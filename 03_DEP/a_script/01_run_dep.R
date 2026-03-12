@@ -28,7 +28,6 @@ library(tibble)
 library(readr)
 library(purrr)
 library(proteoDA)
-library(openxlsx)
 
 set.seed(42)
 
@@ -37,9 +36,8 @@ setwd(rprojroot::find_rstudio_root_file())
 cfg <- list(
   norm_csv    = "01_normalization/c_data/02_normalized.csv",
   norm_rds    = "01_normalization/c_data/03_DAList_normalized.rds",
-  data_dir    = "03_DEP/c_data",
-  report_dir  = "03_DEP/b_reports",
-  per_dir     = "03_DEP/c_data/04_per_contrast_results",
+  data_dir     = "03_DEP/c_data",
+  report_dir   = "03_DEP/b_reports",
   proteoDA_dir = "03_DEP/b_reports/01_proteoDA",
   pval_thresh = 0.10,
   lfc_thresh  = 0,
@@ -48,7 +46,6 @@ cfg <- list(
 )
 
 dir.create(cfg$data_dir,     recursive = TRUE, showWarnings = FALSE)
-dir.create(cfg$per_dir,      recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$proteoDA_dir, recursive = TRUE, showWarnings = FALSE)
 
 # --- LOAD DATA & BUILD METADATA ---
@@ -131,7 +128,25 @@ dal <- extract_DA_results(dal,
                           lfc_thresh  = cfg$lfc_thresh,
                           adj_method  = cfg$adj_method)
 
-# --- SAVE FITTED DAList ---
+# --- INJECT PI-SCORE INTO dal$results ---
+# Pi = p^|logFC| (Xiao et al. 2014); lower = more significant
+contrast_names <- names(dal$results)
+
+for (cname in contrast_names) {
+  res <- dal$results[[cname]]
+  res$pi_score <- res$P.Value ^ abs(res$logFC)
+  res$sig_pi <- case_when(
+    res$pi_score < cfg$pi_thresh & res$logFC > 0 ~  1L,
+    res$pi_score < cfg$pi_thresh & res$logFC < 0 ~ -1L,
+    TRUE ~ 0L
+  )
+  dal$results[[cname]] <- res
+}
+
+# proteoDA Excel formatting expects gene_symbol column
+dal$annotation$gene_symbol <- dal$annotation$gene
+
+# --- SAVE FITTED DAList (with Pi-score in results) ---
 
 saveRDS(dal, file.path(cfg$data_dir, "01_limma_DAList.rds"))
 
@@ -152,67 +167,28 @@ tryCatch(
   error = function(e) cat(sprintf("write_limma_plots: %s\n", conditionMessage(e)))
 )
 
-# --- BUILD RESULTS FROM dal$results (no disk round-trip) ---
+# --- WRITE TABLES VIA proteoDA ---
+# Per-contrast CSVs, combined results (wide), and formatted Excel workbook
+# with conditional formatting & UniProt hyperlinks — all handled by proteoDA.
+# Pi-score columns pass through because they were injected into dal$results above.
 
-contrast_names <- names(dal$results)
-ann_df <- as.data.frame(dal$annotation)
-
-# dal$results stores stats with uniprot_id as rownames; convert to column
-# and join annotation (gene, protein, description) for per-contrast CSVs
-results_list <- lapply(contrast_names, function(cname) {
-  dal$results[[cname]] |>
-    rownames_to_column("uniprot_id") |>
-    left_join(ann_df, by = "uniprot_id") |>
-    mutate(
-      pi_score = P.Value ^ abs(logFC),
-      sig_pi = case_when(
-        pi_score < cfg$pi_thresh & logFC > 0 ~  1L,
-        pi_score < cfg$pi_thresh & logFC < 0 ~ -1L,
-        TRUE ~ 0L)
-    ) |>
-    select(-any_of(c("sig.PVal", "sig.FDR"))) |>
-    mutate(contrast = cname)
-})
-names(results_list) <- contrast_names
-
-# --- WRITE PER-CONTRAST CSVs ---
-
-data_df <- as.data.frame(dal$data)
-
-for (cname in contrast_names) {
-  res <- results_list[[cname]]
-  out <- ann_df |>
-    bind_cols(data_df) |>
-    left_join(
-      res |> select(uniprot_id, logFC, CI.L, CI.R, average_intensity,
-                     t, B, P.Value, adj.P.Val, pi_score, sig_pi),
-      by = "uniprot_id"
-    )
-  write_csv(out, file.path(cfg$per_dir, paste0(cname, ".csv")))
-}
-
-# --- BUILD COMBINED RESULTS (wide format) ---
-
-base_df <- bind_cols(
-  ann_df |> select(any_of(c("uniprot_id", "protein", "gene", "description"))),
-  data_df
+write_limma_tables(dal,
+  output_dir        = cfg$data_dir,
+  contrasts_subdir  = "04_per_contrast_results",
+  summary_csv       = "02_DA_summary_base.csv",
+  combined_file_csv = "03_combined_results.csv",
+  spreadsheet_xlsx  = "05_results.xlsx",
+  overwrite         = TRUE
 )
 
-for (cname in contrast_names) {
-  res <- results_list[[cname]]
-  stat_cols <- res |>
-    select(uniprot_id, logFC, CI.L, CI.R, average_intensity, t, B,
-           P.Value, adj.P.Val, pi_score, sig_pi)
-  names(stat_cols)[-1] <- paste0(names(stat_cols)[-1], "_", cname)
-  base_df <- left_join(base_df, stat_cols, by = "uniprot_id")
-}
+# proteoDA summary only has sig.PVal/sig.FDR; replace with Pi-enriched version
+file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 
-write_csv(base_df, file.path(cfg$data_dir, "03_combined_results.csv"))
-
-# --- BUILD DA SUMMARY ---
+# --- DA SUMMARY (with Pi-score counts) ---
+# proteoDA's summarize_contrast_DA lacks Pi-score columns, so we build our own.
 
 da_summary <- map_dfr(contrast_names, function(cname) {
-  res <- results_list[[cname]]
+  res <- dal$results[[cname]]
   bind_rows(
     tibble(contrast = cname, type = "up",
            sig.PVal   = sum(res$P.Value < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
@@ -242,17 +218,6 @@ da_summary <- map_dfr(contrast_names, function(cname) {
 })
 
 write_csv(da_summary, file.path(cfg$data_dir, "02_DA_summary.csv"))
-
-# --- BUILD RESULTS EXCEL ---
-
-wb_results <- createWorkbook()
-for (cname in contrast_names) {
-  addWorksheet(wb_results, cname)
-  writeData(wb_results, cname, results_list[[cname]])
-}
-addWorksheet(wb_results, "DA_Summary")
-writeData(wb_results, "DA_Summary", da_summary)
-saveWorkbook(wb_results, file.path(cfg$data_dir, "05_results.xlsx"), overwrite = TRUE)
 
 # --- SUMMARY ---
 
