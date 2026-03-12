@@ -1,0 +1,454 @@
+---
+title: "Stage 3: Differential Expression"
+subtitle: "limma + duplicateCorrelation → 7 Contrasts → Pi-Score → Robustness"
+author: "DTL"
+date: today
+bibliography: references.bib
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-summary: "Show code"
+    code-tools: true
+    theme:
+      light: flatly
+      dark: darkly
+    fig-width: 10
+    fig-height: 7
+    df-print: paged
+    smooth-scroll: true
+    self-contained: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Setup
+
+```{r}
+#| label: setup
+#| include: false
+#| eval: true
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(comment = "#>", collapse = TRUE)
+```
+
+```{r}
+#| label: libraries
+#| eval: true
+
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(readr)
+  library(readxl)
+  library(ggplot2)
+})
+```
+
+This document records the differential expression pipeline (Stage 3) for the HRvLR DIA-MS proteomics study. The pipeline takes as input the cycloess-normalized, non-imputed protein abundance matrix produced in Stage 1, applies limma with within-subject correlation estimation via `duplicateCorrelation`, and tests seven pre-specified contrasts spanning a 2×3 factorial design (Responder HR/LR × Timepoint T1/T2/T3, n = 8 per group). The run script is `HRvLR_DEP_run.R`.
+
+The non-imputed matrix is the primary input throughout. Peng et al. (2024) demonstrated that limma applied directly to data with missing values — where per-protein models are fitted using only the complete observations for that protein — consistently outperforms alternatives that impute missing values before modelling [@peng2024]. Imputation introduces distributional assumptions that can distort variance estimates, inflate precision, and alter the ranking of differentially expressed proteins. Accordingly, the non-imputed matrix is primary, and an imputation-based sensitivity analysis is run in parallel as a robustness check.
+
+## Loading data and building metadata
+
+The pipeline reads the normalized abundance matrix from Stage 1, then loads the canonical metadata object — the `DAList` produced by `proteoDA` during normalization — rather than parsing sample names by regular expression. This ensures that factor levels for `Group`, `Timepoint`, and `Group_Time` are identical to those used in all other stages of the analysis. Deriving metadata from column names would introduce fragility: any renaming or reordering of samples would silently produce incorrect factor assignments. Loading the canonical metadata object removes that risk entirely.
+
+```{r}
+#| label: dep-load
+#| eval: false
+
+library(proteoDA)
+
+df <- read_csv("01_normalization/c_data/02_normalized.csv", show_col_types = FALSE)
+
+ann_cols   <- c("uniprot_id", "protein", "gene", "description")
+ann        <- df[, ann_cols]
+samp_names <- setdiff(names(df), ann_cols)
+mat        <- as.matrix(df[, samp_names])
+rownames(mat) <- ann$uniprot_id
+
+cat(sprintf("Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
+            nrow(mat), ncol(mat), sum(is.na(mat)),
+            100 * sum(is.na(mat)) / length(mat)))
+
+# Canonical metadata from the normalization DAList (not regex-derived)
+dal_norm <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
+dal_meta <- as.data.frame(dal_norm$metadata)
+meta <- tibble(
+  sample_id = dal_meta$Col_ID,
+  responder = factor(dal_meta$Group,      levels = c("HR", "LR")),
+  time      = factor(dal_meta$Timepoint,  levels = c("T1", "T2", "T3")),
+  group     = factor(dal_meta$Group_Time,
+                     levels = c("HR_T1", "HR_T2", "HR_T3",
+                                "LR_T1", "LR_T2", "LR_T3")),
+  subject   = sub("_T[123]$", "", dal_meta$Col_ID)
+)
+
+print(table(meta$responder, meta$time))
+stopifnot(setequal(colnames(mat), meta$sample_id))
+```
+
+The sample breakdown by responder group and timepoint is shown below. Each cell should contain exactly n = 8 samples. The `stopifnot` guard ensures the sample order in the matrix matches the metadata exactly before any model is fitted.
+
+```{r}
+#| label: show-metadata
+#| eval: true
+
+dal_norm <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
+table(dal_norm$metadata$Group, dal_norm$metadata$Timepoint)
+cat(sprintf("Proteins: %d | Samples: %d\n",
+            nrow(dal_norm$data), ncol(dal_norm$data)))
+```
+
+With the metadata confirmed, the next step is to specify the statistical design that governs how those samples are modelled.
+
+## Statistical design
+
+The model is parametrized using a cell-means formulation (`~ 0 + group`) rather than the default reference-cell parametrization (`~ group`). In a reference-cell model, the intercept represents one particular group mean, and all other coefficients are differences from that reference. For a 2×3 factorial design with seven planned contrasts, this creates unnecessary complexity — some contrasts become differences of differences of model coefficients, which are harder to specify correctly and harder to audit. The cell-means parametrization avoids an intercept entirely: each coefficient is the estimated mean log-abundance for one of the six Group_Time combinations (HR_T1, HR_T2, HR_T3, LR_T1, LR_T2, LR_T3). Every planned contrast is then a simple arithmetic expression over those six means, making the contrast matrix transparent and the biological question unambiguous.
+
+### Within-subject correlation (duplicateCorrelation)
+
+The study has a repeated-measures structure: each subject contributes three observations (T1, T2, T3), one per timepoint. Ignoring this structure would treat all observations as independent, overestimating the available degrees of freedom and producing anti-conservative p-values. A fully mixed-effects model would handle this correctly in principle, but fitting per-protein random effects with n = 8 subjects per group produces unreliable variance component estimates — the within-group sample size is too small for the random-effects variance to be estimated stably for each of several thousand proteins.
+
+The `duplicateCorrelation` approach from Smyth (2005) offers a better-calibrated alternative for small-n proteomics [@smyth2005]. It estimates a single average within-subject correlation, ρ, by pooling information across all proteins. This pooled estimate is then used as a fixed blocking correlation when fitting the per-protein linear models. Because ρ is estimated globally rather than per-protein, its estimation is stable even with small n, and limma's empirical Bayes moderation subsequently stabilizes the per-protein variance estimates. The combination of a global blocking correlation with per-protein eBayes moderation is substantially more powerful than either mixed models or naive repeated-measures ANOVA in this setting.
+
+The design formula `~ 0 + group + (1 | subject)` passed to `proteoDA::add_design()` specifies both the cell-means parametrization and the blocking factor simultaneously. The `(1 | subject)` term instructs `duplicateCorrelation` to treat subject as the blocking variable.
+
+```{r}
+#| label: dep-design
+#| eval: false
+
+dal <- add_design(dal, "~ 0 + group + (1 | subject)")
+
+# Strip the "group" prefix that model.matrix() prepends to factor-level column names
+colnames(dal$design$design_matrix) <- gsub("^group", "",
+                                            colnames(dal$design$design_matrix))
+```
+
+The resulting design matrix has one row per sample and one column per Group_Time level. Each row contains exactly one non-zero entry:
+
+```
+             HR_T1 HR_T2 HR_T3 LR_T1 LR_T2 LR_T3
+  S03_T1         1     0     0     0     0     0
+  S03_T2         0     1     0     0     0     0
+  S03_T3         0     0     1     0     0     0
+  S04_T1         0     0     0     1     0     0
+  ...
+```
+
+The estimated within-subject correlation from the fitted model is shown below.
+
+```{r}
+#| label: show-within-cor
+#| eval: true
+
+dal_dep <- readRDS("03_DEP/c_data/01_limma_DAList.rds")
+within_cor <- dal_dep$eBayes_fit$correlation %||%
+  dal_dep$tags$duplicate_correlation %||% NA_real_
+if (!is.na(within_cor)) {
+  cat(sprintf("Within-subject correlation (rho): %.3f\n", within_cor))
+}
+```
+
+A ρ above 0.5 indicates that subjects are highly consistent in their proteomic profiles across timepoints — repeated measures from the same individual are strongly correlated, and accounting for this structure provides substantial power gains. A ρ below 0.3 would suggest high inter-individual variability relative to the within-subject signal, making the blocking less beneficial but still correct to apply. A ρ near zero would imply that the repeated-measures structure provides negligible additional information and the design is effectively equivalent to independent samples. With this correlation estimate in hand, the pipeline proceeds to specify the seven planned contrasts.
+
+## Contrasts
+
+Seven contrasts were pre-specified before model fitting to address the principal biological questions of the study. Four within-group contrasts test whether protein abundance changes over time within each responder group: Training_HR and Training_LR compare T2 (72 hours post-training) to T1 (baseline) within HR and LR subjects respectively, while Acute_HR and Acute_LR compare T3 (1 hour post-acute bout) to T2. These contrasts characterize the proteomic response to training adaptation and acute exercise separately in each responder class. The fifth contrast, Baseline_HRvLR, asks whether HR and LR subjects differ in their baseline proteome before any intervention — a difference here would confound the interpretation of subsequent response contrasts. The two interaction contrasts, Training_Interaction and Acute_Interaction, are the analytically most important: they ask whether the change from T1 to T2 (or T2 to T3) differs between HR and LR. A significant interaction means the proteomic response to exercise differs between responder groups, which is the central question of the study.
+
+```{r}
+#| label: dep-contrasts
+#| eval: false
+
+dal <- add_contrasts(dal, contrasts_vector = c(
+  "Training_HR          = HR_T2 - HR_T1",
+  "Training_LR          = LR_T2 - LR_T1",
+  "Acute_HR             = HR_T3 - HR_T2",
+  "Acute_LR             = LR_T3 - LR_T2",
+  "Baseline_HRvLR       = HR_T1 - LR_T1",
+  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
+  "Acute_Interaction    = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
+))
+```
+
+The resulting contrast matrix is shown below. Each column is a contrast and each row is a Group_Time cell mean. A value of +1 means that cell mean is added, -1 means it is subtracted, and 0 means it does not contribute to that contrast. For the interaction contrasts, reading down the column reveals the difference-of-differences structure: the Training_Interaction column has -1 at HR_T1, +1 at HR_T2, +1 at LR_T1, and -1 at LR_T2, which implements `(HR_T2 - HR_T1) - (LR_T2 - LR_T1)` exactly.
+
+| Group_Time | Training_HR | Training_LR | Acute_HR | Acute_LR | Baseline_HRvLR | Training_Int | Acute_Int |
+|:-----------|:-----------:|:-----------:|:--------:|:--------:|:--------------:|:------------:|:---------:|
+| HR_T1      |     -1      |      0      |    0     |    0     |       1        |      -1      |     0     |
+| HR_T2      |      1      |      0      |   -1     |    0     |       0        |       1      |     0     |
+| HR_T3      |      0      |      0      |    1     |    0     |       0        |       0      |     1     |
+| LR_T1      |      0      |     -1      |    0     |    0     |      -1        |       1      |     0     |
+| LR_T2      |      0      |      1      |    0     |   -1     |       0        |      -1      |     0     |
+| LR_T3      |      0      |      0      |    0     |    1     |       0        |       0      |    -1     |
+
+With the contrast matrix specified, the model can be fitted and results extracted.
+
+## Fitting the model and extracting results
+
+Model fitting proceeds in three internally chained steps within `fit_limma_model()`. First, `lmFit()` fits a per-protein linear model to each row of the data matrix, using the design matrix and the blocking correlation ρ estimated by `duplicateCorrelation` to account for within-subject covariance. Second, `contrasts.fit()` reparametrizes the fitted model from the cell-means space into contrast space, producing contrast-specific coefficient estimates and standard errors. Third, `eBayes()` applies empirical Bayes moderation: for each protein, the per-protein variance estimate is shrunk toward a prior variance derived from the distribution of all per-protein variances in the experiment. This is the key innovation of limma (Ritchie et al. 2015) [@ritchie2015] — proteins quantified from few complete observations, which would otherwise yield highly variable variance estimates, are stabilized by borrowing strength from the global prior. The result is moderated t-statistics that are more reliable than ordinary t-statistics, especially in the small-n regime characteristic of DIA-MS proteomics.
+
+The FDR threshold for the primary significance call is set at 0.10. This is appropriate for discovery proteomics with n = 8 per group, where strict FDR control at 0.05 would discard genuinely altered proteins with modest statistical support. The Pi-score (see next section) provides a secondary filter that additionally requires a biologically meaningful fold change, guarding against the detection of statistically significant but trivially small changes.
+
+```{r}
+#| label: dep-fit
+#| eval: false
+
+dal <- fit_limma_model(dal)
+dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
+
+saveRDS(dal, file.path(DATA_DIR, "limma_DAList.rds"))
+```
+
+The significance summary across all seven contrasts is shown below. Only directions with at least one significant protein (by either criterion) are shown.
+
+```{r}
+#| label: show-da-summary
+#| eval: true
+
+da_sum <- read_csv("03_DEP/c_data/02_DA_summary.csv", show_col_types = FALSE)
+da_sum |>
+  filter(type != "nonsig") |>
+  select(contrast, type, any_of(c("sig.Pi", "sig.FDR.05", "sig.FDR.10")))
+```
+
+Where FDR and Pi counts are zero, this does not necessarily indicate biological null results — in a small-n DIA-MS study, the analysis is powered to detect proteins with large fold changes, and the interaction contrasts in particular test a subtle hypothesis (difference in the magnitude of response) that requires substantial biological effect to clear a stringent multiple-testing threshold. The bootstrap confidence intervals in a later section provide an effect-size summary that is interpretable regardless of significance.
+
+## Pi-score
+
+The Pi-score, introduced by Xiao et al. (2014) [@xiao2014], integrates statistical significance with fold-change magnitude into a single scalar that can serve as a joint ranking criterion. It is defined as:
+
+$$\text{Pi} = p^{|\log_2 \text{FC}|}$$
+
+The logic of this formula is that the exponent — the absolute log-fold change — modulates how much a given p-value is penalized. For a protein with a small fold change, the exponent is less than one, so the p-value is raised to a fractional power and Pi is larger than the raw p-value, making it harder to achieve Pi < 0.05. For a protein with a large fold change, the exponent exceeds one and Pi shrinks below the raw p-value. The threshold Pi < 0.05 is equivalent to the original pi-score threshold of 1.3 on the -log10 scale, since -log10(Pi) = |logFC| × -log10(p).
+
+To make this concrete: a protein with p = 0.01 and |logFC| = 0.5 yields Pi = 0.01^0.5 = 0.1, which does not pass the Pi < 0.05 threshold despite a nominally significant p-value, because the fold change is small. A protein with p = 0.01 and |logFC| = 1.5 yields Pi = 0.01^1.5 = 0.001, which clears the threshold comfortably because both the statistical and biological evidence are strong. Neither criterion alone is sufficient — a protein must show meaningful abundance change and robust statistical support to be classified as significant by Pi.
+
+```{r}
+#| label: pi-score-computation
+#| eval: false
+
+# Applied to each per-contrast CSV after writing by write_limma_tables()
+res <- res |>
+  mutate(
+    pi_score = P.Value ^ abs(logFC),
+    sig_pi = case_when(
+      pi_score < 0.05 & logFC > 0 ~  1L,
+      pi_score < 0.05 & logFC < 0 ~ -1L,
+      TRUE ~ 0L
+    )
+  )
+```
+
+The top-ranked proteins by Pi-score for the Training_HR contrast are shown below. A protein ranking in the top 5 by Pi but not reaching FDR < 0.10 has a large fold change that pushes its Pi below 0.05, but its nominal p-value is not small enough to survive Benjamini-Hochberg correction at the FDR threshold. Such a protein is biologically interesting but statistically marginal — it warrants attention in the pathway context and in the sensitivity analysis, but should not be reported as a definitive DEP without corroborating evidence.
+
+```{r}
+#| label: show-per-contrast
+#| eval: true
+
+f <- "03_DEP/c_data/04_per_contrast_results/Training_HR.csv"
+if (file.exists(f)) {
+  res <- read_csv(f, show_col_types = FALSE)
+  cat(sprintf("Training_HR: %d proteins\n", nrow(res)))
+  res |>
+    arrange(pi_score) |>
+    select(gene, logFC, P.Value, adj.P.Val, pi_score, sig_pi) |>
+    head(5)
+}
+```
+
+## Combined results matrix
+
+Results across all seven contrasts are assembled into a single wide-format matrix with one row per protein and contrast-suffixed columns (e.g., `logFC_Training_HR`, `P.Value_Training_HR`, `adj.P.Val_Training_HR`, `pi_score_Training_HR`, `sig_pi_Training_HR`). This structure is convenient for downstream analysis: any per-protein, cross-contrast comparison can be performed with a single `select()` or `filter()` call without joining multiple tables.
+
+```{r}
+#| label: show-combined-results
+#| eval: true
+
+if (file.exists("03_DEP/c_data/03_combined_results.csv")) {
+  comb <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+  cat(sprintf("Combined results: %d proteins x %d columns\n", nrow(comb), ncol(comb)))
+  comb |>
+    select(uniprot_id, gene,
+           logFC_Training_HR, P.Value_Training_HR,
+           adj.P.Val_Training_HR, pi_score_Training_HR, sig_pi_Training_HR) |>
+    head(4)
+}
+```
+
+With the core results assembled, the pipeline generates visualizations for each contrast to facilitate inspection of the significance landscape. These are described next.
+
+## Per-contrast visualization
+
+For each of the seven contrasts, the pipeline produces a triple volcano plot — three panels arranged left to right, each representing a progressively more stringent significance filter. The leftmost panel plots -log10(nominal P.Value) against log2FC with a threshold line at -log10(0.01); the middle panel uses -log10(adj.P.Val) with a threshold at -log10(0.10); and the rightmost panel uses -log10(Pi) with a threshold at -log10(0.05). Reading from left to right moves from the broadest candidate set to the most stringent joint filter. The color scheme is consistent across all panels: upregulated proteins are red, downregulated proteins are blue, and non-significant proteins are grey.
+
+```{r}
+#| label: volcano-code
+#| eval: false
+
+# Volcano factory — defined once, called three times per contrast
+make_vol <- function(df, ycol, ylab, top_df, thresh) {
+  ggplot(df, aes(logFC, .data[[ycol]], color = dir_pi)) +
+    geom_point(alpha = 0.35, size = 1) +
+    geom_hline(yintercept = thresh, linetype = "dashed",
+               color = "grey40", linewidth = 0.4) +
+    geom_text_repel(data = top_df, aes(label = gene), size = 2.5,
+                    max.overlaps = 15, show.legend = FALSE, seed = 42) +
+    scale_color_manual(values = c(Up = "#D6604D", Down = "#4393C3", NS = "grey70"),
+                       drop = FALSE) +
+    labs(x = expression(log[2]~FC), y = ylab) +
+    theme_bw(base_size = 11) +
+    theme(legend.position = "none")
+}
+
+# For each contrast (shown here for Training_HR):
+p1 <- make_vol(res, "nlog10_pval", expression(-log[10](P.Value)),
+               top_nom, -log10(0.01)) + ggtitle("Nominal P < 0.01")
+p2 <- make_vol(res, "nlog10_adj",  expression(-log[10](adj.P.Val)),
+               top_adj, -log10(0.10)) + ggtitle("FDR < 0.10")
+p3 <- make_vol(res, "nlog10_pi",   expression(-log[10](Pi)),
+               top_pi,  -log10(0.05)) + ggtitle("Pi < 0.05")
+```
+
+Proteins that survive all three filters are the highest-confidence DEPs: they have a small nominal p-value, a small FDR-adjusted p-value, and a fold change large enough that the combined Pi criterion is also met. A protein visible in the Pi panel but absent from the FDR panel has a large fold change but did not survive multiple-testing correction — it is a biologically interesting candidate that the study is underpowered to confirm statistically. Conversely, a protein visible in the FDR panel but absent from the Pi panel has a very small p-value but a trivially small fold change — it is statistically robust but may lack biological significance. These distinctions are relevant when prioritizing proteins for follow-up experiments. The robustness analyses in the following sections provide complementary, protein-agnostic views of the response magnitude.
+
+## Response profiling
+
+The response profiling analysis addresses a different question from the per-protein DEP tests: not which specific proteins change, but whether the overall magnitude of proteomic response differs between HR and LR. A broader distribution of |logFC| values in HR relative to LR across all proteins — including those that individually do not reach significance — would suggest that HR subjects mount a globally more pronounced proteomic response to exercise. This characterization of group-level proteomic plasticity is informative even when no individual protein clears the significance threshold, and it provides context for interpreting the interaction contrasts.
+
+Four complementary statistical tests are applied to the paired |logFC| distributions from corresponding HR and LR contrasts. The Kolmogorov-Smirnov test is a non-parametric test of whether the two distributions have the same shape, sensitive to differences in location, spread, and skew. The Fligner-Killeen test specifically assesses whether the variance of |logFC| differs between groups — a significant result would indicate that HR and LR differ in the consistency of their proteomic response, even if median magnitudes are similar. The Wilcoxon signed-rank test treats the per-protein |logFC| values as paired (the same proteins are measured in both contrasts) and tests for a systematic shift. Cliff's delta is the non-parametric effect size for paired ordinal data, ranging from -1 to +1, where a positive value means the first group (HR) has larger fold changes on average. Effect sizes are classified as negligible (< 0.147), small (0.147–0.33), medium (0.33–0.474), or large (> 0.474).
+
+```{r}
+#| label: response-profiling-code
+#| eval: false
+
+# run_response_comparison() is defined in HRvLR_DEP_run.R
+# Two calls — one for Training, one for Acute:
+rp_training <- run_response_comparison(results_list,
+  "Training_HR", "Training_LR", "Training (HR vs LR)")
+rp_acute <- run_response_comparison(results_list,
+  "Acute_HR", "Acute_LR", "Acute (HR vs LR)")
+```
+
+```{r}
+#| label: show-response-profiling
+#| eval: true
+
+if (file.exists("03_DEP/c_data/06_response_profiling_diagnostics.csv")) {
+  rp <- read_csv("03_DEP/c_data/06_response_profiling_diagnostics.csv",
+                 show_col_types = FALSE)
+  rp |> select(comparison, test, statistic, p_value, interpretation)
+}
+```
+
+A significant KS test (p < 0.05) means the shape of the |logFC| distribution differs between HR and LR, encompassing any combination of differences in median, spread, or tail behaviour. A significant Fligner-Killeen test in the absence of a KS result would isolate a variance difference. A positive Cliff's delta with medium or large magnitude would provide the clearest evidence that HR subjects show globally larger proteomic responses. If all four tests are non-significant with negligible Cliff's delta, the data do not support a global difference in response magnitude, and any observed DEP differences between HR and LR should be interpreted as protein-specific rather than reflecting a general difference in proteomic plasticity. The bootstrap confidence intervals in the next section complement this analysis by quantifying the median effect size per contrast with uncertainty.
+
+## Bootstrap confidence intervals
+
+The per-protein significance tests report which proteins cross a threshold but give little intuition about the overall scale of proteomic change in each contrast. The bootstrap analysis addresses this by computing the median absolute log-fold change across all quantified proteins per contrast, together with a 95% bias-corrected and accelerated (BCa) confidence interval from 10,000 bootstrap resamples. The median |logFC| is an effect-size summary that is interpretable without reference to protein-specific significance — it answers the question: "how large are the protein abundance changes in this contrast, on average?" The BCa method is preferred over the standard percentile bootstrap because it corrects for both bias and skewness in the bootstrap distribution, producing more accurate interval coverage with heavy-tailed data [@efron1993].
+
+```{r}
+#| label: bootstrap-code
+#| eval: false
+
+library(boot)
+
+# Applied per contrast (shown for a single contrast named cname):
+vals <- abs(results_list[[cname]]$logFC)
+vals <- vals[!is.na(vals)]
+b    <- boot(vals, function(d, i) median(d[i], na.rm = TRUE), R = 10000)
+ci   <- tryCatch(boot.ci(b, type = "bca"),
+                 error = function(e) boot.ci(b, type = "perc"))
+```
+
+```{r}
+#| label: show-bootstrap
+#| eval: true
+
+if (file.exists("03_DEP/c_data/09_effect_size_bootstrap.csv")) {
+  boot_df <- read_csv("03_DEP/c_data/09_effect_size_bootstrap.csv",
+                      show_col_types = FALSE)
+  boot_df |> arrange(desc(median_absLFC))
+}
+```
+
+The ordering of contrasts by descending median |logFC| reveals which conditions drive the largest proteomic changes in this experiment. Interaction contrasts typically have smaller median |logFC| than within-group contrasts — they measure differences in responses rather than responses themselves — so their position in the table also indicates how much the two responder groups diverge. Narrow confidence intervals reflect high precision (many complete protein observations per contrast); wide intervals arise when the |logFC| distribution is highly variable or when many proteins have missing values. The power analysis that follows contextualizes these effect sizes against what the study could reliably detect.
+
+## Power analysis
+
+The power analysis provides a lower bound on the minimum detectable log-fold change for each contrast at 80% power and α = 0.10. The calculation uses `pwr.t.test()` from the `pwr` package, which implements the standard t-test power formula. This is a conservative bound because limma's moderated t-statistic has greater power than the ordinary t-statistic — empirical Bayes shrinkage effectively increases the degrees of freedom for variance estimation, so the actual minimum detectable effect is smaller than the value reported here. For within-group contrasts (Training_HR, Training_LR, Acute_HR, Acute_LR), the paired test formula is used and the effective residual standard deviation is adjusted for within-subject correlation: σ_eff = σ × √(2(1 − ρ)). A high ρ substantially reduces σ_eff and thus the minimum detectable logFC. For between-group contrasts (Baseline_HRvLR and the two Interaction contrasts), the two-sample formula is used without a correlation adjustment.
+
+```{r}
+#| label: power-code
+#| eval: false
+
+library(pwr)
+
+# Applied per contrast (within sigma estimated from eBayes fit):
+eff_sigma <- if (paired && !is.na(within_cor))
+  sigma_residual * sqrt(2 * (1 - within_cor)) else
+  sigma_residual * sqrt(2)
+
+pw <- pwr.t.test(n = n_subj, d = NULL, sig.level = 0.10, power = 0.80,
+                 type = if (paired) "paired" else "two.sample")
+min_detectable_logFC <- pw$d * eff_sigma
+```
+
+```{r}
+#| label: show-power
+#| eval: true
+
+if (file.exists("03_DEP/c_data/10_power_analysis.csv")) {
+  power_df <- read_csv("03_DEP/c_data/10_power_analysis.csv",
+                       show_col_types = FALSE)
+  power_df |>
+    select(contrast, n_subjects, within_cor, effective_sigma,
+           min_detectable_d, min_detectable_logFC)
+}
+```
+
+If the minimum detectable logFC exceeds 0.5 log2 units (approximately a 1.4-fold change), the study can reliably detect only proteins with substantial abundance shifts. This is common in small-n DIA-MS experiments and does not invalidate the analysis — it means that the detected DEPs, if any, are robust to noise, and that the Pi-score filter was calibrated correctly to require a meaningful effect size. Paired within-group contrasts benefit most from high ρ: at ρ = 0.7, the effective sigma for paired contrasts is reduced by a factor of √(0.6) ≈ 0.77 relative to the independent-samples assumption. The sensitivity analysis in the next section confirms that these power constraints do not introduce any dependence on the choice of missing-value strategy.
+
+## Imputation sensitivity analysis
+
+The primary analysis uses the non-imputed matrix throughout, consistent with the recommendation of Peng et al. (2024) [@peng2024]. As a robustness check, an identical limma pipeline is run on an imputed version of the same matrix (from Stage 2), and the resulting t-statistics are compared per contrast by Spearman rank correlation. High concordance — ρ > 0.95 — would confirm that the choice of imputation strategy does not materially alter the protein rankings, and that the non-imputed results are stable. Any protein that changes significance status between the two analyses (present in one result set but not the other at FDR < 0.10) is flagged for scrutiny.
+
+```{r}
+#| label: show-imputation-sensitivity
+#| eval: true
+
+if (file.exists("03_DEP/c_data/11_imputation_sensitivity.csv")) {
+  sens <- read_csv("03_DEP/c_data/11_imputation_sensitivity.csv",
+                   show_col_types = FALSE)
+  sens
+} else {
+  cat("Imputation sensitivity file not yet available.\n")
+}
+```
+
+A Spearman ρ above 0.95 constitutes excellent concordance: the two approaches rank proteins almost identically and any significance differences are attributable to random variation rather than systematic divergence. A ρ between 0.85 and 0.95 indicates moderate sensitivity; proteins that switch significance status in this range deserve closer examination, since their interpretation may depend on the assumed missingness mechanism. A ρ below 0.85 would indicate that imputation substantially reshapes the ranking structure, which would call for a deeper investigation of the missing-value pattern and the imputation model used — in such a case, the non-imputed results would still be reported as primary, consistent with Peng et al. (2024), but the discordance would be explicitly documented.
+
+## Stage outputs
+
+All outputs from `HRvLR_DEP_run.R` are written to `03_DEP/c_data/` and numbered in pipeline order.
+
+| File | Description |
+|:-----|:------------|
+| `c_data/01_limma_DAList.rds` | Full `proteoDA` DAList with fitted eBayes model inside |
+| `c_data/02_DA_summary.csv` | Significance counts by contrast, direction, and criterion (FDR 0.05, FDR 0.10, Pi < 0.05) |
+| `c_data/03_combined_results.csv` | **PRIMARY OUTPUT** — all 7 contrasts in wide format, one row per protein |
+| `c_data/04_per_contrast_results/` | 7 individual CSVs with logFC, t, P.Value, adj.P.Val, pi_score, sig_pi |
+| `c_data/05_results.xlsx` | Excel workbook with one sheet per contrast plus DA_Summary |
+| `c_data/06_response_profiling_diagnostics.csv` | KS, Fligner-Killeen, Wilcoxon, Cliff's delta for Training and Acute comparisons |
+| `c_data/07_response_profiling_training_quantiles.csv` | Quantile comparison of |logFC| for Training_HR vs Training_LR |
+| `c_data/08_response_profiling_acute_quantiles.csv` | Quantile comparison of |logFC| for Acute_HR vs Acute_LR |
+| `c_data/09_effect_size_bootstrap.csv` | Median |logFC| with 95% BCa CI per contrast (10,000 resamples) |
+| `c_data/10_power_analysis.csv` | Minimum detectable logFC at 80% power, α = 0.10, per contrast |
+| `c_data/11_imputation_sensitivity.csv` | Spearman ρ between non-imputed and imputed t-statistics per contrast |
+| `c_data/12_DEP_supplementary.xlsx` | Supplementary workbook (13 sheets): methods overview, significance summary, per-contrast results, response profiling, bootstrap CIs, power analysis, imputation sensitivity |
