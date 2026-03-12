@@ -1,0 +1,4 @@
+factor,p_value,significant
+Group,0.372,FALSE
+Timepoint,0.528,FALSE
+Group_Time,0.626,FALSE
