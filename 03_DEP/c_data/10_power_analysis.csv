@@ -1,0 +1,8 @@
+contrast,n_subjects,within_cor,effective_sigma,min_detectable_d,min_detectable_logFC,power,alpha
+Training_HR,7,0.1839146613211403,0.8216,1.0666,0.8763,0.8,0.1
+Training_LR,8,0.1839146613211403,0.8216,0.9781,0.8036,0.8,0.1
+Acute_HR,7,0.1839146613211403,0.8216,1.0666,0.8763,0.8,0.1
+Acute_LR,8,0.1839146613211403,0.8216,0.9781,0.8036,0.8,0.1
+Baseline_HRvLR,7,NA,0.9094,1.4109,1.2831,0.8,0.1
+Training_Interaction,7,NA,0.9094,1.4109,1.2831,0.8,0.1
+Acute_Interaction,7,NA,0.9094,1.4109,1.2831,0.8,0.1
