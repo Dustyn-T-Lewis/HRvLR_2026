@@ -1,6 +1,6 @@
 ---
 title: "Stage 1: Normalization"
-subtitle: "HPA Filter → Missingness Filter → Outlier Detection → Cycloess"
+subtitle: "HPA Filter -> Missingness Filter -> Outlier Detection -> Cycloess"
 author: "DTL"
 date: today
 bibliography: references.bib
@@ -9,8 +9,9 @@ format:
     toc: true
     toc-depth: 3
     toc-location: left
+    toc_float: true
     number-sections: true
-    code-fold: true
+    code-fold: show
     code-summary: "Show code"
     code-tools: true
     theme:
@@ -36,24 +37,80 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(comment = "#>", collapse = TRUE)
 ```
 
-## Overview
+## Introduction
 
-This document traces the complete normalization pipeline for the HRvLR DIA-MS skeletal muscle proteomics dataset. The study follows a 2 × 3 factorial design: Responder (HR / LR) × Timepoint (T1 / T2 / T3), with n = 8 subjects per group.
+Welcome to Stage 1 of the HRvLR proteomics analysis pipeline. In this tutorial, we walk through every step required to transform raw protein intensity measurements from a mass spectrometer into a clean, **normalized** matrix that is ready for downstream statistical analysis. If you have taken one introductory R course, you have enough background to follow along.
 
-Stage 1 transforms raw DIA-NN intensities into a quality-controlled, normalized protein matrix suitable for differential abundance analysis. The pipeline is split across two scripts:
+### What is this study about?
+
+We are analyzing skeletal muscle biopsies from subjects classified as **High Responders (HR)** or **Low Responders (LR)** to resistance exercise training. The study follows a **2 x 3 factorial design**: two responder groups (HR and LR) crossed with three timepoints (T1 = baseline, T2 = 72 hours post-training, T3 = 1 hour post-acute exercise bout), with n = 8 subjects per group. Proteins were quantified using **Data-Independent Acquisition mass spectrometry (DIA-MS)**, a technique that systematically fragments all peptides in a sample to provide comprehensive protein coverage [@demichev2020].
+
+### What is normalization?
+
+**Normalization** is the process of removing unwanted technical variation between samples so that the remaining differences reflect true biology. Mass spectrometers introduce systematic biases --- differences in total protein loaded, chromatographic drift between runs, and detector sensitivity fluctuations --- that can be larger than the biological effects we want to detect. Without normalization, a protein that appears more abundant in HR than LR might simply reflect the fact that more total protein was injected in those particular runs.
+
+### Pipeline overview
+
+This stage performs four sequential operations:
+
+1. **Tissue-relevance filtering** --- remove proteins not expressed in skeletal muscle
+2. **Missingness filtering** --- remove proteins detected in too few samples
+3. **Outlier detection** --- identify and remove technically failed samples
+4. **Cyclic loess normalization** --- correct intensity-dependent biases between samples
+
+The pipeline is implemented across two R scripts:
 
 | Script | Role |
 |--------|------|
 | `01_run_normalization.R` | Core computation: filtering, outlier detection, cycloess normalization, PRONE benchmark, export |
 | `02_norm_reports.R` | Visualization: reads `00_report_intermediates.rds` and produces the 4-page diagnostic PDF + supplementary workbook |
 
-This two-script design separates compute-heavy operations from reporting. The intermediates `.rds` file serializes all plot-ready objects so that `02_norm_reports.R` can produce publication-quality diagnostics without re-running the pipeline. Every filtering decision, sample quality judgment, and normalization choice is recorded here alongside the code and quantitative evidence that supports it.
+This two-script design separates compute-heavy operations from reporting. The intermediates `.rds` file serializes all plot-ready objects so that `02_norm_reports.R` can produce publication-quality diagnostics without re-running the pipeline.
 
-## Script 1: `01_run_normalization.R`
+## Prerequisites
 
-### Data loading and validation
+### Required R packages
 
-Raw protein intensities and annotation are stored together in a single Excel workbook (`00_input/HRvLR_raw.xlsx`). The first step separates the annotation columns — UniProt ID, protein name, gene symbol, description, and number of peptide sequences — from the sample intensity columns, which are named by `Col_ID` to match the sample metadata CSV.
+Before running this pipeline, make sure the following packages are installed:
+
+- **proteoDA** --- the backbone package for label-free proteomics data analysis; provides the `DAList` container, normalization functions, and QC reporting [@thurman_proteoDA_2023]
+- **readxl** / **readr** --- for reading Excel and CSV files
+- **dplyr** / **tidyr** / **stringr** --- tidyverse tools for data manipulation
+- **rprojroot** --- locates the project root directory automatically
+
+### Input files
+
+| File | Location | Description |
+|------|----------|-------------|
+| `HRvLR_raw.xlsx` | `00_input/` | Raw DIA-NN protein intensities + annotation columns |
+| `HRvLR_meta.csv` | `00_input/` | Sample metadata (Col_ID, Group, Timepoint, Group_Time, Subject_ID) |
+| `HPA_skeletal_muscle_annotations.tsv` | `00_input/` | Human Protein Atlas gene list for skeletal muscle |
+
+### Expected directory structure
+
+```
+A_HRvLR_2026/
+  00_input/
+    HRvLR_raw.xlsx
+    HRvLR_meta.csv
+    HPA_skeletal_muscle_annotations.tsv
+  01_normalization/
+    a_script/       <- this file lives here
+    b_reports/      <- PDF reports are written here
+    c_data/         <- processed data outputs go here
+```
+
+> **Note:** All file paths in this tutorial are relative to the project root (`A_HRvLR_2026/`). The setup chunk above sets the working directory to the project root automatically using `rprojroot`.
+
+Now that we know what we need, let us begin loading and inspecting the raw data.
+
+## Data Loading and Validation
+
+The first step is to separate our raw Excel file into two components: the **annotation columns** (protein identifiers and descriptions) and the **intensity columns** (one per sample). We also load the sample metadata from a separate CSV file and verify that the sample identifiers match perfectly.
+
+### Why this matters
+
+Proteomics data files often bundle annotation and intensity data together. We need to split them because downstream functions expect a pure numeric matrix of intensities. The metadata file provides the experimental design information (which sample belongs to which group and timepoint) that we will need for all statistical analyses.
 
 ```{r}
 #| label: norm-load
@@ -70,13 +127,19 @@ stopifnot("Sample mismatch" = setequal(colnames(intensity), metadata$Col_ID))
 intensity <- intensity[, metadata$Col_ID]  # enforce consistent column order
 ```
 
-The `stopifnot()` call is a hard contract check. If any sample name in the intensity matrix does not exactly match a `Col_ID` in the metadata — whether due to a typo, a missing sample, or a file version mismatch — the pipeline stops immediately. R's silent column recycling and partial matching mean a sample order mismatch would not throw an error on its own, yet it would corrupt every downstream association between a sample's intensities and its group label.
+> **`proteoDA`** [@thurman_proteoDA_2023] is an R package designed specifically for label-free proteomics data analysis. It provides the `DAList` container object (introduced later in this tutorial) that keeps intensity data, protein annotation, and sample metadata structurally synchronized. We chose `proteoDA` over alternatives like `DEP` or `MSstats` because it wraps `limma` directly, supports `duplicateCorrelation` for repeated-measures designs, and provides built-in normalization benchmarking.
 
-### HPA tissue filter
+The `stopifnot()` call is a **hard contract check**. If any sample name in the intensity matrix does not exactly match a `Col_ID` in the metadata --- whether due to a typo, a missing sample, or a file version mismatch --- the pipeline stops immediately. R's silent column recycling and partial matching mean a sample order mismatch would not throw an error on its own, yet it would corrupt every downstream association between a sample's intensities and its group label.
 
-DIA-NN's library-free search mode matches peptide spectra against a complete human proteome reference, which inevitably yields non-specific identifications from blood (hemoglobin chains, serum albumin), skin (keratins), and connective tissue contaminants. A blanket abundance filter would remove low-abundance muscle proteins before removing high-abundance contaminants; the tissue-relevance filter is the biologically correct first step.
+With the raw data loaded and validated, we are ready to begin filtering out proteins that are not relevant to our tissue of interest.
 
-The Human Protein Atlas (HPA) skeletal muscle annotation file provides a gene-symbol reference set. Only proteins whose gene symbol is present in this set are retained.
+## HPA Tissue-Relevance Filter
+
+### Why filter by tissue?
+
+DIA-NN's library-free search mode [@demichev2020] matches peptide spectra against a complete human proteome reference, which inevitably yields non-specific identifications from blood (hemoglobin chains, serum albumin), skin (keratins), and connective tissue contaminants. A blanket abundance filter would remove low-abundance muscle proteins before removing high-abundance contaminants. The tissue-relevance filter is the biologically correct first step.
+
+The **Human Protein Atlas (HPA)** [@uhlen2015] skeletal muscle annotation file provides a curated gene-symbol reference set of proteins known to be expressed in skeletal muscle. We retain only proteins whose gene symbol appears in this set.
 
 ```{r}
 #| label: hpa-filter
@@ -95,11 +158,13 @@ intensity  <- intensity[keep_hpa, ]
 annotation <- annotation[keep_hpa, ] |> left_join(hpa, by = c("gene" = "Gene"))
 ```
 
-The `left_join()` appends HPA annotation fields — subcellular location, protein class, interaction partners — directly to the annotation data frame, making these attributes available for downstream pathway and subcellular analyses without a separate merge step.
+The `left_join()` appends HPA annotation fields --- subcellular location, protein class, interaction partners --- directly to the annotation data frame, making these attributes available for downstream pathway and subcellular analyses without a separate merge step.
 
-### Deduplication
+> **Note:** The HPA filter is intentionally conservative. Some genuine muscle proteins may be absent from the HPA skeletal muscle list (e.g., newly characterized isoforms). However, the alternative --- retaining contaminants --- would introduce far more noise than the few true positives we might lose.
 
-DIA-NN can report multiple precursor groups for the same UniProt accession when a protein has several proteoform entries in the reference library. Retaining multiple rows per UniProt ID would artificially inflate protein counts and introduce redundant observations. The row with the highest mean intensity across all samples is kept, as it represents the most reliably detected peptide evidence.
+## Deduplication
+
+DIA-NN can report multiple precursor groups for the same UniProt accession when a protein has several **proteoform** entries (different post-translational modifications or splice variants) in the reference library. Retaining multiple rows per UniProt ID would artificially inflate protein counts and introduce redundant observations. We keep the row with the highest mean intensity across all samples, as it represents the most reliably detected peptide evidence.
 
 ```{r}
 #| label: deduplication
@@ -110,7 +175,7 @@ if (any(duplicated(annotation$uniprot_id))) {
   keep_idx <- annotation |>
     mutate(row_idx = row_number()) |>
     group_by(uniprot_id) |>
-    slice_max(row_mean, n = 1, with_ties = FALSE) |>
+    slice_max(row_mean, n = 1, with_ties = FALSE) |>  # keep highest-mean row per ID
     pull(row_idx)
   annotation <- annotation[keep_idx, ]
   intensity  <- intensity[keep_idx, ]
@@ -118,9 +183,13 @@ if (any(duplicated(annotation$uniprot_id))) {
 }
 ```
 
-### DAList assembly and missingness filter
+With tissue-irrelevant proteins and duplicates removed, we now package the data into a structured container and apply our missingness threshold.
 
-The `proteoDA` package [@thurman_proteoDA_2023] organizes data, annotation, and metadata into a `DAList` object — a named list whose three slots are kept structurally synchronized through all filtering, normalization, and modeling operations. This eliminates the most common source of silent errors in proteomics pipelines: row- or column-order divergence between the intensity matrix and the annotation or metadata tables.
+## DAList Assembly and Missingness Filter
+
+### What is a DAList?
+
+The `proteoDA` package organizes data, annotation, and metadata into a **`DAList` object** --- a named list whose three slots (data, annotation, metadata) are kept structurally synchronized through all filtering, normalization, and modeling operations [@thurman_proteoDA_2023]. This eliminates the most common source of silent errors in proteomics pipelines: row- or column-order divergence between the intensity matrix and the annotation or metadata tables.
 
 ```{r}
 #| label: assemble-dalist
@@ -135,9 +204,15 @@ dal <- DAList(data = int_mat, annotation = annot_df, metadata = meta_df)
 dal <- zero_to_missing(dal)
 ```
 
-DIA-NN encodes non-detections as numeric zeros rather than `NA`. The `zero_to_missing()` function converts all zeros to `NA`, after which limma fits each protein using only its observed samples — the statistically correct treatment for instrument-censored data.
+### Converting zeros to missing values
 
-After zero conversion, proteins are filtered by group-wise detection: a protein must have at least 5 non-missing values (of 8) in at least 1 of the 6 Group_Time cells. The group-wise logic preserves condition-specific proteins that would be removed by a naive global filter.
+DIA-NN encodes non-detections as numeric zeros rather than `NA`. The `zero_to_missing()` function converts all zeros to `NA`. This is critical because a zero intensity does not mean "this protein has zero abundance" --- it means "the instrument did not detect this protein in this run." After conversion, downstream statistical models (like `limma`) fit each protein using only its observed samples, which is the statistically correct treatment for instrument-censored data.
+
+### Group-wise missingness filter
+
+After zero conversion, we filter proteins by **group-wise detection**: a protein must have at least 5 non-missing values (of 8) in at least 1 of the 6 Group_Time cells. The group-wise logic preserves condition-specific proteins that would be removed by a naive global filter. For example, a protein expressed only in HR subjects at T3 would be removed by a "detected in 50% of all samples" rule, but retained by our group-wise threshold because it passes within the HR_T3 group.
+
+This threshold (5 of 8 = 62.5%) is a standard choice for DIA-MS proteomics. Requiring too few detections per group leads to unreliable variance estimates; requiring too many discards condition-specific biology [@valikangas2018].
 
 ```{r}
 #| label: missingness-filter
@@ -149,6 +224,16 @@ dal <- filter_proteins_by_group(dal, min_reps = cfg$miss_min_reps,
                                 grouping_column = "Group_Time")
 ```
 
+> **`filter_proteins_by_group()`** is a `proteoDA` function that removes proteins failing the group-wise detection criterion. The key arguments are:
+>
+> - `min_reps`: minimum number of non-missing samples required within a group (here, 5 of 8)
+> - `min_groups`: minimum number of groups that must pass the threshold (here, 1 of 6)
+> - `grouping_column`: the metadata column defining experimental groups
+
+### Filtering summary
+
+The table below shows how many proteins survived each filtering step:
+
 ```{r}
 #| label: show-pipeline-summary
 #| eval: true
@@ -157,24 +242,30 @@ suppressPackageStartupMessages({ library(dplyr); library(readr); library(readxl)
 
 if (file.exists("01_normalization/c_data/05_normalization_supp.xlsx")) {
   readxl::read_excel("01_normalization/c_data/05_normalization_supp.xlsx",
-                     sheet = "Pipeline_Summary")
+                     sheet = "Pipeline_Summary", skip = 3)
 }
 ```
 
-### Outlier detection (3-method consensus)
+**Interpretation:** Each step removes a different class of problematic proteins. The HPA filter removes tissue-irrelevant contaminants (typically blood and skin proteins). The missingness filter removes proteins with too few detections to support reliable statistical testing. Together, these filters reduce the dataset from the raw identification count to a focused set of reliably quantified skeletal muscle proteins.
 
-Sample outlier detection balances false positives — removing a biologically extreme but technically sound sample — against false negatives — retaining a failed sample that will inflate within-group variance. A multi-method consensus approach [@huang2024] addresses this by requiring independent corroboration: a sample is flagged as an outlier only if at least `k = 2` of 3 detection methods agree.
+Now that we have a filtered protein matrix, we need to check whether any individual samples are technically compromised. This is where outlier detection comes in.
 
-#### Method 1: Sample missingness
+## Outlier Detection (3-Method Consensus)
 
-Per-sample missingness percentages are computed from the filtered data matrix. An absolute threshold is set using the Tukey fence (Q3 + 1.5 × IQR) of the distribution of per-sample missingness, and a within-subject delta threshold is computed from the distribution of pairwise missingness changes. A sample is flagged if it exceeds either threshold.
+### Why use multiple methods?
+
+Sample outlier detection must balance two risks: **false positives** (removing a biologically extreme but technically sound sample) and **false negatives** (retaining a failed sample that will inflate within-group variance). A multi-method consensus approach addresses this by requiring independent corroboration [@huang2024]: a sample is flagged as an outlier only if at least **k = 2 of 3** detection methods agree.
+
+### Method 1: Sample Missingness
+
+We compute the percentage of missing values per sample. Samples with unusually high missingness --- or an unusually large change in missingness relative to the same subject's other timepoints --- are flagged. We define "unusual" using the **Tukey fence** (Q3 + 1.5 x IQR), a robust outlier threshold from classical exploratory data analysis [@tukey1977].
 
 ```{r}
 #| label: outlier-missingness
 #| eval: false
 
 pct_missing <- colMeans(is.na(dal$data)) * 100
-miss_thresh <- quantile(pct_missing, 0.75) + 1.5 * IQR(pct_missing)
+miss_thresh <- quantile(pct_missing, 0.75) + 1.5 * IQR(pct_missing)  # Tukey fence
 
 miss_info <- dal$metadata |>
   select(Col_ID, Subject_ID, Group, Timepoint) |>
@@ -190,9 +281,11 @@ miss_info$miss_flag <- miss_info$pct_missing > miss_thresh |
   miss_info$delta_missing > delta_thresh
 ```
 
-#### Method 2: PCA Mahalanobis distance
+The `delta_missing` column captures how different each sample's missingness is from its within-subject siblings. A subject whose T2 sample has 40% missingness while T1 and T3 have 10% likely had a technical problem at T2.
 
-PCA is run on complete-case proteins after log2 transformation. Each sample's position in PC1–PC3 space is summarized by its Mahalanobis distance from the centroid, and samples exceeding the chi-squared critical value at 99% with 3 degrees of freedom are flagged.
+### Method 2: PCA Mahalanobis Distance
+
+**Principal Component Analysis (PCA)** is a technique that reduces the thousands of protein measurements per sample to a small number of summary dimensions (principal components) that capture the major patterns of variation. We run PCA on the complete-case proteins (those with no missing values) after log2 transformation. Each sample's position in PC1--PC3 space is summarized by its **Mahalanobis distance** from the centroid --- a measure of how far a sample is from the "center" of the data in multivariate space. Samples exceeding the chi-squared critical value at 99% confidence with 3 degrees of freedom are flagged.
 
 ```{r}
 #| label: outlier-pca
@@ -200,15 +293,17 @@ PCA is run on complete-case proteins after log2 transformation. Each sample's po
 
 complete_mat <- dal$data[rowSums(is.na(dal$data)) == 0, ]
 pca_pre  <- run_pca(complete_mat, dal$metadata, log_transform = TRUE)
-pc3      <- pca_pre$pca$x[, 1:3]
-mahal    <- mahalanobis(pc3, colMeans(pc3), cov(pc3))
+pc3      <- pca_pre$pca$x[, 1:3]  # first 3 principal components
+mahal    <- mahalanobis(pc3, colMeans(pc3), cov(pc3))  # distance from centroid
 pca_flags <- tibble(Col_ID = colnames(dal$data), mahal_dist = mahal,
                     pca_flag = mahal > qchisq(1 - cfg$mahal_p, df = 3))
 ```
 
-#### Method 3: MAD on sample-median intensity
+> **Note:** Mahalanobis distance accounts for the correlation structure between PCs, unlike simple Euclidean distance. A sample that is far along PC1 but near the mean on PC2 and PC3 might have a moderate Euclidean distance but a small Mahalanobis distance if PC1 has high variance.
 
-The median log2 intensity is computed per sample, and samples deviating by more than 3 MADs from the cohort median are flagged. MAD is preferred over standard deviation because it is not inflated by the very outliers being detected.
+### Method 3: MAD on Sample-Median Intensity
+
+The **median log2 intensity** is computed per sample. Samples deviating by more than 3 **MADs** (Median Absolute Deviations) from the cohort median are flagged. We use MAD rather than standard deviation because MAD is **robust** --- it is not inflated by the very outliers we are trying to detect.
 
 ```{r}
 #| label: outlier-mad
@@ -221,9 +316,9 @@ mad_flags  <- tibble(Col_ID = names(samp_med), sample_median = samp_med,
                      mad_flag = abs(samp_med - global_med) > cfg$mad_k * mad_val)
 ```
 
-#### Consensus and removal
+### Consensus and Removal
 
-The three flag vectors are combined per sample. A consensus outlier is any sample where at least `k = 2` flags are `TRUE`. Only the flagged sample is removed — not the subject's other timepoints — since `duplicateCorrelation` in limma explicitly supports incomplete block designs.
+The three flag vectors are combined per sample. A **consensus outlier** is any sample where at least k = 2 flags are `TRUE`. Only the flagged sample is removed --- not the subject's other timepoints --- since `duplicateCorrelation` in `limma` explicitly supports incomplete block designs [@smyth2005].
 
 ```{r}
 #| label: outlier-consensus
@@ -241,13 +336,17 @@ if (length(outlier_ids) > 0) {
 }
 ```
 
+### Outlier diagnostics
+
+The table below shows the top 10 samples ranked by number of flags. A sample with `consensus_outlier = TRUE` was removed from all subsequent analyses:
+
 ```{r}
 #| label: show-outlier-diagnostics
 #| eval: true
 
 if (file.exists("01_normalization/c_data/05_normalization_supp.xlsx")) {
   readxl::read_excel("01_normalization/c_data/05_normalization_supp.xlsx",
-                     sheet = "Outlier_Diagnostics") |>
+                     sheet = "Outlier_Diagnostics", skip = 3) |>
     dplyr::select(any_of(c("Col_ID", "pct_missing", "delta_missing", "mahal_dist",
                             "miss_flag", "pca_flag", "mad_flag", "n_flags",
                             "consensus_outlier"))) |>
@@ -256,14 +355,28 @@ if (file.exists("01_normalization/c_data/05_normalization_supp.xlsx")) {
 }
 ```
 
-### Normalization (cycloess)
+**Interpretation:** Samples flagged by all three methods have converging evidence of technical failure --- high missingness, unusual PCA position, and abnormal median intensity. Samples flagged by only one method are likely biologically extreme (e.g., a subject with an unusually strong acute response) rather than technically compromised. The consensus rule (k >= 2) protects against removing these biologically interesting samples.
 
-Cyclic loess normalization [@bolstad_cyclic_loess_2003] corrects for non-linear, intensity-dependent systematic biases between samples. For each sample pair, an MA-plot loess smoother is fit and subtracted, iterating over all pairs until corrections stabilize. This approach is preferable to quantile normalization for DIA-MS data where genuine biological differences can manifest as global intensity shifts — cycloess corrects non-linear technical biases while preserving true biological differences in overall abundance level.
+With compromised samples removed, we are ready to correct the remaining systematic biases through normalization.
+
+## Normalization (Cyclic Loess)
+
+### What is cyclic loess normalization?
+
+**Cyclic loess (cycloess)** normalization [@bolstad_cyclic_loess_2003] corrects for non-linear, intensity-dependent systematic biases between samples. The idea is straightforward:
+
+1. For each pair of samples, plot the difference in intensity (M = log-ratio) against the average intensity (A = mean log-abundance) --- this is called an **MA-plot**.
+2. Fit a smooth curve (loess) through the MA-plot. Any systematic trend in this curve represents a technical bias that depends on protein abundance.
+3. Subtract the fitted curve to remove the bias.
+4. Repeat for all sample pairs, cycling through until corrections stabilize.
+
+We chose cycloess over **quantile normalization** because quantile normalization forces all samples to have identical intensity distributions, which can erase genuine biological differences that manifest as global intensity shifts. Cycloess corrects non-linear technical biases while preserving true biological differences in overall abundance level --- an important distinction for DIA-MS data where treatment effects may shift the entire distribution [@valikangas2018].
 
 ```{r}
 #| label: cycloess-normalization
 #| eval: false
 
+# Generate pre-normalization QC reports for comparison
 write_norm_report(dal, grouping_column = "Group_Time",
                   output_dir = cfg$report_dir,
                   filename = "01_norm_comparison.pdf", overwrite = TRUE)
@@ -272,15 +385,22 @@ write_qc_report(dal, color_column = "Group_Time",
                 output_dir = cfg$report_dir,
                 filename = "02_qc_pre.pdf", overwrite = TRUE)
 
-dal_pre <- dal
+dal_pre <- dal  # snapshot for benchmark comparison
 saveRDS(dal_pre, file.path(cfg$data_dir, "01_DAList_prenorm.rds"))
 
-dal <- normalize_data(dal, norm_method = cfg$norm_method)
+dal <- normalize_data(dal, norm_method = cfg$norm_method)  # apply cycloess
 
+# Generate post-normalization QC report
 write_qc_report(dal, color_column = "Group_Time",
                 output_dir = cfg$report_dir,
                 filename = "03_qc_post.pdf", overwrite = TRUE)
 ```
+
+> **`normalize_data()`** is the core normalization function in `proteoDA`. The `norm_method` argument accepts any of: `"log2"`, `"median"`, `"mean"`, `"vsn"`, `"quantile"`, `"cycloess"`, `"rlr"`, `"gi"`. Internally, it dispatches to `limma::normalizeBetweenArrays()` for most methods. The output is a modified `DAList` where `dal$data` now contains the normalized log2 intensities.
+
+### Inspecting the normalized matrix
+
+Let us examine the dimensions and missingness of the final normalized matrix:
 
 ```{r}
 #| label: normalized-matrix-preview
@@ -299,9 +419,23 @@ if (file.exists("01_normalization/c_data/02_normalized.csv")) {
 }
 ```
 
-### Normalization benchmark (PRONE framework)
+**Interpretation:** The normalized matrix retains the missing values from the original data --- normalization does not fill in missing values (that is the job of Stage 2: Imputation). The percentage of missing values tells us how much data will need to be either imputed or handled by `limma`'s built-in missing-value support in Stage 3.
 
-To validate the cycloess choice empirically, eight normalization methods are benchmarked against three quantitative metrics from the PRONE framework [@arend_PRONE_2025]. PCV (pooled within-group coefficient of variation, computed on linear-scale intensities per @brenes2024) and PMAD (pooled within-group median absolute deviation) measure technical noise reduction, while COR (mean pairwise within-group Pearson correlation) measures biological coherence. A composite rank — the mean of the three per-metric ranks — identifies the best performer.
+Now that we have applied our chosen normalization method, we should verify that it was actually the best choice. The next section benchmarks cycloess against seven alternative methods.
+
+## Normalization Benchmark (PRONE Framework)
+
+### Why benchmark?
+
+Different normalization methods make different assumptions about the data. Rather than relying solely on theoretical arguments, we validate our choice empirically by benchmarking eight methods against three quantitative metrics from the **PRONE framework** [@arend_PRONE_2025]. This is a data-driven way to confirm that cycloess is optimal for our specific dataset.
+
+### The three metrics
+
+- **PCV** (Pooled Coefficient of Variation): measures technical noise within biological groups. Computed on linear-scale intensities per @brenes2024. Lower is better --- it means samples within the same group are more consistent.
+- **PMAD** (Pooled Median Absolute Deviation): another measure of within-group dispersion, but more robust to extreme values than PCV. Lower is better.
+- **COR** (Mean Pairwise Correlation): the average Pearson correlation between samples in the same group. Higher is better --- it means biological replicates look more similar to each other.
+
+A **composite rank** --- the mean of the three per-metric ranks --- identifies the best overall performer. The method with the lowest composite rank achieves the best balance across all three criteria.
 
 ```{r}
 #| label: normalization-benchmark
@@ -325,6 +459,8 @@ norm_scores <- lapply(methods, function(m) {
 write_csv(norm_scores, file.path(cfg$data_dir, "04_norm_quality_scores.csv"))
 ```
 
+### Benchmark results
+
 ```{r}
 #| label: show-norm-scores
 #| eval: true
@@ -337,27 +473,38 @@ if (file.exists("01_normalization/c_data/04_norm_quality_scores.csv")) {
 }
 ```
 
-### Export and intermediates
+**Interpretation:** The method with the lowest composite rank is the best overall performer for this dataset. If cycloess ranks first or near-first, our a priori choice is empirically validated. If another method outperforms cycloess, we would need to reconsider --- but cycloess consistently performs well on DIA-MS datasets because it handles the non-linear biases characteristic of this acquisition mode without forcing identical distributions [@valikangas2018].
 
-The script exports the normalized matrix as CSV, the full DAList as RDS, and computes all plot-ready data objects (filter bar chart data, missingness bar chart, per-subject variability, eta-squared variance partition, pre/post PCA scores) which are serialized into `00_report_intermediates.rds` for consumption by `02_norm_reports.R`.
+> **Note:** The `"log2"` method simply applies a log2 transformation without any between-sample correction. It serves as the baseline --- any normalization method should improve upon log2-only transformation.
+
+## Export and Intermediates
+
+The final step of the core pipeline exports the normalized matrix in two formats and prepares all plot-ready data objects for the reporting script.
 
 ```{r}
 #| label: export
 #| eval: false
 
+# CSV: annotation columns + normalized intensities (human-readable, portable)
 export_df <- bind_cols(
   as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
   as_tibble(dal$data))
 write_csv(export_df, file.path(cfg$data_dir, "02_normalized.csv"))
+
+# RDS: full DAList object (preserves metadata, factors, and structure)
 saveRDS(dal, file.path(cfg$data_dir, "03_DAList_normalized.rds"))
 
 # Compute plot data and save intermediates for 02_norm_reports.R
 saveRDS(intermediates, file.path(cfg$data_dir, "00_report_intermediates.rds"))
 ```
 
-## Script 2: `02_norm_reports.R`
+The CSV is the **primary output** consumed by Stage 2 (Imputation) and Stage 3 (Differential Expression). The RDS preserves the full `DAList` structure including factor levels and metadata, which is essential for exact reproducibility of downstream `proteoDA` operations.
 
-This script reads `00_report_intermediates.rds` and produces two outputs without re-running any computation:
+With the core computation complete, the reporting script generates publication-quality diagnostics from the saved intermediates. We describe these outputs next.
+
+## Diagnostic Reports
+
+The reporting script (`02_norm_reports.R`) reads the pre-computed `00_report_intermediates.rds` file and produces two outputs without re-running any computation.
 
 ### 4-page diagnostic PDF (`04_diagnostics.pdf`)
 
@@ -388,17 +535,35 @@ int <- readRDS(file.path(cfg$data_dir, "00_report_intermediates.rds"))
 # -> 05_normalization_supp.xlsx (4 sheets)
 ```
 
-## Stage outputs
+## Stage Outputs
+
+The complete list of files produced by Stage 1:
 
 | File | Description |
 |------|-------------|
-| `b_reports/01_norm_comparison.pdf` | `write_norm_report()` — 8 normalization methods side-by-side (density, boxplot) |
+| `b_reports/01_norm_comparison.pdf` | `write_norm_report()` --- 8 normalization methods side-by-side (density, boxplot) |
 | `b_reports/02_qc_pre.pdf` | QC before normalization: boxplots, correlation heatmap, PCA |
-| `b_reports/03_qc_post.pdf` | QC after cycloess: same layout — compare to pre for normalization effect |
+| `b_reports/03_qc_post.pdf` | QC after cycloess: same layout --- compare to pre for normalization effect |
 | `b_reports/04_diagnostics.pdf` | 4 pages: protein filtering + detection; outlier diagnostics (3 methods); post-norm PCA; variability summary |
 | `c_data/00_report_intermediates.rds` | Serialized plot-ready objects for `02_norm_reports.R` |
 | `c_data/01_DAList_prenorm.rds` | DAList pre-normalization (reference for PRONE benchmark) |
-| `c_data/02_normalized.csv` | **PRIMARY** — cycloess-normalized matrix (4 annotation cols + sample cols) |
-| `c_data/03_DAList_normalized.rds` | **PRIMARY** — normalized DAList with full metadata |
+| `c_data/02_normalized.csv` | **PRIMARY** --- cycloess-normalized matrix (4 annotation cols + sample cols) |
+| `c_data/03_DAList_normalized.rds` | **PRIMARY** --- normalized DAList with full metadata |
 | `c_data/04_norm_quality_scores.csv` | PRONE rankings for 8 normalization methods |
 | `c_data/05_normalization_supp.xlsx` | 4-sheet workbook: Pipeline_Summary, Norm_Ranking, Outlier_Diagnostics, Filtered_Proteins |
+
+We now have a quality-controlled, normalized protein abundance matrix. The next stage (Stage 2: Imputation) will characterize and address the remaining missing values before we proceed to differential expression analysis in Stage 3.
+
+## Session Info
+
+```{r}
+#| label: session-info
+#| eval: true
+
+sessionInfo()
+```
+
+## References
+
+::: {#refs}
+:::
