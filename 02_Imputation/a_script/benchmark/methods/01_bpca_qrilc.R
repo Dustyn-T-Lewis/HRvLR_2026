@@ -14,10 +14,10 @@ impute_BPCA_QRILC <- function(mat, meta, is_mnar, ...) {
   mar_idx <- which(has_na & !mnar_flag)
   mnar_idx <- which(has_na & mnar_flag)
 
-  if (length(mar_idx) > 0) {
+  if (length(mar_idx)) {
     imp[mar_idx, ] <- MsCoreUtils::impute_matrix(mat[mar_idx, , drop = FALSE], method = "bpca")
   }
-  if (length(mnar_idx) > 0) {
+  if (length(mnar_idx)) {
     imp[mnar_idx, ] <- MsCoreUtils::impute_matrix(mat[mnar_idx, , drop = FALSE], method = "QRILC")
   }
   # Fallback for any remaining NAs (e.g., BPCA failure on high-missingness rows)

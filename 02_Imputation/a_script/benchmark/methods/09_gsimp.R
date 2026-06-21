@@ -29,7 +29,7 @@ impute_GSimp <- function(mat, meta, is_mnar, ...) {
         # Sample from truncated normal below the observation threshold
         proposal <- rnorm(100, mean = mu - 1.5 * s, sd = s * 0.5)
         proposal <- proposal[proposal < obs_min]
-        if (length(proposal) > 0) {
+        if (length(proposal)) {
           imp[i, j] <- sample(proposal, 1)
         } else {
           imp[i, j] <- mu - 2 * s

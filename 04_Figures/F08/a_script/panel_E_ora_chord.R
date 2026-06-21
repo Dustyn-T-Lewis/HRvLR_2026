@@ -34,7 +34,7 @@ DPI     <- 300
 PW_COLORS_10 <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E",
                    "#E6AB02", "#A6761D", "#666666", "#1F78B4", "#FB9A99")
 
-# -- Step 1: Load DEP results & build pool -----------------------------------
+# Load DEP results & build pool
 dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
 all_genes <- unique(dep_df$gene)
 
@@ -77,7 +77,7 @@ display_lfc <- dep_pool %>%
 message("Primary contrast distribution:")
 print(table(display_lfc$primary_contrast))
 
-# -- Step 2: ORA with Jaccard 0.3 -------------------------------------------
+# ORA with Jaccard 0.3
 pw_collection <- build_pathway_collection(min_size = 15, max_size = 500)
 
 up_genes   <- display_lfc %>% filter(display_logFC > 0) %>% pull(gene)
@@ -155,7 +155,7 @@ if (nrow(ora_final) == 0) {
   quit(save = "no", status = 0)
 }
 
-# -- Step 3: Build chord data -----------------------------------------------
+# Chord data
 chord_links <- list()
 for (i in seq_len(nrow(ora_final))) {
   genes <- ora_final$overlapGenes[[i]]
@@ -207,7 +207,7 @@ if (n_missing > 0) {
   link_df <- link_df %>% filter(!is.na(primary_contrast))
 }
 
-# -- Step 4: Direction assignment per pathway --------------------------------
+# Direction assignment per pathway
 pw_direction <- link_df %>%
   group_by(pathway, pathway_full, pathway_label, pathway_padj, pathway_db,
            pathway_size) %>%
@@ -232,7 +232,7 @@ for (i in seq_len(nrow(pw_direction))) {
     pw_direction$direction[i], pw_direction$n_overlap[i]))
 }
 
-# -- Step 5: Order proteins & pathways ---------------------------------------
+# Order proteins & pathways
 pw_direction <- pw_direction %>% arrange(direction, pathway_padj)
 pathways_ordered <- pw_direction$pathway_label
 
@@ -255,7 +255,7 @@ proteins_ordered <- gene_primary_pw %>%
   pull(gene) %>%
   unique()
 
-# -- Step 6: Save chord data CSVs -------------------------------------------
+# Save chord data CSVs
 write_csv(
   link_df %>% select(gene, pathway_label, pathway_padj, pathway_db,
                       primary_contrast, display_logFC),
@@ -268,7 +268,7 @@ write_csv(
 )
 message("\nChord data saved to c_data/panel_E/")
 
-# -- Step 7: Render chord diagram --------------------------------------------
+# Render chord diagram
 logfc_color <- function(lfc) {
   lfc_clamped <- pmin(pmax(lfc, -2), 2)
   colorRamp2(c(-2, 0, 2), c("#4393C3", "white", "#D6604D"))(lfc_clamped)

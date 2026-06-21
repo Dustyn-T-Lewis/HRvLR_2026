@@ -28,7 +28,7 @@ dir.create(RPT, recursive = TRUE, showWarnings = FALSE)
 pdf_device <- get_pdf_device()
 PF_W <- 220
 
-# -- Step 1: Load data --------------------------------------------------------
+# Load data
 
 dal      <- readRDS("02_Imputation/c_data/01_DAList_imputed.rds")
 dep_df   <- read_csv("03_DEP/c_data/03_combined_results.csv",
@@ -39,14 +39,14 @@ imp_csv  <- read_csv("02_Imputation/c_data/01_imputed.csv",
 meta <- dal$metadata
 sample_cols <- meta$Col_ID
 
-# -- Step 2: Build imputed matrix ----------------------------------------------
+# Imputed matrix
 
 mat_imp <- imp_csv %>%
   select(uniprot_id, all_of(sample_cols)) %>%
   column_to_rownames("uniprot_id") %>%
   as.matrix()
 
-# -- Step 3: Design matrix + duplicateCorrelation -----------------------------
+# Design + duplicateCorrelation
 # HRvLR design: Group_Time has levels HR_T1, HR_T2, HR_T3, LR_T1, LR_T2, LR_T3
 # For Training contrasts we need T2 - T1 within each group.
 
@@ -68,7 +68,7 @@ cm <- makeContrasts(
   levels = design
 )
 
-# -- Step 4: Define Training_HR gene sets -----------------------------------
+# Training_HR gene sets
 
 imp_ids <- rownames(mat_imp)
 
@@ -85,7 +85,7 @@ sets_pi <- list(
 message(sprintf("Gene sets (Pi < 0.05): up = %d, down = %d",
                 length(sets_pi$up), length(sets_pi$down)))
 
-# -- Step 5: Run fry -----------------------------------------------------------
+# Run fry
 
 run_fry_set <- function(idx, set_name) {
   if (length(idx) < 3) return(tibble(set = set_name, n = length(idx),
@@ -107,7 +107,7 @@ fry_all <- bind_rows(fry_up, fry_dn) %>%
 
 write_csv(fry_all, file.path(DAT, "panel_C_fry", "fry_results_all.csv"))
 
-# -- Step 6: Driving proteins + leading-edge ORA -------------------------------
+# Driving proteins + leading-edge ORA
 
 driving_up <- dep_df %>%
   filter(uniprot_id %in% sets_pi$up_ids, uniprot_id %in% imp_ids,
@@ -150,7 +150,7 @@ ora_leading_dn <- if (nrow(driving_dn) >= 5) {
     error = function(e) tibble())
 } else tibble()
 
-# -- Step 7: Barcode data -----------------------------------------------------
+# Barcode data
 
 t_rank <- dep_df %>%
   filter(uniprot_id %in% imp_ids, !is.na(t_Training_LR)) %>%
@@ -173,7 +173,7 @@ t_rank$es_down <- running_es(t_rank$t_Training_LR, t_rank$in_down)
 n_all <- nrow(t_rank)
 txt_s <- scale_text(BASE_STAT, PF_W)
 
-# -- Step 8: Barcode visualization -- both Up and Down -------------------------
+# Barcode visualization, both Up and Down
 
 HR_COLOR <- unname(CONTRAST_COLORS["Training_HR"])
 LR_COLOR <- unname(CONTRAST_COLORS["Training_LR"])
@@ -342,7 +342,7 @@ ggsave(file.path(RPT, "panel_C_fry_MAIN.pdf"), pC_fry,
 ggsave(file.path(RPT, "panel_C_fry_MAIN.png"), pC_fry,
        width = PF_W + 80, height = 175, units = "mm", dpi = 300)
 
-# -- Step 9b: Leading-edge ORA bar chart (SUPP) --------------------------------
+# Leading-edge ORA bar chart (SUPP)
 
 make_ora_bars <- function(ora_df, set_label, bar_color, show_xaxis = FALSE) {
   if (nrow(ora_df) == 0) return(NULL)

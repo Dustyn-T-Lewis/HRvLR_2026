@@ -26,7 +26,7 @@ dir.create(file.path(DAT, "panel_D_fry"), recursive = TRUE, showWarnings = FALSE
 
 pdf_device <- get_pdf_device()
 
-# -- Step 1: Load data ---------------------------------------------------------
+# Load data
 
 dal <- readRDS("02_Imputation/c_data/01_DAList_imputed.rds")
 dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
@@ -40,7 +40,7 @@ avail_samples <- setdiff(names(imp_csv), ann_cols)
 sample_cols <- intersect(meta$Col_ID, avail_samples)
 meta <- meta %>% filter(Col_ID %in% sample_cols)
 
-# -- Step 2: Build imputed matrix ----------------------------------------------
+# Imputed matrix
 
 mat_imp <- imp_csv %>%
   select(uniprot_id, all_of(sample_cols)) %>%
@@ -50,7 +50,7 @@ mat_imp <- imp_csv %>%
 n_imp <- nrow(mat_imp)
 message(sprintf("Imputed matrix: %d proteins x %d samples", n_imp, ncol(mat_imp)))
 
-# -- Step 3: Design + duplicateCorrelation -------------------------------------
+# Design + duplicateCorrelation
 
 meta$subject <- sub("_T[123]$", "", meta$Col_ID)
 meta$Group_Time <- factor(meta$Group_Time)
@@ -66,7 +66,7 @@ message(sprintf("Within-subject correlation: %.4f", cor_val))
 avail <- colnames(design)
 message(sprintf("Design columns: %s", paste(avail, collapse = ", ")))
 
-# -- Step 4: fry-based barcode for both pairs ----------------------------------
+# fry-based barcode for both pairs
 
 # Pair definitions: source contrast (define gene sets) -> target contrast (rank against)
 pair_defs <- list(

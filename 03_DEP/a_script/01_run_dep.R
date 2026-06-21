@@ -70,7 +70,7 @@ cat(sprintf("Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
 dal_norm <- readRDS(cfg$norm_rds)
 dal_meta <- as.data.frame(dal_norm$metadata)
 missing_meta_cols <- setdiff(required_meta_cols, names(dal_meta))
-if (length(missing_meta_cols) > 0) {
+if (length(missing_meta_cols)) {
   stop(sprintf(
     "Missing required metadata columns in normalized DAList: %s",
     paste(missing_meta_cols, collapse = ", ")

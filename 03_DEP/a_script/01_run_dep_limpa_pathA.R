@@ -74,7 +74,7 @@ norm_meta <- as.data.frame(dal_norm$metadata)
 
 stopifnot(all(c("Run", "Col_ID") %in% colnames(run_map)))
 missing_runs <- setdiff(colnames(y), run_map$Run)
-if (length(missing_runs) > 0) {
+if (length(missing_runs)) {
   stop("Runs in report not in run_map: ", paste(head(missing_runs, 5), collapse = ", "))
 }
 

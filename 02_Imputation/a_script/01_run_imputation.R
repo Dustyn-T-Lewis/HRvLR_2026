@@ -59,7 +59,7 @@ rownames(mat) <- feature_id
 
 dal_norm <- readRDS(cfg$norm_rds)
 missing_meta_cols <- setdiff(required_meta_cols, names(dal_norm$metadata))
-if (length(missing_meta_cols) > 0) {
+if (length(missing_meta_cols)) {
   stop(sprintf(
     "Missing required metadata columns in normalized DAList: %s",
     paste(missing_meta_cols, collapse = ", ")
