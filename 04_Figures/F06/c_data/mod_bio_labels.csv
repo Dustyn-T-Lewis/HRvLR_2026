@@ -1,0 +1,12 @@
+module_color,module_id,bio_label,n_proteins,display_label
+turquoise,M1,NA,285,M1: turquoise (n=285)
+blue,M2,NA,271,M2: blue (n=271)
+brown,M3,NA,187,M3: brown (n=187)
+yellow,M4,NA,173,M4: yellow (n=173)
+green,M5,NA,160,M5: green (n=160)
+red,M6,NA,144,M6: red (n=144)
+black,M7,NA,112,M7: black (n=112)
+pink,M8,NA,112,M8: pink (n=112)
+magenta,M9,NA,105,M9: magenta (n=105)
+purple,M10,NA,78,M10: purple (n=78)
+greenyellow,M11,NA,35,M11: greenyellow (n=35)

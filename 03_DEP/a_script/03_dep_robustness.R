@@ -209,6 +209,18 @@ if (file.exists(cfg$imp_path)) {
   imp_mat  <- as.matrix(imp_data[, imp_samp])
   rownames(imp_mat) <- imp_data$uniprot_id
 
+  # Align imp_mat row order to ann$uniprot_id. Imputation reorders proteins
+  # by gene_order for missForest determinism, so rows in 01_imputed.csv are
+  # in a different order from the DEP DAList annotation. DAList() silently
+  # re-labels rownames(data) to match annotation while leaving values in
+  # place — without this match() step protein labels detach from intensities.
+  ord <- match(ann$uniprot_id, rownames(imp_mat))
+  if (any(is.na(ord))) {
+    stop("Imputed CSV is missing proteins from the DEP annotation.")
+  }
+  imp_mat <- imp_mat[ord, , drop = FALSE]
+  stopifnot(identical(rownames(imp_mat), ann$uniprot_id))
+
   shared_samps <- intersect(colnames(mat), colnames(imp_mat))
   meta_imp_df  <- meta[meta$sample_id %in% shared_samps, ]
 
@@ -227,6 +239,8 @@ if (file.exists(cfg$imp_path)) {
     "Acute_HR = HR_T3 - HR_T2",
     "Acute_LR = LR_T3 - LR_T2",
     "Baseline_HRvLR = HR_T1 - LR_T1",
+    "Trained_HRvLR = HR_T2 - LR_T2",
+    "Acute_HRvLR = HR_T3 - LR_T3",
     "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
     "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
   ))
@@ -341,6 +355,8 @@ contrast_labels <- c(
   Acute_HR              = "HR_T3 - HR_T2",
   Acute_LR              = "LR_T3 - LR_T2",
   Baseline_HRvLR        = "HR_T1 - LR_T1",
+  Trained_HRvLR         = "HR_T2 - LR_T2",
+  Acute_HRvLR           = "HR_T3 - LR_T3",
   Training_Interaction  = "(HR_T2-HR_T1) - (LR_T2-LR_T1)",
   Acute_Interaction     = "(HR_T3-HR_T2) - (LR_T3-LR_T2)"
 )
@@ -374,7 +390,7 @@ addStyle(wb_supp, "Response_Profiling", hdr_style,
 writeData(wb_supp, "Response_Profiling", response_diag,
           startRow = length(rp_header) + 2, headerStyle = bold_style)
 setColWidths(wb_supp, "Response_Profiling",
-             cols = 1:ncol(response_diag), widths = "auto")
+             cols = seq_len(ncol(response_diag)), widths = "auto")
 
 # Sheet 11: Bootstrap CIs
 write_supp_sheet(wb_supp, "Effect_Size_CI", c(

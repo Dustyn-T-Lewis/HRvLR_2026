@@ -1,0 +1,3 @@
+pair,contrast_x,contrast_y,n_all,pearson_all,pearson_ci_lo,pearson_ci_hi,spearman_all,spearman_ci_lo,spearman_ci_hi,sign_concordance_pct,n_sig,pearson_sig,spearman_sig,sign_conc_sig
+HR,Training_HR,Acute_HR,1924,-0.4709,-0.505,-0.4354,-0.444,-0.4792,-0.4074,33.9,138,-0.5323,-0.5282,15.9
+LR,Training_LR,Acute_LR,1917,-0.4225,-0.4586,-0.385,-0.3899,-0.4272,-0.3512,36.9,115,-0.4779,-0.5924,15.7

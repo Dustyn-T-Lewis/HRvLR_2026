@@ -1,0 +1,206 @@
+gene,quadrant,sig_cat,pathway,logFC_Acute_HR,logFC_Acute_LR
+AZGP1,Concordant Up,Ac.(LR),Adaptive Immune Response Based On Somatic ...,0.6983,0.8401
+HPRT1,Concordant Up,Ac.(LR),Adaptive Immune Response Based On Somatic ...,0.468,0.8501
+HLA-B,Concordant Up,Ac.(LR),Adaptive Immune Response Based On Somatic ...,0.1983,1.2119
+DHCR24,Concordant Up,Ac.(HR),Amyloid Precursor Protein Catabolic Process,1.2721,0.1106
+CLU,Concordant Up,Ac.(LR),Amyloid Precursor Protein Catabolic Process,0.4558,1.9579
+APOE,Concordant Up,Ac.(LR),Amyloid Precursor Protein Catabolic Process,0.0875,1.9125
+KLKB1,Concordant Up,Ac.(LR),Coagulation,0.6509,1.5192
+NAGK,Concordant Up,Ac.(HR),Defense Response To Bacterium,0.7315,0.2242
+LYZ,Concordant Up,Both,Defense Response To Gram Positive Bacterium,2.5184,3.4571
+HMGB2,Concordant Up,Ac.(HR),Defense Response To Gram Positive Bacterium,1.2382,0.7505
+H2BC4,Concordant Up,Ac.(HR),Defense Response To Gram Positive Bacterium,1.0296,0.6679
+APOL1,Concordant Up,Ac.(LR),Disruption Of Anatomical Structure In Anot...,0.0132,2.2615
+ILF3,Concordant Up,Ac.(HR),E2F Targets,1.4417,0.4164
+RPA2,Concordant Up,Ac.(HR),E2F Targets,0.9191,0.484
+SYNCRIP,Concordant Up,Ac.(HR),E2F Targets,0.7269,0.2355
+LCP1,Concordant Up,Ac.(LR),Extracellular Matrix Disassembly,1.0363,2.3295
+FLOT1,Concordant Up,Ac.(LR),Extracellular Matrix Disassembly,0.0055,1.0368
+ADD1,Concordant Up,Ac.(LR),Heme Metabolism,1.0597,1.5459
+CAT,Concordant Up,Ac.(LR),Heme Metabolism,0.4997,1.5954
+SPTB,Concordant Up,Ac.(LR),Heme Metabolism,0.4933,1.8
+BLVRB,Concordant Up,Ac.(LR),Heme Metabolism,0.3319,0.9824
+SLC2A1,Concordant Up,Ac.(LR),Heme Metabolism,0.2726,1.8231
+ANK1,Concordant Up,Ac.(LR),Heme Metabolism,0.2607,2.0896
+GCLC,Concordant Up,Ac.(LR),Heme Metabolism,0.1999,1.2044
+ALAD,Concordant Up,Ac.(LR),Heme Metabolism,0.1397,1.2143
+BPGM,Concordant Up,Ac.(LR),Heme Metabolism,0.0898,1.6431
+SERPING1,Concordant Up,Ac.(LR),Humoral Immune Response,0.4935,1.7858
+BOLA2,Concordant Up,Ac.(HR),Intracellular Iron Ion Homeostasis,0.7943,0.0744
+CP,Concordant Up,Ac.(LR),Intracellular Iron Ion Homeostasis,0.7422,1.8379
+MPP1,Concordant Up,Ac.(LR),Leukocyte Chemotaxis,0.3337,1.1857
+FN1,Concordant Up,Both,Myeloid Leukocyte Activation,1.0417,1.0083
+ANXA1,Concordant Up,Ac.(HR),Myeloid Leukocyte Activation,0.9872,0.4742
+SNCA,Concordant Up,Ac.(LR),Myeloid Leukocyte Activation,0.2695,2.912
+OSTF1,Concordant Up,Ac.(HR),Other,2.2854,0.9139
+GPC1,Concordant Up,Ac.(HR),Other,2.1538,0.8574
+FERMT3,Concordant Up,Both,Other,2.1293,1.6445
+SYNE2,Concordant Up,Both,Other,1.9662,3.1172
+RRAD,Concordant Up,Both,Other,1.8427,1.2082
+TPPP3,Concordant Up,Ac.(HR),Other,1.746,0.1604
+DCAF8,Concordant Up,Ac.(HR),Other,1.6414,2.0559
+ARHGDIB,Concordant Up,Both,Other,1.4705,1.4383
+NUBP2,Concordant Up,Ac.(HR),Other,1.4337,1.0593
+IFITM1,Concordant Up,Ac.(HR),Other,1.2959,1.0329
+ARHGAP1,Concordant Up,Ac.(HR),Other,1.2134,0.0199
+CD63,Concordant Up,Ac.(HR),Other,1.0079,0.106
+APMAP,Concordant Up,Both,Other,0.9341,0.9551
+DNAJB4,Concordant Up,Ac.(HR),Other,0.9125,0.2619
+ARPC2,Concordant Up,Ac.(HR),Other,0.9065,0.2068
+RPLP1,Concordant Up,Ac.(HR),Other,0.8925,0.2062
+RPL7A,Concordant Up,Ac.(HR),Other,0.8749,0.3435
+HBG2,Concordant Up,Ac.(LR),Other,0.8673,2.7515
+ECHDC2,Concordant Up,Ac.(HR),Other,0.8634,0.4644
+RPL12,Concordant Up,Ac.(HR),Other,0.8501,0.0239
+TCAP,Concordant Up,Ac.(LR),Other,0.8152,1.2058
+RPL7,Concordant Up,Ac.(HR),Other,0.7834,0.0335
+RPLP2,Concordant Up,Ac.(HR),Other,0.7031,0.183
+LRG1,Concordant Up,Ac.(LR),Other,0.6675,1.319
+STOM,Concordant Up,Ac.(LR),Other,0.6539,1.7761
+MAPRE1,Concordant Up,Ac.(HR),Other,0.6436,0.0164
+NANS,Concordant Up,Ac.(LR),Other,0.6415,1.2724
+NPC2,Concordant Up,Ac.(LR),Other,0.6248,0.905
+CAP1,Concordant Up,Ac.(LR),Other,0.6218,0.9684
+TKT,Concordant Up,Ac.(LR),Other,0.5872,1.4711
+PNP,Concordant Up,Ac.(LR),Other,0.5392,2.1378
+TTR,Concordant Up,Ac.(LR),Other,0.4739,1.4918
+PITPNA,Concordant Up,Ac.(LR),Other,0.411,0.9952
+ARPC4,Concordant Up,Ac.(LR),Other,0.3647,0.8724
+PGD,Concordant Up,Ac.(LR),Other,0.3626,0.6911
+DDX6,Concordant Up,Ac.(LR),Other,0.3309,0.8173
+LXN,Concordant Up,Ac.(LR),Other,0.29,1.606
+SEPTIN6,Concordant Up,Ac.(LR),Other,0.2809,2.233
+TMOD1,Concordant Up,Ac.(LR),Other,0.2582,0.945
+MOB4,Concordant Up,Ac.(LR),Other,0.2273,0.645
+SERPINF1,Concordant Up,Ac.(LR),Other,0.1777,0.7969
+CLIC1,Concordant Up,Ac.(LR),Other,0.1416,0.815
+ARHGAP19,Concordant Up,Ac.(LR),Other,0.1398,1.4877
+DDI2,Concordant Up,Ac.(LR),Other,0.0847,1.3798
+NPM1,Concordant Up,Ac.(LR),Positive Regulation Of DNA Binding Transcr...,0.6031,0.6541
+ANXA3,Concordant Up,Ac.(LR),Positive Regulation Of DNA Binding Transcr...,0.5482,0.8334
+HNRNPUL2,Concordant Up,Ac.(HR),RNA Splicing Via Transesterification React...,1.5831,0.5005
+HNRNPA3,Concordant Up,Both,RNA Splicing Via Transesterification React...,1.1252,0.8287
+RBMX,Concordant Up,Ac.(LR),RNA Splicing Via Transesterification React...,1.0989,1.1268
+HNRNPR,Concordant Up,Both,RNA Splicing Via Transesterification React...,0.7332,0.6424
+NCL,Concordant Up,Ac.(HR),RNA Splicing Via Transesterification React...,0.7317,0.1201
+HNRNPA2B1,Concordant Up,Ac.(LR),RNA Splicing Via Transesterification React...,0.7023,1.0301
+HNRNPC,Concordant Up,Ac.(LR),RNA Splicing Via Transesterification React...,0.6385,1.2344
+LSM2,Concordant Up,Ac.(LR),RNA Splicing Via Transesterification React...,0.4059,1.0545
+HNRNPA1,Concordant Up,Ac.(LR),RNA Splicing Via Transesterification React...,0.3069,0.8924
+CSNK1A1,Concordant Up,Ac.(LR),Regulation Of Innate Immune Response,0.8148,0.8543
+LTF,Concordant Up,Both,Response To Fungus,5.0514,4.541
+S100A8,Concordant Up,Both,Response To Fungus,3.8117,5.0678
+S100A9,Concordant Up,Both,Response To Fungus,3.677,5.6525
+CTSG,Concordant Up,Ac.(LR),Response To Fungus,2.0462,2.1283
+DEFA3,Concordant Up,Ac.(LR),Response To Fungus,0.3134,2.9376
+HLA-C,Concordant Down,Ac.(HR),Adaptive Immune Response Based On Somatic ...,-1.7528,-0.8062
+CD81,Concordant Down,Both,Humoral Immune Response,-1.0713,-0.7757
+SEPTIN9,Concordant Down,Ac.(LR),Other,-0.0568,-1.1921
+COBL,Concordant Down,Ac.(LR),Other,-0.0741,-0.7471
+UBE2D1,Concordant Down,Ac.(LR),Other,-0.2054,-0.9387
+MRPL22,Concordant Down,Ac.(LR),Other,-0.2636,-0.8427
+MRPL49,Concordant Down,Ac.(LR),Other,-0.2975,-1.1654
+CALU,Concordant Down,Ac.(HR),Other,-0.5201,-0.2498
+RCSD1,Concordant Down,Both,Other,-0.6313,-0.5845
+UBA3,Concordant Down,Ac.(HR),Other,-0.6326,-0.1829
+FBP2,Concordant Down,Ac.(HR),Other,-0.6403,-0.0689
+PLIN4,Concordant Down,Ac.(HR),Other,-0.6436,-0.4
+LRRC20,Concordant Down,Ac.(HR),Other,-0.672,-0.2468
+ACSF2,Concordant Down,Ac.(HR),Other,-0.6838,-0.2142
+PHKB,Concordant Down,Ac.(HR),Other,-0.7024,-0.2216
+HMGCL,Concordant Down,Ac.(HR),Other,-0.7237,-0.1172
+COX19,Concordant Down,Ac.(HR),Other,-0.7319,-0.0251
+MYLK2,Concordant Down,Ac.(HR),Other,-0.7416,-0.006
+ATPAF2,Concordant Down,Ac.(HR),Other,-0.8046,-0.4678
+EPM2A,Concordant Down,Ac.(HR),Other,-0.8602,-0.4608
+PNPT1,Concordant Down,Both,Other,-0.8637,-1.0753
+CACNG1,Concordant Down,Ac.(HR),Other,-0.8681,-0.4919
+TPSB2,Concordant Down,Ac.(HR),Other,-0.9774,-0.5333
+CHCHD10,Concordant Down,Ac.(HR),Other,-1.1019,-0.3023
+KRT10,Concordant Down,Ac.(HR),Other,-1.1704,-0.827
+TPRKB,Concordant Down,Ac.(HR),Other,-1.5914,-0.0025
+MAP2K6,Concordant Down,Ac.(HR),Regulation Of Innate Immune Response,-0.6595,-0.1657
+RTN3,Discordant,Ac.(HR),Amyloid Precursor Protein Catabolic Process,0.7426,-0.5352
+FLOT2,Discordant,Ac.(LR),Amyloid Precursor Protein Catabolic Process,-0.4863,0.7312
+PPBP,Discordant,Ac.(LR),Antimicrobial Humoral Immune Response Medi...,-0.4026,1.4438
+CRIP2,Discordant,Ac.(LR),Coagulation,0.4081,-1.0071
+AQP1,Discordant,Ac.(LR),Defense Response To Gram Negative Bacterium,-0.0235,0.7582
+SRSF2,Discordant,Ac.(HR),E2F Targets,0.7276,-0.057
+XRCC6,Discordant,Inter.,E2F Targets,-0.5883,0.3784
+RPA3,Discordant,Inter.,E2F Targets,-0.5948,0.3459
+FSCN1,Discordant,Ac.(HR),Extracellular Matrix Disassembly,1.0717,-0.2756
+PBXIP1,Discordant,Inter.,Extracellular Matrix Disassembly,0.5219,-0.2625
+EPB41,Discordant,Ac.(LR),Heme Metabolism,-0.1347,1.7721
+FTL,Discordant,Ac.(HR),Intracellular Iron Ion Homeostasis,1.2922,-0.1705
+ISCU,Discordant,Inter.,Intracellular Iron Ion Homeostasis,0.6674,-0.4802
+NUBP1,Discordant,Ac.(LR),Intracellular Iron Ion Homeostasis,0.0524,-0.9618
+TFRC,Discordant,Ac.(LR),Intracellular Iron Ion Homeostasis,-0.0543,1.0231
+PADI2,Discordant,Ac.(HR),Leukocyte Chemotaxis,0.7014,-5e-4
+RPL13A,Discordant,Inter.,Leukocyte Chemotaxis,0.6523,-0.5951
+S100A13,Discordant,Ac.(HR),Myeloid Leukocyte Activation,1.0697,-0.3596
+MYO18A,Discordant,Ac.(HR),Myeloid Leukocyte Activation,0.9746,-0.081
+RO60,Discordant,Ac.(HR),Other,2.3764,-0.5112
+PM20D2,Discordant,Ac.(HR),Other,1.6058,-0.3733
+ARL1,Discordant,Ac.(HR),Other,1.3999,-0.4128
+PPP2R5D,Discordant,Ac.(HR),Other,1.2225,-0.7335
+FXYD1,Discordant,Ac.(HR),Other,1.1234,-0.4998
+PEA15,Discordant,Inter.,Other,1.0021,-0.6813
+UQCC3,Discordant,Inter.,Other,0.923,-0.8286
+MAP1LC3B2,Discordant,Ac.(HR),Other,0.9211,-0.0159
+BIN3,Discordant,Inter.,Other,0.9101,-0.2613
+FARSA,Discordant,Ac.(HR),Other,0.9048,-0.0446
+TIMMDC1,Discordant,Inter.,Other,0.8988,-0.522
+RPS20,Discordant,Ac.(HR),Other,0.852,-0.4924
+RPL6,Discordant,Ac.(HR),Other,0.7866,-0.359
+SSB,Discordant,Inter.,Other,0.7845,-0.8985
+LAMTOR1,Discordant,Inter.,Other,0.7701,-0.4443
+GAA,Discordant,Inter.,Other,0.7484,-0.3935
+RPL14,Discordant,Inter.,Other,0.711,-0.4985
+MYPN,Discordant,Inter.,Other,0.6924,-0.2997
+PDLIM3,Discordant,Ac.(HR),Other,0.6601,-0.1695
+RWDD1,Discordant,Inter.,Other,0.6007,-0.5495
+CHORDC1,Discordant,Ac.(LR),Other,0.5667,-1.1978
+COPB1,Discordant,Inter.,Other,0.53,-0.4456
+PRKRA,Discordant,Inter.,Other,0.5215,-0.753
+TMEM43,Discordant,Inter.,Other,0.4965,-0.533
+CAMK2D,Discordant,Inter.,Other,0.4679,-0.1609
+RUVBL1,Discordant,Inter.,Other,0.4561,-0.3287
+UBE2O,Discordant,Ac.(LR),Other,0.4065,-1.0917
+VARS1,Discordant,Inter.,Other,0.4041,-0.5392
+JPT2,Discordant,Inter.,Other,0.3569,-0.6755
+MAPRE3,Discordant,Inter.,Other,0.2271,-0.5456
+PRKCSH,Discordant,Inter.,Other,0.212,-0.4901
+FITM1,Discordant,Ac.(LR),Other,0.1837,-0.9597
+TIMM8A,Discordant,Ac.(LR),Other,0.1504,-0.7429
+STOML2,Discordant,Ac.(LR),Other,0.1164,-0.6269
+SERPINF2,Discordant,Ac.(LR),Other,-9e-4,1.616
+BTD,Discordant,Ac.(LR),Other,-0.025,1.1069
+RPS27A,Discordant,Ac.(LR),Other,-0.0481,0.7729
+CCS,Discordant,Ac.(LR),Other,-0.0702,1.1697
+APOD,Discordant,Ac.(LR),Other,-0.0906,1.4597
+RBP4,Discordant,Ac.(LR),Other,-0.1862,1.7215
+MYH8,Discordant,Ac.(LR),Other,-0.2055,1.1666
+AIMP1,Discordant,Inter.,Other,-0.2914,0.4383
+ADIPOQ,Discordant,Ac.(LR),Other,-0.3775,0.9807
+YARS1,Discordant,Ac.(LR),Other,-0.4055,1.247
+ALDOC,Discordant,Inter.,Other,-0.4384,0.4509
+GARNL3,Discordant,Inter.,Other,-0.4535,0.6071
+MT-ND3,Discordant,Inter.,Other,-0.5957,0.56
+PFKFB1,Discordant,Inter.,Other,-0.6168,0.1949
+TARDBP,Discordant,Inter.,Other,-0.6285,0.5881
+ADSS2,Discordant,Inter.,Other,-0.6392,0.485
+MICOS13,Discordant,Inter.,Other,-0.6596,0.3738
+ARPC1B,Discordant,Inter.,Other,-0.6659,0.4577
+COQ3,Discordant,Ac.(HR),Other,-0.6822,0.017
+TST,Discordant,Inter.,Other,-0.7081,0.3148
+MLEC,Discordant,Ac.(HR),Other,-0.7606,0.0771
+GMPPB,Discordant,Inter.,Other,-0.8505,0.1872
+ACSS2,Discordant,Ac.(HR),Other,-0.8595,0.1537
+SMIM4,Discordant,Ac.(HR),Other,-0.8793,0.0105
+MYLK,Discordant,Inter.,Other,-0.881,0.3093
+DUSP28,Discordant,Ac.(HR),Other,-0.8999,0.0103
+ACAD10,Discordant,Ac.(HR),Other,-0.9212,0.0856
+PHKG1,Discordant,Ac.(HR),Other,-0.9257,0.0403
+SH3BGRL,Discordant,Ac.(LR),Other,-0.9764,1.0809
+ATG3,Discordant,Inter.,Other,-1.1008,0.4095
+PTPN1,Discordant,Ac.(HR),Regulation Of Innate Immune Response,1.3733,-0.428
