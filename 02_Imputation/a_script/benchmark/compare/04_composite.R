@@ -138,7 +138,7 @@ for (i in seq_len(nrow(df))) {
   if (!is.na(r$nrmse_mcar) && r$nrmse_mcar > 0.8) flags <- c(flags, "NRMSE-MCAR>0.8")
   if (!is.na(r$nrmse_mnar) && r$nrmse_mnar > 0.8) flags <- c(flags, "NRMSE-MNAR>0.8")
   if (!is.na(r$class_sens_fc) && r$class_sens_fc > 0.05) flags <- c(flags, "Classifier-sensitive")
-  if (length(flags) > 0) add("  Flags:           %s", paste(flags, collapse = ", "))
+  if (length(flags)) add("  Flags:           %s", paste(flags, collapse = ", "))
   add("")
 }
 

@@ -271,7 +271,7 @@ assign_enrichment_classes <- function(genes, universe, pathways,
     hits <- intersect(genes, pw_genes)
     # Only assign if not already assigned (most-specific-first)
     unassigned_hits <- hits[is.na(gene_class[hits])]
-    if (length(unassigned_hits) > 0) {
+    if (length(unassigned_hits)) {
       gene_class[unassigned_hits] <- pw_name
     }
   }
@@ -429,7 +429,7 @@ assign_consolidated <- function(fg_genes, all_genes, pathways = NULL,
     if (length(hits) == 0) next
     s <- pw_sizes[pw_name]
     better <- hits[bg_best_size[hits] > s]
-    if (length(better) > 0) {
+    if (length(better)) {
       bg_best_cat[better]  <- pw_cats[pw_name]
       bg_best_size[better] <- s
     }
@@ -560,7 +560,7 @@ assign_pathways_membership <- function(fg_genes, universe, pathways = NULL,
     pw_name <- top_sorted$pathway[i]
     hits <- intersect(fg_genes, pathways[[pw_name]])
     unassigned <- hits[is.na(gene_class[hits])]
-    if (length(unassigned) > 0) gene_class[unassigned] <- pw_name
+    if (length(unassigned)) gene_class[unassigned] <- pw_name
   }
   gene_class[is.na(gene_class)] <- "Other"
 
