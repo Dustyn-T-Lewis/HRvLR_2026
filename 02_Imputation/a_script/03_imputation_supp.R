@@ -1,73 +1,89 @@
 #!/usr/bin/env Rscript
-###############################################################################
-#   03_imputation_supp.R — Supplementary Excel workbook
-#
-#   HRvLR 2×3 design: Responder (HR/LR) × Timepoint (T1/T2/T3)
-#
-#   Input:  CSV files from c_data_v2/ (produced by 01_run_imputation.R)
-#   Output: c_data_v2/10_imputation_supp.xlsx
-###############################################################################
+# Rebuild the HRvLR Stage 02 supplementary workbook from top-level outputs.
 
-# ==== Libraries ==============================================================
 library(openxlsx)
 library(readr)
 library(tibble)
 
-# ==== Configuration ==========================================================
 setwd(rprojroot::find_rstudio_root_file())
 
-DATA_DIR <- "02_Imputation/c_data_v2"
+DATA_DIR <- "02_Imputation/c_data"
+BENCH_DIR <- file.path(DATA_DIR, "benchmark")
+OUT_FILE <- file.path(DATA_DIR, "02_imputation.xlsx")
 
-# ==== Load data ==============================================================
-bench_sum  <- read_csv(file.path(DATA_DIR, "03_benchmark_summary.csv"),
-                       show_col_types = FALSE)
-bench_df   <- read_csv(file.path(DATA_DIR, "04_benchmark_raw_iterations.csv"),
-                       show_col_types = FALSE)
-ext_sum    <- read_csv(file.path(DATA_DIR, "05_benchmark_extended.csv"),
-                       show_col_types = FALSE)
-bin_sum    <- read_csv(file.path(DATA_DIR, "06_benchmark_per_intensity.csv"),
-                       show_col_types = FALSE)
 miss_class <- read_csv(file.path(DATA_DIR, "02_mar_mnar_classification.csv"),
-                       show_col_types = FALSE)
+  show_col_types = FALSE)
+imputed_df <- read_csv(file.path(DATA_DIR, "01_imputed.csv"),
+  show_col_types = FALSE)
+mask_df <- read_csv(file.path(DATA_DIR, "07_imputation_mask.csv"),
+  show_col_types = FALSE)
 mnar_audit <- read_csv(file.path(DATA_DIR, "08_mnar_imputation_audit.csv"),
-                       show_col_types = FALSE)
-info_lines <- readLines(file.path(DATA_DIR, "09_imputation_summary.txt"))
-info_df    <- tibble(
-  Parameter = sub(" = .*", "", info_lines),
-  Value     = sub(".* = ", "", info_lines))
+  show_col_types = FALSE)
+summary_lines <- readLines(file.path(DATA_DIR, "09_imputation_summary.txt"))
 
-# ==== Helper ==================================================================
+summary_df <- tibble(
+  metric = sub(" = .*", "", summary_lines),
+  value = sub(".* = ", "", summary_lines)
+)
+
+readme_df <- tibble(
+  sheet = c(
+    "imputed_matrix",
+    "mar_mnar_classification",
+    "imputation_mask",
+    "mnar_audit",
+    "summary",
+    "benchmark_ranking",
+    "benchmark_summary"
+  ),
+  description = c(
+    "Fully imputed matrix written by the canonical YvO-style missForest workflow.",
+    "Per-feature MAR/MNAR calls, vote breakdown, and reliability flags.",
+    "Boolean mask marking values that were originally missing.",
+    "Pre/post mean shift audit for MNAR-classified features.",
+    "Key pipeline parameters and output counts.",
+    "Optional benchmark composite ranking if exploratory benchmark outputs exist.",
+    "Optional benchmark NRMSE/PSS summary if exploratory benchmark outputs exist."
+  )
+)
+
 add_sheet <- function(wb, name, df) {
-  hs <- createStyle(textDecoration = "bold", border = "Bottom", fgFill = "#DCE6F1")
+  header_style <- createStyle(
+    textDecoration = "bold",
+    border = "Bottom",
+    fgFill = "#DCE6F1"
+  )
   addWorksheet(wb, name)
-  writeData(wb, name, df, headerStyle = hs)
+  writeData(wb, name, df, headerStyle = header_style)
   freezePane(wb, name, firstActiveRow = 2)
   setColWidths(wb, name, cols = seq_len(ncol(df)), widths = "auto")
 }
 
-# ==== Build workbook ==========================================================
 wb <- createWorkbook()
+add_sheet(wb, "README", readme_df)
+add_sheet(wb, "imputed_matrix", imputed_df)
+add_sheet(wb, "mar_mnar_classification", miss_class)
+add_sheet(wb, "imputation_mask", mask_df)
+add_sheet(wb, "mnar_audit", mnar_audit)
+add_sheet(wb, "summary", summary_df)
 
-readme <- tibble(
-  Sheet = c("Benchmark", "Extended", "Per_Intensity", "Classification",
-            "MNAR_Audit", "Iterations", "Summary"),
-  Description = c(
-    "Method ranking by NRMSE and PSS (12 methods x 20 iterations)",
-    "Top 5 methods: NRMSE + PSS + per-intensity-tertile breakdown",
-    "Per-intensity bin NRMSE for all methods (low/mid/high abundance)",
-    "Per-protein Complete/MAR/MNAR classification with reliability flag",
-    "MNAR pre/post means, shift, Cohen's d",
-    "Raw per-iteration NRMSE and PSS for all methods",
-    "Pipeline summary statistics"))
-add_sheet(wb, "README", readme)
-add_sheet(wb, "Benchmark", bench_sum)
-add_sheet(wb, "Extended", ext_sum)
-add_sheet(wb, "Per_Intensity", bin_sum)
-add_sheet(wb, "Classification", miss_class)
-add_sheet(wb, "MNAR_Audit", mnar_audit)
-add_sheet(wb, "Iterations", bench_df)
-add_sheet(wb, "Summary", info_df)
+bench_rank_path <- file.path(BENCH_DIR, "04_composite_ranking.csv")
+if (file.exists(bench_rank_path)) {
+  add_sheet(
+    wb,
+    "benchmark_ranking",
+    read_csv(bench_rank_path, show_col_types = FALSE)
+  )
+}
 
-saveWorkbook(wb, file.path(DATA_DIR, "10_imputation_supp.xlsx"), overwrite = TRUE)
+bench_sum_path <- file.path(BENCH_DIR, "03_benchmark_summary.csv")
+if (file.exists(bench_sum_path)) {
+  add_sheet(
+    wb,
+    "benchmark_summary",
+    read_csv(bench_sum_path, show_col_types = FALSE)
+  )
+}
 
-cat(sprintf("Supplementary workbook written: %s/10_imputation_supp.xlsx\n", DATA_DIR))
+saveWorkbook(wb, OUT_FILE, overwrite = TRUE)
+cat(sprintf("Supplementary workbook written: %s\n", OUT_FILE))

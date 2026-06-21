@@ -1,0 +1,6 @@
+"contrast","n_up","n_down","n_total","label"
+"Training_HR",20,39,59,"n = 59  (20↑  39↓)"
+"Training_LR",17,14,31,"n = 31  (17↑  14↓)"
+"Acute_HR",62,30,92,"n = 92  (62↑  30↓)"
+"Acute_LR",82,15,97,"n = 97  (82↑  15↓)"
+"Baseline_HRvLR",20,9,29,"n = 29  (20↑  9↓)"

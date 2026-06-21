@@ -1,408 +1,309 @@
 #!/usr/bin/env Rscript
-###############################################################################
-#   01_run_imputation.R — Core imputation pipeline (no visualization)
+# Canonical HRvLR Stage 02 imputation
+# Direct YvO transfer: 3-method MAR/MNAR consensus -> missForest
 #
-#   HRvLR 2×3 design: Responder (HR/LR) × Timepoint (T1/T2/T3)
+# Primary DEP remains non-imputed. This stage exists for QC, sensitivity, and
+# complete-matrix downstream tasks.
 #
-#   Input:  02_normalized.csv + 03_DAList_normalized.rds from 01_normalization
-#   Output: imputed matrix, DAList, classification, benchmark tables → c_data_v2/
-#           + 00_report_intermediates.rds for 02_imputation_reports.R
-#
-#   Refs: Lazar 2016 (hybrid MAR/MNAR), Hediyeh-zadeh 2023 (msImpute EBM),
-#         Jin 2021 (NRMSE masking), Webel 2024 (>50% reliability flag),
-#         Wei 2018 (Procrustes structure preservation)
-###############################################################################
+# Outputs:
+#   02_Imputation/c_data/00_report_intermediates.rds
+#   02_Imputation/c_data/01_imputed.csv
+#   02_Imputation/c_data/01_DAList_imputed.rds
+#   02_Imputation/c_data/02_mar_mnar_classification.csv
+#   02_Imputation/c_data/07_imputation_mask.csv
+#   02_Imputation/c_data/08_mnar_imputation_audit.csv
+#   02_Imputation/c_data/09_imputation_summary.txt
+#   02_Imputation/c_data/sessionInfo.txt
 
-# ==== Libraries ==============================================================
-library(MsCoreUtils)
-library(msImpute)
-library(pcaMethods)
-library(imputeLCMD)
 library(missForest)
-library(missMDA)
-library(vegan)
 library(dplyr)
 library(tidyr)
 library(tibble)
 library(readr)
-library(stringr)
 
-# ==== Configuration ==========================================================
+set.seed(42)
 setwd(rprojroot::find_rstudio_root_file())
 
 cfg <- list(
-  NORM_CSV        = "01_normalization/c_data/02_normalized.csv",
-  NORM_RDS        = "01_normalization/c_data/03_DAList_normalized.rds",
-  DATA_DIR        = "02_Imputation/c_data_v2",
-  N_ITER          = 20L,
-  MASK_FRAC       = 0.10,
-  MISS_UNRELIABLE = 50,
-  METHODS = list(
-    # MNAR (left-censored)
-    MinProb        = list(method = "MinProb"),
-    MinDet         = list(method = "MinDet"),
-    QRILC          = list(method = "QRILC"),
-    zero           = list(method = "zero"),
-    # MAR (structure-based)
-    knn            = list(method = "knn"),
-    bpca           = list(method = "bpca"),
-    RF             = list(method = "RF"),
-    SVD            = list(method = "SVD"),
-    imputePCA      = list(method = "imputePCA"),
-    # Hybrid (MAR backbone + QRILC for MNAR)
-    mix_bpca_QRILC = list(method = "mixed", mar = "bpca", mnar = "QRILC"),
-    mix_knn_QRILC  = list(method = "mixed", mar = "knn",  mnar = "QRILC"),
-    mix_RF_QRILC   = list(method = "mixed", mar = "RF",   mnar = "QRILC")
-  )
+  norm_csv = "01_normalization/c_data/02_normalized.csv",
+  norm_rds = "01_normalization/c_data/03_DAList_normalized.rds",
+  data_dir = "02_Imputation/c_data",
+  miss_unreliable = 50
 )
 
-METHOD_TYPE <- tibble(method = names(cfg$METHODS)) |>
-  mutate(type = case_when(
-    method %in% c("MinProb", "MinDet", "QRILC", "zero") ~ "MNAR",
-    str_starts(method, "mix_") ~ "Hybrid",
-    TRUE ~ "MAR"))
+dir.create(cfg$data_dir, recursive = TRUE, showWarnings = FALSE)
 
-dir.create(cfg$DATA_DIR, showWarnings = FALSE, recursive = TRUE)
-
-# ==== Palettes (self-contained, for intermediates RDS) ========================
-PAL_GT    <- c(HR_T1 = scales::alpha("#D6604D", 0.4), HR_T2 = "#D6604D",
-               HR_T3 = scales::alpha("#B2182B", 0.8),
-               LR_T1 = scales::alpha("#4393C3", 0.4), LR_T2 = "#4393C3",
-               LR_T3 = scales::alpha("#2166AC", 0.8))
-PAL_MAR   <- c(MAR = "#4393C3", MNAR = "#D6604D")
+PAL_GT <- c(
+  HR_T1 = scales::alpha("#D6604D", 0.4),
+  HR_T2 = "#D6604D",
+  HR_T3 = scales::alpha("#B2182B", 0.8),
+  LR_T1 = scales::alpha("#4393C3", 0.4),
+  LR_T2 = "#4393C3",
+  LR_T3 = scales::alpha("#2166AC", 0.8)
+)
+PAL_MAR <- c(MAR = "#4393C3", MNAR = "#D6604D")
 PAL_CLASS <- c(Complete = "#4DAF4A", MAR = "#4393C3", MNAR = "#D6604D")
-PAL_MTYPE <- c(MNAR = "#D6604D", MAR = "#4393C3", Hybrid = "#5AAE61")
-PAL_BIN   <- c(low = "#D6604D", mid = "#F4A582", high = "#92C5DE")
 
-# ==== Helpers =================================================================
-run_impute <- function(m, mat, randna) {
-  if (m$method == "mixed")
-    MsCoreUtils::impute_matrix(mat, method = "mixed", randna = randna,
-                               mar = m$mar, mnar = m$mnar)
-  else if (m$method == "imputePCA")
-    missMDA::imputePCA(mat, ncp = 2, method = "Regularized")$completeObs
-  else if (m$method == "SVD")
-    pcaMethods::pca(mat, method = "svdImpute", nPcs = 2, verbose = FALSE)@completeObs
-  else
-    MsCoreUtils::impute_matrix(mat, method = m$method)
-}
+required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time")
 
-nrmse <- function(true_vals, imp_vals) {
-  sqrt(mean((true_vals - imp_vals)^2)) / sd(true_vals)
-}
+df <- read_csv(cfg$norm_csv, show_col_types = FALSE)
+ann <- df |>
+  select(uniprot_id, gene, protein, description)
 
-pss_metric <- function(original, imputed, n_pc = 5) {
-  complete_prots <- complete.cases(original)
-  if (sum(complete_prots) < n_pc + 1) return(NA_real_)
-  n_pc_use <- min(n_pc, ncol(original) - 1)
-  pca_orig <- prcomp(t(original[complete_prots, ]), center = TRUE, scale. = TRUE)
-  pca_imp  <- prcomp(t(imputed[complete_prots, ]),  center = TRUE, scale. = TRUE)
-  vegan::procrustes(pca_orig$x[, seq_len(n_pc_use)],
-                    pca_imp$x[, seq_len(n_pc_use)])$ss
-}
+feature_id <- if (anyDuplicated(df$gene)) df$uniprot_id else df$gene
+ann <- ann |>
+  mutate(feature_id = feature_id)
 
-###############################################################################
-# 1. LOAD DATA
-###############################################################################
-df  <- read_csv(cfg$NORM_CSV, show_col_types = FALSE)
-ann <- df |> select(uniprot_id, gene, protein, description)
 mat <- as.matrix(df[, -(1:4)])
-rownames(mat) <- df$gene
+rownames(mat) <- feature_id
 
-if (any(duplicated(df$gene))) {
-  warning("Duplicate gene names; using uniprot_id as rownames")
-  rownames(mat) <- df$uniprot_id
+dal_norm <- readRDS(cfg$norm_rds)
+missing_meta_cols <- setdiff(required_meta_cols, names(dal_norm$metadata))
+if (length(missing_meta_cols) > 0) {
+  stop(sprintf(
+    "Missing required metadata columns in normalized DAList: %s",
+    paste(missing_meta_cols, collapse = ", ")
+  ))
 }
-cat(sprintf("%d proteins x %d samples\n", nrow(mat), ncol(mat)))
 
-dal_norm <- readRDS(cfg$NORM_RDS)
-meta <- tibble(
-  Col_ID     = dal_norm$metadata$Col_ID,
-  Group      = dal_norm$metadata$Group,
-  Timepoint  = dal_norm$metadata$Timepoint,
-  Group_Time = dal_norm$metadata$Group_Time
-)
-stopifnot(setequal(meta$Col_ID, colnames(mat)))
+meta <- as_tibble(dal_norm$metadata) |>
+  select(all_of(required_meta_cols))
 
-###############################################################################
-# 2. MISSINGNESS PROFILING
-###############################################################################
+stopifnot("Sample mismatch" = setequal(meta$Col_ID, colnames(mat)))
+mat <- mat[, meta$Col_ID, drop = FALSE]
+
+meta <- meta |>
+  mutate(
+    Group = factor(Group, levels = c("HR", "LR")),
+    Timepoint = factor(Timepoint, levels = c("T1", "T2", "T3")),
+    Group_Time = factor(Group_Time,
+      levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3"))
+  )
+
+if (any(is.na(meta$Subject_ID))) {
+  stop("Subject_ID contains missing values; repeated-measures imputation audit cannot proceed.")
+}
+
+cat(sprintf("Loaded: %d proteins x %d samples\n", nrow(mat), ncol(mat)))
+
 prot_miss <- rowSums(is.na(mat))
-prot_pct  <- prot_miss / ncol(mat) * 100
+prot_pct <- prot_miss / ncol(mat) * 100
 obs_means <- rowMeans(mat, na.rm = TRUE)
-pct_miss  <- round(sum(is.na(mat)) / length(mat) * 100, 2)
+pct_miss <- round(sum(is.na(mat)) / length(mat) * 100, 2)
 
-cat(sprintf("Missing: %d / %d (%.2f%%) | Complete: %d\n",
-            sum(is.na(mat)), length(mat), pct_miss, sum(prot_miss == 0)))
-
-miss_by_group <- sapply(unique(meta$Group_Time), function(g) {
-  cols <- meta$Col_ID[meta$Group_Time == g]
+miss_by_group <- sapply(unique(as.character(meta$Group_Time)), function(gt) {
+  cols <- meta$Col_ID[meta$Group_Time == gt]
   rowSums(is.na(mat[, cols, drop = FALSE])) / length(cols) * 100
 })
 
-###############################################################################
-# 3. MAR/MNAR CLASSIFICATION
-###############################################################################
 has_na <- which(prot_miss > 0 & prot_miss < ncol(mat))
-miss_class <- tibble(gene = rownames(mat), n_miss = prot_miss,
-                     pct_miss = prot_pct, mean_intensity = obs_means)
+inc_mean <- obs_means[has_na]
+inc_pct <- prot_pct[has_na]
 
-# Primary: msImpute EBM | Fallback: k-means on (intensity, missingness)
-mar_result <- tryCatch({
-  feat <- msImpute::selectFeatures(mat[has_na, ], method = "ebm",
-                                   group = meta$Group_Time)
-  mar_names <- feat$name[feat$msImpute_feature == TRUE]
-  n_incomplete <- nrow(feat)
-  cat(sprintf("EBM result: %d MAR / %d MNAR (of %d incomplete proteins)\n",
-              length(mar_names), n_incomplete - length(mar_names), n_incomplete))
-  if (length(mar_names) < 0.05 * n_incomplete) {
-    cat("  EBM degenerate (<5% MAR) -- falling back to k-means\n")
-    NULL
-  } else {
-    list(mar_genes = mar_names, method = "msImpute_ebm")
-  }
-}, error = function(e) {
-  cat(sprintf("msImpute EBM failed (%s) -- falling back to k-means\n",
-              conditionMessage(e)))
-  NULL
-})
+# Classifier 1: k-means on observed intensity and missingness
+set.seed(42)
+km <- kmeans(scale(cbind(inc_mean, inc_pct)), centers = 2, nstart = 25)
+km_mnar <- km$cluster == which.min(tapply(inc_mean, km$cluster, mean))
 
-if (is.null(mar_result)) {
-  mc_sub <- miss_class |> filter(n_miss > 0, n_miss < ncol(mat))
-  km <- kmeans(scale(cbind(mc_sub$mean_intensity, mc_sub$pct_miss)),
-               centers = 2, nstart = 25)
-  cl_means <- tapply(mc_sub$mean_intensity, km$cluster, mean)
-  mnar_cl <- which.min(cl_means)
-  mar_result <- list(
-    mar_genes = mc_sub$gene[km$cluster != mnar_cl],
-    method = sprintf("k-means (cluster means: %.1f vs %.1f)",
-                     cl_means[mnar_cl], cl_means[-mnar_cl]))
-}
+# Classifier 2: global logistic P(missing | feature mean intensity)
+lr_df <- data.frame(
+  is_miss = as.integer(is.na(as.vector(mat))),
+  intensity = rep(obs_means, ncol(mat))
+)
+lr_fit <- glm(is_miss ~ intensity, data = lr_df, family = binomial)
+lr_pred <- predict(lr_fit, newdata = data.frame(intensity = inc_mean), type = "response")
+lr_mnar <- lr_pred > median(lr_pred)
 
-cat(sprintf("Classification: %s\n", mar_result$method))
+# Classifier 3: left-tail proximity
+global_q25 <- quantile(mat, 0.25, na.rm = TRUE)
+tail_frac <- vapply(
+  has_na,
+  function(i) mean(mat[i, !is.na(mat[i, ])] < global_q25),
+  numeric(1)
+)
+lt_mnar <- (tail_frac * inc_pct / 100) > median(tail_frac * inc_pct / 100)
+
+votes <- as.integer(km_mnar) + as.integer(lr_mnar) + as.integer(lt_mnar)
+
+miss_class <- tibble(
+  uniprot_id = ann$uniprot_id,
+  gene = ann$gene,
+  protein = ann$protein,
+  description = ann$description,
+  feature_id = ann$feature_id,
+  n_miss = prot_miss,
+  pct_miss = prot_pct,
+  mean_intensity = obs_means,
+  vote_kmeans = NA_integer_,
+  vote_logistic = NA_integer_,
+  vote_lefttail = NA_integer_,
+  n_mnar_votes = NA_integer_
+)
+
+miss_class$vote_kmeans[has_na] <- as.integer(km_mnar)
+miss_class$vote_logistic[has_na] <- as.integer(lr_mnar)
+miss_class$vote_lefttail[has_na] <- as.integer(lt_mnar)
+miss_class$n_mnar_votes[has_na] <- votes
 
 miss_class <- miss_class |>
   mutate(
     classification = case_when(
       n_miss == 0 ~ "Complete",
-      gene %in% mar_result$mar_genes ~ "MAR",
-      TRUE ~ "MNAR"),
-    imputation_reliable = classification == "Complete" | pct_miss < cfg$MISS_UNRELIABLE
+      n_miss >= ncol(mat) ~ "MNAR",
+      n_mnar_votes >= 2 ~ "MNAR",
+      TRUE ~ "MAR"
+    ),
+    imputation_reliable = classification == "Complete" | pct_miss < cfg$miss_unreliable
   )
 
-# Group-stratified missingness (Fisher test per MNAR protein)
-mnar_genes <- miss_class$gene[miss_class$classification == "MNAR"]
-group_miss_pval <- setNames(rep(NA_real_, nrow(miss_class)), miss_class$gene)
+mnar_ids <- miss_class$feature_id[miss_class$classification == "MNAR"]
 
-for (g in mnar_genes) {
-  ct <- sapply(unique(meta$Group_Time), function(gt) {
+group_miss_pval <- setNames(rep(NA_real_, nrow(miss_class)), miss_class$feature_id)
+for (fid in mnar_ids) {
+  ct <- sapply(unique(as.character(meta$Group_Time)), function(gt) {
     cols <- meta$Col_ID[meta$Group_Time == gt]
-    c(missing = sum(is.na(mat[g, cols])), observed = sum(!is.na(mat[g, cols])))
+    c(missing = sum(is.na(mat[fid, cols])), observed = sum(!is.na(mat[fid, cols])))
   })
-  group_miss_pval[g] <- tryCatch(
+  group_miss_pval[fid] <- tryCatch(
     fisher.test(ct, simulate.p.value = TRUE, B = 2000)$p.value,
-    error = function(e) NA_real_)
+    error = function(e) NA_real_
+  )
 }
-miss_class$group_miss_pval <- group_miss_pval[miss_class$gene]
+miss_class$group_miss_pval <- group_miss_pval[miss_class$feature_id]
 
-n_sig <- sum(group_miss_pval[mnar_genes] < 0.05, na.rm = TRUE)
+n_mar <- sum(miss_class$classification == "MAR")
+n_mnar <- sum(miss_class$classification == "MNAR")
+n_complete <- sum(miss_class$classification == "Complete")
+mar_vals <- sum(miss_class$n_miss[miss_class$classification == "MAR"])
+mnar_vals <- sum(miss_class$n_miss[miss_class$classification == "MNAR"])
+total_vals <- mar_vals + mnar_vals
+pct_mar_vals <- if (total_vals > 0) round(mar_vals / total_vals * 100, 1) else NA_real_
 
-n_mar_prots  <- sum(miss_class$classification == "MAR")
-n_mnar_prots <- length(mnar_genes)
-n_comp_prots <- sum(miss_class$classification == "Complete")
-mar_miss_vals  <- sum(miss_class$n_miss[miss_class$classification == "MAR"])
-mnar_miss_vals <- sum(miss_class$n_miss[miss_class$classification == "MNAR"])
-total_miss_vals <- mar_miss_vals + mnar_miss_vals
+cat(sprintf(
+  "Classification: MAR %d | MNAR %d | Complete %d\n",
+  n_mar, n_mnar, n_complete
+))
 
-cat(sprintf("Proteins -- MAR: %d | MNAR: %d (%d with group bias) | Complete: %d\n",
-            n_mar_prots, n_mnar_prots, n_sig, n_comp_prots))
-cat(sprintf("Missing values -- MAR: %d (%.1f%%) | MNAR: %d (%.1f%%) | Total: %d\n",
-            mar_miss_vals, mar_miss_vals / total_miss_vals * 100,
-            mnar_miss_vals, mnar_miss_vals / total_miss_vals * 100,
-            total_miss_vals))
+cat("Imputing with missForest...\n")
+gene_order <- order(rownames(mat))
+mat <- mat[gene_order, , drop = FALSE]
+ann <- ann[gene_order, , drop = FALSE]
+miss_class <- miss_class[gene_order, , drop = FALSE]
 
-###############################################################################
-# 4. BENCHMARK
-###############################################################################
 set.seed(42)
-randna <- setNames(miss_class$classification != "MNAR", miss_class$gene)
+mf <- missForest::missForest(t(mat), maxiter = 10, ntree = 100, verbose = TRUE)
+mat_imp <- t(mf$ximp)
+rownames(mat_imp) <- rownames(mat)
+colnames(mat_imp) <- colnames(mat)
+stopifnot("Imputed matrix still contains NA values" = sum(is.na(mat_imp)) == 0)
 
-# Pre-compute intensity bins for per-intensity analysis
-bench_genes <- miss_class$gene[randna[miss_class$gene]]
-bench_means <- rowMeans(mat[bench_genes, , drop = FALSE], na.rm = TRUE)
-bin_breaks  <- unique(quantile(bench_means, probs = c(0, 1/3, 2/3, 1)))
-bin_labels  <- c("low", "mid", "high")[seq_len(length(bin_breaks) - 1)]
-prot_bins   <- cut(bench_means, breaks = bin_breaks, labels = bin_labels,
-                   include.lowest = TRUE)
-names(prot_bins) <- bench_genes
+oob <- as.numeric(mf$OOBerror[1])
+cat(sprintf("OOB error: %.4f\n", oob))
 
-cat(sprintf("Benchmarking: %d methods x %d iterations\n",
-            length(cfg$METHODS), cfg$N_ITER))
-bench_raw <- vector("list", length(cfg$METHODS) * cfg$N_ITER)
-bin_raw   <- vector("list", length(cfg$METHODS) * cfg$N_ITER * length(bin_labels))
-k <- 0L; kb <- 0L
-
-for (iter in seq_len(cfg$N_ITER)) {
-  if (iter %% 5 == 0) cat(sprintf("  Iter %d/%d\n", iter, cfg$N_ITER))
-
-  mar_obs_idx <- which(!is.na(mat) & randna[row(mat)])
-  mask_idx    <- sample(mar_obs_idx, round(length(mar_obs_idx) * cfg$MASK_FRAC))
-  true_v      <- mat[mask_idx]
-  mm <- mat; mm[mask_idx] <- NA
-
-  mask_rows <- rownames(mat)[((mask_idx - 1) %% nrow(mat)) + 1]
-  mask_bin  <- prot_bins[mask_rows]
-
-  for (nm in names(cfg$METHODS)) {
-    imp <- tryCatch(run_impute(cfg$METHODS[[nm]], mm, randna),
-                    error = function(e) NULL)
-    if (is.null(imp)) next
-
-    k <- k + 1L
-    nrmse_val <- nrmse(true_v, imp[mask_idx])
-    pss_val   <- tryCatch(pss_metric(mat, imp), error = function(e) NA_real_)
-    bench_raw[[k]] <- tibble(method = nm, iter = iter,
-                             nrmse = nrmse_val, pss = pss_val)
-
-    for (b in bin_labels) {
-      sel <- which(mask_bin == b & !is.na(mask_bin))
-      if (length(sel) < 5) next
-      kb <- kb + 1L
-      bin_raw[[kb]] <- tibble(method = nm, iter = iter, bin = b,
-                              nrmse = nrmse(true_v[sel], imp[mask_idx[sel]]))
-    }
-  }
-}
-
-bench_df  <- bind_rows(bench_raw)
-bench_sum <- bench_df |>
-  group_by(method) |>
-  summarise(mean_nrmse   = mean(nrmse),
-            sd_nrmse     = sd(nrmse),
-            median_nrmse = median(nrmse),
-            mean_pss     = mean(pss, na.rm = TRUE),
-            sd_pss       = sd(pss, na.rm = TRUE),
-            .groups = "drop") |>
-  arrange(mean_nrmse)
-
-bin_df  <- bind_rows(bin_raw)
-bin_sum <- bin_df |>
-  group_by(method, bin) |>
-  summarise(mean_nrmse = mean(nrmse), sd_nrmse = sd(nrmse), .groups = "drop")
-
-top5 <- bench_sum$method[1:min(5, nrow(bench_sum))]
-ext_sum <- bench_sum |>
-  filter(method %in% top5) |>
-  select(method, nrmse = mean_nrmse, pss = mean_pss) |>
-  left_join(
-    bin_sum |> filter(method %in% top5) |>
-      select(method, bin, mean_nrmse) |>
-      pivot_wider(names_from = bin, values_from = mean_nrmse, names_prefix = "nrmse_"),
-    by = "method")
-
-best <- bench_sum$method[1]
-cat(sprintf("Best: %s (mean NRMSE = %.4f, PSS = %.4f)\n",
-            best, bench_sum$mean_nrmse[1], bench_sum$mean_pss[1]))
-print(as.data.frame(ext_sum), digits = 4, row.names = FALSE)
-
-###############################################################################
-# 5. APPLY BEST METHOD
-###############################################################################
-set.seed(42)
-mat_imp <- run_impute(cfg$METHODS[[best]], mat, randna)
-stopifnot(sum(is.na(mat_imp)) == 0)
-
-###############################################################################
-# 6. EXPORT DATA
-###############################################################################
 was_na <- is.na(mat)
-stopifnot(identical(ann$gene, rownames(mat_imp)))
+mnar_idx <- miss_class$feature_id[miss_class$classification == "MNAR"]
 
 mnar_audit <- tibble(
-  gene      = mnar_genes,
-  pre_mean  = rowMeans(mat[mnar_genes, ], na.rm = TRUE),
-  post_mean = rowMeans(mat_imp[mnar_genes, ]),
-  pre_sd    = apply(mat[mnar_genes, ], 1, sd, na.rm = TRUE),
-  pct_miss  = prot_pct[mnar_genes],
-  shift     = rowMeans(mat_imp[mnar_genes, ]) - rowMeans(mat[mnar_genes, ], na.rm = TRUE),
-  effect_d  = (rowMeans(mat_imp[mnar_genes, ]) - rowMeans(mat[mnar_genes, ], na.rm = TRUE)) /
-              apply(mat[mnar_genes, ], 1, sd, na.rm = TRUE),
-  imputation_reliable = prot_pct[mnar_genes] < cfg$MISS_UNRELIABLE
+  uniprot_id = miss_class$uniprot_id[match(mnar_idx, miss_class$feature_id)],
+  gene = miss_class$gene[match(mnar_idx, miss_class$feature_id)],
+  feature_id = mnar_idx,
+  pre_mean = rowMeans(mat[mnar_idx, , drop = FALSE], na.rm = TRUE),
+  post_mean = rowMeans(mat_imp[mnar_idx, , drop = FALSE]),
+  pre_sd = apply(mat[mnar_idx, , drop = FALSE], 1, sd, na.rm = TRUE),
+  pct_miss = miss_class$pct_miss[match(mnar_idx, miss_class$feature_id)],
+  imputation_reliable = miss_class$imputation_reliable[match(mnar_idx, miss_class$feature_id)]
+) |>
+  mutate(
+    shift = post_mean - pre_mean,
+    effect_d = shift / pre_sd
+  )
+
+imputed_df <- bind_cols(
+  ann |>
+    select(uniprot_id, protein, gene, description),
+  as_tibble(mat_imp)
 )
+write_csv(imputed_df, file.path(cfg$data_dir, "01_imputed.csv"))
 
-write_csv(bind_cols(ann, as_tibble(mat_imp)),
-          file.path(cfg$DATA_DIR, "01_imputed.csv"))
+mask_df <- bind_cols(
+  ann |>
+    select(uniprot_id, gene, feature_id),
+  as_tibble(was_na)
+)
+write_csv(mask_df, file.path(cfg$data_dir, "07_imputation_mask.csv"))
+write_csv(miss_class, file.path(cfg$data_dir, "02_mar_mnar_classification.csv"))
+write_csv(mnar_audit, file.path(cfg$data_dir, "08_mnar_imputation_audit.csv"))
 
-dal <- readRDS(cfg$NORM_RDS)
+dal <- dal_norm
 mat_imp_uid <- mat_imp
 rownames(mat_imp_uid) <- ann$uniprot_id
 dal$data <- mat_imp_uid
-dal$annotation <- merge(
-  dal$annotation,
-  miss_class |> select(gene, n_miss, pct_miss,
-                       miss_classification = classification,
-                       imputation_reliable),
-  by = "gene", all.x = TRUE, sort = FALSE)
-saveRDS(dal, file.path(cfg$DATA_DIR, "01_DAList_imputed.rds"))
+dal$annotation <- dal$annotation |>
+  left_join(
+    miss_class |>
+      select(uniprot_id, n_miss, pct_miss,
+        miss_classification = classification,
+        imputation_reliable),
+    by = "uniprot_id"
+  )
+# Re-align $annotation rows to $data row order. dal_norm$annotation comes in
+# normalization order; mat_imp_uid was reordered by gene_order for missForest
+# determinism. Without this match() step the saved DAList has same set of
+# proteins in $data and $annotation but different row positions.
+dal$annotation <- dal$annotation[
+  match(rownames(dal$data), dal$annotation$uniprot_id), , drop = FALSE]
+rownames(dal$annotation) <- dal$annotation$uniprot_id
+stopifnot(identical(rownames(dal$data), dal$annotation$uniprot_id))
+saveRDS(dal, file.path(cfg$data_dir, "01_DAList_imputed.rds"))
 
-write_csv(miss_class, file.path(cfg$DATA_DIR, "02_mar_mnar_classification.csv"))
-write_csv(bench_sum,  file.path(cfg$DATA_DIR, "03_benchmark_summary.csv"))
-write_csv(bench_df,   file.path(cfg$DATA_DIR, "04_benchmark_raw_iterations.csv"))
-write_csv(ext_sum,    file.path(cfg$DATA_DIR, "05_benchmark_extended.csv"))
-write_csv(bin_sum,    file.path(cfg$DATA_DIR, "06_benchmark_per_intensity.csv"))
-write_csv(bind_cols(tibble(gene = rownames(was_na)), as_tibble(was_na)),
-          file.path(cfg$DATA_DIR, "07_imputation_mask.csv"))
-write_csv(mnar_audit, file.path(cfg$DATA_DIR, "08_mnar_imputation_audit.csv"))
+summary_lines <- c(
+  sprintf("n_proteins = %d", nrow(mat)),
+  sprintf("n_samples = %d", ncol(mat)),
+  sprintf("pct_missing = %.2f", pct_miss),
+  sprintf("n_complete = %d", n_complete),
+  sprintf("n_mar_proteins = %d", n_mar),
+  sprintf("n_mnar_proteins = %d", n_mnar),
+  sprintf("n_mar_values = %d", mar_vals),
+  sprintf("n_mnar_values = %d", mnar_vals),
+  sprintf("pct_mar_values = %.1f", pct_mar_vals),
+  "classification_method = 3-method consensus (kmeans + logistic + left-tail)",
+  sprintf("n_unreliable = %d", sum(!miss_class$imputation_reliable)),
+  "best_method = missForest",
+  sprintf("oob_error = %.4f", oob)
+)
+writeLines(summary_lines, file.path(cfg$data_dir, "09_imputation_summary.txt"))
 
-info <- list(
-  n_proteins   = nrow(mat), n_samples = ncol(mat), pct_missing = pct_miss,
-  n_complete   = n_comp_prots, n_mar_proteins = n_mar_prots,
-  n_mnar_proteins = n_mnar_prots, n_mar_values = mar_miss_vals,
-  n_mnar_values = mnar_miss_vals,
-  pct_mar_values = round(mar_miss_vals / total_miss_vals * 100, 1),
-  classification_method = mar_result$method,
-  n_unreliable = sum(!miss_class$imputation_reliable),
-  best_method  = best,
-  best_nrmse   = round(bench_sum$mean_nrmse[1], 4),
-  best_pss     = round(bench_sum$mean_pss[1], 4))
-writeLines(paste(names(info), info, sep = " = "),
-           file.path(cfg$DATA_DIR, "09_imputation_summary.txt"))
+saveRDS(
+  list(
+    mat = mat,
+    mat_imp = mat_imp,
+    was_na = was_na,
+    ann = ann,
+    meta = meta,
+    miss_class = miss_class,
+    miss_by_group = miss_by_group,
+    prot_pct = prot_pct,
+    pct_miss = pct_miss,
+    mnar_genes = mnar_idx,
+    mnar_audit = mnar_audit,
+    best = "missForest",
+    oob_error = oob,
+    n_mar_prots = n_mar,
+    n_mnar_prots = n_mnar,
+    mar_miss_vals = mar_vals,
+    mnar_miss_vals = mnar_vals,
+    total_miss_vals = total_vals,
+    classification_method = "3-method consensus (kmeans + logistic + left-tail)",
+    PAL_GT = PAL_GT,
+    PAL_MAR = PAL_MAR,
+    PAL_CLASS = PAL_CLASS
+  ),
+  file.path(cfg$data_dir, "00_report_intermediates.rds")
+)
 
-###############################################################################
-# 7. SAVE INTERMEDIATES FOR REPORT SCRIPT
-###############################################################################
-saveRDS(list(
-  mat          = mat,
-  mat_imp      = mat_imp,
-  was_na       = was_na,
-  ann          = ann,
-  meta         = meta,
-  miss_class   = miss_class,
-  miss_by_group = miss_by_group,
-  prot_pct     = prot_pct,
-  pct_miss     = pct_miss,
-  mnar_genes   = mnar_genes,
-  mnar_audit   = mnar_audit,
-  bench_sum    = bench_sum,
-  bench_df     = bench_df,
-  bin_sum      = bin_sum,
-  ext_sum      = ext_sum,
-  top5         = top5,
-  best         = best,
-  METHOD_TYPE  = METHOD_TYPE,
-  N_ITER       = cfg$N_ITER,
-  MASK_FRAC    = cfg$MASK_FRAC,
-  n_mar_prots  = n_mar_prots,
-  n_mnar_prots = n_mnar_prots,
-  mar_miss_vals  = mar_miss_vals,
-  mnar_miss_vals = mnar_miss_vals,
-  total_miss_vals = total_miss_vals,
-  PAL_GT       = PAL_GT,
-  PAL_MAR      = PAL_MAR,
-  PAL_CLASS    = PAL_CLASS,
-  PAL_MTYPE    = PAL_MTYPE,
-  PAL_BIN      = PAL_BIN
-), file.path(cfg$DATA_DIR, "00_report_intermediates.rds"))
+writeLines(capture.output(sessionInfo()), file.path(cfg$data_dir, "sessionInfo.txt"))
 
-cat(sprintf("Done: %s (NRMSE %.4f) | %d unreliable proteins\n",
-            best, bench_sum$mean_nrmse[1], sum(!miss_class$imputation_reliable)))
+cat(sprintf(
+  "Done: missForest | %d proteins x %d samples | OOB = %.4f\n",
+  nrow(mat_imp), ncol(mat_imp), oob
+))

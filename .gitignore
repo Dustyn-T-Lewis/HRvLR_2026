@@ -2,6 +2,8 @@
 **/.DS_Store
 .RData
 **/.Rhistory
+**/.Rapp.history
+.claude/
 .Rproj.user/
 .here
 Archive/

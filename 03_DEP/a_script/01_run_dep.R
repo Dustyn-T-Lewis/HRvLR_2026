@@ -3,12 +3,14 @@
 # T1 = baseline, T2 = 72hr post-training, T3 = 1hr acute post-bout
 # Input:  cycloess-normalized, non-imputed (limma handles NAs per-protein)
 #
-# 7 Contrasts:
+# 9 Contrasts:
 #   Training_HR            = HR_T2 - HR_T1
 #   Training_LR            = LR_T2 - LR_T1
 #   Acute_HR               = HR_T3 - HR_T2
 #   Acute_LR               = LR_T3 - LR_T2
 #   Baseline_HRvLR         = HR_T1 - LR_T1
+#   Trained_HRvLR          = HR_T2 - LR_T2
+#   Acute_HRvLR            = HR_T3 - LR_T3
 #   Training_Interaction   = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)
 #   Acute_Interaction      = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)
 #
@@ -48,6 +50,8 @@ cfg <- list(
 dir.create(cfg$data_dir,     recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$proteoDA_dir, recursive = TRUE, showWarnings = FALSE)
 
+required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time")
+
 # --- LOAD DATA & BUILD METADATA ---
 
 df <- read_csv(cfg$norm_csv, show_col_types = FALSE)
@@ -65,18 +69,30 @@ cat(sprintf("Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
 # Canonical metadata from normalisation DAList (not regex-derived)
 dal_norm <- readRDS(cfg$norm_rds)
 dal_meta <- as.data.frame(dal_norm$metadata)
+missing_meta_cols <- setdiff(required_meta_cols, names(dal_meta))
+if (length(missing_meta_cols) > 0) {
+  stop(sprintf(
+    "Missing required metadata columns in normalized DAList: %s",
+    paste(missing_meta_cols, collapse = ", ")
+  ))
+}
+
 meta <- tibble(
   sample_id  = dal_meta$Col_ID,
   responder  = dal_meta$Group,
   time       = dal_meta$Timepoint,
   group      = dal_meta$Group_Time,
-  subject    = sub("_T[123]$", "", dal_meta$Col_ID)
+  subject    = dal_meta$Subject_ID
 )
 meta$responder <- factor(meta$responder, levels = c("HR", "LR"))
 meta$time      <- factor(meta$time,      levels = c("T1", "T2", "T3"))
 meta$group     <- factor(meta$group,
                          levels = c("HR_T1", "HR_T2", "HR_T3",
                                     "LR_T1", "LR_T2", "LR_T3"))
+
+if (any(is.na(meta$subject)) || any(meta$subject == "")) {
+  stop("Subject_ID must be present for duplicateCorrelation blocking.")
+}
 
 print(table(meta$responder, meta$time))
 stopifnot(setequal(colnames(mat), meta$sample_id))
@@ -107,6 +123,8 @@ dal <- add_contrasts(dal, contrasts_vector = c(
   "Acute_HR = HR_T3 - HR_T2",
   "Acute_LR = LR_T3 - LR_T2",
   "Baseline_HRvLR = HR_T1 - LR_T1",
+  "Trained_HRvLR = HR_T2 - LR_T2",
+  "Acute_HRvLR = HR_T3 - LR_T3",
   "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
   "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 ))
@@ -212,8 +230,8 @@ da_summary <- map_dfr(contrast_names, function(cname) {
            pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
            p_adj_method = cfg$adj_method,
            sig.Pi     = sum(res$sig_pi == 0, na.rm = TRUE),
-           sig.FDR.05 = sum(!res$adj.P.Val < 0.05, na.rm = TRUE),
-           sig.FDR.10 = sum(!res$adj.P.Val < 0.10, na.rm = TRUE))
+           sig.FDR.05 = sum(res$adj.P.Val >= 0.05, na.rm = TRUE),
+           sig.FDR.10 = sum(res$adj.P.Val >= 0.10, na.rm = TRUE))
   )
 })
 

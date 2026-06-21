@@ -1,23 +1,25 @@
 #!/usr/bin/env Rscript
 # HRvLR Normalization — DIA-MS skeletal muscle proteomics (HR vs LR × T1/T2/T3)
 #
-# Pipeline: HPA tissue filter → dedup → group-wise missingness (≥5/8) →
-#           consensus outlier detection → cycloess normalization (proteoDA)
+# Pipeline: HPA tissue filter → blood contaminant removal → dedup →
+#           group-wise missingness (≥5/8) → consensus outlier detection →
+#           cycloess normalization (proteoDA)
 #
-# Outputs (c_data_v2/):
+# Outputs (c_data/):
 #   00_report_intermediates.rds — objects for 02_norm_reports.R
 #   01_DAList_prenorm.rds       — pre-normalization snapshot
 #   02_normalized.csv           — normalized matrix (annotation + samples)
 #   03_DAList_normalized.rds    — full normalized DAList
 #   04_norm_quality_scores.csv  — PRONE-style method ranking
 #
-# Reports (b_reports_v2/):
+# Reports (b_reports/):
 #   01_norm_comparison.pdf — proteoDA multi-method comparison
 #   02_qc_pre.pdf          — proteoDA pre-normalization QC
 #   03_qc_post.pdf         — proteoDA post-normalization QC
 #
 # Refs: Thurman 2023 (proteoDA), Bolstad 2003 (cycloess),
-#       Brenes 2024 (CV on linear scale), Huang 2024 (SEAOP outlier)
+#       Brenes 2024 (CV on linear scale), Huang 2024 (SEAOP outlier),
+#       Geyer 2016 (plasma proteome, PMID 27135364)
 
 library(proteoDA)
 library(readxl)
@@ -38,13 +40,13 @@ cfg <- list(
   hpa_file  = "00_input/HPA_skeletal_muscle_annotations.tsv",
 
   # Output directories
-  report_dir = "01_normalization/b_reports_v2",
-  data_dir   = "01_normalization/c_data_v2",
+  report_dir = "01_normalization/b_reports",
+  data_dir   = "01_normalization/c_data",
 
   # Thresholds
   miss_min_reps = 5,        # min detected samples per group (of 8)
   miss_min_groups = 1,      # min groups passing threshold
-  outlier_k   = 2,          # methods that must agree for consensus
+  outlier_k   = 3,          # methods that must agree for consensus (>=3/4)
   mahal_p     = 0.01,       # PCA Mahalanobis chi-sq cutoff
   mad_k       = 3,          # MAD multiplier for median intensity
   norm_method = "cycloess"
@@ -111,6 +113,44 @@ cat(sprintf("HPA: %d -> %d (-%d)\n",
             n_before, nrow(annotation), n_before - nrow(annotation)))
 
 # =============================================================================
+# 2b. BLOOD CONTAMINANT REMOVAL
+#     Source 1: top abundant plasma proteins (Geyer et al. 2016, PMID 27135364)
+#     Source 2: HPA "Immunoglobulin genes" protein class
+# =============================================================================
+
+BLOOD_CONTAMINANTS <- c(
+  # Hemoglobins
+  "HBA1", "HBA2", "HBB",
+  # Serum carrier / transport
+  "ALB", "TF", "HP", "HPX", "GC",
+  # Apolipoproteins
+  "APOA1", "APOA2", "APOB", "APOC1", "APOC2", "APOC3",
+  # Coagulation / fibrinolysis
+  "FGA", "FGB", "FGG", "F2", "PLG",
+  # Complement cascade
+  "C3", "C4A", "C4B", "C5", "C6", "C7", "C8A", "C8B", "C8G", "C9",
+  "CFB", "CFH", "CFI", "C1QB", "C1QC", "C1R", "C1S", "C2",
+  # Acute-phase / protease inhibitors
+  "SERPINA1", "SERPINA3", "A2M", "ORM1", "ORM2", "AHSG", "ITIH4",
+  # Other high-abundance plasma
+  "AGT", "AMBP", "KNG1", "HRG", "VTN"
+)
+
+hpa_ig <- hpa$Gene[grepl("Immunoglobulin genes", hpa$Protein_class, fixed = TRUE)]
+blood_genes <- unique(c(BLOOD_CONTAMINANTS, hpa_ig))
+
+n_before <- nrow(annotation)
+keep_blood <- !annotation$gene %in% blood_genes
+intensity  <- intensity[keep_blood, ]
+annotation <- annotation[keep_blood, ]
+
+filter_log <- bind_rows(filter_log, tibble(
+  step = "Blood contaminant removal", n_before = n_before,
+  n_after = nrow(annotation), n_removed = n_before - nrow(annotation)))
+cat(sprintf("Blood: %d -> %d (-%d)\n",
+            n_before, nrow(annotation), n_before - nrow(annotation)))
+
+# =============================================================================
 # 3. DEDUPLICATE BY UNIPROT ID
 # =============================================================================
 
@@ -158,11 +198,17 @@ cat(sprintf("Missingness: %d -> %d (-%d)\n",
             n_before, nrow(dal$data), n_before - nrow(dal$data)))
 print(filter_log)
 
+removed_blood <- raw |>
+  select(uniprot_id, gene, description) |>
+  filter(gene %in% blood_genes, !gene %in% removed_genes)
+
 filtered_proteins <- bind_rows(
   tibble(uniprot_id = raw$uniprot_id, gene = raw$gene,
          description = raw$description) |>
     filter(gene %in% removed_genes) |>
     mutate(removal_step = "HPA tissue filter"),
+  removed_blood |>
+    mutate(removal_step = "Blood contaminant removal"),
   annot_df |>
     filter(!uniprot_id %in% rownames(dal$data)) |>
     select(uniprot_id, gene, description) |>
@@ -171,7 +217,7 @@ filtered_proteins <- bind_rows(
 ) |> distinct(uniprot_id, .keep_all = TRUE)
 
 # =============================================================================
-# 5. OUTLIER DETECTION (3-method consensus)
+# 5. OUTLIER DETECTION (4-method consensus)
 # =============================================================================
 
 # Method 1: Sample missingness (pooled threshold, flags individual samples)
@@ -209,16 +255,25 @@ mad_val    <- mad(samp_med)
 mad_flags  <- tibble(Col_ID = names(samp_med), sample_median = samp_med,
                      mad_flag = abs(samp_med - global_med) > cfg$mad_k * mad_val)
 
-# Consensus
+# Method 4: Inter-sample correlation (median pairwise Pearson r)
+cor_mat     <- cor(log2(dal$data + 1), use = "pairwise.complete.obs")
+med_cor     <- apply(cor_mat, 2, function(x) median(x[x < 1], na.rm = TRUE))
+cor_med_all <- median(med_cor)
+cor_mad_all <- mad(med_cor)
+cor_flags   <- tibble(Col_ID = names(med_cor), median_cor = med_cor,
+                      cor_flag = med_cor < cor_med_all - cfg$mad_k * cor_mad_all)
+
+# Consensus (>=3 of 4 methods)
 outlier_diag <- miss_info |>
   left_join(pca_flags, by = "Col_ID") |>
   left_join(mad_flags, by = "Col_ID") |>
-  mutate(n_flags = miss_flag + pca_flag + mad_flag,
+  left_join(cor_flags, by = "Col_ID") |>
+  mutate(n_flags = miss_flag + pca_flag + mad_flag + cor_flag,
          consensus_outlier = n_flags >= cfg$outlier_k)
 
 n_outliers <- sum(outlier_diag$consensus_outlier)
-cat(sprintf("Outliers: %d sample(s) flagged (%d/%d consensus)\n",
-            n_outliers, cfg$outlier_k, cfg$outlier_k))
+cat(sprintf("Outliers: %d sample(s) flagged (%d/4 consensus)\n",
+            n_outliers, cfg$outlier_k))
 
 # Snapshot pre-outlier state for diagnostics (detection plot includes outliers)
 data_pre_outlier <- dal$data
@@ -363,6 +418,8 @@ intermediates <- list(
   pca_post         = pca_post,
   global_med       = global_med,
   mad_val          = mad_val,
+  cor_med_all      = cor_med_all,
+  cor_mad_all      = cor_mad_all,
   subj_var         = subj_var,
   eta2_vals        = eta2_vals,
   norm_scores      = norm_scores,

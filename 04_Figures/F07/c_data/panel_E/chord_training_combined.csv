@@ -1,0 +1,30 @@
+gene,pathway_label,pathway_padj,pathway_db,primary_contrast,display_logFC
+APOL1,Biological Process Involve..,1,Other,Training_LR,-2.09737125775166
+LTF,Biological Process Involve..,1,Other,Training_HR,-3.22501518119
+ROMO1,Biological Process Involve..,1,Other,Training_Interaction,-1.06355726078061
+BCKDK,Regulation Of Fatty Acid M..,1,Other,Training_HR,-1.64859884638337
+MLYCD,Regulation Of Fatty Acid M..,1,Other,Training_HR,-1.1335905244081
+CPT1A,Regulation Of Fatty Acid M..,1,Other,Training_Interaction,1.37290255456844
+ADIPOQ,Regulation Of Fatty Acid M..,1,Other,Training_Interaction,1.22526332673552
+TIMM8A,Establishment Of Protein L..,1,Other,Training_LR,0.753595748441118
+TOMM40,Establishment Of Protein L..,1,Other,Training_HR,1.06299266180784
+MTX1,Establishment Of Protein L..,1,Other,Training_HR,0.962861618672454
+TOMM7,Establishment Of Protein L..,1,Other,Training_HR,-1.37352328351902
+TIMM13,Establishment Of Protein L..,1,Other,Training_HR,1.09464662938896
+PFKFB2,Carbohydrate Phosphorylation,1,Other,Training_LR,1.09938161894659
+TKFC,Carbohydrate Phosphorylation,1,Other,Training_HR,0.880724586255045
+RBKS,Carbohydrate Phosphorylation,1,Other,Training_Interaction,-1.66164944708036
+PPM1B,Lipoprotein Metabolic Proc..,1,Other,Training_Interaction,-1.10516921754407
+LYPLA2,Lipoprotein Metabolic Proc..,1,Other,Training_LR,0.521684341296108
+APOD,Lipoprotein Metabolic Proc..,1,Other,Training_LR,-1.03619531830839
+NMT1,Lipoprotein Metabolic Proc..,1,Other,Training_LR,-1.22643256744275
+MFN2,Smooth Muscle Cell Prolife..,1,Other,Training_Interaction,0.866043417563908
+XRCC5,Smooth Muscle Cell Prolife..,1,Other,Training_Interaction,-0.920477655489282
+POLDIP2,Smooth Muscle Cell Prolife..,1,Other,Training_Interaction,-1.22577225080811
+F13A1,KRAS Signaling Up,1,Other,Training_HR,1.05331684817006
+AKT2,KRAS Signaling Up,1,Other,Training_LR,0.920715797958628
+CAB39L,KRAS Signaling Up,1,Other,Training_HR,-1.71090556266348
+GAA,Monosaccharide Metabolic P..,1,Other,Training_Interaction,-1.09318846825282
+VDAC2,Phospholipid Transport,1,Other,Training_HR,0.549474378856715
+NPC2,Phospholipid Transport,1,Other,Training_LR,-0.828876084952824
+PITPNA,Phospholipid Transport,1,Other,Training_LR,-1.26880158251953
