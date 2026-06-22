@@ -183,5 +183,5 @@ write.csv(cliff_results,
   row.names = FALSE
 )
 
-save_panel(pD, file.path(RPT_DIR, "panel_D_cv_SUPP"), PD_W, PD_H)
+save_panel(pD, file.path(RPT_DIR, "panel_d_cv_transitions"), PD_W, PD_H)
 cat("F02 Panel D done.\n")

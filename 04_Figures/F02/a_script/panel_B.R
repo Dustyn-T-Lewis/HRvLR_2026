@@ -57,6 +57,6 @@ pB <- ggplot(lfc_long, aes(x = abs_lfc)) +
   FIG_THEME +
   theme(strip.text = element_text(size = 8, face = "bold"))
 
-save_panel(pB, file.path(RPT_DIR, "panel_B_logfc_density_MAIN"), PB_W, PB_H)
+save_panel(pB, file.path(RPT_DIR, "panel_b_effect_size"), PB_W, PB_H)
 write.csv(lfc_stats, file.path(DAT_DIR, "audit_panel_B_lfc_stats.csv"), row.names = FALSE)
 cat("F02 Panel B done.\n")
