@@ -1,0 +1,10 @@
+contrast,spearman_rho,p_value,n_proteins
+Training_HR,0.9803,0,1870
+Training_LR,0.9849,0,1873
+Acute_HR,0.9894,0,1876
+Acute_LR,0.9829,0,1867
+Baseline_HRvLR,0.9756,0,1868
+Trained_HRvLR,0.988,0,1877
+Acute_HRvLR,0.9855,0,1869
+Training_Interaction,0.9701,0,1863
+Acute_Interaction,0.9819,0,1862
