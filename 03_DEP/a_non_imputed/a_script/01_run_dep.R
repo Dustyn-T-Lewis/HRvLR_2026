@@ -23,30 +23,23 @@
 
 # SETUP
 
-library(dplyr)
-library(tidyr)
-library(tibble)
-library(readr)
-library(purrr)
-library(proteoDA)
+pacman::p_load(dplyr, tidyr, tibble, readr, purrr, proteoDA, here)
 
 set.seed(42)
 
-setwd(rprojroot::find_rstudio_root_file())
-
 cfg <- list(
-  norm_csv    = "01_normalization/c_data/02_normalized.csv",
-  norm_rds    = "01_normalization/c_data/03_DAList_normalized.rds",
-  data_dir     = "03_DEP/c_data",
-  report_dir   = "03_DEP/b_reports",
-  proteoDA_dir = "03_DEP/b_reports/01_proteoDA",
+  norm_csv = here("02_Normalization", "c_data", "normalized.csv"),
+  norm_rds = here("02_Normalization", "c_data", "DAList_normalized.rds"),
+  data_dir = here("03_DEP", "a_non_imputed", "c_data"),
+  report_dir = here("03_DEP", "a_non_imputed", "b_reports"),
+  proteoDA_dir = here("03_DEP", "a_non_imputed", "b_reports", "01_proteoDA"),
   pval_thresh = 0.10,
-  lfc_thresh  = 0,
-  adj_method  = "BH",
-  pi_thresh   = 0.05
+  lfc_thresh = 0,
+  adj_method = "BH",
+  pi_thresh = 0.05
 )
 
-dir.create(cfg$data_dir,     recursive = TRUE, showWarnings = FALSE)
+dir.create(cfg$data_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$proteoDA_dir, recursive = TRUE, showWarnings = FALSE)
 
 required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time")
@@ -55,15 +48,17 @@ required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Tim
 
 df <- read_csv(cfg$norm_csv, show_col_types = FALSE)
 
-ann_cols   <- c("uniprot_id", "protein", "gene", "description")
-ann        <- df[, ann_cols]
+ann_cols <- c("uniprot_id", "protein", "gene", "description")
+ann <- df[, ann_cols]
 samp_names <- setdiff(names(df), ann_cols)
-mat        <- as.matrix(df[, samp_names])
+mat <- as.matrix(df[, samp_names])
 rownames(mat) <- ann$uniprot_id
 
-cat(sprintf("Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
-            nrow(mat), ncol(mat), sum(is.na(mat)),
-            100 * sum(is.na(mat)) / length(mat)))
+cat(sprintf(
+  "Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
+  nrow(mat), ncol(mat), sum(is.na(mat)),
+  100 * sum(is.na(mat)) / length(mat)
+))
 
 # Canonical metadata from normalisation DAList (not regex-derived)
 dal_norm <- readRDS(cfg$norm_rds)
@@ -84,10 +79,13 @@ meta <- tibble(
   subject    = dal_meta$Subject_ID
 )
 meta$responder <- factor(meta$responder, levels = c("HR", "LR"))
-meta$time      <- factor(meta$time,      levels = c("T1", "T2", "T3"))
-meta$group     <- factor(meta$group,
-                         levels = c("HR_T1", "HR_T2", "HR_T3",
-                                    "LR_T1", "LR_T2", "LR_T3"))
+meta$time <- factor(meta$time, levels = c("T1", "T2", "T3"))
+meta$group <- factor(meta$group,
+  levels = c(
+    "HR_T1", "HR_T2", "HR_T3",
+    "LR_T1", "LR_T2", "LR_T3"
+  )
+)
 
 if (any(is.na(meta$subject)) || any(meta$subject == "")) {
   stop("Subject_ID must be present for duplicateCorrelation blocking.")
@@ -111,8 +109,10 @@ dal <- DAList(
 # STATISTICAL DESIGN
 
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
-colnames(dal$design$design_matrix) <- gsub("^group", "",
-                                            colnames(dal$design$design_matrix))
+colnames(dal$design$design_matrix) <- gsub(
+  "^group", "",
+  colnames(dal$design$design_matrix)
+)
 
 # CONTRASTS
 
@@ -141,9 +141,10 @@ if (!is.na(within_cor)) cat(sprintf("Within-subject correlation: %.3f\n", within
 # BMC Bioinform 9:43, recommend FDR 0-15% for label-free proteomics).
 # Pi-score (Pi < 0.05) provides a secondary effect-size-weighted filter.
 dal <- extract_DA_results(dal,
-                          pval_thresh = cfg$pval_thresh,
-                          lfc_thresh  = cfg$lfc_thresh,
-                          adj_method  = cfg$adj_method)
+  pval_thresh = cfg$pval_thresh,
+  lfc_thresh  = cfg$lfc_thresh,
+  adj_method  = cfg$adj_method
+)
 
 # INJECT PI-SCORE INTO dal$results
 # Pi = p^|logFC| (Xiao et al. 2014); lower = more significant
@@ -151,9 +152,9 @@ contrast_names <- names(dal$results)
 
 for (cname in contrast_names) {
   res <- dal$results[[cname]]
-  res$pi_score <- res$P.Value ^ abs(res$logFC)
+  res$pi_score <- res$P.Value^abs(res$logFC)
   res$sig_pi <- case_when(
-    res$pi_score < cfg$pi_thresh & res$logFC > 0 ~  1L,
+    res$pi_score < cfg$pi_thresh & res$logFC > 0 ~ 1L,
     res$pi_score < cfg$pi_thresh & res$logFC < 0 ~ -1L,
     TRUE ~ 0L
   )
@@ -176,11 +177,12 @@ tryCatch(
 
 tryCatch(
   write_limma_plots(dal,
-                    grouping_column = "group",
-                    output_dir      = cfg$proteoDA_dir,
-                    table_columns   = c("uniprot_id", "gene", "protein"),
-                    title_column    = "gene",
-                    overwrite       = TRUE),
+    grouping_column = "group",
+    output_dir      = cfg$proteoDA_dir,
+    table_columns   = c("uniprot_id", "gene", "protein"),
+    title_column    = "gene",
+    overwrite       = TRUE
+  ),
   error = function(e) cat(sprintf("write_limma_plots: %s\n", conditionMessage(e)))
 )
 
@@ -195,6 +197,7 @@ write_limma_tables(dal,
   summary_csv       = "02_DA_summary_base.csv",
   combined_file_csv = "03_combined_results.csv",
   spreadsheet_xlsx  = "05_results.xlsx",
+  annot_cols        = c("uniprot_id", "gene", "protein", "description"),
   overwrite         = TRUE
 )
 
@@ -207,30 +210,36 @@ file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 da_summary <- map_dfr(contrast_names, function(cname) {
   res <- dal$results[[cname]]
   bind_rows(
-    tibble(contrast = cname, type = "up",
-           sig.PVal   = sum(res$P.Value < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
-           sig.FDR    = sum(res$adj.P.Val < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
-           pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-           p_adj_method = cfg$adj_method,
-           sig.Pi     = sum(res$sig_pi == 1, na.rm = TRUE),
-           sig.FDR.05 = sum(res$adj.P.Val < 0.05 & res$logFC > 0, na.rm = TRUE),
-           sig.FDR.10 = sum(res$adj.P.Val < 0.10 & res$logFC > 0, na.rm = TRUE)),
-    tibble(contrast = cname, type = "down",
-           sig.PVal   = sum(res$P.Value < cfg$pval_thresh & res$logFC < 0, na.rm = TRUE),
-           sig.FDR    = sum(res$adj.P.Val < cfg$pval_thresh & res$logFC < 0, na.rm = TRUE),
-           pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-           p_adj_method = cfg$adj_method,
-           sig.Pi     = sum(res$sig_pi == -1, na.rm = TRUE),
-           sig.FDR.05 = sum(res$adj.P.Val < 0.05 & res$logFC < 0, na.rm = TRUE),
-           sig.FDR.10 = sum(res$adj.P.Val < 0.10 & res$logFC < 0, na.rm = TRUE)),
-    tibble(contrast = cname, type = "nonsig",
-           sig.PVal   = sum(res$P.Value >= cfg$pval_thresh, na.rm = TRUE),
-           sig.FDR    = sum(res$adj.P.Val >= cfg$pval_thresh, na.rm = TRUE),
-           pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-           p_adj_method = cfg$adj_method,
-           sig.Pi     = sum(res$sig_pi == 0, na.rm = TRUE),
-           sig.FDR.05 = sum(res$adj.P.Val >= 0.05, na.rm = TRUE),
-           sig.FDR.10 = sum(res$adj.P.Val >= 0.10, na.rm = TRUE))
+    tibble(
+      contrast = cname, type = "up",
+      sig.PVal = sum(res$P.Value < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
+      sig.FDR = sum(res$adj.P.Val < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
+      pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
+      p_adj_method = cfg$adj_method,
+      sig.Pi = sum(res$sig_pi == 1, na.rm = TRUE),
+      sig.FDR.05 = sum(res$adj.P.Val < 0.05 & res$logFC > 0, na.rm = TRUE),
+      sig.FDR.10 = sum(res$adj.P.Val < 0.10 & res$logFC > 0, na.rm = TRUE)
+    ),
+    tibble(
+      contrast = cname, type = "down",
+      sig.PVal = sum(res$P.Value < cfg$pval_thresh & res$logFC < 0, na.rm = TRUE),
+      sig.FDR = sum(res$adj.P.Val < cfg$pval_thresh & res$logFC < 0, na.rm = TRUE),
+      pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
+      p_adj_method = cfg$adj_method,
+      sig.Pi = sum(res$sig_pi == -1, na.rm = TRUE),
+      sig.FDR.05 = sum(res$adj.P.Val < 0.05 & res$logFC < 0, na.rm = TRUE),
+      sig.FDR.10 = sum(res$adj.P.Val < 0.10 & res$logFC < 0, na.rm = TRUE)
+    ),
+    tibble(
+      contrast = cname, type = "nonsig",
+      sig.PVal = sum(res$P.Value >= cfg$pval_thresh, na.rm = TRUE),
+      sig.FDR = sum(res$adj.P.Val >= cfg$pval_thresh, na.rm = TRUE),
+      pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
+      p_adj_method = cfg$adj_method,
+      sig.Pi = sum(res$sig_pi == 0, na.rm = TRUE),
+      sig.FDR.05 = sum(res$adj.P.Val >= 0.05, na.rm = TRUE),
+      sig.FDR.10 = sum(res$adj.P.Val >= 0.10, na.rm = TRUE)
+    )
   )
 })
 
@@ -241,5 +250,7 @@ write_csv(da_summary, file.path(cfg$data_dir, "02_DA_summary.csv"))
 print(dal$design$contrast_matrix)
 print(da_summary)
 
-cat(sprintf("Done: 01_run_dep.R — %d contrasts -> %s/\n",
-            length(contrast_names), cfg$data_dir))
+cat(sprintf(
+  "Done: 01_run_dep.R — %d contrasts -> %s/\n",
+  length(contrast_names), cfg$data_dir
+))

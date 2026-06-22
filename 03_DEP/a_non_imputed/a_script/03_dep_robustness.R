@@ -9,30 +9,20 @@
 
 # SETUP
 
-library(dplyr)
-library(tidyr)
-library(tibble)
-library(stringr)
-library(readr)
-library(purrr)
-library(ggplot2)
-library(patchwork)
-library(proteoDA)
-library(openxlsx)
-library(boot)
-library(pwr)
+pacman::p_load(
+  dplyr, tidyr, tibble, stringr, readr, purrr, ggplot2, patchwork,
+  proteoDA, openxlsx, boot, pwr, here
+)
 
 set.seed(42)
 
-setwd(rprojroot::find_rstudio_root_file())
-
 cfg <- list(
-  data_dir = "03_DEP/c_data",
-  per_dir = "03_DEP/c_data/04_per_contrast_results",
-  report_dir = "03_DEP/b_reports",
-  norm_csv = "01_normalization/c_data/02_normalized.csv",
-  norm_rds = "01_normalization/c_data/03_DAList_normalized.rds",
-  imp_rds = "02_Imputation/c_data/DAList_imputed_missforest.rds",
+  data_dir = here("03_DEP", "a_non_imputed", "c_data"),
+  per_dir = here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results"),
+  report_dir = here("03_DEP", "a_non_imputed", "b_reports"),
+  norm_csv = here("02_Normalization", "c_data", "normalized.csv"),
+  norm_rds = here("02_Normalization", "c_data", "DAList_normalized.rds"),
+  imp_rds = here("02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"),
   pi_thresh = 0.05,
   pval_thresh = 0.10
 )
@@ -42,9 +32,17 @@ cfg <- list(
 dal <- readRDS(file.path(cfg$data_dir, "01_limma_DAList.rds"))
 contrast_names <- names(dal$results)
 
-# Read per-contrast CSVs
+# Read per-contrast CSVs; derive Pi-score (not carried by write_limma_tables).
 results_list <- lapply(contrast_names, function(cname) {
-  read_csv(file.path(cfg$per_dir, paste0(cname, ".csv")), show_col_types = FALSE)
+  read_csv(file.path(cfg$per_dir, paste0(cname, ".csv")), show_col_types = FALSE) |>
+    mutate(
+      pi_score = P.Value^abs(logFC),
+      sig_pi = case_when(
+        pi_score < cfg$pi_thresh & logFC > 0 ~ 1L,
+        pi_score < cfg$pi_thresh & logFC < 0 ~ -1L,
+        TRUE ~ 0L
+      )
+    )
 })
 names(results_list) <- contrast_names
 

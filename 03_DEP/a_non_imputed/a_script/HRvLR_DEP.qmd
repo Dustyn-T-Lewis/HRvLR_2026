@@ -90,16 +90,16 @@ The pipeline is implemented across three scripts:
 
 | File | Location | Description |
 |------|----------|-------------|
-| `02_normalized.csv` | `01_normalization/c_data/` | Cycloess-normalized, non-imputed protein matrix |
-| `03_DAList_normalized.rds` | `01_normalization/c_data/` | Full DAList with canonical metadata |
-| `DAList_imputed_missforest.rds` | `02_Imputation/c_data/` | Imputed DAList (missForest arm; sensitivity analysis only) |
+| `02_normalized.csv` | `02_Normalization/c_data/` | Cycloess-normalized, non-imputed protein matrix |
+| `03_DAList_normalized.rds` | `02_Normalization/c_data/` | Full DAList with canonical metadata |
+| `DAList_imputed_missforest.rds` | `02_Normalization/imputation/c_data/` | Imputed DAList (missForest arm; sensitivity analysis only) |
 
 ### Expected directory structure
 
 ```
 A_HRvLR_2026/
-  01_normalization/c_data/   <- Stage 1 outputs
-  02_Imputation/c_data/      <- Stage 2 outputs (sensitivity analysis)
+  02_Normalization/c_data/   <- Stage 1 outputs
+  02_Normalization/imputation/c_data/      <- Stage 2 outputs (sensitivity analysis)
   03_DEP/
     a_script/                <- this file lives here
     b_reports/               <- PDF reports + proteoDA outputs
@@ -118,7 +118,7 @@ We read the normalized abundance matrix from Stage 1, then load the canonical me
 
 library(proteoDA)
 
-df <- read_csv("01_normalization/c_data/02_normalized.csv", show_col_types = FALSE)
+df <- read_csv("02_Normalization/c_data/normalized.csv", show_col_types = FALSE)
 
 ann_cols <- c("uniprot_id", "protein", "gene", "description")
 ann <- df[, ann_cols]
@@ -133,7 +133,7 @@ cat(sprintf(
 ))
 
 # Canonical metadata from the normalization DAList (not regex-derived)
-dal_norm <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
+dal_norm <- readRDS("02_Normalization/c_data/DAList_normalized.rds")
 dal_meta <- as.data.frame(dal_norm$metadata)
 meta <- tibble(
   sample_id = dal_meta$Col_ID,
@@ -158,7 +158,7 @@ stopifnot(setequal(colnames(mat), meta$sample_id))
 #| label: show-metadata
 #| eval: true
 
-dal_norm <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
+dal_norm <- readRDS("02_Normalization/c_data/DAList_normalized.rds")
 table(dal_norm$metadata$Group, dal_norm$metadata$Timepoint)
 cat(sprintf(
   "Proteins: %d | Samples: %d\n",
@@ -203,7 +203,7 @@ colnames(dal$design$design_matrix) <- gsub(
 #| label: show-within-cor
 #| eval: true
 
-dal_dep <- readRDS("03_DEP/c_data/01_limma_DAList.rds")
+dal_dep <- readRDS("03_DEP/a_non_imputed/c_data/01_limma_DAList.rds")
 within_cor <- dal_dep$eBayes_fit$correlation %||%
   dal_dep$tags$duplicate_correlation %||% NA_real_
 if (!is.na(within_cor)) {
@@ -295,7 +295,7 @@ saveRDS(dal, file.path(DATA_DIR, "limma_DAList.rds"))
 #| label: show-da-summary
 #| eval: true
 
-da_sum <- read_csv("03_DEP/c_data/02_DA_summary.csv", show_col_types = FALSE)
+da_sum <- read_csv("03_DEP/a_non_imputed/c_data/02_DA_summary.csv", show_col_types = FALSE)
 da_sum |>
   filter(type != "nonsig") |>
   select(contrast, type, any_of(c("sig.Pi", "sig.FDR.05", "sig.FDR.10")))
@@ -350,7 +350,7 @@ res <- res |>
 #| label: show-per-contrast
 #| eval: true
 
-f <- "03_DEP/c_data/04_per_contrast_results/Training_HR.csv"
+f <- "03_DEP/a_non_imputed/c_data/04_per_contrast_results/Training_HR.csv"
 if (file.exists(f)) {
   res <- read_csv(f, show_col_types = FALSE)
   cat(sprintf("Training_HR: %d proteins\n", nrow(res)))
@@ -371,8 +371,8 @@ Results across all seven contrasts are assembled into a single wide-format matri
 #| label: show-combined-results
 #| eval: true
 
-if (file.exists("03_DEP/c_data/03_combined_results.csv")) {
-  comb <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+if (file.exists("03_DEP/a_non_imputed/c_data/03_combined_results.csv")) {
+  comb <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
   cat(sprintf("Combined results: %d proteins x %d columns\n", nrow(comb), ncol(comb)))
   comb |>
     select(
@@ -473,8 +473,8 @@ rp_acute <- run_response_comparison(
 #| label: show-response-profiling
 #| eval: true
 
-if (file.exists("03_DEP/c_data/06_response_profiling_diagnostics.csv")) {
-  rp <- read_csv("03_DEP/c_data/06_response_profiling_diagnostics.csv",
+if (file.exists("03_DEP/a_non_imputed/c_data/06_response_profiling_diagnostics.csv")) {
+  rp <- read_csv("03_DEP/a_non_imputed/c_data/06_response_profiling_diagnostics.csv",
     show_col_types = FALSE
   )
   rp |> select(comparison, test, statistic, p_value, interpretation)
@@ -512,8 +512,8 @@ ci <- tryCatch(boot.ci(b, type = "bca"),
 #| label: show-bootstrap
 #| eval: true
 
-if (file.exists("03_DEP/c_data/09_effect_size_bootstrap.csv")) {
-  boot_df <- read_csv("03_DEP/c_data/09_effect_size_bootstrap.csv",
+if (file.exists("03_DEP/a_non_imputed/c_data/09_effect_size_bootstrap.csv")) {
+  boot_df <- read_csv("03_DEP/a_non_imputed/c_data/09_effect_size_bootstrap.csv",
     show_col_types = FALSE
   )
   boot_df |> arrange(desc(median_absLFC))
@@ -556,8 +556,8 @@ min_detectable_logFC <- pw$d * eff_sigma
 #| label: show-power
 #| eval: true
 
-if (file.exists("03_DEP/c_data/10_power_analysis.csv")) {
-  power_df <- read_csv("03_DEP/c_data/10_power_analysis.csv",
+if (file.exists("03_DEP/a_non_imputed/c_data/10_power_analysis.csv")) {
+  power_df <- read_csv("03_DEP/a_non_imputed/c_data/10_power_analysis.csv",
     show_col_types = FALSE
   )
   power_df |>
@@ -580,8 +580,8 @@ As a robustness check, an identical limma pipeline is run on the **imputed** ver
 #| label: show-imputation-sensitivity
 #| eval: true
 
-if (file.exists("03_DEP/c_data/11_imputation_sensitivity.csv")) {
-  sens <- read_csv("03_DEP/c_data/11_imputation_sensitivity.csv",
+if (file.exists("03_DEP/a_non_imputed/c_data/11_imputation_sensitivity.csv")) {
+  sens <- read_csv("03_DEP/a_non_imputed/c_data/11_imputation_sensitivity.csv",
     show_col_types = FALSE
   )
   sens
@@ -598,7 +598,7 @@ if (file.exists("03_DEP/c_data/11_imputation_sensitivity.csv")) {
 
 ## Stage Outputs
 
-All outputs from the DEP pipeline are written to `03_DEP/c_data/` and numbered in pipeline order:
+All outputs from the DEP pipeline are written to `03_DEP/a_non_imputed/c_data/` and numbered in pipeline order:
 
 | File | Description |
 |:-----|:------------|
