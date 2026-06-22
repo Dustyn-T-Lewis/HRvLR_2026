@@ -13,8 +13,8 @@ library(imputeLCMD)
 set.seed(42)
 setwd(rprojroot::find_rstudio_root_file())
 
-norm_rds <- "01_normalization/c_data/03_DAList_normalized.rds"
-data_dir <- "02_Imputation/c_data"
+norm_rds <- "02_Normalization/c_data/DAList_normalized.rds"
+data_dir <- "02_Normalization/imputation/c_data"
 dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
 
 dal <- readRDS(norm_rds)
