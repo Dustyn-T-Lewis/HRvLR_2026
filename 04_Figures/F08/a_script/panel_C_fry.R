@@ -11,7 +11,10 @@ setwd(rprojroot::find_rstudio_root_file())
 source("04_Figures/F08/a_script/style.R")
 
 suppressPackageStartupMessages({
-  library(tidyverse); library(limma); library(fgsea); library(patchwork)
+  library(tidyverse)
+  library(limma)
+  library(fgsea)
+  library(patchwork)
 })
 set.seed(42)
 
@@ -24,9 +27,15 @@ pdf_device <- get_pdf_device()
 PF_W <- 220
 
 # Load data
-dal     <- readRDS("02_Imputation/c_data/01_DAList_imputed.rds")
-dep_df  <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
-imp_csv <- read_csv("02_Imputation/c_data/01_imputed.csv", show_col_types = FALSE)
+dal <- readRDS("02_Imputation/c_data/DAList_imputed_missforest.rds")
+dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+imp_csv <- dplyr::bind_cols(
+  tibble::as_tibble(dal$annotation[, c(
+    "uniprot_id", "protein",
+    "gene", "description"
+  )]),
+  tibble::as_tibble(dal$data)
+)
 
 meta <- dal$metadata
 sample_cols <- meta$Col_ID
@@ -39,7 +48,8 @@ mat_imp <- imp_csv %>%
 
 # Design + duplicateCorrelation
 meta$Group_Time <- factor(meta$Group_Time,
-  levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3"))
+  levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+)
 design <- model.matrix(~ 0 + Group_Time, data = meta)
 colnames(design) <- gsub("^Group_Time", "", colnames(design))
 
@@ -67,19 +77,29 @@ sets_pi <- list(
   down_ids = sig_pi$uniprot_id[sig_pi$logFC_Acute_HR < 0]
 )
 
-message(sprintf("Gene sets (Pi < 0.05): up = %d, down = %d",
-                length(sets_pi$up), length(sets_pi$down)))
+message(sprintf(
+  "Gene sets (Pi < 0.05): up = %d, down = %d",
+  length(sets_pi$up), length(sets_pi$down)
+))
 
 # Run fry
 run_fry_set <- function(idx, set_name) {
-  if (length(idx) < 3) return(tibble(set = set_name, n = length(idx),
-                                      direction = NA_character_,
-                                      PValue = NA_real_, PValue.Mixed = NA_real_))
-  res <- fry(mat_imp, index = idx, design = design,
-             contrast = cm[, "Acute_LR"], block = block_id,
-             correlation = cor_imp)
-  tibble(set = set_name, n = length(idx), direction = res$Direction[1],
-         PValue = res$PValue[1], PValue.Mixed = res$PValue.Mixed[1])
+  if (length(idx) < 3) {
+    return(tibble(
+      set = set_name, n = length(idx),
+      direction = NA_character_,
+      PValue = NA_real_, PValue.Mixed = NA_real_
+    ))
+  }
+  res <- fry(mat_imp,
+    index = idx, design = design,
+    contrast = cm[, "Acute_LR"], block = block_id,
+    correlation = cor_imp
+  )
+  tibble(
+    set = set_name, n = length(idx), direction = res$Direction[1],
+    PValue = res$PValue[1], PValue.Mixed = res$PValue.Mixed[1]
+  )
 }
 
 fry_up <- run_fry_set(sets_pi$up, "ac_hr_up") %>%
@@ -93,18 +113,26 @@ write_csv(fry_all, file.path(DAT, "panel_C_fry", "fry_results_all.csv"))
 
 # Driving proteins + leading-edge ORA
 driving_up <- dep_df %>%
-  filter(uniprot_id %in% sets_pi$up_ids, uniprot_id %in% imp_ids,
-         t_Acute_LR > 0) %>%
-  transmute(gene, uniprot_id, set = "ac_hr_up",
-            t_acute_hr = t_Acute_HR, t_acute_lr = t_Acute_LR,
-            logFC_Acute_HR, logFC_Acute_LR, pi_score_Acute_HR)
+  filter(
+    uniprot_id %in% sets_pi$up_ids, uniprot_id %in% imp_ids,
+    t_Acute_LR > 0
+  ) %>%
+  transmute(gene, uniprot_id,
+    set = "ac_hr_up",
+    t_acute_hr = t_Acute_HR, t_acute_lr = t_Acute_LR,
+    logFC_Acute_HR, logFC_Acute_LR, pi_score_Acute_HR
+  )
 
 driving_dn <- dep_df %>%
-  filter(uniprot_id %in% sets_pi$down_ids, uniprot_id %in% imp_ids,
-         t_Acute_LR < 0) %>%
-  transmute(gene, uniprot_id, set = "ac_hr_down",
-            t_acute_hr = t_Acute_HR, t_acute_lr = t_Acute_LR,
-            logFC_Acute_HR, logFC_Acute_LR, pi_score_Acute_HR)
+  filter(
+    uniprot_id %in% sets_pi$down_ids, uniprot_id %in% imp_ids,
+    t_Acute_LR < 0
+  ) %>%
+  transmute(gene, uniprot_id,
+    set = "ac_hr_down",
+    t_acute_hr = t_Acute_HR, t_acute_lr = t_Acute_LR,
+    logFC_Acute_HR, logFC_Acute_LR, pi_score_Acute_HR
+  )
 
 driving_df <- bind_rows(driving_up, driving_dn)
 write_csv(driving_df, file.path(DAT, "panel_C_fry", "driving_proteins.csv"))
@@ -115,41 +143,56 @@ all_genes <- dep_df$gene[dep_df$uniprot_id %in% imp_ids]
 
 ora_leading_up <- if (nrow(driving_up) >= 5) {
   tryCatch(
-    run_ora_deduplicated(genes = driving_up$gene, universe = all_genes,
-                          pathways = pw_collection, jaccard_cutoff = 0.5,
-                          min_size = 10, max_size = 500, padj_cutoff = 0.1) %>%
+    run_ora_deduplicated(
+      genes = driving_up$gene, universe = all_genes,
+      pathways = pw_collection, jaccard_cutoff = 0.5,
+      min_size = 10, max_size = 500, padj_cutoff = 0.1
+    ) %>%
       mutate(pathway_label = clean_pathway_name(pathway)) %>%
       slice_head(n = 5),
-    error = function(e) tibble())
-} else tibble()
+    error = function(e) tibble()
+  )
+} else {
+  tibble()
+}
 
 ora_leading_dn <- if (nrow(driving_dn) >= 5) {
   tryCatch(
-    run_ora_deduplicated(genes = driving_dn$gene, universe = all_genes,
-                          pathways = pw_collection, jaccard_cutoff = 0.5,
-                          min_size = 10, max_size = 500, padj_cutoff = 0.1) %>%
+    run_ora_deduplicated(
+      genes = driving_dn$gene, universe = all_genes,
+      pathways = pw_collection, jaccard_cutoff = 0.5,
+      min_size = 10, max_size = 500, padj_cutoff = 0.1
+    ) %>%
       mutate(pathway_label = clean_pathway_name(pathway)) %>%
       slice_head(n = 5),
-    error = function(e) tibble())
-} else tibble()
+    error = function(e) tibble()
+  )
+} else {
+  tibble()
+}
 
 # Barcode data
 t_rank <- dep_df %>%
   filter(uniprot_id %in% imp_ids, !is.na(t_Acute_LR)) %>%
   arrange(desc(t_Acute_LR)) %>%
-  mutate(rank = row_number(),
-         in_up   = uniprot_id %in% sets_pi$up_ids,
-         in_down = uniprot_id %in% sets_pi$down_ids)
+  mutate(
+    rank = row_number(),
+    in_up = uniprot_id %in% sets_pi$up_ids,
+    in_down = uniprot_id %in% sets_pi$down_ids
+  )
 
 running_es <- function(t_vals, in_set) {
-  n <- length(t_vals); n_h <- sum(in_set)
-  if (n_h == 0) return(rep(0, n))
+  n <- length(t_vals)
+  n_h <- sum(in_set)
+  if (n_h == 0) {
+    return(rep(0, n))
+  }
   hit_w <- ifelse(in_set, abs(t_vals), 0)
   miss_w <- 1 / (n - n_h)
   cumsum(ifelse(in_set, hit_w / sum(hit_w), -miss_w))
 }
 
-t_rank$es_up   <- running_es(t_rank$t_Acute_LR, t_rank$in_up)
+t_rank$es_up <- running_es(t_rank$t_Acute_LR, t_rank$in_up)
 t_rank$es_down <- running_es(t_rank$t_Acute_LR, t_rank$in_down)
 
 n_all <- nrow(t_rank)
@@ -160,70 +203,96 @@ HR_COL <- unname(CONTRAST_COLORS["Acute_HR"])
 LR_COL <- unname(CONTRAST_COLORS["Acute_LR"])
 
 make_barcode <- function(t_df, in_col, es_col, fry_row, title, color,
-                          p_position = "top_right") {
+                         p_position = "top_right") {
   marks <- t_df %>% filter(.data[[in_col]])
   is_sig <- !is.na(fry_row$PValue) && fry_row$PValue < 0.05
   line_color <- if (is_sig) color else scales::alpha(color, 0.4)
 
-  p_label <- sprintf("fry %s, %s (n = %d)%s",
-                      fry_row$direction, fmt_p(fry_row$PValue),
-                      fry_row$n,
-                      if (fry_row$consistent) "" else " \u2717")
+  p_label <- sprintf(
+    "fry %s, %s (n = %d)%s",
+    fry_row$direction, fmt_p(fry_row$PValue),
+    fry_row$n,
+    if (fry_row$consistent) "" else " \u2717"
+  )
   p_color <- if (fry_row$consistent) "grey20" else "#DC2626"
 
   if (p_position == "bottom_left") {
-    p_x <- n_all * 0.02; p_y <- -Inf; p_hjust <- 0; p_vjust <- -0.5
+    p_x <- n_all * 0.02
+    p_y <- -Inf
+    p_hjust <- 0
+    p_vjust <- -0.5
   } else {
-    p_x <- n_all * 0.98; p_y <- Inf; p_hjust <- 1; p_vjust <- 1.3
+    p_x <- n_all * 0.98
+    p_y <- Inf
+    p_hjust <- 1
+    p_vjust <- 1.3
   }
 
   p_es <- ggplot(t_df, aes(x = rank, y = .data[[es_col]])) +
     geom_area(fill = scales::alpha(line_color, 0.15), color = NA) +
     geom_line(color = line_color, linewidth = 0.6) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey60",
-               linewidth = 0.3) +
-    annotate("text", x = p_x, y = p_y,
-             label = p_label,
-             hjust = p_hjust, vjust = p_vjust, size = txt_s * 1.1,
-             fontface = "bold", color = p_color) +
+    geom_hline(
+      yintercept = 0, linetype = "dashed", color = "grey60",
+      linewidth = 0.3
+    ) +
+    annotate("text",
+      x = p_x, y = p_y,
+      label = p_label,
+      hjust = p_hjust, vjust = p_vjust, size = txt_s * 1.1,
+      fontface = "bold", color = p_color
+    ) +
     labs(y = "ES", title = title) +
     scale_x_continuous(limits = c(1, n_all), expand = c(0.005, 0)) +
     FIG_THEME +
-    theme(axis.text.x = element_blank(), axis.title.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          plot.margin = margin(3, 4, 0, 4, "mm"),
-          plot.title = element_text(size = 9.5, face = "bold"))
+    theme(
+      axis.text.x = element_blank(), axis.title.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      plot.margin = margin(3, 4, 0, 4, "mm"),
+      plot.title = element_text(size = 9.5, face = "bold")
+    )
 
   p_bc <- ggplot(marks, aes(x = rank, xend = rank, y = 0, yend = 1)) +
     geom_segment(color = line_color, linewidth = 0.3, alpha = 0.7) +
     scale_x_continuous(limits = c(1, n_all), expand = c(0.005, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
     FIG_THEME +
-    theme(axis.text = element_blank(), axis.title = element_blank(),
-          axis.ticks = element_blank(), panel.grid = element_blank(),
-          panel.background = element_rect(fill = "grey97"),
-          plot.margin = margin(0, 4, 0, 4, "mm"))
+    theme(
+      axis.text = element_blank(), axis.title = element_blank(),
+      axis.ticks = element_blank(), panel.grid = element_blank(),
+      panel.background = element_rect(fill = "grey97"),
+      plot.margin = margin(0, 4, 0, 4, "mm")
+    )
 
   list(es = p_es, bc = p_bc)
 }
 
-up_title <- sprintf("Ac.(HR)-Up DEPs (Pi < 0.05, n = %d) \u2192 Ac.(LR) ranked t",
-                     length(sets_pi$up))
-dn_title <- sprintf("Ac.(HR)-Down DEPs (Pi < 0.05, n = %d) \u2192 Ac.(LR) ranked t%s",
-                     length(sets_pi$down),
-                     if (!is.na(fry_dn$PValue) && fry_dn$PValue > 0.05) "  (n.s.)" else "")
+up_title <- sprintf(
+  "Ac.(HR)-Up DEPs (Pi < 0.05, n = %d) \u2192 Ac.(LR) ranked t",
+  length(sets_pi$up)
+)
+dn_title <- sprintf(
+  "Ac.(HR)-Down DEPs (Pi < 0.05, n = %d) \u2192 Ac.(LR) ranked t%s",
+  length(sets_pi$down),
+  if (!is.na(fry_dn$PValue) && fry_dn$PValue > 0.05) "  (n.s.)" else ""
+)
 
 p1 <- make_barcode(t_rank, "in_up", "es_up", fry_up, up_title, HR_COL,
-                    p_position = "top_right")
+  p_position = "top_right"
+)
 p2 <- make_barcode(t_rank, "in_down", "es_down", fry_dn, dn_title, HR_COL,
-                    p_position = "bottom_left")
+  p_position = "bottom_left"
+)
 
 p_t <- ggplot(t_rank, aes(x = rank, y = t_Acute_LR)) +
-  geom_area(fill = scales::alpha(LR_COL, 0.20),
-            color = LR_COL, linewidth = 0.3) +
+  geom_area(
+    fill = scales::alpha(LR_COL, 0.20),
+    color = LR_COL, linewidth = 0.3
+  ) +
   geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.3) +
-  labs(x = sprintf("Protein rank by t(Acute LR)  [n = %d]", n_all),
-       y = "t-stat") +
+  labs(
+    x = sprintf("Protein rank by t(Acute LR)  [n = %d]", n_all),
+    y = "t-stat"
+  ) +
   scale_x_continuous(limits = c(1, n_all), expand = c(0.005, 0)) +
   FIG_THEME +
   theme(plot.margin = margin(2, 4, 4, 4, "mm"))
@@ -240,55 +309,76 @@ shorten_ora_label <- function(x, max_chars = 32) {
 
 make_flanking_ora <- function(ora_df, set_label, bar_color) {
   if (is.null(ora_df) || nrow(ora_df) == 0) {
-    return(ggplot() + theme_void() +
-             annotate("text", x = 0.5, y = 0.5, label = "No sig. pathways",
-                      size = 3, color = "grey60"))
+    return(ggplot() +
+      theme_void() +
+      annotate("text",
+        x = 0.5, y = 0.5, label = "No sig. pathways",
+        size = 3, color = "grey60"
+      ))
   }
   bars <- ora_df %>%
     slice_head(n = 5) %>%
-    mutate(neg_log_padj = -log10(pmax(padj, 1e-20)),
-           short_label  = shorten_ora_label(pathway_label),
-           star = sig_stars(padj),
-           y = rev(row_number()),
-           bar_h = 0.7,
-           text_size = case_when(nchar(short_label) > 28 ~ 2.0,
-                                 nchar(short_label) > 22 ~ 2.4,
-                                 nchar(short_label) > 16 ~ 2.7,
-                                 TRUE ~ 3.0))
+    mutate(
+      neg_log_padj = -log10(pmax(padj, 1e-20)),
+      short_label = shorten_ora_label(pathway_label),
+      star = sig_stars(padj),
+      y = rev(row_number()),
+      bar_h = 0.7,
+      text_size = case_when(
+        nchar(short_label) > 28 ~ 2.0,
+        nchar(short_label) > 22 ~ 2.4,
+        nchar(short_label) > 16 ~ 2.7,
+        TRUE ~ 3.0
+      )
+    )
   x_max <- max(bars$neg_log_padj, na.rm = TRUE)
   x_display_max <- x_max * 1.18
 
   ggplot(bars, aes(y = y)) +
-    geom_rect(aes(xmin = 0, xmax = neg_log_padj,
-                  ymin = y - bar_h / 2, ymax = y + bar_h / 2),
-              fill = bar_color, color = NA) +
+    geom_rect(
+      aes(
+        xmin = 0, xmax = neg_log_padj,
+        ymin = y - bar_h / 2, ymax = y + bar_h / 2
+      ),
+      fill = bar_color, color = NA
+    ) +
     geom_text(aes(x = neg_log_padj / 2, y = y, label = short_label),
-              hjust = 0.5, size = bars$text_size, fontface = "bold",
-              color = "white", lineheight = 0.85) +
+      hjust = 0.5, size = bars$text_size, fontface = "bold",
+      color = "white", lineheight = 0.85
+    ) +
     geom_text(aes(x = neg_log_padj + x_max * 0.04, label = star),
-              hjust = 0, vjust = 0.5, size = 3, fontface = "bold",
-              color = "black") +
+      hjust = 0, vjust = 0.5, size = 3, fontface = "bold",
+      color = "black"
+    ) +
     labs(title = set_label, x = expression(-log[10](p[adj])), y = NULL) +
-    scale_x_continuous(limits = c(0, x_display_max),
-                       breaks = scales::pretty_breaks(n = 3),
-                       expand = expansion(mult = c(0, 0.02))) +
+    scale_x_continuous(
+      limits = c(0, x_display_max),
+      breaks = scales::pretty_breaks(n = 3),
+      expand = expansion(mult = c(0, 0.02))
+    ) +
     scale_y_continuous(limits = c(0.3, nrow(bars) + 0.7), expand = c(0, 0)) +
     theme_minimal(base_size = 8) +
-    theme(panel.grid    = element_blank(),
-          axis.text.y   = element_blank(),
-          axis.ticks.y  = element_blank(),
-          axis.title.y  = element_blank(),
-          axis.text.x   = element_text(size = 7),
-          axis.title.x  = element_text(size = 8),
-          axis.line.x   = element_line(color = "grey40", linewidth = 0.3),
-          plot.title    = element_text(face = "bold", size = 8.5, hjust = 0.5),
-          plot.margin   = margin(3, 4, 0, 0, "mm"))
+    theme(
+      panel.grid = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.x = element_text(size = 7),
+      axis.title.x = element_text(size = 8),
+      axis.line.x = element_line(color = "grey40", linewidth = 0.3),
+      plot.title = element_text(face = "bold", size = 8.5, hjust = 0.5),
+      plot.margin = margin(3, 4, 0, 0, "mm")
+    )
 }
 
-p_ora_flank_up <- make_flanking_ora(ora_leading_up, "Concordant (Up)",
-                                     unname(DIR_COLORS["Up"]))
-p_ora_flank_dn <- make_flanking_ora(ora_leading_dn, "Concordant (Down)",
-                                     unname(DIR_COLORS["Down"]))
+p_ora_flank_up <- make_flanking_ora(
+  ora_leading_up, "Concordant (Up)",
+  unname(DIR_COLORS["Up"])
+)
+p_ora_flank_dn <- make_flanking_ora(
+  ora_leading_dn, "Concordant (Down)",
+  unname(DIR_COLORS["Down"])
+)
 
 # -- Composite --
 fry_design <- c(
@@ -303,77 +393,115 @@ fry_design <- c(
 
 pC_fry <- p1$es + p1$bc + p2$es + p2$bc + p_t +
   p_ora_flank_up + p_ora_flank_dn +
-  plot_layout(design = fry_design,
-              heights = c(2.5, 0.4, 2.5, 0.4, 1.2),
-              widths  = c(3, 1.5)) +
+  plot_layout(
+    design = fry_design,
+    heights = c(2.5, 0.4, 2.5, 0.4, 1.2),
+    widths = c(3, 1.5)
+  ) +
   plot_annotation(
     title = "fry Gene-Set Rotation Test: Acute Concordance",
-    subtitle = sprintf("Rotation-based set test | dupCor = %.3f | n = %d proteins | Ac.(HR)-sig sets tested in Ac.(LR)",
-                        cor_imp, n_all),
-    theme = theme(plot.title = element_text(size = 11, face = "bold"),
-                  plot.subtitle = element_text(size = 8.5, color = "grey30"))
+    subtitle = sprintf(
+      "Rotation-based set test | dupCor = %.3f | n = %d proteins | Ac.(HR)-sig sets tested in Ac.(LR)",
+      cor_imp, n_all
+    ),
+    theme = theme(
+      plot.title = element_text(size = 11, face = "bold"),
+      plot.subtitle = element_text(size = 8.5, color = "grey30")
+    )
   )
 
 ggsave(file.path(RPT, "panel_C_fry_MAIN.pdf"), pC_fry,
-       width = PF_W + 80, height = 175, units = "mm", device = pdf_device)
+  width = PF_W + 80, height = 175, units = "mm", device = pdf_device
+)
 ggsave(file.path(RPT, "panel_C_fry_MAIN.png"), pC_fry,
-       width = PF_W + 80, height = 175, units = "mm", dpi = 300)
+  width = PF_W + 80, height = 175, units = "mm", dpi = 300
+)
 
 # -- Supp: Leading-edge ORA bars -----------------------------------------------
 make_ora_bars <- function(ora_df, set_label, bar_color, show_xaxis = FALSE) {
-  if (nrow(ora_df) == 0) return(NULL)
+  if (nrow(ora_df) == 0) {
+    return(NULL)
+  }
   bars <- ora_df %>%
     slice_head(n = 3) %>%
-    mutate(neg_log_padj = -log10(pmax(padj, 1e-20)),
-           star = sig_stars(padj),
-           y = rev(row_number()),
-           bar_h = 0.7,
-           text_size = case_when(
-             nchar(pathway_label) > 35 ~ 2.8,
-             nchar(pathway_label) > 25 ~ 3.4,
-             TRUE ~ 4.0))
+    mutate(
+      neg_log_padj = -log10(pmax(padj, 1e-20)),
+      star = sig_stars(padj),
+      y = rev(row_number()),
+      bar_h = 0.7,
+      text_size = case_when(
+        nchar(pathway_label) > 35 ~ 2.8,
+        nchar(pathway_label) > 25 ~ 3.4,
+        TRUE ~ 4.0
+      )
+    )
   x_max <- max(bars$neg_log_padj, na.rm = TRUE)
   x_display_max <- x_max * 1.15
 
   ggplot(bars, aes(y = y)) +
-    geom_rect(aes(xmin = 0, xmax = neg_log_padj,
-                  ymin = y - bar_h / 2, ymax = y + bar_h / 2),
-              fill = bar_color, color = NA) +
+    geom_rect(
+      aes(
+        xmin = 0, xmax = neg_log_padj,
+        ymin = y - bar_h / 2, ymax = y + bar_h / 2
+      ),
+      fill = bar_color, color = NA
+    ) +
     geom_text(aes(x = neg_log_padj / 2, y = y, label = pathway_label),
-              hjust = 0.5, size = bars$text_size, fontface = "bold",
-              color = "white", lineheight = 0.85) +
+      hjust = 0.5, size = bars$text_size, fontface = "bold",
+      color = "white", lineheight = 0.85
+    ) +
     geom_text(aes(x = neg_log_padj + x_max * 0.03, label = star),
-              hjust = 0, vjust = 0.5, size = 3.5, fontface = "bold",
-              color = "black") +
-    annotate("segment", x = 0, xend = x_display_max, y = -Inf, yend = -Inf,
-             color = "grey40", linewidth = 0.3) +
-    labs(title = set_label,
-         x = if (show_xaxis) expression(-log[10](p[adj])) else NULL,
-         y = NULL) +
-    scale_x_continuous(limits = c(0, x_display_max),
-                       breaks = scales::pretty_breaks(n = 3),
-                       expand = expansion(mult = c(0, 0.02))) +
+      hjust = 0, vjust = 0.5, size = 3.5, fontface = "bold",
+      color = "black"
+    ) +
+    annotate("segment",
+      x = 0, xend = x_display_max, y = -Inf, yend = -Inf,
+      color = "grey40", linewidth = 0.3
+    ) +
+    labs(
+      title = set_label,
+      x = if (show_xaxis) expression(-log[10](p[adj])) else NULL,
+      y = NULL
+    ) +
+    scale_x_continuous(
+      limits = c(0, x_display_max),
+      breaks = scales::pretty_breaks(n = 3),
+      expand = expansion(mult = c(0, 0.02))
+    ) +
     scale_y_continuous(limits = c(0.5, nrow(bars) + 0.5), expand = c(0, 0)) +
     theme_minimal(base_size = 9) +
-    theme(panel.grid    = element_blank(),
-          axis.text.y   = element_blank(),
-          axis.ticks.y  = element_blank(),
-          axis.title.y  = element_blank(),
-          axis.text.x   = if (show_xaxis) element_text(size = 8.5, face = "bold")
-                          else element_blank(),
-          axis.title.x  = if (show_xaxis) element_text(size = 9.5, face = "bold")
-                          else element_blank(),
-          axis.line.x   = element_blank(),
-          axis.ticks.x  = if (show_xaxis) element_line(color = "grey40", linewidth = 0.3)
-                          else element_blank(),
-          plot.title    = element_text(face = "bold", size = 10, hjust = 0.5),
-          plot.margin   = margin(2, 6, 2, 2, "mm"))
+    theme(
+      panel.grid = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.x = if (show_xaxis) {
+        element_text(size = 8.5, face = "bold")
+      } else {
+        element_blank()
+      },
+      axis.title.x = if (show_xaxis) {
+        element_text(size = 9.5, face = "bold")
+      } else {
+        element_blank()
+      },
+      axis.line.x = element_blank(),
+      axis.ticks.x = if (show_xaxis) {
+        element_line(color = "grey40", linewidth = 0.3)
+      } else {
+        element_blank()
+      },
+      plot.title = element_text(face = "bold", size = 10, hjust = 0.5),
+      plot.margin = margin(2, 6, 2, 2, "mm")
+    )
 }
 
 p_ora_up <- make_ora_bars(ora_leading_up, "Up DEPs", unname(DIR_COLORS["Up"]),
-                           show_xaxis = FALSE)
+  show_xaxis = FALSE
+)
 p_ora_dn <- make_ora_bars(ora_leading_dn, "Down DEPs", unname(DIR_COLORS["Down"]),
-                           show_xaxis = TRUE)
+  show_xaxis = TRUE
+)
 
 if (!is.null(p_ora_up) || !is.null(p_ora_dn)) {
   ora_panels <- Filter(Negate(is.null), list(p_ora_up, p_ora_dn))
@@ -381,13 +509,18 @@ if (!is.null(p_ora_up) || !is.null(p_ora_dn)) {
     plot_annotation(
       title = "Leading-Edge ORA: fry Driving Proteins",
       subtitle = "Hypergeometric ORA on concordant driving proteins | top 3 per set",
-      theme = theme(plot.title    = element_text(size = 12, face = "bold", hjust = 0.5),
-                    plot.subtitle = element_text(size = 9, hjust = 0.5, color = "grey30")))
+      theme = theme(
+        plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 9, hjust = 0.5, color = "grey30")
+      )
+    )
 
   ggsave(file.path(RPT, "supp", "panel_C_fry_ora_SUPP.pdf"), p_ora,
-         width = 160, height = 100, units = "mm", device = pdf_device)
+    width = 160, height = 100, units = "mm", device = pdf_device
+  )
   ggsave(file.path(RPT, "supp", "panel_C_fry_ora_SUPP.png"), p_ora,
-         width = 160, height = 100, units = "mm", dpi = 300)
+    width = 160, height = 100, units = "mm", dpi = 300
+  )
   message("F08 Panel C ORA (supp) done")
 }
 
