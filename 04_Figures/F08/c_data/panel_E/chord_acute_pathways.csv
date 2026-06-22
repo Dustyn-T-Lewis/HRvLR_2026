@@ -1,5 +1,0 @@
-pathway_label,pathway_padj,pathway_db,n_overlap,mean_logFC,direction
-Defense Response To Bacter..,0.0012098791761389273,GO:BP,11,2.625959423627595,Up
-RNA Splicing Via Transeste..,0.003974438160598802,GO:BP,13,1.004759073476468,Up
-Heme Metabolism,0.008980775609533436,Hallmark,14,1.6201935429817464,Up
-Myeloid Leukocyte Activation,0.009941022303966719,GO:BP,8,1.5288829086517604,Up

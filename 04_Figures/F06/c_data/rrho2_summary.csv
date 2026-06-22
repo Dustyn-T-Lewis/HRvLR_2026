@@ -1,3 +1,0 @@
-pair,max_concordant_up,max_concordant_down,max_discordant_1,max_discordant_2,n_hotspot_UU,n_hotspot_DD,n_hotspot_UD,n_hotspot_DU,n_shared,stepsize,grid_size
-High Responders,0.06,2.08,52.34,47.12,1,0,449,589,1924,20,99
-Low Responders,0.13,0.85,43.28,33.28,1,0,415,272,1917,20,98

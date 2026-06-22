@@ -108,4 +108,4 @@ pE_right <- ggplot(pheno_wide, aes(x = Group, y = delta, fill = Group)) +
 pE <- (pE_left | pE_right) + plot_layout(widths = c(0.65, 0.35))
 
 # Save ----
-save_panel(pE, file.path(RPT, "panel_E_fcsa_type2_MAIN"), PW, PH)
+save_panel(pE, file.path(RPT, "panel_e_fcsa_type2"), PW, PH)

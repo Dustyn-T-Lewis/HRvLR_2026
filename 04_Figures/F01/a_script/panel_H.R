@@ -113,4 +113,4 @@ audit_H <- pheno_wide %>%
   mutate(delta_t_test_p = stats_delta$p.value)
 write_csv(audit_H, file.path(DAT, "audit_panel_H_1rm_ext.csv"))
 
-save_panel(pH, file.path(RPT, "panel_H_1rm_ext_MAIN"), PW, PH)
+save_panel(pH, file.path(RPT, "panel_h_1rm_ext"), PW, PH)
