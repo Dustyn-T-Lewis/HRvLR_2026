@@ -20,44 +20,37 @@ read_panel_png <- function(dir_path, filename) {
 }
 
 main_dir <- file.path(RPT_MAIN, "png")
-supp_dir <- file.path(RPT_SUPP, "png")
 
-pA <- read_panel_png(main_dir, "MAIN_panel_A_Baseline_HRvLR.png")
-pB <- read_panel_png(main_dir, "MAIN_panel_B_Trained_HRvLR.png")
-pC <- read_panel_png(main_dir, "MAIN_panel_C_Acute_HRvLR.png")
-pD <- read_panel_png(main_dir, "MAIN_panel_D_Training_HR.png")
-pE <- read_panel_png(main_dir, "MAIN_panel_E_Training_LR.png")
-pF <- read_panel_png(main_dir, "MAIN_panel_F_Acute_HR.png")
-pG <- read_panel_png(main_dir, "MAIN_panel_G_Acute_LR.png")
-
-sA <- read_panel_png(supp_dir, "SUPP_panel_A_Training_Interaction.png")
-sB <- read_panel_png(supp_dir, "SUPP_panel_B_Acute_Interaction.png")
+# Nine panels grouped into four family rows: HR, LR, HRvLR, Interaction.
+pA <- read_panel_png(main_dir, "MAIN_panel_A_Training_HR.png")
+pB <- read_panel_png(main_dir, "MAIN_panel_B_Acute_HR.png")
+pC <- read_panel_png(main_dir, "MAIN_panel_C_Training_LR.png")
+pD <- read_panel_png(main_dir, "MAIN_panel_D_Acute_LR.png")
+pE <- read_panel_png(main_dir, "MAIN_panel_E_Baseline_HRvLR.png")
+pF <- read_panel_png(main_dir, "MAIN_panel_F_Trained_HRvLR.png")
+pG <- read_panel_png(main_dir, "MAIN_panel_G_Acute_HRvLR.png")
+pH <- read_panel_png(main_dir, "MAIN_panel_H_Training_Interaction.png")
+pI <- read_panel_png(main_dir, "MAIN_panel_I_Acute_Interaction.png")
 
 wrap_panel <- function(grob) {
-  ggplot() + annotation_custom(grob) +
-    theme_void() + theme(plot.margin = margin(2, 2, 2, 2))
+  ggplot() +
+    annotation_custom(grob) +
+    theme_void() +
+    theme(plot.margin = margin(2, 2, 2, 2))
 }
 
 main_composite <- (
-  wrap_panel(pA) | wrap_panel(pB) | wrap_panel(pC)
+  wrap_panel(pA) | wrap_panel(pB) | plot_spacer()
 ) / (
-  wrap_panel(pD) | wrap_panel(pE) | plot_spacer()
+  wrap_panel(pC) | wrap_panel(pD) | plot_spacer()
 ) / (
-  wrap_panel(pF) | wrap_panel(pG) | plot_spacer()
+  wrap_panel(pE) | wrap_panel(pF) | wrap_panel(pG)
+) / (
+  wrap_panel(pH) | wrap_panel(pI) | plot_spacer()
 ) +
   plot_annotation(
     title = "Protein- and Pathway-Level Signatures",
-    subtitle = "State contrasts plus within-group training and acute responses",
-    theme = theme(
-      plot.title = element_text(size = 12, face = "bold"),
-      plot.subtitle = element_text(size = 9, face = "bold.italic", color = "grey30")
-    )
-  )
-
-supp_composite <- (wrap_panel(sA) | wrap_panel(sB)) +
-  plot_annotation(
-    title = "Interaction Signatures",
-    subtitle = "Difference-of-differences contrasts for training and acute response",
+    subtitle = "Volcano rings by family: HR and LR within-responder, HR-vs-LR state, and differential response",
     theme = theme(
       plot.title = element_text(size = 12, face = "bold"),
       plot.subtitle = element_text(size = 9, face = "bold.italic", color = "grey30")
@@ -66,21 +59,14 @@ supp_composite <- (wrap_panel(sA) | wrap_panel(sB)) +
 
 dir.create(file.path(RPT_MAIN, "pdf"), recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(RPT_MAIN, "png"), recursive = TRUE, showWarnings = FALSE)
-dir.create(file.path(RPT_SUPP, "pdf"), recursive = TRUE, showWarnings = FALSE)
-dir.create(file.path(RPT_SUPP, "png"), recursive = TRUE, showWarnings = FALSE)
 
 ggsave(file.path(RPT_MAIN, "pdf", "MAIN_F04_composite.pdf"), main_composite,
-       width = 540, height = 560, units = "mm",
-       device = pdf_device, limitsize = FALSE)
+  width = 540, height = 740, units = "mm",
+  device = pdf_device, limitsize = FALSE
+)
 ggsave(file.path(RPT_MAIN, "png", "MAIN_F04_composite.png"), main_composite,
-       width = 540, height = 560, units = "mm",
-       dpi = 300, limitsize = FALSE)
+  width = 540, height = 740, units = "mm",
+  dpi = 300, limitsize = FALSE
+)
 
-ggsave(file.path(RPT_SUPP, "pdf", "SUPP_F04_interactions.pdf"), supp_composite,
-       width = 380, height = 210, units = "mm",
-       device = pdf_device, limitsize = FALSE)
-ggsave(file.path(RPT_SUPP, "png", "SUPP_F04_interactions.png"), supp_composite,
-       width = 380, height = 210, units = "mm",
-       dpi = 300, limitsize = FALSE)
-
-cat("F04 composites saved\n")
+cat("F04 composite saved\n")

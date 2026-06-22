@@ -30,43 +30,60 @@ dep_df <- read_csv(
 )
 
 # ── Panel dimensions ─────────────────────────────────────────────────────────
-PW <- 190; PH <- 185
+PW <- 190
+PH <- 185
 
 # ── Contrast config ──────────────────────────────────────────────────────────
+# All nine contrasts, grouped by family (HR / LR / HRvLR / Interaction).
 main_specs <- list(
-  list(panel = "panel_A", contrast = "Baseline_HRvLR",
-       title = "Baseline State: HR vs LR",
-       subtitle = "HR - LR at Baseline (T1)"),
-  list(panel = "panel_B", contrast = "Trained_HRvLR",
-       title = "Trained State: HR vs LR",
-       subtitle = "HR - LR after training (T2)"),
-  list(panel = "panel_C", contrast = "Acute_HRvLR",
-       title = "Acute State: HR vs LR",
-       subtitle = "HR - LR after acute bout (T3)"),
-  list(panel = "panel_D", contrast = "Training_HR",
-       title = "Training Response - HR",
-       subtitle = "HR: T2 - T1 (72h post-training)"),
-  list(panel = "panel_E", contrast = "Training_LR",
-       title = "Training Response - LR",
-       subtitle = "LR: T2 - T1 (72h post-training)"),
-  list(panel = "panel_F", contrast = "Acute_HR",
-       title = "Acute Response - HR",
-       subtitle = "HR: T3 - T2 (1h acute bout)"),
-  list(panel = "panel_G", contrast = "Acute_LR",
-       title = "Acute Response - LR",
-       subtitle = "LR: T3 - T2 (1h acute bout)")
+  list(
+    panel = "panel_A", contrast = "Training_HR",
+    title = "Training Response - HR",
+    subtitle = "HR: T2 - T1 (72h post-training)"
+  ),
+  list(
+    panel = "panel_B", contrast = "Acute_HR",
+    title = "Acute Response - HR",
+    subtitle = "HR: T3 - T2 (1h acute bout)"
+  ),
+  list(
+    panel = "panel_C", contrast = "Training_LR",
+    title = "Training Response - LR",
+    subtitle = "LR: T2 - T1 (72h post-training)"
+  ),
+  list(
+    panel = "panel_D", contrast = "Acute_LR",
+    title = "Acute Response - LR",
+    subtitle = "LR: T3 - T2 (1h acute bout)"
+  ),
+  list(
+    panel = "panel_E", contrast = "Baseline_HRvLR",
+    title = "Baseline State: HR vs LR",
+    subtitle = "HR - LR at Baseline (T1)"
+  ),
+  list(
+    panel = "panel_F", contrast = "Trained_HRvLR",
+    title = "Trained State: HR vs LR",
+    subtitle = "HR - LR after training (T2)"
+  ),
+  list(
+    panel = "panel_G", contrast = "Acute_HRvLR",
+    title = "Acute State: HR vs LR",
+    subtitle = "HR - LR after acute bout (T3)"
+  ),
+  list(
+    panel = "panel_H", contrast = "Training_Interaction",
+    title = "Differential Training Response",
+    subtitle = "(HR_T2 - HR_T1) - (LR_T2 - LR_T1)"
+  ),
+  list(
+    panel = "panel_I", contrast = "Acute_Interaction",
+    title = "Differential Acute Response",
+    subtitle = "(HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
+  )
 )
 
-supp_specs <- list(
-  list(panel = "panel_A", contrast = "Training_Interaction",
-       title = "Training Interaction (HR - LR)",
-       subtitle = "(HR_T2 - HR_T1) - (LR_T2 - LR_T1)"),
-  list(panel = "panel_B", contrast = "Acute_Interaction",
-       title = "Acute Interaction (HR - LR)",
-       subtitle = "(HR_T3 - HR_T2) - (LR_T3 - LR_T2)")
-)
-
-all_specs <- c(main_specs, supp_specs)
+all_specs <- main_specs
 
 # ── Build local fGSEA cache once from current DEP results ────────────────────
 pw_collection <- build_pathway_collection(min_size = 15, max_size = 500)
@@ -165,15 +182,6 @@ walk(
   report_png_dir = RPT_MAIN_PNG,
   data_root = file.path(DAT, "main"),
   file_prefix = "MAIN"
-)
-
-walk(
-  supp_specs,
-  build_and_save_panel,
-  report_pdf_dir = RPT_SUPP_PDF,
-  report_png_dir = RPT_SUPP_PNG,
-  data_root = file.path(DAT, "supp"),
-  file_prefix = "SUPP"
 )
 
 message("All F04 volcano-ring panels complete.")
