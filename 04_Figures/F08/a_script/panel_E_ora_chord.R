@@ -35,7 +35,7 @@ PW_COLORS_10 <- c("#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E",
                    "#E6AB02", "#A6761D", "#666666", "#1F78B4", "#FB9A99")
 
 # Load DEP results & build pool
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 all_genes <- unique(dep_df$gene)
 
 pi_cols    <- paste0("pi_score_", RELEVANT_CONTRASTS)

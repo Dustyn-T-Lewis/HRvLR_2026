@@ -25,7 +25,7 @@ for (d in c(RPT_MAIN_PDF, RPT_MAIN_PNG, RPT_SUPP_PDF, RPT_SUPP_PNG, DAT)) {
 
 # ── Load data once ────────────────────────────────────────────────────────────
 dep_df <- read_csv(
-  here::here("03_DEP/c_data/03_combined_results.csv"),
+  here::here("03_DEP/a_non_imputed/c_data/03_combined_results.csv"),
   show_col_types = FALSE
 )
 

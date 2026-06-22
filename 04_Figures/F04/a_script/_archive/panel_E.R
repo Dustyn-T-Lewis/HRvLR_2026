@@ -16,7 +16,7 @@ RPT <- here::here("04_Figures/F03/b_reports")
 DAT <- here::here("04_Figures/F03/c_data")
 dir.create(file.path(DAT, "panel_E"), recursive = TRUE, showWarnings = FALSE)
 
-dep_df   <- read_csv(here::here("03_DEP/c_data/03_combined_results.csv"),
+dep_df   <- read_csv(here::here("03_DEP/a_non_imputed/c_data/03_combined_results.csv"),
                      show_col_types = FALSE)
 fgsea_df <- read_csv(here::here("04_Figures/F03/c_data/06_panel_F_fgsea_results.csv"),
                      show_col_types = FALSE)

@@ -27,8 +27,8 @@ pdf_device <- get_pdf_device()
 PF_W <- 220
 
 # Load data
-dal <- readRDS("02_Imputation/c_data/DAList_imputed_missforest.rds")
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dal <- readRDS("02_Normalization/imputation/c_data/DAList_imputed_missforest.rds")
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 imp_csv <- dplyr::bind_cols(
   tibble::as_tibble(dal$annotation[, c(
     "uniprot_id", "protein",

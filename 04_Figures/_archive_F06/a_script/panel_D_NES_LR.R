@@ -19,7 +19,7 @@ SIG_COLORS <- SIG_COLORS_F06_LR
 SIG_LBL_F  <- SIG_LABEL_FILL_F06_LR
 SIG_LBL_T  <- SIG_LABEL_TEXT_F06_LR
 
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 pw_collection <- build_pathway_collection(min_size = 10, max_size = 500)
 set.seed(42)
 fgsea_list <- list()

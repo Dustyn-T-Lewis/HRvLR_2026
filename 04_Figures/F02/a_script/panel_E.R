@@ -18,7 +18,7 @@ n_proteins <- nrow(imp_mat)
 
 # Imputation mask (TRUE = was missing, i.e. imputed) derived from the
 # normalized matrix: NAs there are exactly the values missForest filled in.
-norm_dal <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
+norm_dal <- readRDS("02_Normalization/c_data/DAList_normalized.rds")
 mask_src <- is.na(as.matrix(norm_dal$data)) # rownames = uniprot_id
 uid2gene <- setNames(imp_dal$annotation$gene, imp_dal$annotation$uniprot_id)
 mask_df <- as_tibble(mask_src) |>
