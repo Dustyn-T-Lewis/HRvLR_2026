@@ -92,7 +92,7 @@ The pipeline is implemented across three scripts:
 |------|----------|-------------|
 | `02_normalized.csv` | `01_normalization/c_data/` | Cycloess-normalized, non-imputed protein matrix |
 | `03_DAList_normalized.rds` | `01_normalization/c_data/` | Full DAList with canonical metadata |
-| `01_imputed.csv` | `02_Imputation/c_data/` | Imputed matrix (for sensitivity analysis only) |
+| `DAList_imputed_missforest.rds` | `02_Imputation/c_data/` | Imputed DAList (missForest arm; sensitivity analysis only) |
 
 ### Expected directory structure
 
@@ -120,27 +120,32 @@ library(proteoDA)
 
 df <- read_csv("01_normalization/c_data/02_normalized.csv", show_col_types = FALSE)
 
-ann_cols   <- c("uniprot_id", "protein", "gene", "description")
-ann        <- df[, ann_cols]
+ann_cols <- c("uniprot_id", "protein", "gene", "description")
+ann <- df[, ann_cols]
 samp_names <- setdiff(names(df), ann_cols)
-mat        <- as.matrix(df[, samp_names])
+mat <- as.matrix(df[, samp_names])
 rownames(mat) <- ann$uniprot_id
 
-cat(sprintf("Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
-            nrow(mat), ncol(mat), sum(is.na(mat)),
-            100 * sum(is.na(mat)) / length(mat)))
+cat(sprintf(
+  "Loaded: %d proteins x %d samples | missing: %d (%.1f%%)\n",
+  nrow(mat), ncol(mat), sum(is.na(mat)),
+  100 * sum(is.na(mat)) / length(mat)
+))
 
 # Canonical metadata from the normalization DAList (not regex-derived)
 dal_norm <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
 dal_meta <- as.data.frame(dal_norm$metadata)
 meta <- tibble(
   sample_id = dal_meta$Col_ID,
-  responder = factor(dal_meta$Group,      levels = c("HR", "LR")),
-  time      = factor(dal_meta$Timepoint,  levels = c("T1", "T2", "T3")),
-  group     = factor(dal_meta$Group_Time,
-                     levels = c("HR_T1", "HR_T2", "HR_T3",
-                                "LR_T1", "LR_T2", "LR_T3")),
-  subject   = sub("_T[123]$", "", dal_meta$Col_ID)
+  responder = factor(dal_meta$Group, levels = c("HR", "LR")),
+  time = factor(dal_meta$Timepoint, levels = c("T1", "T2", "T3")),
+  group = factor(dal_meta$Group_Time,
+    levels = c(
+      "HR_T1", "HR_T2", "HR_T3",
+      "LR_T1", "LR_T2", "LR_T3"
+    )
+  ),
+  subject = sub("_T[123]$", "", dal_meta$Col_ID)
 )
 
 print(table(meta$responder, meta$time))
@@ -155,8 +160,10 @@ stopifnot(setequal(colnames(mat), meta$sample_id))
 
 dal_norm <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
 table(dal_norm$metadata$Group, dal_norm$metadata$Timepoint)
-cat(sprintf("Proteins: %d | Samples: %d\n",
-            nrow(dal_norm$data), ncol(dal_norm$data)))
+cat(sprintf(
+  "Proteins: %d | Samples: %d\n",
+  nrow(dal_norm$data), ncol(dal_norm$data)
+))
 ```
 
 **Interpretation:** Each cell in the table should contain exactly n = 8 samples. Any cell with fewer than 8 indicates that an outlier was removed during Stage 1. The `stopifnot` guard ensures the sample order in the matrix matches the metadata exactly before any model is fitted.
@@ -182,8 +189,10 @@ The **`duplicateCorrelation`** approach from @smyth2005 estimates a single avera
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 
 # Strip the "group" prefix that model.matrix() prepends to factor-level column names
-colnames(dal$design$design_matrix) <- gsub("^group", "",
-                                            colnames(dal$design$design_matrix))
+colnames(dal$design$design_matrix) <- gsub(
+  "^group", "",
+  colnames(dal$design$design_matrix)
+)
 ```
 
 > **`add_design()`** is a `proteoDA` function that builds the design matrix and specifies the blocking factor in one call. The `(1 | subject)` term instructs `duplicateCorrelation` to treat subject as the blocking variable. The resulting design matrix has one row per sample and one column per Group_Time level.
@@ -326,11 +335,11 @@ Neither criterion alone is sufficient. A protein must show **both** meaningful a
 # Applied to each per-contrast CSV after writing by write_limma_tables()
 res <- res |>
   mutate(
-    pi_score = P.Value ^ abs(logFC),
+    pi_score = P.Value^abs(logFC),
     sig_pi = case_when(
-      pi_score < 0.05 & logFC > 0 ~  1L,   # significant up-regulation
-      pi_score < 0.05 & logFC < 0 ~ -1L,    # significant down-regulation
-      TRUE ~ 0L                               # not significant
+      pi_score < 0.05 & logFC > 0 ~ 1L, # significant up-regulation
+      pi_score < 0.05 & logFC < 0 ~ -1L, # significant down-regulation
+      TRUE ~ 0L # not significant
     )
   )
 ```
@@ -366,9 +375,11 @@ if (file.exists("03_DEP/c_data/03_combined_results.csv")) {
   comb <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
   cat(sprintf("Combined results: %d proteins x %d columns\n", nrow(comb), ncol(comb)))
   comb |>
-    select(uniprot_id, gene,
-           logFC_Training_HR, P.Value_Training_HR,
-           adj.P.Val_Training_HR, pi_score_Training_HR, sig_pi_Training_HR) |>
+    select(
+      uniprot_id, gene,
+      logFC_Training_HR, P.Value_Training_HR,
+      adj.P.Val_Training_HR, pi_score_Training_HR, sig_pi_Training_HR
+    ) |>
     head(4)
 }
 ```
@@ -393,24 +404,36 @@ Reading from left to right moves from the broadest candidate set to the most str
 make_vol <- function(df, ycol, ylab, top_df, thresh) {
   ggplot(df, aes(logFC, .data[[ycol]], color = dir_pi)) +
     geom_point(alpha = 0.35, size = 1) +
-    geom_hline(yintercept = thresh, linetype = "dashed",
-               color = "grey40", linewidth = 0.4) +
-    geom_text_repel(data = top_df, aes(label = gene), size = 2.5,
-                    max.overlaps = 15, show.legend = FALSE, seed = 42) +
-    scale_color_manual(values = c(Up = "#D6604D", Down = "#4393C3", NS = "grey70"),
-                       drop = FALSE) +
-    labs(x = expression(log[2]~FC), y = ylab) +
+    geom_hline(
+      yintercept = thresh, linetype = "dashed",
+      color = "grey40", linewidth = 0.4
+    ) +
+    geom_text_repel(
+      data = top_df, aes(label = gene), size = 2.5,
+      max.overlaps = 15, show.legend = FALSE, seed = 42
+    ) +
+    scale_color_manual(
+      values = c(Up = "#D6604D", Down = "#4393C3", NS = "grey70"),
+      drop = FALSE
+    ) +
+    labs(x = expression(log[2] ~ FC), y = ylab) +
     theme_bw(base_size = 11) +
     theme(legend.position = "none")
 }
 
 # For each contrast (shown here for Training_HR):
-p1 <- make_vol(res, "nlog10_pval", expression(-log[10](P.Value)),
-               top_nom, -log10(0.01)) + ggtitle("Nominal P < 0.01")
-p2 <- make_vol(res, "nlog10_adj",  expression(-log[10](adj.P.Val)),
-               top_adj, -log10(0.10)) + ggtitle("FDR < 0.10")
-p3 <- make_vol(res, "nlog10_pi",   expression(-log[10](Pi)),
-               top_pi,  -log10(0.05)) + ggtitle("Pi < 0.05")
+p1 <- make_vol(
+  res, "nlog10_pval", expression(-log[10](P.Value)),
+  top_nom, -log10(0.01)
+) + ggtitle("Nominal P < 0.01")
+p2 <- make_vol(
+  res, "nlog10_adj", expression(-log[10](adj.P.Val)),
+  top_adj, -log10(0.10)
+) + ggtitle("FDR < 0.10")
+p3 <- make_vol(
+  res, "nlog10_pi", expression(-log[10](Pi)),
+  top_pi, -log10(0.05)
+) + ggtitle("Pi < 0.05")
 ```
 
 **How to read a volcano plot:** Each point is a protein. The x-axis is the logFC (positive = up in the numerator condition, negative = down). The y-axis is statistical significance on a -log10 scale (higher = more significant). Proteins in the upper corners are the strongest candidates --- they have both large fold changes and small p-values.
@@ -434,10 +457,14 @@ Four complementary statistical tests are applied:
 
 # run_response_comparison() is defined in 03_dep_robustness.R
 # Two calls --- one for Training, one for Acute:
-rp_training <- run_response_comparison(results_list,
-  "Training_HR", "Training_LR", "Training (HR vs LR)")
-rp_acute <- run_response_comparison(results_list,
-  "Acute_HR", "Acute_LR", "Acute (HR vs LR)")
+rp_training <- run_response_comparison(
+  results_list,
+  "Training_HR", "Training_LR", "Training (HR vs LR)"
+)
+rp_acute <- run_response_comparison(
+  results_list,
+  "Acute_HR", "Acute_LR", "Acute (HR vs LR)"
+)
 ```
 
 ### Response profiling results
@@ -448,7 +475,8 @@ rp_acute <- run_response_comparison(results_list,
 
 if (file.exists("03_DEP/c_data/06_response_profiling_diagnostics.csv")) {
   rp <- read_csv("03_DEP/c_data/06_response_profiling_diagnostics.csv",
-                 show_col_types = FALSE)
+    show_col_types = FALSE
+  )
   rp |> select(comparison, test, statistic, p_value, interpretation)
 }
 ```
@@ -472,9 +500,10 @@ library(boot)
 # Applied per contrast (shown for a single contrast named cname):
 vals <- abs(results_list[[cname]]$logFC)
 vals <- vals[!is.na(vals)]
-b    <- boot(vals, function(d, i) median(d[i], na.rm = TRUE), R = 10000)
-ci   <- tryCatch(boot.ci(b, type = "bca"),
-                 error = function(e) boot.ci(b, type = "perc"))
+b <- boot(vals, function(d, i) median(d[i], na.rm = TRUE), R = 10000)
+ci <- tryCatch(boot.ci(b, type = "bca"),
+  error = function(e) boot.ci(b, type = "perc")
+)
 ```
 
 ### Bootstrap results
@@ -485,7 +514,8 @@ ci   <- tryCatch(boot.ci(b, type = "bca"),
 
 if (file.exists("03_DEP/c_data/09_effect_size_bootstrap.csv")) {
   boot_df <- read_csv("03_DEP/c_data/09_effect_size_bootstrap.csv",
-                      show_col_types = FALSE)
+    show_col_types = FALSE
+  )
   boot_df |> arrange(desc(median_absLFC))
 }
 ```
@@ -507,12 +537,16 @@ For **within-group contrasts** (Training_HR, Training_LR, Acute_HR, Acute_LR), t
 library(pwr)
 
 # Applied per contrast (within sigma estimated from eBayes fit):
-eff_sigma <- if (paired && !is.na(within_cor))
-  sigma_residual * sqrt(2 * (1 - within_cor)) else
+eff_sigma <- if (paired && !is.na(within_cor)) {
+  sigma_residual * sqrt(2 * (1 - within_cor))
+} else {
   sigma_residual * sqrt(2)
+}
 
-pw <- pwr.t.test(n = n_subj, d = NULL, sig.level = 0.10, power = 0.80,
-                 type = if (paired) "paired" else "two.sample")
+pw <- pwr.t.test(
+  n = n_subj, d = NULL, sig.level = 0.10, power = 0.80,
+  type = if (paired) "paired" else "two.sample"
+)
 min_detectable_logFC <- pw$d * eff_sigma
 ```
 
@@ -524,10 +558,13 @@ min_detectable_logFC <- pw$d * eff_sigma
 
 if (file.exists("03_DEP/c_data/10_power_analysis.csv")) {
   power_df <- read_csv("03_DEP/c_data/10_power_analysis.csv",
-                       show_col_types = FALSE)
+    show_col_types = FALSE
+  )
   power_df |>
-    select(contrast, n_subjects, within_cor, effective_sigma,
-           min_detectable_d, min_detectable_logFC)
+    select(
+      contrast, n_subjects, within_cor, effective_sigma,
+      min_detectable_d, min_detectable_logFC
+    )
 }
 ```
 
@@ -545,7 +582,8 @@ As a robustness check, an identical limma pipeline is run on the **imputed** ver
 
 if (file.exists("03_DEP/c_data/11_imputation_sensitivity.csv")) {
   sens <- read_csv("03_DEP/c_data/11_imputation_sensitivity.csv",
-                   show_col_types = FALSE)
+    show_col_types = FALSE
+  )
   sens
 } else {
   cat("Imputation sensitivity file not yet available.\n")
