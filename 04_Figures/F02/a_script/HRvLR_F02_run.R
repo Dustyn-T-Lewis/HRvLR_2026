@@ -16,4 +16,6 @@ source("04_Figures/F02/a_script/panel_C.R") # panel_c_cv
 source("04_Figures/F02/a_script/panel_D.R") # panel_d_cv_transitions
 source("04_Figures/F02/a_script/panel_E.R") # panel_e_intra_variability
 
-cat("F02 panels rendered to", RPT_DIR, "\n")
+source("04_Figures/F02/a_script/HRvLR_F02_composite.R") # F02_composite
+
+cat("F02 panels + composite rendered to", RPT_DIR, "\n")

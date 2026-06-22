@@ -32,23 +32,44 @@ pca_df <- as.data.frame(pca_res$x[, 1:2]) |>
     by = c("sample" = "Col_ID")
   )
 
-# PERMANOVA
+# PERMANOVA: Group is between-subject; Timepoint within-subject (permute within blocks)
 dist_mat <- vegdist(mat, method = "euclidean")
-perm_res <- adonis2(dist_mat ~ Group * Timepoint,
+perm_group <- adonis2(dist_mat ~ Group, data = pca_df, permutations = 999)
+perm_time <- adonis2(dist_mat ~ Timepoint,
   data = pca_df, permutations = 999,
   strata = pca_df$Subject_ID
 )
-perm_txt <- sprintf(
-  "PERMANOVA: Group R²=%.3f %s | Time R²=%.3f %s",
-  perm_res$R2[1], ifelse(perm_res$`Pr(>F)`[1] < 0.05, "*", "ns"),
-  perm_res$R2[2], ifelse(perm_res$`Pr(>F)`[2] < 0.05, "*", "ns")
-)
+stat_label <- function(res, term) {
+  sprintf(
+    "PERMANOVA\n%s  R² = %.3f, %s", term,
+    res$R2[1], fmt_p(res$`Pr(>F)`[1])
+  )
+}
+
+# Shaded 80% ellipses (fill + dashed outline) for clean group separation
+ellipse_layers <- function(grp) {
+  list(
+    stat_ellipse(aes(fill = .data[[grp]]),
+      geom = "polygon",
+      alpha = 0.12, level = 0.80, show.legend = FALSE
+    ),
+    stat_ellipse(aes(group = .data[[grp]]),
+      level = 0.80,
+      linewidth = 0.4, linetype = "dashed", show.legend = FALSE
+    )
+  )
+}
 
 # Plot 1: Group coloring
 pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
-  stat_ellipse(level = 0.80, linewidth = 0.5, linetype = "dashed") +
-  geom_point(size = 2, alpha = 0.8) +
+  ellipse_layers("Group") +
+  geom_point(size = 2, alpha = 0.85) +
+  annotate("text",
+    x = Inf, y = Inf, label = stat_label(perm_group, "Group"),
+    hjust = 1.05, vjust = 1.15, size = 2.6, color = "grey30", fontface = "bold"
+  ) +
   scale_color_manual(values = GROUP_COLS) +
+  scale_fill_manual(values = GROUP_COLS, guide = "none") +
   labs(
     x = sprintf("PC1 (%.1f%%)", var_pct[1]),
     y = sprintf("PC2 (%.1f%%)", var_pct[2]),
@@ -59,9 +80,14 @@ pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
 
 # Plot 2: Timepoint coloring
 pA_time <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Timepoint)) +
-  stat_ellipse(level = 0.80, linewidth = 0.5, linetype = "dashed") +
-  geom_point(size = 2, alpha = 0.8) +
+  ellipse_layers("Timepoint") +
+  geom_point(size = 2, alpha = 0.85) +
+  annotate("text",
+    x = Inf, y = Inf, label = stat_label(perm_time, "Time"),
+    hjust = 1.05, vjust = 1.15, size = 2.6, color = "grey30", fontface = "bold"
+  ) +
   scale_color_manual(values = TIME_COLS) +
+  scale_fill_manual(values = TIME_COLS, guide = "none") +
   labs(
     x = sprintf("PC1 (%.1f%%)", var_pct[1]),
     y = sprintf("PC2 (%.1f%%)", var_pct[2]),
@@ -73,7 +99,10 @@ pA_time <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Timepoint)) +
 pA_combined <- (pA_group | pA_time) +
   plot_annotation(
     title = "PCA of Imputed Proteome",
-    subtitle = perm_txt,
+    subtitle = sprintf(
+      "%s proteins (imputed), %d samples | 80%% shaded ellipses",
+      format(nrow(imp_df), big.mark = ","), nrow(pca_df)
+    ),
     tag_levels = list(c("A", "")),
     theme = theme(
       plot.title    = element_text(face = "bold", size = 11),
