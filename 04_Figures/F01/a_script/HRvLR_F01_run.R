@@ -12,4 +12,6 @@ for (p in LETTERS[1:9]) {
   source(sprintf("04_Figures/F01/a_script/panel_%s.R", p))
 }
 
-cat("F01 phenotype panels rendered to", RPT, "\n")
+source("04_Figures/F01/a_script/HRvLR_F01_composite.R")
+
+cat("F01 phenotype panels + composite rendered to", RPT, "\n")
