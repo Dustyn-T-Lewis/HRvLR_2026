@@ -15,7 +15,7 @@ RPT <- here::here("04_Figures/F04/b_reports")
 DAT <- here::here("04_Figures/F04/c_data")
 dir.create(file.path(DAT, "panel_I"), recursive = TRUE, showWarnings = FALSE)
 
-dep_df <- read_csv(here::here("03_DEP/c_data/03_combined_results.csv"),
+dep_df <- read_csv(here::here("03_DEP/a_non_imputed/c_data/03_combined_results.csv"),
                    show_col_types = FALSE)
 
 scatter_df <- dep_df |>
