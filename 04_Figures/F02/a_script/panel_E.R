@@ -169,5 +169,5 @@ write.csv(group_summary,
   row.names = FALSE
 )
 
-save_panel(pE, file.path(RPT_DIR, "panel_E_imputed_SUPP"), PE_W, PE_H)
+save_panel(pE, file.path(RPT_DIR, "panel_e_intra_variability"), PE_W, PE_H)
 cat("F02 Panel E done.\n")

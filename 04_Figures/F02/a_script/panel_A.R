@@ -82,7 +82,7 @@ pA_combined <- (pA_group | pA_time) +
     )
   )
 
-save_panel(pA_combined, file.path(RPT_DIR, "panel_A_pca_MAIN"), PA_W, PA_H)
+save_panel(pA_combined, file.path(RPT_DIR, "panel_a_pca"), PA_W, PA_H)
 write.csv(pca_df |> select(sample, PC1, PC2, Group, Timepoint),
   file.path(DAT_DIR, "audit_panel_A_pca_scores.csv"),
   row.names = FALSE

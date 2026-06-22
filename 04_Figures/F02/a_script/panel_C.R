@@ -53,6 +53,6 @@ pC <- ggplot(cv_df, aes(x = group, y = cv, fill = group)) +
     axis.text.x = element_text(angle = 30, hjust = 1)
   )
 
-save_panel(pC, file.path(RPT_DIR, "panel_C_cv_MAIN"), PC_W, PC_H)
+save_panel(pC, file.path(RPT_DIR, "panel_c_cv"), PC_W, PC_H)
 write.csv(cv_med, file.path(DAT_DIR, "audit_panel_C_cv_medians.csv"), row.names = FALSE)
 cat("F02 Panel C done.\n")
