@@ -19,17 +19,18 @@ suppressPackageStartupMessages({
 source("04_Figures/shared/style.R")
 
 BASE <- "04_Figures/F00"
-RPT  <- file.path(BASE, "b_reports", "supp")
-PNL  <- file.path(RPT, "panels")
-DAT  <- file.path(BASE, "c_data")
+RPT <- file.path(BASE, "b_reports", "supp")
+PNL <- file.path(RPT, "panels")
+DAT <- file.path(BASE, "c_data")
 for (d in c(RPT, PNL, DAT)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
 
 PW <- 89
 PH <- 65
 
 int_norm <- readRDS("01_normalization/c_data/00_report_intermediates.rds")
-int_imp  <- readRDS("02_Imputation/c_data/00_report_intermediates.rds")
-da_summ  <- read_csv("03_DEP/c_data/02_DA_summary.csv", show_col_types = FALSE)
+norm_dal <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
+imp_dal <- readRDS("02_Imputation/c_data/DAList_imputed_missforest.rds")
+da_summ <- read_csv("03_DEP/c_data/02_DA_summary.csv", show_col_types = FALSE)
 outlier_sens <- if (file.exists("03_DEP/c_data/11_outlier_sensitivity.csv")) {
   read_csv("03_DEP/c_data/11_outlier_sensitivity.csv", show_col_types = FALSE)
 } else {
@@ -67,10 +68,14 @@ compact_panel <- function(plot) {
 
 placeholder_plot <- function(tag, title, subtitle) {
   ggplot() +
-    annotate("text", x = 0.5, y = 0.55, label = title,
-             size = 4, fontface = "bold", color = "grey25") +
-    annotate("text", x = 0.5, y = 0.42, label = subtitle,
-             size = 3, color = "grey40") +
+    annotate("text",
+      x = 0.5, y = 0.55, label = title,
+      size = 4, fontface = "bold", color = "grey25"
+    ) +
+    annotate("text",
+      x = 0.5, y = 0.42, label = subtitle,
+      size = 3, color = "grey40"
+    ) +
     labs(tag = tag) +
     theme_void() +
     theme(plot.tag = element_text(face = "bold", size = 12))
@@ -88,7 +93,8 @@ pA <- ggplot(fcasc, aes(step, n_after)) +
   geom_col(fill = "#2166AC", width = 0.7) +
   geom_text(aes(label = comma(n_after)), vjust = -1.5, size = 2.2, fontface = "bold") +
   geom_text(aes(label = ifelse(removed > 0, paste0("-", comma(removed)), "")),
-            vjust = -0.2, size = 2.0, color = "#B2182B") +
+    vjust = -0.2, size = 2.0, color = "#B2182B"
+  ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.18)), labels = comma) +
   labs(
     x = NULL, y = "Proteins retained", tag = "A",
@@ -109,8 +115,10 @@ norm_scores <- int_norm$norm_scores %>%
 
 pB <- ggplot(norm_scores, aes(composite, method, fill = method == "cycloess")) +
   geom_col(width = 0.7) +
-  geom_text(aes(label = sprintf("%.2f", composite)), hjust = -0.1,
-            size = 2.0, fontface = "bold") +
+  geom_text(aes(label = sprintf("%.2f", composite)),
+    hjust = -0.1,
+    size = 2.0, fontface = "bold"
+  ) +
   scale_fill_manual(values = c(`TRUE` = "#E41A1C", `FALSE` = "grey70"), guide = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.16))) +
   labs(
@@ -133,8 +141,10 @@ pca_pre <- int_norm$pca_pre$scores %>%
   )
 
 pC <- ggplot(pca_pre, aes(PC1, PC2, color = Group_Time, shape = Timepoint, fill = Group_Time)) +
-  stat_ellipse(aes(group = Group_Time), geom = "polygon", alpha = 0.10,
-               level = 0.80, linewidth = 0.25, show.legend = FALSE) +
+  stat_ellipse(aes(group = Group_Time),
+    geom = "polygon", alpha = 0.10,
+    level = 0.80, linewidth = 0.25, show.legend = FALSE
+  ) +
   geom_point(size = 1.5, alpha = 0.85) +
   scale_color_manual(values = PCA_COLORS, name = NULL) +
   scale_fill_manual(values = PCA_COLORS, guide = "none") +
@@ -160,8 +170,10 @@ pca_post <- int_norm$pca_post$scores %>%
   )
 
 pD <- ggplot(pca_post, aes(PC1, PC2, color = Group_Time, shape = Timepoint, fill = Group_Time)) +
-  stat_ellipse(aes(group = Group_Time), geom = "polygon", alpha = 0.10,
-               level = 0.80, linewidth = 0.25, show.legend = FALSE) +
+  stat_ellipse(aes(group = Group_Time),
+    geom = "polygon", alpha = 0.10,
+    level = 0.80, linewidth = 0.25, show.legend = FALSE
+  ) +
   geom_point(size = 1.5, alpha = 0.85) +
   scale_color_manual(values = PCA_COLORS, name = NULL) +
   scale_fill_manual(values = PCA_COLORS, guide = "none") +
@@ -233,51 +245,32 @@ pF <- ggplot(miss_bar, aes(reorder(Col_ID, -n), n, fill = Group_Time, alpha = is
 write_csv(miss_bar, file.path(DAT, "panel_F_sample_missingness.csv"))
 save_png_pdf(pF, "SUPP_panel_F_sample_missingness", PW, PH)
 
-# Panel G: MAR/MNAR scatter ----------------------------------------------------
+# Panel G: MAR/MNAR classification — not available under minimal imputation
+# Per-protein MAR/MNAR classification was dropped when stage 02 moved to the
+# CvH-style method arms (imp4p / MsCoreUtils / missForest).
 
-mc <- int_imp$miss_class %>%
-  mutate(classification = factor(classification, levels = c("Complete", "MAR", "MNAR")))
-
-pG <- ggplot(mc, aes(mean_intensity, pct_miss, color = classification)) +
-  geom_point(alpha = 0.40, size = 0.7) +
-  scale_color_manual(values = c("Complete" = "grey70", "MAR" = "#377EB8", "MNAR" = "#E41A1C"), name = NULL) +
-  scale_y_continuous(labels = function(x) paste0(round(x), "%")) +
-  labs(
-    x = "Mean log2 intensity", y = "% missing", tag = "G",
-    title = "MAR vs MNAR classification",
-    subtitle = sprintf("%s proteins", comma(nrow(mc)))
-  ) +
-  FIG_THEME +
-  theme(legend.position = "top")
-
-write_csv(mc, file.path(DAT, "panel_G_missingness_classification.csv"))
+pG <- placeholder_plot(
+  "G", "MAR/MNAR classification not available",
+  "Per-protein classification dropped under minimal imputation"
+)
 save_png_pdf(pG, "SUPP_panel_G_missingness_scatter", PW, PH)
 
-# Panel H: classification counts ----------------------------------------------
+# Panel H: classification counts — not available under minimal imputation
 
-class_counts <- mc %>%
-  count(classification) %>%
-  mutate(pct = 100 * n / sum(n))
-
-pH <- ggplot(class_counts, aes(classification, n, fill = classification)) +
-  geom_col(width = 0.6) +
-  geom_text(aes(label = sprintf("%d\n(%.0f%%)", n, pct)),
-            vjust = -0.2, size = 2.2, fontface = "bold") +
-  scale_fill_manual(values = c("Complete" = "grey70", "MAR" = "#377EB8", "MNAR" = "#E41A1C"), guide = "none") +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.22))) +
-  labs(
-    x = NULL, y = "Proteins", tag = "H",
-    title = "Missingness class counts"
-  ) +
-  FIG_THEME
-
-write_csv(class_counts, file.path(DAT, "panel_H_missingness_class_counts.csv"))
+pH <- placeholder_plot(
+  "H", "Missingness class counts not available",
+  "Per-protein classification dropped under minimal imputation"
+)
 save_png_pdf(pH, "SUPP_panel_H_missingness_counts", PW, PH)
 
 # Panel I: observed vs imputed density ----------------------------------------
 
-obs_vals <- as.numeric(int_imp$mat[!int_imp$was_na])
-imp_vals <- as.numeric(int_imp$mat_imp[int_imp$was_na])
+norm_mat <- as.matrix(norm_dal$data)
+imp_mat <- as.matrix(imp_dal$data)[rownames(norm_mat), colnames(norm_mat)]
+was_na <- is.na(norm_mat)
+oob_error <- imp_dal$imputation$oob_error
+obs_vals <- as.numeric(norm_mat[!was_na])
+imp_vals <- as.numeric(imp_mat[was_na])
 dens_df <- bind_rows(
   tibble(value = obs_vals, type = "Observed"),
   tibble(value = imp_vals, type = "Imputed")
@@ -288,9 +281,11 @@ pI <- ggplot(dens_df, aes(value, fill = type, color = type)) +
   geom_density(alpha = 0.35, linewidth = 0.4) +
   scale_fill_manual(values = c("Observed" = "#377EB8", "Imputed" = "#E41A1C"), name = NULL) +
   scale_color_manual(values = c("Observed" = "#377EB8", "Imputed" = "#E41A1C"), name = NULL) +
-  annotate("text", x = Inf, y = Inf, hjust = 1.1, vjust = 1.5,
-           label = sprintf("OOB = %.3f", int_imp$oob_error),
-           size = 2.2, fontface = "italic", color = "grey30") +
+  annotate("text",
+    x = Inf, y = Inf, hjust = 1.1, vjust = 1.5,
+    label = sprintf("OOB = %.3f", oob_error),
+    size = 2.2, fontface = "italic", color = "grey30"
+  ) +
   labs(
     x = "log2 intensity", y = "Density", tag = "I",
     title = "Observed vs imputed intensity"
@@ -298,34 +293,20 @@ pI <- ggplot(dens_df, aes(value, fill = type, color = type)) +
   FIG_THEME +
   theme(legend.position = "top")
 
-write_csv(dens_df %>% group_by(type) %>% summarise(n = n(), mean = mean(value), median = median(value), sd = sd(value), .groups = "drop"),
-          file.path(DAT, "panel_I_imputation_density_summary.csv"))
+write_csv(
+  dens_df %>% group_by(type) %>% summarise(n = n(), mean = mean(value), median = median(value), sd = sd(value), .groups = "drop"),
+  file.path(DAT, "panel_I_imputation_density_summary.csv")
+)
 save_png_pdf(pI, "SUPP_panel_I_imputation_density", PW, PH)
 
-# Panel J: MNAR shift histogram ------------------------------------------------
+# Panel J: MNAR shift — not available under minimal imputation
+# Mechanism-agnostic missForest imputes all missing values with one model and
+# produces no MNAR-specific shift audit.
 
-if (nrow(int_imp$mnar_audit) > 0) {
-  audit <- int_imp$mnar_audit
-  shift_mean <- mean(audit$shift, na.rm = TRUE)
-
-  pJ <- ggplot(audit, aes(shift)) +
-    geom_histogram(binwidth = 0.025, fill = "#E41A1C", alpha = 0.70,
-                   color = "white", linewidth = 0.2) +
-    geom_vline(xintercept = 0, linetype = "dashed", color = "grey30", linewidth = 0.4) +
-    geom_vline(xintercept = shift_mean, color = "#B2182B", linewidth = 0.4) +
-    annotate("text", x = shift_mean, y = Inf,
-             label = sprintf("mean = %+.3f", shift_mean),
-             vjust = 1.4, hjust = -0.1, size = 2.2, color = "#B2182B") +
-    labs(
-      x = "Shift (log2)", y = "MNAR proteins", tag = "J",
-      title = "MNAR imputed value shift"
-    ) +
-    FIG_THEME
-  write_csv(audit, file.path(DAT, "panel_J_mnar_shift_audit.csv"))
-} else {
-  pJ <- placeholder_plot("J", "MNAR shift audit unavailable", "No MNAR audit table found")
-}
-
+pJ <- placeholder_plot(
+  "J", "MNAR shift audit not available",
+  "Mechanism-agnostic missForest produces no MNAR audit"
+)
 save_png_pdf(pJ, "SUPP_panel_J_mnar_shift", PW, PH)
 
 # Panel K: DEP counts heatmap --------------------------------------------------
@@ -349,7 +330,8 @@ dep_counts <- da_summ %>%
 pK <- ggplot(dep_counts, aes(threshold, contrast, fill = n)) +
   geom_tile(color = "white", linewidth = 0.8) +
   geom_text(aes(label = comma(n), color = n > max(n, na.rm = TRUE) * 0.5),
-            size = 2.3, fontface = "bold") +
+    size = 2.3, fontface = "bold"
+  ) +
   scale_color_manual(values = c(`TRUE` = "white", `FALSE` = "grey20"), guide = "none") +
   scale_fill_gradient(low = "#DEEBF7", high = "#08519C", name = "DEPs") +
   labs(
@@ -357,8 +339,10 @@ pK <- ggplot(dep_counts, aes(threshold, contrast, fill = n)) +
     title = "DEP counts by contrast and threshold"
   ) +
   FIG_THEME +
-  theme(axis.text.x = element_text(angle = 15, hjust = 1, size = 6),
-        legend.position = "right")
+  theme(
+    axis.text.x = element_text(angle = 15, hjust = 1, size = 6),
+    legend.position = "right"
+  )
 
 write_csv(dep_counts, file.path(DAT, "panel_K_dep_counts.csv"))
 save_png_pdf(pK, "SUPP_panel_K_dep_heatmap", PW, PH)
@@ -403,9 +387,11 @@ if (nrow(robust_long) > 0) {
     geom_hline(yintercept = 0.95, linetype = "dashed", color = "grey60", linewidth = 0.3) +
     geom_line(linewidth = 0.5, alpha = 0.8) +
     geom_point(size = 2) +
-    geom_text(data = pi_labels, aes(label = label), inherit.aes = FALSE,
-              x = pi_labels$contrast, y = pi_labels$rho + 0.0025,
-              size = 2.1, color = "grey25", fontface = "bold") +
+    geom_text(
+      data = pi_labels, aes(label = label), inherit.aes = FALSE,
+      x = pi_labels$contrast, y = pi_labels$rho + 0.0025,
+      size = 2.1, color = "grey25", fontface = "bold"
+    ) +
     scale_color_manual(values = c("Outlier reduction" = "#2166AC", "Imputation sensitivity" = "#B2182B"), name = NULL) +
     scale_y_continuous(limits = c(0.94, 1.005), breaks = c(0.95, 0.97, 0.99, 1.00)) +
     labs(
@@ -414,8 +400,10 @@ if (nrow(robust_long) > 0) {
       subtitle = "Rank concordance after stage perturbation"
     ) +
     FIG_THEME +
-    theme(axis.text.x = element_text(angle = 35, hjust = 1, size = 6),
-          legend.position = "top")
+    theme(
+      axis.text.x = element_text(angle = 35, hjust = 1, size = 6),
+      legend.position = "top"
+    )
   write_csv(robust_long, file.path(DAT, "panel_L_robustness_summary.csv"))
 } else {
   pL <- placeholder_plot("L", "Robustness summaries unavailable", "Sensitivity tables were not found")
@@ -449,7 +437,7 @@ page2 <- (compact_panel(pG) | compact_panel(pH)) /
     title = "Pipeline QC - Imputation and DEP",
     subtitle = sprintf(
       "MAR/MNAR classification, missForest (OOB = %.3f), and DEP robustness summaries",
-      int_imp$oob_error
+      oob_error
     ),
     theme = theme(
       plot.title = element_text(face = "bold", size = 12),
@@ -458,13 +446,17 @@ page2 <- (compact_panel(pG) | compact_panel(pH)) /
   )
 
 ggsave(file.path(RPT, "SUPP_F00_normalization.pdf"), page1,
-       width = 178, height = 205, units = "mm", device = PDF_DEVICE)
+  width = 178, height = 205, units = "mm", device = PDF_DEVICE
+)
 ggsave(file.path(RPT, "SUPP_F00_normalization.png"), page1,
-       width = 178, height = 205, units = "mm", dpi = 300)
+  width = 178, height = 205, units = "mm", dpi = 300
+)
 
 ggsave(file.path(RPT, "SUPP_F00_imputation_dep.pdf"), page2,
-       width = 178, height = 205, units = "mm", device = PDF_DEVICE)
+  width = 178, height = 205, units = "mm", device = PDF_DEVICE
+)
 ggsave(file.path(RPT, "SUPP_F00_imputation_dep.png"), page2,
-       width = 178, height = 205, units = "mm", dpi = 300)
+  width = 178, height = 205, units = "mm", dpi = 300
+)
 
 message("F00 supplementary QC composites done")
