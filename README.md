@@ -79,22 +79,18 @@ Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R   # exploratory alt
 Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imputed DEP
 ```
 
-### Figure and Network Stages
+### Figures
 
-Direct-transfer and validated analogue figure scripts should be rerun only after
-stages `01` to `03` complete cleanly.
+Two active figures, each rendered as standalone panels (no composite) into
+`b_reports`; rerun only after stages `01` to `03` complete cleanly.
 
-- `04_Figures/F01`: phenotype
-- `04_Figures/F02`: proteome overview and QC
-- `04_Figures/F03`: contrast-level summary and enrichment overview
-- `04_Figures/F04`: volcano rings
-- `04_Figures/F05`: between-group concordance
-- `05_WGCNA/a_script/01_run_wgcna.R`
-- `04_Figures/F06`: within-group training vs acute concordance
+- `04_Figures/F01`: phenotype atlas
+- `04_Figures/F02`: global proteome overview and QC
 
-`F07`, `F08`, and later exploratory figure directories exist in the repository
-but should be treated as HRvLR-specific extensions, not direct YvO manuscript
-transfers, unless explicitly included in the active figure plan.
+```sh
+Rscript 04_Figures/F01/a_script/HRvLR_F01_run.R
+Rscript 04_Figures/F02/a_script/HRvLR_F02_run.R
+```
 
 ## Repository Conventions
 
