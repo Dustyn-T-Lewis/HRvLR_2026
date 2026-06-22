@@ -7,23 +7,27 @@ setwd(rprojroot::find_rstudio_root_file())
 source("04_Figures/F09/a_script/style.R")
 
 suppressPackageStartupMessages({
-  library(readr); library(dplyr); library(tidyr); library(stringr)
-  library(ggplot2); library(patchwork)
+  library(readr)
+  library(dplyr)
+  library(tidyr)
+  library(stringr)
+  library(ggplot2)
+  library(patchwork)
 })
 
 RPT <- "04_Figures/F09/b_reports"
 
-RPT_PDF       <- file.path(RPT, "main", "pdf")
+RPT_PDF <- file.path(RPT, "main", "pdf")
 
-RPT_PNG       <- file.path(RPT, "main", "png")
+RPT_PNG <- file.path(RPT, "main", "png")
 
-RPT_SUPP_PDF  <- file.path(RPT, "supp", "pdf")
+RPT_SUPP_PDF <- file.path(RPT, "supp", "pdf")
 
-RPT_SUPP_PNG  <- file.path(RPT, "supp", "png")
+RPT_SUPP_PNG <- file.path(RPT, "supp", "png")
 DAT <- "04_Figures/F09/c_data"
 dir.create(RPT, recursive = TRUE, showWarnings = FALSE)
-dir.create(RPT_PDF,      recursive = TRUE, showWarnings = FALSE)
-dir.create(RPT_PNG,      recursive = TRUE, showWarnings = FALSE)
+dir.create(RPT_PDF, recursive = TRUE, showWarnings = FALSE)
+dir.create(RPT_PNG, recursive = TRUE, showWarnings = FALSE)
 dir.create(RPT_SUPP_PDF, recursive = TRUE, showWarnings = FALSE)
 dir.create(RPT_SUPP_PNG, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
@@ -33,16 +37,18 @@ pdf_device <- get_pdf_device()
 message("Panel B: WGCNA per-module triptych...")
 
 # --- Load data ---
-MEs        <- readRDS(file.path(PANEL_DATA, "MEs.rds"))
-datExpr    <- readRDS(file.path(PANEL_DATA, "datExpr.rds"))
-meta       <- read_csv(file.path(PANEL_DATA, "meta.csv"), show_col_types = FALSE)
-module_df  <- read_csv(file.path(PANEL_DATA, "module_df.csv"), show_col_types = FALSE)
-mod_bio    <- read_csv(file.path(PANEL_DATA, "mod_bio_labels.csv"), show_col_types = FALSE)
-lmm_audit  <- read_csv(file.path(WGCNA_DATA, "wgcna_lmm_contrast_audit.csv"),
-                        show_col_types = FALSE)
-enrich_df  <- read_csv(file.path(WGCNA_DATA, "wgcna_module_enrichment.csv"),
-                        show_col_types = FALSE)
-ann        <- read_csv(file.path(PANEL_DATA, "imp_annotations.csv"), show_col_types = FALSE)
+MEs <- readRDS(file.path(PANEL_DATA, "MEs.rds"))
+datExpr <- readRDS(file.path(PANEL_DATA, "datExpr.rds"))
+meta <- read_csv(file.path(PANEL_DATA, "meta.csv"), show_col_types = FALSE)
+module_df <- read_csv(file.path(PANEL_DATA, "module_df.csv"), show_col_types = FALSE)
+mod_bio <- read_csv(file.path(PANEL_DATA, "mod_bio_labels.csv"), show_col_types = FALSE)
+lmm_audit <- read_csv(file.path(WGCNA_DATA, "wgcna_lmm_contrast_audit.csv"),
+  show_col_types = FALSE
+)
+enrich_df <- read_csv(file.path(WGCNA_DATA, "wgcna_module_enrichment.csv"),
+  show_col_types = FALSE
+)
+ann <- read_csv(file.path(PANEL_DATA, "imp_annotations.csv"), show_col_types = FALSE)
 
 if (!"display_label" %in% colnames(mod_bio)) {
   mod_bio <- mod_bio %>%
@@ -52,7 +58,9 @@ mod_labels <- setNames(mod_bio$display_label, mod_bio$module_color)
 
 # Key modules
 km_file <- file.path(PANEL_DATA, "key_modules.txt")
-KEY_MODULES <- if (file.exists(km_file)) readLines(km_file) else {
+KEY_MODULES <- if (file.exists(km_file)) {
+  readLines(km_file)
+} else {
   km_file2 <- file.path(WGCNA_DATA, "key_modules.txt")
   if (file.exists(km_file2)) readLines(km_file2) else stop("key_modules.txt not found")
 }
@@ -65,8 +73,10 @@ mod_order <- KEY_MODULES
 imp_mat <- readRDS(file.path(PANEL_DATA, "imp_mat.rds"))
 
 group_order <- c("HR_T1", "HR_T2", "LR_T1", "LR_T2")
-group_labels <- c(HR_T1 = "HR-T1", HR_T2 = "HR-T2",
-                  LR_T1 = "LR-T1", LR_T2 = "LR-T2")
+group_labels <- c(
+  HR_T1 = "HR-T1", HR_T2 = "HR-T2",
+  LR_T1 = "LR-T1", LR_T2 = "LR-T2"
+)
 
 # Build z-scores for each key module
 z_list <- list()
@@ -76,7 +86,7 @@ for (mod in KEY_MODULES) {
   if (length(mod_ids) == 0) next
 
   sub_mat <- imp_mat[mod_ids, meta$sample_id, drop = FALSE]
-  z_mat <- t(scale(t(sub_mat)))  # z-score per protein across samples
+  z_mat <- t(scale(t(sub_mat))) # z-score per protein across samples
 
   for (gt in group_order) {
     samps <- meta$sample_id[meta$group_time == gt]
@@ -115,17 +125,17 @@ me_data <- bind_rows(me_list)
 
 # Save triptych intermediates
 write_csv(z_scores, file.path(DAT, "03_panel_B_heatmap_zscores.csv"))
-write_csv(me_data,  file.path(DAT, "03_panel_B_eigengene_data.csv"))
+write_csv(me_data, file.path(DAT, "03_panel_B_eigengene_data.csv"))
 
 # --- Dimensions ---
 PB_W <- 280
 PB_H <- 80 * length(mod_order) + 30
 
-txt_heat  <- scale_text(BASE_GENE, PB_W) * 0.7
-txt_axis  <- scale_text(BASE_STAT, PB_W) * 1.0
+txt_heat <- scale_text(BASE_GENE, PB_W) * 0.7
+txt_axis <- scale_text(BASE_STAT, PB_W) * 1.0
 txt_title <- scale_text(BASE_GENE, PB_W) * 1.3
-txt_bar   <- scale_text(BASE_GENE, PB_W) * 0.95
-txt_sig   <- scale_text(BASE_GENE, PB_W) * 0.85
+txt_bar <- scale_text(BASE_GENE, PB_W) * 0.95
+txt_sig <- scale_text(BASE_GENE, PB_W) * 0.85
 
 light_modules <- c("yellow", "pink")
 
@@ -138,7 +148,9 @@ lmm_stats <- lmm_audit %>%
 # --- Build one triptych row per module ---
 build_row <- function(mod, show_xlab = FALSE) {
   label <- if (mod %in% names(mod_labels)) mod_labels[mod] else str_to_title(mod)
-  n_mod <- module_df %>% filter(module_color == mod) %>% nrow()
+  n_mod <- module_df %>%
+    filter(module_color == mod) %>%
+    nrow()
   title_txt <- paste0(label, " (n=", n_mod, ")")
 
   # -- Heatmap: z-scores (4 group columns) --
@@ -154,35 +166,50 @@ build_row <- function(mod, show_xlab = FALSE) {
 
   p_heat <- ggplot(z_mod, aes(x = group, y = gene, fill = z)) +
     geom_tile() +
-    scale_fill_gradient2(low = "#4393C3", mid = "white", high = "#D6604D",
-                         midpoint = 0, limits = c(-2, 2), oob = scales::squish,
-                         guide = "none") +
+    scale_fill_gradient2(
+      low = "#4393C3", mid = "white", high = "#D6604D",
+      midpoint = 0, limits = c(-2, 2), oob = scales::squish,
+      guide = "none"
+    ) +
     scale_x_discrete(labels = group_labels, position = "bottom") +
     labs(title = title_txt, y = NULL, x = NULL) +
     FIG_THEME +
     theme(
-      plot.title   = element_text(size = txt_title, face = "bold"),
-      axis.text.x  = if (show_xlab) element_text(size = txt_axis * 0.85, angle = 45, hjust = 1)
-                      else element_blank(),
-      axis.text.y  = element_blank(),
-      axis.ticks   = element_blank(),
+      plot.title = element_text(size = txt_title, face = "bold"),
+      axis.text.x = if (show_xlab) {
+        element_text(size = txt_axis * 0.85, angle = 45, hjust = 1)
+      } else {
+        element_blank()
+      },
+      axis.text.y = element_blank(),
+      axis.ticks = element_blank(),
       panel.border = element_blank(),
-      plot.margin  = margin(2, 1, 2, 2)
+      plot.margin = margin(2, 1, 2, 2)
     )
 
   # -- Eigengene dynamics: paired T1->T2 with LMM brackets --
   me_mod <- me_data %>%
     filter(module == mod) %>%
-    mutate(timepoint = factor(timepoint, levels = c("T1", "T2")),
-           group = factor(group, levels = c("HR", "LR")))
+    mutate(
+      timepoint = factor(timepoint, levels = c("T1", "T2")),
+      group = factor(group, levels = c("HR", "LR"))
+    )
 
   # LMM p-values for brackets
-  p_thr <- lmm_stats %>% filter(module == mod, contrast == "Training_HR") %>% pull(p_bh)
-  p_tlr <- lmm_stats %>% filter(module == mod, contrast == "Training_LR") %>% pull(p_bh)
-  p_bl  <- lmm_stats %>% filter(module == mod, contrast == "Baseline_HRvLR") %>% pull(p_bh)
+  p_thr <- lmm_stats %>%
+    filter(module == mod, contrast == "Training_HR") %>%
+    pull(p_bh)
+  p_tlr <- lmm_stats %>%
+    filter(module == mod, contrast == "Training_LR") %>%
+    pull(p_bh)
+  p_bl <- lmm_stats %>%
+    filter(module == mod, contrast == "Baseline_HRvLR") %>%
+    pull(p_bh)
 
   fmt_sig <- function(p) {
-    if (length(p) == 0 || is.na(p)) return("ns")
+    if (length(p) == 0 || is.na(p)) {
+      return("ns")
+    }
     if (p < 0.001) "***" else if (p < 0.01) "**" else if (p < 0.05) "*" else "ns"
   }
 
@@ -192,26 +219,34 @@ build_row <- function(mod, show_xlab = FALSE) {
     stat_summary(aes(group = group, color = group), fun = mean, geom = "point", size = 2.5) +
     scale_color_manual(values = GROUP_COLORS, guide = "none") +
     # Bracket annotations
-    annotate("text", x = 1.5, y = max(me_mod$eigengene, na.rm = TRUE) * 0.95,
-             label = fmt_sig(p_thr), size = txt_sig, fontface = "bold",
-             color = GROUP_COLORS["HR"]) +
-    annotate("text", x = 1.5, y = min(me_mod$eigengene, na.rm = TRUE) * 0.95,
-             label = fmt_sig(p_tlr), size = txt_sig, fontface = "bold",
-             color = GROUP_COLORS["LR"]) +
-    annotate("text", x = 0.65,
-             y = mean(c(max(me_mod$eigengene, na.rm = TRUE),
-                        min(me_mod$eigengene, na.rm = TRUE))),
-             label = fmt_sig(p_bl), size = txt_sig, fontface = "bold",
-             color = "grey40", angle = 90) +
+    annotate("text",
+      x = 1.5, y = max(me_mod$eigengene, na.rm = TRUE) * 0.95,
+      label = fmt_sig(p_thr), size = txt_sig, fontface = "bold",
+      color = GROUP_COLORS["HR"]
+    ) +
+    annotate("text",
+      x = 1.5, y = min(me_mod$eigengene, na.rm = TRUE) * 0.95,
+      label = fmt_sig(p_tlr), size = txt_sig, fontface = "bold",
+      color = GROUP_COLORS["LR"]
+    ) +
+    annotate("text",
+      x = 0.65,
+      y = mean(c(
+        max(me_mod$eigengene, na.rm = TRUE),
+        min(me_mod$eigengene, na.rm = TRUE)
+      )),
+      label = fmt_sig(p_bl), size = txt_sig, fontface = "bold",
+      color = "grey40", angle = 90
+    ) +
     labs(y = "Eigengene", x = NULL) +
     FIG_THEME +
     theme(
-      axis.text.x  = if (show_xlab) element_text(size = txt_axis * 0.85) else element_blank(),
-      axis.text.y  = element_text(size = txt_axis * 0.75),
+      axis.text.x = if (show_xlab) element_text(size = txt_axis * 0.85) else element_blank(),
+      axis.text.y = element_text(size = txt_axis * 0.75),
       axis.title.y = element_text(size = txt_axis * 0.8),
       panel.border = element_blank(),
       panel.grid.major.y = element_line(color = "grey92", linewidth = 0.3),
-      plot.margin  = margin(2, 1, 2, 1)
+      plot.margin = margin(2, 1, 2, 1)
     )
 
   # -- ORA bars: top 5 per module --
@@ -228,16 +263,22 @@ build_row <- function(mod, show_xlab = FALSE) {
 
   if (nrow(bar_data) == 0) {
     p_bars <- ggplot() +
-      annotate("text", x = 0.5, y = 0.5, label = "No sig.\nenrichment",
-               size = txt_bar, color = "grey50") +
-      theme_void() + theme(plot.margin = margin(2, 2, 2, 1))
+      annotate("text",
+        x = 0.5, y = 0.5, label = "No sig.\nenrichment",
+        size = txt_bar, color = "grey50"
+      ) +
+      theme_void() +
+      theme(plot.margin = margin(2, 2, 2, 1))
   } else {
     p_bars <- ggplot(bar_data, aes(x = neg_log10_p, y = clean_name)) +
       geom_col(aes(fill = db_fill), color = "black", linewidth = 0.3, width = 0.7) +
-      geom_text(aes(label = clean_name, x = 0.3), hjust = 0, size = txt_bar,
-                fontface = "bold",
-                color = ifelse(bar_data$db_fill %in% c("#AA336A", "#1565C0", "#00796B"),
-                               "white", "grey20")) +
+      geom_text(aes(label = clean_name, x = 0.3),
+        hjust = 0, size = txt_bar,
+        fontface = "bold",
+        color = ifelse(bar_data$db_fill %in% c("#AA336A", "#1565C0", "#00796B"),
+          "white", "grey20"
+        )
+      ) +
       scale_fill_identity() +
       scale_x_continuous(
         expand = expansion(mult = c(0, 0.05)),
@@ -268,13 +309,18 @@ rows <- lapply(seq_along(mod_order), function(i) {
 })
 
 # Z-score legend
-z_legend <- ggplot(data.frame(z = seq(-2, 2, length.out = 100)),
-                   aes(x = z, y = 1, fill = z)) +
+z_legend <- ggplot(
+  data.frame(z = seq(-2, 2, length.out = 100)),
+  aes(x = z, y = 1, fill = z)
+) +
   geom_tile() +
-  scale_fill_gradient2(low = "#4393C3", mid = "white", high = "#D6604D",
-                       midpoint = 0, limits = c(-2, 2),
-                       name = "Z-score", guide = guide_colorbar(
-                         barwidth = unit(40, "mm"), barheight = unit(3, "mm"))) +
+  scale_fill_gradient2(
+    low = "#4393C3", mid = "white", high = "#D6604D",
+    midpoint = 0, limits = c(-2, 2),
+    name = "Z-score", guide = guide_colorbar(
+      barwidth = unit(40, "mm"), barheight = unit(3, "mm")
+    )
+  ) +
   theme_void() +
   theme(legend.position = "bottom", legend.text = element_text(size = txt_axis * 0.7))
 
@@ -282,11 +328,13 @@ z_legend <- ggplot(data.frame(z = seq(-2, 2, length.out = 100)),
 triptych <- wrap_plots(rows, ncol = 1) / wrap_elements(z_legend) +
   plot_layout(heights = c(rep(1, length(mod_order)), 0.12))
 
-ggsave(file.path(RPT_PDF, "panel_B_triptych_MAIN.pdf"), triptych,
-       width = PB_W, height = PB_H, units = "mm",
-       device = pdf_device, limitsize = FALSE)
-ggsave(file.path(RPT_PNG, "panel_B_triptych_MAIN.png"), triptych,
-       width = PB_W, height = PB_H, units = "mm",
-       dpi = 300, limitsize = FALSE)
+ggsave(file.path(RPT, "panel_b_triptych.pdf"), triptych,
+  width = PB_W, height = PB_H, units = "mm",
+  device = pdf_device, limitsize = FALSE, bg = "white"
+)
+ggsave(file.path(RPT, "panel_b_triptych.png"), triptych,
+  width = PB_W, height = PB_H, units = "mm",
+  dpi = 300, limitsize = FALSE, bg = "white"
+)
 
 message("  Panel B (WGCNA triptych) saved")
