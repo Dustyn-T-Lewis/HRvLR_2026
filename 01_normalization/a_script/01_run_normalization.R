@@ -31,7 +31,7 @@ library(stringr)
 set.seed(42)
 setwd(rprojroot::find_rstudio_root_file())
 
-# --- Configuration -----------------------------------------------------------
+# Configuration
 
 cfg <- list(
   # Input files
@@ -55,7 +55,7 @@ cfg <- list(
 dir.create(cfg$report_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$data_dir,   recursive = TRUE, showWarnings = FALSE)
 
-# --- Helper ------------------------------------------------------------------
+# Helper
 
 run_pca <- function(mat, metadata, log_transform = TRUE) {
   # Median-impute for PCA only (imputed values never exported)
@@ -70,9 +70,7 @@ run_pca <- function(mat, metadata, log_transform = TRUE) {
   list(pca = pca, scores = pc, var_exp = ve)
 }
 
-# =============================================================================
-# 1. LOAD DATA
-# =============================================================================
+# LOAD DATA
 
 raw <- read_excel(cfg$raw_file)
 annot_cols <- c("uniprot_id", "protein", "gene", "description", "n_seq")
@@ -89,9 +87,7 @@ filter_log <- tibble(step = "Raw input", n_before = NA_integer_,
                      n_after = n_raw, n_removed = NA_integer_)
 cat(sprintf("Raw: %d proteins x %d samples\n", n_raw, ncol(intensity)))
 
-# =============================================================================
-# 2. HPA TISSUE FILTER
-# =============================================================================
+# HPA TISSUE FILTER
 
 hpa <- read_tsv(cfg$hpa_file, show_col_types = FALSE) |>
   select(Gene, Ensembl, Evidence,
@@ -112,11 +108,9 @@ filter_log <- bind_rows(filter_log, tibble(
 cat(sprintf("HPA: %d -> %d (-%d)\n",
             n_before, nrow(annotation), n_before - nrow(annotation)))
 
-# =============================================================================
-# 2b. BLOOD CONTAMINANT REMOVAL
+# BLOOD CONTAMINANT REMOVAL
 #     Source 1: top abundant plasma proteins (Geyer et al. 2016, PMID 27135364)
 #     Source 2: HPA "Immunoglobulin genes" protein class
-# =============================================================================
 
 BLOOD_CONTAMINANTS <- c(
   # Hemoglobins
@@ -150,9 +144,7 @@ filter_log <- bind_rows(filter_log, tibble(
 cat(sprintf("Blood: %d -> %d (-%d)\n",
             n_before, nrow(annotation), n_before - nrow(annotation)))
 
-# =============================================================================
-# 3. DEDUPLICATE BY UNIPROT ID
-# =============================================================================
+# DEDUPLICATE BY UNIPROT ID
 
 if (any(duplicated(annotation$uniprot_id))) {
   n_before_dup <- nrow(annotation)
@@ -171,9 +163,7 @@ if (any(duplicated(annotation$uniprot_id))) {
   cat(sprintf("Deduplicated: %d proteins\n", nrow(annotation)))
 }
 
-# =============================================================================
-# 4. ASSEMBLE DAList & MISSINGNESS FILTER
-# =============================================================================
+# ASSEMBLE DAList & MISSINGNESS FILTER
 
 int_mat <- as.data.frame(data.matrix(intensity))
 rownames(int_mat) <- annotation$uniprot_id
@@ -216,9 +206,7 @@ filtered_proteins <- bind_rows(
                                   cfg$miss_min_reps))
 ) |> distinct(uniprot_id, .keep_all = TRUE)
 
-# =============================================================================
-# 5. OUTLIER DETECTION (4-method consensus)
-# =============================================================================
+# OUTLIER DETECTION (4-method consensus)
 
 # Method 1: Sample missingness (pooled threshold, flags individual samples)
 pct_missing <- colMeans(is.na(dal$data)) * 100
@@ -287,9 +275,7 @@ if (n_outliers > 0) {
   cat(sprintf("%d samples remain\n", ncol(dal$data)))
 }
 
-# =============================================================================
-# 6. NORMALIZE (cycloess via proteoDA)
-# =============================================================================
+# NORMALIZE (cycloess via proteoDA)
 
 write_norm_report(dal, grouping_column = "Group_Time",
                   output_dir = cfg$report_dir,
@@ -310,9 +296,7 @@ write_qc_report(dal, color_column = "Group_Time",
                 output_dir = cfg$report_dir,
                 filename = "03_qc_post.pdf", overwrite = TRUE)
 
-# =============================================================================
-# 7. NORMALIZATION METHOD RANKING (PRONE-style)
-# =============================================================================
+# NORMALIZATION METHOD RANKING (PRONE-style)
 
 norm_metric <- function(mat, groups, metric) {
   grp_list <- split(seq_len(ncol(mat)), groups)
@@ -356,9 +340,7 @@ write_csv(norm_scores, file.path(cfg$data_dir, "04_norm_quality_scores.csv"))
 cat("Norm ranking:\n")
 print(norm_scores |> select(method, PCV, PMAD, COR, composite))
 
-# =============================================================================
-# 8. EXPORT
-# =============================================================================
+# EXPORT
 
 export_df <- bind_cols(
   as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
@@ -367,9 +349,7 @@ export_df <- bind_cols(
 write_csv(export_df, file.path(cfg$data_dir, "02_normalized.csv"))
 saveRDS(dal, file.path(cfg$data_dir, "03_DAList_normalized.rds"))
 
-# =============================================================================
-# 9. COMPUTE PLOT DATA & SAVE INTERMEDIATES for 02_norm_reports.R
-# =============================================================================
+# COMPUTE PLOT DATA & SAVE INTERMEDIATES for 02_norm_reports.R
 
 filter_bar_data <- filter_log |>
   filter(!is.na(n_removed)) |>
