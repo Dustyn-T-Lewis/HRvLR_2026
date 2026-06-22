@@ -16,14 +16,14 @@ library(cowplot)
 
 setwd(rprojroot::find_rstudio_root_file())
 
-# --- Configuration -----------------------------------------------------------
+# Configuration
 
 cfg <- list(
   report_dir = "01_normalization/b_reports",
   data_dir   = "01_normalization/c_data"
 )
 
-# --- Load intermediates ------------------------------------------------------
+# Load intermediates
 
 int <- readRDS(file.path(cfg$data_dir, "00_report_intermediates.rds"))
 
@@ -48,7 +48,7 @@ dal_nrow         <- int$dal_nrow
 dal_ncol         <- int$dal_ncol
 cfg_full         <- int$cfg
 
-# --- Palette & theme (self-contained) ----------------------------------------
+# Palette & theme (self-contained)
 
 pal_gt <- c(
   HR_T1 = scales::alpha("#D6604D", 0.4), HR_T2 = "#D6604D",
@@ -60,9 +60,7 @@ shape_tp <- c(T1 = 16, T2 = 15, T3 = 17)
 col_resp <- c(HR = "#D6604D", LR = "#4393C3")
 theme_qc <- theme_minimal(base_size = 12)
 
-# =============================================================================
 # PAGE 1: Filtering & missingness
-# =============================================================================
 
 p_filter <- ggplot(filter_bar_data, aes(step, n, fill = status)) +
   geom_col(width = 0.7) +
@@ -82,9 +80,7 @@ p_miss <- ggplot(miss_bar_data, aes(reorder(Col_ID, -n * (status == "Detected"))
   theme_qc + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5),
                    strip.text = element_text(face = "bold"))
 
-# =============================================================================
 # PAGE 2: Outlier diagnostics
-# =============================================================================
 
 # Color by responder group (HR = red, LR = blue)
 outlier_diag$resp <- ifelse(grepl("^HR_", outlier_diag$prefix) |
@@ -157,9 +153,7 @@ p_out_cor <- ggplot(outlier_diag, aes(reorder(prefix, median_cor),
                            cfg_full$mad_k, sum(outlier_diag$cor_flag))) +
   theme_qc + theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 4))
 
-# =============================================================================
 # PAGE 3: Post-normalization PCA
-# =============================================================================
 
 p_pca_post <- ggplot(pca_post$scores, aes(PC1, PC2,
                                             color = Group_Time, shape = Timepoint)) +
@@ -171,9 +165,7 @@ p_pca_post <- ggplot(pca_post$scores, aes(PC1, PC2,
        title = "Post-normalization PCA") +
   theme_qc + theme(legend.position = "bottom")
 
-# =============================================================================
 # PAGE 4: Variability
-# =============================================================================
 
 n_subjects <- length(unique(subj_var$Subject_ID))
 
@@ -202,9 +194,7 @@ p_eta2 <- ggplot(data.frame(eta2 = eta2_vals[!is.na(eta2_vals)]), aes(eta2)) +
                            median(eta2_vals, na.rm = TRUE))) +
   theme_qc
 
-# =============================================================================
 # ASSEMBLE PDF (4 pages)
-# =============================================================================
 
 pdf(file.path(cfg$report_dir, "04_diagnostics.pdf"), width = 20, height = 10)
 
@@ -257,9 +247,7 @@ print(
 dev.off()
 cat("Wrote: 04_diagnostics.pdf\n")
 
-# =============================================================================
 # SUPPLEMENTARY WORKBOOK
-# =============================================================================
 
 add_sheet <- function(wb, name, title, notes, df) {
   addWorksheet(wb, name)
