@@ -26,7 +26,7 @@ SIG_LABEL_FILL_SCATTER <- c(
   "LR only"     = scales::alpha("#5DA5DA", 0.80),
   "Sig Both"    = scales::alpha("#2E7D32", 0.80),
   "Interaction" = scales::alpha("#7B5EA7", 0.80),
-  "NS"          = scales::alpha("grey70",  0.75)
+  "NS"          = scales::alpha("grey70", 0.75)
 )
 
 SIG_LABEL_TEXT_SCATTER <- c(
@@ -77,12 +77,12 @@ PANEL_SM <- 120
 PANEL_MD <- 180
 PANEL_LG <- 280
 
-BASE_PATHWAY  <- 4.0
-BASE_GENE     <- 3.2
-BASE_STAT     <- 3.5
+BASE_PATHWAY <- 4.0
+BASE_GENE <- 3.2
+BASE_STAT <- 3.5
 BASE_QUADRANT <- 4.0
-BASE_COUNT    <- 3.5
-BASE_TAG      <- 18
+BASE_COUNT <- 3.5
+BASE_TAG <- 18
 
 scale_text <- function(base_size, panel_width_mm, ref_width = PANEL_MD) {
   base_size * sqrt(panel_width_mm / ref_width)
@@ -108,13 +108,13 @@ FIG_THEME <- theme_bw(base_size = 10) +
 # ── Scatter classification ────────────────────────────────────────────────────
 
 classify_proteins_scatter <- function(pi_HR, pi_LR, pi_interaction,
-                                       threshold = 0.05) {
+                                      threshold = 0.05) {
   dplyr::case_when(
-    pi_interaction < threshold             ~ "Interaction",
-    pi_HR < threshold & pi_LR < threshold  ~ "Sig Both",
-    pi_HR < threshold                      ~ "HR only",
-    pi_LR < threshold                      ~ "LR only",
-    TRUE                                   ~ "NS"
+    pi_interaction < threshold ~ "Interaction",
+    pi_HR < threshold & pi_LR < threshold ~ "Sig Both",
+    pi_HR < threshold ~ "HR only",
+    pi_LR < threshold ~ "LR only",
+    TRUE ~ "NS"
   ) |>
     factor(levels = c("Interaction", "Sig Both", "HR only", "LR only", "NS"))
 }
@@ -123,7 +123,13 @@ classify_proteins_scatter <- function(pi_HR, pi_LR, pi_interaction,
 
 get_pdf_device <- function() {
   tryCatch(
-    { f <- tempfile(); cairo_pdf(f); dev.off(); unlink(f); cairo_pdf },
+    {
+      f <- tempfile()
+      cairo_pdf(f)
+      dev.off()
+      unlink(f)
+      cairo_pdf
+    },
     error = function(e) "pdf"
   )
 }
@@ -132,8 +138,10 @@ PDF_DEVICE <- get_pdf_device()
 
 save_panel <- function(plot, path_stem, width, height, pdf_device = PDF_DEVICE) {
   ggsave(paste0(path_stem, ".pdf"), plot,
-         width = width, height = height, units = "mm", device = pdf_device)
+    width = width, height = height, units = "mm", device = pdf_device, bg = "white"
+  )
   ggsave(paste0(path_stem, ".png"), plot,
-         width = width, height = height, units = "mm", dpi = 300)
+    width = width, height = height, units = "mm", dpi = 300, bg = "white"
+  )
   message("  Saved: ", basename(path_stem))
 }
