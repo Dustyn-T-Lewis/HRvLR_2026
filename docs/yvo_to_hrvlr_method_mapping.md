@@ -174,7 +174,7 @@ Validation checks:
 
 | YvO source | YvO question | YvO assumptions | HRvLR target | Transfer status | HRvLR decision |
 | --- | --- | --- | --- | --- | --- |
-| `02_Imputation/a_script/01_impute.R` | Which proteins are MAR vs MNAR, and can we generate a deterministic complete matrix for QC-sensitive or complete-data downstream tasks without using imputation in the primary DEP model? | 3-method MAR/MNAR consensus, within-matrix missingness profiling, `missForest`, deterministic row ordering before stochastic imputation, unreliability flag at `>50%` missing | Canonical target: `02_Imputation/a_script/01_run_imputation.R`, `02_imputation_reports.R`, `03_imputation_supp.R` | Direct with HRvLR group adaptation | Use the YvO-style primary workflow as canonical HRvLR stage 02. Keep imputation out of the primary DEP model. Keep the `>50%` unreliability flag. Recompute missingness by HRvLR `Group_Time` cells. Treat the existing 12-method benchmark as optional exploratory infrastructure, not the canonical transferred method. |
+| `02_Imputation/a_script/01_impute.R` | Which proteins are MAR vs MNAR, and can we generate a deterministic complete matrix for QC-sensitive or complete-data downstream tasks without using imputation in the primary DEP model? | 3-method MAR/MNAR consensus, within-matrix missingness profiling, `missForest`, deterministic row ordering before stochastic imputation, unreliability flag at `>50%` missing | Exploratory arms: `a_imp4p.R`, `b_mscoreutils.R`, `c_missforest.R`, each writing `DAList_imputed_<method>.rds` | Superseded by 2026 audit | Stage 02 restructured to CvH-style lean per-method arms (imp4p / MsCoreUtils / missForest). Imputation stays out of the primary DEP model; the `missForest` arm is what downstream QC/figures read. The YvO-style 3-method MAR/MNAR consensus, per-protein classification, and the 12-method benchmark were removed. |
 
 Transferred assumptions:
 
@@ -335,12 +335,16 @@ Every canonical rerun should verify:
 
 1. `01_normalization/a_script/01_run_normalization.R`
 2. `01_normalization/a_script/02_norm_reports.R`
-3. `02_Imputation/a_script/01_run_imputation.R`
-4. `02_Imputation/a_script/02_imputation_reports.R`
-5. `02_Imputation/a_script/03_imputation_supp.R`
-6. `03_DEP/a_script/01_run_dep.R`
-7. `03_DEP/a_script/02_dep_reports.R`
-8. `03_DEP/a_script/03_dep_robustness.R`
+3. `03_DEP/a_script/01_run_dep.R`
+4. `03_DEP/a_script/02_dep_reports.R`
+5. `03_DEP/a_script/03_dep_robustness.R`
+
+Imputation is exploratory (not part of the primary DEP path). Run the arm(s) you
+need before figures/WGCNA; `c_missforest.R` is the default downstream arm:
+
+- `02_Imputation/a_script/c_missforest.R`
+- `02_Imputation/a_script/a_imp4p.R`
+- `02_Imputation/a_script/b_mscoreutils.R`
 
 ### Direct-Transfer Figures
 

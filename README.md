@@ -27,7 +27,7 @@ forward.
 | --- | --- | --- |
 | `00` | `00_input/` | Raw intensity matrix, metadata, phenotype table, HPA annotations |
 | `01` | `01_normalization/` | YvO-style HPA filter, blood contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection, `cycloess` normalization |
-| `02` | `02_Imputation/` | YvO-style 3-method MAR/MNAR consensus plus `missForest` for QC and sensitivity analyses; primary DEP remains non-imputed |
+| `02` | `02_Imputation/` | Exploratory imputation arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds`; primary DEP remains non-imputed |
 | `03` | `03_DEP/` | `limma + duplicateCorrelation`, 7 HRvLR contrasts, Pi-score summaries, robustness analyses |
 | `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions |
 | `05` | `05_WGCNA/` | Module-level repeated-measures network analysis feeding downstream figure assets |
@@ -40,13 +40,21 @@ forward.
 Rscript 01_normalization/a_script/01_run_normalization.R
 Rscript 01_normalization/a_script/02_norm_reports.R
 
-Rscript 02_Imputation/a_script/01_run_imputation.R
-Rscript 02_Imputation/a_script/02_imputation_reports.R
-Rscript 02_Imputation/a_script/03_imputation_supp.R
-
 Rscript 03_DEP/a_script/01_run_dep.R
 Rscript 03_DEP/a_script/02_dep_reports.R
 Rscript 03_DEP/a_script/03_dep_robustness.R
+```
+
+The primary DEP runs on the non-imputed normalized matrix. Imputation is
+exploratory and feeds only QC, sensitivity, and figure/WGCNA inputs. Each arm is
+independent and writes a method-tagged `DAList_imputed_<method>.rds`; the
+`missForest` arm is the one downstream figures and the DEP sensitivity check read
+by default:
+
+```sh
+Rscript 02_Imputation/a_script/c_missforest.R    # default downstream arm
+Rscript 02_Imputation/a_script/a_imp4p.R         # exploratory alternative
+Rscript 02_Imputation/a_script/b_mscoreutils.R   # exploratory alternative
 ```
 
 ### Figure and Network Stages
