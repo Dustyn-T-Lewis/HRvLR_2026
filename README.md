@@ -13,13 +13,34 @@ forward.
 
 ## Design and Canonical Contrasts
 
+DEP fits the means model `~ 0 + group` (one mean per `Group_Time` cell) with
+`duplicateCorrelation` blocking on `Subject_ID`, and computes all 9 contrasts
+below. Each is a linear combination of the six cell means, so all are estimable.
+
+HR (within-responder):
+
 - `Training_HR = HR_T2 - HR_T1`
-- `Training_LR = LR_T2 - LR_T1`
-- `Baseline_HRvLR = HR_T1 - LR_T1`
-- `Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)`
 - `Acute_HR = HR_T3 - HR_T2`
+
+LR (within-responder):
+
+- `Training_LR = LR_T2 - LR_T1`
 - `Acute_LR = LR_T3 - LR_T2`
+
+HRvLR (between-responder):
+
+- `Baseline_HRvLR = HR_T1 - LR_T1`
+- `Trained_HRvLR = HR_T2 - LR_T2`
+- `Acute_HRvLR = HR_T3 - LR_T3`
+
+Interaction (differential response):
+
+- `Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)`
 - `Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)`
+
+Figure defaults: volcano rings show all 9, grouped by the four families above.
+Other figures (proteome overview onward) default to the 7-contrast set that
+drops `Trained_HRvLR` and `Acute_HRvLR`.
 
 ## Pipeline Overview
 
@@ -28,7 +49,7 @@ forward.
 | `00` | `00_input/` | Raw intensity matrix, metadata, phenotype table, HPA annotations |
 | `01` | `01_normalization/` | YvO-style HPA filter, blood contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection, `cycloess` normalization |
 | `02` | `02_Imputation/` | Exploratory imputation arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds`; primary DEP remains non-imputed |
-| `03` | `03_DEP/` | `limma + duplicateCorrelation`, 7 HRvLR contrasts, Pi-score summaries, robustness analyses |
+| `03` | `03_DEP/` | `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries, robustness analyses |
 | `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions |
 | `05` | `05_WGCNA/` | Module-level repeated-measures network analysis feeding downstream figure assets |
 
