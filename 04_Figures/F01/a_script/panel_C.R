@@ -108,4 +108,4 @@ pC_right <- ggplot(pheno_wide, aes(x = Group, y = delta, fill = Group)) +
 pC <- (pC_left | pC_right) + plot_layout(widths = c(0.65, 0.35))
 
 # Save ----
-save_panel(pC, file.path(RPT, "panel_C_fcsa_mixed_MAIN"), PW, PH)
+save_panel(pC, file.path(RPT, "panel_c_fcsa_mixed"), PW, PH)

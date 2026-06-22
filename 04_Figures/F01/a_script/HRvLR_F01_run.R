@@ -1,13 +1,15 @@
-# F01 Full Phenotype Atlas — Runner
+# F01 phenotype atlas — render the standalone panels (a-i) into b_reports.
+# No composite; panels are assembled into the figure manually.
 setwd(rprojroot::find_rstudio_root_file())
 
-source("04_Figures/F01/a_script/panel_A.R")
-source("04_Figures/F01/a_script/panel_B.R")
-source("04_Figures/F01/a_script/panel_C.R")
-source("04_Figures/F01/a_script/panel_D.R")
-source("04_Figures/F01/a_script/panel_E.R")
-source("04_Figures/F01/a_script/panel_F.R")
-source("04_Figures/F01/a_script/panel_G.R")
-source("04_Figures/F01/a_script/panel_H.R")
-source("04_Figures/F01/a_script/panel_I.R")
-source("04_Figures/F01/a_script/90_stitch_figure.R")
+RPT <- "04_Figures/F01/b_reports"
+unlink(setdiff(list.files(RPT, full.names = TRUE), file.path(RPT, ".gitkeep")),
+  recursive = TRUE
+)
+dir.create(RPT, recursive = TRUE, showWarnings = FALSE)
+
+for (p in LETTERS[1:9]) {
+  source(sprintf("04_Figures/F01/a_script/panel_%s.R", p))
+}
+
+cat("F01 phenotype panels rendered to", RPT, "\n")

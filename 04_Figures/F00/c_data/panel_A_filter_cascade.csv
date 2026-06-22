@@ -1,5 +1,0 @@
-step,n_before,n_after,n_removed,pct_of_raw,removed
-Raw input,NA,2400,NA,100,0
-HPA tissue filter,2400,2263,137,94.3,137
-Blood contaminant removal,2263,2224,39,92.7,39
-Missingness (>=5 of 8 in >=1 group),2224,1943,281,81,281

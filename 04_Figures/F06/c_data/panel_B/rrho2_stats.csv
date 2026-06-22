@@ -1,2 +1,0 @@
-n_proteins,step,pearson,pearson_lo,pearson_hi,spearman,spearman_lo,spearman_hi,concordance_pct
-1919,9,0.2472,0.2048,0.2888,0.2402,0.1976,0.2819,59.2

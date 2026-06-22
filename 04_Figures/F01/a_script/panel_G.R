@@ -66,4 +66,4 @@ audit_G <- meta %>%
   mutate(t_test_p = stats_G$p.value)
 write_csv(audit_G, file.path(DAT, "audit_panel_G_hypertrophy_composite.csv"))
 
-save_panel(pG, file.path(RPT, "panel_G_hypertrophy_composite_MAIN"), PW, PH)
+save_panel(pG, file.path(RPT, "panel_g_hypertrophy_composite"), PW, PH)

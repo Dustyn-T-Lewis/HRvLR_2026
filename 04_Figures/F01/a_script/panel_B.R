@@ -101,4 +101,4 @@ pB_right <- ggplot(pheno_wide, aes(x = Group, y = delta, fill = Group)) +
 pB <- (pB_left | pB_right) + plot_layout(widths = c(0.65, 0.35))
 
 # Save ----
-save_panel(pB, file.path(RPT, "panel_B_1rm_leg_MAIN"), PW, PH)
+save_panel(pB, file.path(RPT, "panel_b_1rm_leg"), PW, PH)
