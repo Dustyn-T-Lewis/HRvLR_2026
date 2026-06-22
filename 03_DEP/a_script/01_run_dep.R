@@ -1,4 +1,4 @@
-# --- HRvLR Differential Expression — limma pipeline (proteoDA) ----------------
+# HRvLR Differential Expression — limma pipeline (proteoDA)
 # Design: 2x3 factorial (Responder x Timepoint), repeated measures on subject
 # T1 = baseline, T2 = 72hr post-training, T3 = 1hr acute post-bout
 # Input:  cycloess-normalized, non-imputed (limma handles NAs per-protein)
@@ -20,9 +20,8 @@
 #   Karpievitch et al. 2012, BMC Bioinform 13(S16):S5 — non-imputed limma
 #   Xiao et al. 2014, Bioinformatics 30(6):801-807 — Pi-score
 #     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3
-# ---------------------------------------------------------------------------
 
-# --- SETUP ---
+# SETUP
 
 library(dplyr)
 library(tidyr)
@@ -52,7 +51,7 @@ dir.create(cfg$proteoDA_dir, recursive = TRUE, showWarnings = FALSE)
 
 required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time")
 
-# --- LOAD DATA & BUILD METADATA ---
+# LOAD DATA & BUILD METADATA
 
 df <- read_csv(cfg$norm_csv, show_col_types = FALSE)
 
@@ -97,7 +96,7 @@ if (any(is.na(meta$subject)) || any(meta$subject == "")) {
 print(table(meta$responder, meta$time))
 stopifnot(setequal(colnames(mat), meta$sample_id))
 
-# --- CREATE DAList ---
+# CREATE DAList
 
 meta_df <- as.data.frame(meta)
 rownames(meta_df) <- meta$sample_id
@@ -109,13 +108,13 @@ dal <- DAList(
   tags       = list(norm_method = "cycloess")
 )
 
-# --- STATISTICAL DESIGN ---
+# STATISTICAL DESIGN
 
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 colnames(dal$design$design_matrix) <- gsub("^group", "",
                                             colnames(dal$design$design_matrix))
 
-# --- CONTRASTS ---
+# CONTRASTS
 
 dal <- add_contrasts(dal, contrasts_vector = c(
   "Training_HR = HR_T2 - HR_T1",
@@ -129,7 +128,7 @@ dal <- add_contrasts(dal, contrasts_vector = c(
   "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 ))
 
-# --- FIT MODEL & EXTRACT RESULTS ---
+# FIT MODEL & EXTRACT RESULTS
 
 dal <- fit_limma_model(dal)
 
@@ -146,7 +145,7 @@ dal <- extract_DA_results(dal,
                           lfc_thresh  = cfg$lfc_thresh,
                           adj_method  = cfg$adj_method)
 
-# --- INJECT PI-SCORE INTO dal$results ---
+# INJECT PI-SCORE INTO dal$results
 # Pi = p^|logFC| (Xiao et al. 2014); lower = more significant
 contrast_names <- names(dal$results)
 
@@ -164,11 +163,11 @@ for (cname in contrast_names) {
 # proteoDA Excel formatting expects gene_symbol column
 dal$annotation$gene_symbol <- dal$annotation$gene
 
-# --- SAVE FITTED DAList (with Pi-score in results) ---
+# SAVE FITTED DAList (with Pi-score in results)
 
 saveRDS(dal, file.path(cfg$data_dir, "01_limma_DAList.rds"))
 
-# --- GENERATE proteoDA REPORTS ---
+# GENERATE proteoDA REPORTS
 
 tryCatch(
   write_limma_reports(dal, output_dir = cfg$proteoDA_dir, overwrite = TRUE),
@@ -185,7 +184,7 @@ tryCatch(
   error = function(e) cat(sprintf("write_limma_plots: %s\n", conditionMessage(e)))
 )
 
-# --- WRITE TABLES VIA proteoDA ---
+# WRITE TABLES VIA proteoDA
 # Per-contrast CSVs, combined results (wide), and formatted Excel workbook
 # with conditional formatting & UniProt hyperlinks — all handled by proteoDA.
 # Pi-score columns pass through because they were injected into dal$results above.
@@ -202,7 +201,7 @@ write_limma_tables(dal,
 # proteoDA summary only has sig.PVal/sig.FDR; replace with Pi-enriched version
 file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 
-# --- DA SUMMARY (with Pi-score counts) ---
+# DA SUMMARY (with Pi-score counts)
 # proteoDA's summarize_contrast_DA lacks Pi-score columns, so we build our own.
 
 da_summary <- map_dfr(contrast_names, function(cname) {
@@ -237,7 +236,7 @@ da_summary <- map_dfr(contrast_names, function(cname) {
 
 write_csv(da_summary, file.path(cfg$data_dir, "02_DA_summary.csv"))
 
-# --- SUMMARY ---
+# SUMMARY
 
 print(dal$design$contrast_matrix)
 print(da_summary)
