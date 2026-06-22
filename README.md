@@ -47,23 +47,22 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | Stage | Directory | Canonical logic |
 | --- | --- | --- |
 | `00` | `00_input/` | Raw intensity matrix, metadata, phenotype table, HPA annotations |
-| `01` | `01_normalization/` | YvO-style HPA filter, blood contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection, `cycloess` normalization |
-| `02` | `02_Imputation/` | Exploratory imputation arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds`; primary DEP remains non-imputed |
-| `03` | `03_DEP/` | `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries, robustness analyses |
+| `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
+| `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds` |
+| `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries, robustness. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
 | `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions |
-| `05` | `05_WGCNA/` | Module-level repeated-measures network analysis feeding downstream figure assets |
 
 ## Canonical Run Order
 
 ### Core Stages
 
 ```sh
-Rscript 01_normalization/a_script/01_run_normalization.R
-Rscript 01_normalization/a_script/02_norm_reports.R
+Rscript 01_Filtering/a_script/01_run_filtering.R
+Rscript 02_Normalization/a_script/01_run_normalization.R
 
-Rscript 03_DEP/a_script/01_run_dep.R
-Rscript 03_DEP/a_script/02_dep_reports.R
-Rscript 03_DEP/a_script/03_dep_robustness.R
+Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
+Rscript 03_DEP/a_non_imputed/a_script/02_dep_reports.R
+Rscript 03_DEP/a_non_imputed/a_script/03_dep_robustness.R
 ```
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
@@ -73,9 +72,11 @@ independent and writes a method-tagged `DAList_imputed_<method>.rds`; the
 by default:
 
 ```sh
-Rscript 02_Imputation/a_script/c_missforest.R    # default downstream arm
-Rscript 02_Imputation/a_script/a_imp4p.R         # exploratory alternative
-Rscript 02_Imputation/a_script/b_mscoreutils.R   # exploratory alternative
+Rscript 02_Normalization/imputation/a_script/c_missforest.R    # default downstream arm
+Rscript 02_Normalization/imputation/a_script/a_imp4p.R         # exploratory alternative
+Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R   # exploratory alternative
+
+Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imputed DEP
 ```
 
 ### Figure and Network Stages
