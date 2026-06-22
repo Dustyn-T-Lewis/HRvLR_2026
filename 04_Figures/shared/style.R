@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
 # ── Colour palettes ----
 
 GROUP_COLORS <- c(HR = "#2166AC", LR = "#B2182B")
-DIR_COLORS   <- c(Up = "#D6604D", Down = "#4393C3", NS = "grey70")
+DIR_COLORS <- c(Up = "#D6604D", Down = "#4393C3", NS = "grey70")
 
 GROUP_FILL <- c(
   HR_T1 = scales::alpha("#2166AC", 0.40),
@@ -22,6 +22,9 @@ GROUP_FILL <- c(
 )
 
 SHAPE_TP <- c(T1 = 16, T2 = 17, T3 = 15)
+
+# Timepoint hues (Okabe-Ito, colourblind-safe): baseline / trained / acute
+TIME_COLORS <- c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")
 
 CONTRAST_COLORS <- c(
   Training_HR          = "#2166AC",
@@ -42,8 +45,10 @@ PCA_COLORS <- c(
   LR_T3 = "#D6604D"
 )
 
-PCA_SHAPES <- c(HR_T1 = 16, HR_T2 = 17, HR_T3 = 15,
-                LR_T1 = 16, LR_T2 = 17, LR_T3 = 15)
+PCA_SHAPES <- c(
+  HR_T1 = 16, HR_T2 = 17, HR_T3 = 15,
+  LR_T1 = 16, LR_T2 = 17, LR_T3 = 15
+)
 
 # ── Panel dimensions & sizing ----
 
@@ -51,12 +56,12 @@ PANEL_SM <- 120
 PANEL_MD <- 180
 PANEL_LG <- 280
 
-BASE_PATHWAY  <- 4.0
-BASE_GENE     <- 3.2
-BASE_STAT     <- 3.5
+BASE_PATHWAY <- 4.0
+BASE_GENE <- 3.2
+BASE_STAT <- 3.5
 BASE_QUADRANT <- 4.0
-BASE_COUNT    <- 3.5
-BASE_TAG      <- 18
+BASE_COUNT <- 3.5
+BASE_TAG <- 18
 
 scale_text <- function(base_size, panel_width_mm, ref_width = PANEL_MD) {
   base_size * sqrt(panel_width_mm / ref_width)
@@ -64,30 +69,34 @@ scale_text <- function(base_size, panel_width_mm, ref_width = PANEL_MD) {
 
 # ── Theme ----
 
-FIG_BASE_SIZE     <- 10
-FIG_TITLE_SIZE    <- 12
+FIG_BASE_SIZE <- 10
+FIG_TITLE_SIZE <- 12
 FIG_SUBTITLE_SIZE <- 9
-FIG_STRIP_SIZE    <- 10
-FIG_AXIS_TITLE    <- 10
-FIG_AXIS_TEXT     <- 8.5
-FIG_LEGEND_TITLE  <- 9.5
-FIG_LEGEND_TEXT   <- 8.5
-FIG_TAG_SIZE      <- 15
+FIG_STRIP_SIZE <- 10
+FIG_AXIS_TITLE <- 10
+FIG_AXIS_TEXT <- 8.5
+FIG_LEGEND_TITLE <- 9.5
+FIG_LEGEND_TEXT <- 8.5
+FIG_TAG_SIZE <- 15
 
 FIG_THEME <- theme_bw(base_size = FIG_BASE_SIZE) +
   theme(
-    plot.title       = element_text(face = "bold", size = FIG_TITLE_SIZE),
-    plot.subtitle    = element_text(face = "bold.italic", size = FIG_SUBTITLE_SIZE,
-                                    color = "grey30"),
-    plot.tag         = element_text(face = "bold", size = FIG_TAG_SIZE),
+    plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
+    plot.subtitle = element_text(
+      face = "bold.italic", size = FIG_SUBTITLE_SIZE,
+      color = "grey30"
+    ),
+    plot.tag = element_text(face = "bold", size = FIG_TAG_SIZE),
     strip.background = element_blank(),
-    strip.text       = element_text(face = "bold", size = FIG_STRIP_SIZE),
-    axis.title       = element_text(face = "bold", size = FIG_AXIS_TITLE),
-    axis.text        = element_text(size = FIG_AXIS_TEXT, color = "grey15"),
-    legend.title     = element_text(face = "bold", size = FIG_LEGEND_TITLE,
-                                    color = "grey20"),
-    legend.text      = element_text(size = FIG_LEGEND_TEXT, color = "grey15"),
-    legend.key.size  = unit(3, "mm"),
+    strip.text = element_text(face = "bold", size = FIG_STRIP_SIZE),
+    axis.title = element_text(face = "bold", size = FIG_AXIS_TITLE),
+    axis.text = element_text(size = FIG_AXIS_TEXT, color = "grey15"),
+    legend.title = element_text(
+      face = "bold", size = FIG_LEGEND_TITLE,
+      color = "grey20"
+    ),
+    legend.text = element_text(size = FIG_LEGEND_TEXT, color = "grey15"),
+    legend.key.size = unit(3, "mm"),
     panel.grid.minor = element_blank()
   )
 
@@ -97,8 +106,10 @@ KEY_TEXT <- 2.8
 
 # ── Contrast definitions ----
 
-CONTRASTS <- c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
-               "Baseline_HRvLR", "Training_Interaction", "Acute_Interaction")
+CONTRASTS <- c(
+  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
+  "Baseline_HRvLR", "Training_Interaction", "Acute_Interaction"
+)
 
 # ── Contrast label mappings ----
 
@@ -125,15 +136,21 @@ CTR_SHORT <- c(
 # ── Helper functions ----
 
 fmt_p <- function(p) {
-  if (p < 0.001) return("p < 0.001")
-  if (p < 0.01)  return(sprintf("p = %.3f", p))
+  if (p < 0.001) {
+    return("p < 0.001")
+  }
+  if (p < 0.01) {
+    return(sprintf("p = %.3f", p))
+  }
   sprintf("p = %.2f", p)
 }
 
 fisher_z_ci <- function(r, n, k = 0, level = 0.95) {
   n_eff <- n - k
-  if (n_eff < 4 || is.na(r)) return(c(lo = NA_real_, hi = NA_real_))
-  z  <- atanh(r)
+  if (n_eff < 4 || is.na(r)) {
+    return(c(lo = NA_real_, hi = NA_real_))
+  }
+  z <- atanh(r)
   se <- 1 / sqrt(n_eff - 3)
   crit <- qnorm(1 - (1 - level) / 2)
   c(lo = tanh(z - crit * se), hi = tanh(z + crit * se))
@@ -142,9 +159,9 @@ fisher_z_ci <- function(r, n, k = 0, level = 0.95) {
 sig_stars <- function(padj) {
   dplyr::case_when(
     padj < 0.001 ~ "***",
-    padj < 0.01  ~ "**",
-    padj < 0.05  ~ "*",
-    TRUE         ~ ""
+    padj < 0.01 ~ "**",
+    padj < 0.05 ~ "*",
+    TRUE ~ ""
   )
 }
 
@@ -190,7 +207,7 @@ scale_y_reordered <- function(..., sep = "___") {
 
 boot_median_ci <- function(x, R = 2000, conf = 0.95) {
   meds <- replicate(R, median(sample(x, replace = TRUE)))
-  qs   <- quantile(meds, c((1 - conf) / 2, (1 + conf) / 2))
+  qs <- quantile(meds, c((1 - conf) / 2, (1 + conf) / 2))
   c(lower = unname(qs[1]), upper = unname(qs[2]))
 }
 
@@ -202,10 +219,15 @@ bracket_pos <- function(y, pad = 0.08) {
 
 darken_color <- function(col, factor = 0.7) {
   rgb_vals <- grDevices::col2rgb(col) / 255
-  vapply(seq_along(col), function(i)
-    grDevices::rgb(rgb_vals[1, i] * factor, rgb_vals[2, i] * factor,
-                   rgb_vals[3, i] * factor),
-    character(1))
+  vapply(
+    seq_along(col), function(i) {
+      grDevices::rgb(
+        rgb_vals[1, i] * factor, rgb_vals[2, i] * factor,
+        rgb_vals[3, i] * factor
+      )
+    },
+    character(1)
+  )
 }
 
 strip_plot_meta <- function(p) {
@@ -216,7 +238,11 @@ strip_plot_meta <- function(p) {
 
 get_pdf_device <- function() {
   tryCatch(
-    { cairo_pdf(tempfile()); dev.off(); cairo_pdf },
+    {
+      cairo_pdf(tempfile())
+      dev.off()
+      cairo_pdf
+    },
     error = function(e) "pdf"
   )
 }
@@ -226,7 +252,9 @@ PDF_DEVICE <- get_pdf_device()
 
 save_panel <- function(plot, path_stem, width, height, pdf_device = PDF_DEVICE) {
   ggsave(paste0(path_stem, ".pdf"), plot,
-         width = width, height = height, units = "mm", device = pdf_device)
+    width = width, height = height, units = "mm", device = pdf_device
+  )
   ggsave(paste0(path_stem, ".png"), plot,
-         width = width, height = height, units = "mm", dpi = 300)
+    width = width, height = height, units = "mm", dpi = 300
+  )
 }
