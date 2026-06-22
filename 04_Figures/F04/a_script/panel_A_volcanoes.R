@@ -1,7 +1,6 @@
-# panel_A_volcanoes.R — HRvLR volcano-ring panels (main + supplementary)
-# Main figure: 7 state/within-group contrasts
-# Supplement:  2 interaction contrasts
-# Adapted from the YvO F04 per-panel export contract.
+# panel_A_volcanoes.R — HRvLR volcano-ring panels, one per contrast.
+# Nine panels (a-i) grouped by family: HR, LR, HR-vs-LR state, interaction.
+# Each saved standalone to b_reports as panel_<letter>_<contrast>.
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -14,14 +13,13 @@ source(here::here("04_Figures/F04/a_script/style.R"))
 source(here::here("04_Figures/F04/a_script/volcano_ring.R"))
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-RPT_MAIN_PDF <- here::here("04_Figures/F04/b_reports/main/pdf")
-RPT_MAIN_PNG <- here::here("04_Figures/F04/b_reports/main/png")
-RPT_SUPP_PDF <- here::here("04_Figures/F04/b_reports/supp/pdf")
-RPT_SUPP_PNG <- here::here("04_Figures/F04/b_reports/supp/png")
+RPT <- here::here("04_Figures/F04/b_reports")
 DAT <- here::here("04_Figures/F04/c_data")
-for (d in c(RPT_MAIN_PDF, RPT_MAIN_PNG, RPT_SUPP_PDF, RPT_SUPP_PNG, DAT)) {
-  dir.create(d, recursive = TRUE, showWarnings = FALSE)
-}
+# Wipe stale panel outputs so only the current nine-panel set remains
+unlink(setdiff(list.files(RPT, full.names = TRUE), file.path(RPT, ".gitkeep")),
+  recursive = TRUE
+)
+for (d in c(RPT, DAT)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
 
 # ── Load data once ────────────────────────────────────────────────────────────
 dep_df <- read_csv(
@@ -37,47 +35,47 @@ PH <- 185
 # All nine contrasts, grouped by family (HR / LR / HRvLR / Interaction).
 main_specs <- list(
   list(
-    panel = "panel_A", contrast = "Training_HR",
+    panel = "panel_a", contrast = "Training_HR",
     title = "Training Response - HR",
     subtitle = "HR: T2 - T1 (72h post-training)"
   ),
   list(
-    panel = "panel_B", contrast = "Acute_HR",
+    panel = "panel_b", contrast = "Acute_HR",
     title = "Acute Response - HR",
     subtitle = "HR: T3 - T2 (1h acute bout)"
   ),
   list(
-    panel = "panel_C", contrast = "Training_LR",
+    panel = "panel_c", contrast = "Training_LR",
     title = "Training Response - LR",
     subtitle = "LR: T2 - T1 (72h post-training)"
   ),
   list(
-    panel = "panel_D", contrast = "Acute_LR",
+    panel = "panel_d", contrast = "Acute_LR",
     title = "Acute Response - LR",
     subtitle = "LR: T3 - T2 (1h acute bout)"
   ),
   list(
-    panel = "panel_E", contrast = "Baseline_HRvLR",
+    panel = "panel_e", contrast = "Baseline_HRvLR",
     title = "Baseline State: HR vs LR",
     subtitle = "HR - LR at Baseline (T1)"
   ),
   list(
-    panel = "panel_F", contrast = "Trained_HRvLR",
+    panel = "panel_f", contrast = "Trained_HRvLR",
     title = "Trained State: HR vs LR",
     subtitle = "HR - LR after training (T2)"
   ),
   list(
-    panel = "panel_G", contrast = "Acute_HRvLR",
+    panel = "panel_g", contrast = "Acute_HRvLR",
     title = "Acute State: HR vs LR",
     subtitle = "HR - LR after acute bout (T3)"
   ),
   list(
-    panel = "panel_H", contrast = "Training_Interaction",
+    panel = "panel_h", contrast = "Training_Interaction",
     title = "Differential Training Response",
     subtitle = "(HR_T2 - HR_T1) - (LR_T2 - LR_T1)"
   ),
   list(
-    panel = "panel_I", contrast = "Acute_Interaction",
+    panel = "panel_i", contrast = "Acute_Interaction",
     title = "Differential Acute Response",
     subtitle = "(HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
   )
@@ -111,13 +109,13 @@ fgsea_df <- purrr::map_dfr(all_specs, function(spec) {
 
 write_csv(fgsea_df, file.path(DAT, "01_fgsea_cache.csv"))
 
-build_and_save_panel <- function(spec, report_pdf_dir, report_png_dir,
-                                 data_root, file_prefix) {
+build_and_save_panel <- function(spec) {
   contrast <- spec$contrast
-  panel_dat <- file.path(data_root, spec$panel)
+  fname <- paste0(spec$panel, "_", tolower(contrast))
+  panel_dat <- file.path(DAT, spec$panel)
   dir.create(panel_dat, recursive = TRUE, showWarnings = FALSE)
 
-  message(sprintf("  Building %s panel %s (%s)", file_prefix, spec$panel, contrast))
+  message(sprintf("  Building %s (%s)", fname, contrast))
 
   top_terms <- select_ring_terms(fgsea_df, contrast, n_each = 6)
   ring_data <- build_ring_with_gaps(top_terms, contrast, fgsea_df, n_each = 6)
@@ -136,16 +134,7 @@ build_and_save_panel <- function(spec, report_pdf_dir, report_png_dir,
     point_alpha = 0.55
   )
 
-  save_panel(
-    p,
-    file.path(report_png_dir, paste0(file_prefix, "_", spec$panel, "_", contrast)),
-    PW, PH
-  )
-  file.copy(
-    file.path(report_png_dir, paste0(file_prefix, "_", spec$panel, "_", contrast, ".pdf")),
-    file.path(report_pdf_dir, paste0(file_prefix, "_", spec$panel, "_", contrast, ".pdf")),
-    overwrite = TRUE
-  )
+  save_panel(p, file.path(RPT, fname), PW, PH)
 
   ring_out <- attr(p, "ring_data")
   if (!is.null(ring_out) && nrow(ring_out) > 0) {
@@ -175,13 +164,6 @@ build_and_save_panel <- function(spec, report_pdf_dir, report_png_dir,
     write_csv(file.path(panel_dat, paste0("volcano_", contrast, ".csv")))
 }
 
-walk(
-  main_specs,
-  build_and_save_panel,
-  report_pdf_dir = RPT_MAIN_PDF,
-  report_png_dir = RPT_MAIN_PNG,
-  data_root = file.path(DAT, "main"),
-  file_prefix = "MAIN"
-)
+walk(main_specs, build_and_save_panel)
 
 message("All F04 volcano-ring panels complete.")
