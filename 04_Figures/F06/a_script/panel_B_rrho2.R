@@ -19,7 +19,7 @@ dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
 
 pdf_device <- get_pdf_device()
 
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 
 JET_COLORS <- c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F",
                 "yellow", "#FF7F00", "red", "#7F0000")

@@ -34,7 +34,7 @@ COMP_RED <- unname(DIR_COLORS["Up"])
 COMP_BLUE <- unname(DIR_COLORS["Down"])
 N_SHOW <- 5
 
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 
 # Per-protein MAR/MNAR classification no longer exists; the imputed border
 # highlight falls back to the non-imputed style for all proteins.

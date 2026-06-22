@@ -17,9 +17,9 @@ setwd(rprojroot::find_rstudio_root_file())
 source("04_Figures/shared/style.R")
 
 # Paths
-NORM_FILE <- "01_normalization/c_data/02_normalized.csv"
-IMP_FILE <- "02_Imputation/c_data/DAList_imputed_missforest.rds"
-DEP_FILE <- "03_DEP/c_data/03_combined_results.csv"
+NORM_FILE <- "02_Normalization/c_data/normalized.csv"
+IMP_FILE <- "02_Normalization/imputation/c_data/DAList_imputed_missforest.rds"
+DEP_FILE <- "03_DEP/a_non_imputed/c_data/03_combined_results.csv"
 META_FILE <- "00_input/HRvLR_meta.csv"
 
 RPT_DIR <- "04_Figures/F03/b_reports"

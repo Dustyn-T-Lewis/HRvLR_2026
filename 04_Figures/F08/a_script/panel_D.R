@@ -16,7 +16,7 @@ dir.create(RPT, recursive = TRUE, showWarnings = FALSE)
 pdf_device <- get_pdf_device()
 
 # -- Run fGSEA on both Acute contrasts ----------------------------------------
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 pw_collection <- build_pathway_collection(min_size = 10, max_size = 500)
 
 set.seed(42)

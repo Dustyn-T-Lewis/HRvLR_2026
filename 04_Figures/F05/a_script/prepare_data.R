@@ -17,7 +17,7 @@ dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
 
 # -- Load DEP results ---------------------------------------------------------
 
-dep_df <- read_csv("03_DEP/c_data/03_combined_results.csv", show_col_types = FALSE)
+dep_df <- read_csv("03_DEP/a_non_imputed/c_data/03_combined_results.csv", show_col_types = FALSE)
 message(sprintf("DEP: %d proteins x %d columns", nrow(dep_df), ncol(dep_df)))
 
 # -- Build pathway collection --------------------------------------------------

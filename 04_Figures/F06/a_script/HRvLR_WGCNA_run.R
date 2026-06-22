@@ -1,5 +1,5 @@
 # HRvLR WGCNA Runner — produces network and module artifacts for F06/F08/F09
-# Inputs:  02_Imputation/c_data/DAList_imputed_missforest.rds
+# Inputs:  02_Normalization/imputation/c_data/DAList_imputed_missforest.rds
 # Outputs: 04_Figures/F06/c_data/wgcna/  (network, sft_summary, stratified trait cors)
 #          04_Figures/F06/c_data/        (panel-ready: MEs, kME, module_colors, datExpr,
 #                                         module_assignments, mod_bio_labels)
@@ -19,7 +19,7 @@ allowWGCNAThreads()
 set.seed(42)
 setwd(rprojroot::find_rstudio_root_file())
 
-DALIST_RDS <- "02_Imputation/c_data/DAList_imputed_missforest.rds"
+DALIST_RDS <- "02_Normalization/imputation/c_data/DAList_imputed_missforest.rds"
 PANEL_DIR <- "04_Figures/F06/c_data"
 DATA_DIR <- file.path(PANEL_DIR, "wgcna")
 REPORT_DIR <- "04_Figures/F06/b_reports/supp/01_QC"

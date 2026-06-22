@@ -27,17 +27,17 @@ for (d in c(RPT, PNL, DAT)) dir.create(d, recursive = TRUE, showWarnings = FALSE
 PW <- 89
 PH <- 65
 
-int_norm <- readRDS("01_normalization/c_data/00_report_intermediates.rds")
-norm_dal <- readRDS("01_normalization/c_data/03_DAList_normalized.rds")
-imp_dal <- readRDS("02_Imputation/c_data/DAList_imputed_missforest.rds")
-da_summ <- read_csv("03_DEP/c_data/02_DA_summary.csv", show_col_types = FALSE)
-outlier_sens <- if (file.exists("03_DEP/c_data/11_outlier_sensitivity.csv")) {
-  read_csv("03_DEP/c_data/11_outlier_sensitivity.csv", show_col_types = FALSE)
+int_norm <- readRDS("02_Normalization/c_data/00_report_intermediates.rds")
+norm_dal <- readRDS("02_Normalization/c_data/DAList_normalized.rds")
+imp_dal <- readRDS("02_Normalization/imputation/c_data/DAList_imputed_missforest.rds")
+da_summ <- read_csv("03_DEP/a_non_imputed/c_data/02_DA_summary.csv", show_col_types = FALSE)
+outlier_sens <- if (file.exists("03_DEP/a_non_imputed/c_data/11_outlier_sensitivity.csv")) {
+  read_csv("03_DEP/a_non_imputed/c_data/11_outlier_sensitivity.csv", show_col_types = FALSE)
 } else {
   tibble()
 }
-imputation_sens <- if (file.exists("03_DEP/c_data/13_imputation_sensitivity.csv")) {
-  read_csv("03_DEP/c_data/13_imputation_sensitivity.csv", show_col_types = FALSE)
+imputation_sens <- if (file.exists("03_DEP/a_non_imputed/c_data/13_imputation_sensitivity.csv")) {
+  read_csv("03_DEP/a_non_imputed/c_data/13_imputation_sensitivity.csv", show_col_types = FALSE)
 } else {
   tibble()
 }
