@@ -25,8 +25,9 @@ dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 MAIN_CONTRASTS <- c(
-  "Training_HR", "Training_LR", "Acute_HR",
-  "Acute_LR", "Baseline_HRvLR"
+  "Baseline_HRvLR",
+  "Training_HR", "Training_LR", "Training_Interaction",
+  "Acute_HR", "Acute_LR", "Acute_Interaction"
 )
 
 DISPLAY_ORDER <- c(
