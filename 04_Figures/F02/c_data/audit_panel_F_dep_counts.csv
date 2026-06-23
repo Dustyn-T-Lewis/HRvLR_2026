@@ -1,22 +1,29 @@
-"contrast","threshold","n","pct","fill_key"
-"Baseline_HRvLR","p < 0.05",61,3.23607427055703,"Baseline_HRvLR___p < 0.05"
-"Baseline_HRvLR","FDR < 0.10",0,0,"Baseline_HRvLR___FDR < 0.10"
-"Baseline_HRvLR","Pi < 0.05",29,1.53846153846154,"Baseline_HRvLR___Pi < 0.05"
-"Training_HR","p < 0.05",124,6.57824933687003,"Training_HR___p < 0.05"
-"Training_HR","FDR < 0.10",0,0,"Training_HR___FDR < 0.10"
-"Training_HR","Pi < 0.05",55,2.91777188328912,"Training_HR___Pi < 0.05"
-"Training_LR","p < 0.05",87,4.61538461538461,"Training_LR___p < 0.05"
-"Training_LR","FDR < 0.10",0,0,"Training_LR___FDR < 0.10"
-"Training_LR","Pi < 0.05",25,1.3262599469496,"Training_LR___Pi < 0.05"
-"Training_Interaction","p < 0.05",52,2.75862068965517,"Training_Interaction___p < 0.05"
-"Training_Interaction","FDR < 0.10",0,0,"Training_Interaction___FDR < 0.10"
-"Training_Interaction","Pi < 0.05",55,2.91777188328912,"Training_Interaction___Pi < 0.05"
-"Acute_HR","p < 0.05",190,10.079575596817,"Acute_HR___p < 0.05"
-"Acute_HR","FDR < 0.10",2,0.106100795755968,"Acute_HR___FDR < 0.10"
-"Acute_HR","Pi < 0.05",84,4.45623342175066,"Acute_HR___Pi < 0.05"
-"Acute_LR","p < 0.05",142,7.53315649867374,"Acute_LR___p < 0.05"
-"Acute_LR","FDR < 0.10",13,0.689655172413793,"Acute_LR___FDR < 0.10"
-"Acute_LR","Pi < 0.05",76,4.03183023872679,"Acute_LR___Pi < 0.05"
-"Acute_Interaction","p < 0.05",113,5.9946949602122,"Acute_Interaction___p < 0.05"
-"Acute_Interaction","FDR < 0.10",0,0,"Acute_Interaction___FDR < 0.10"
-"Acute_Interaction","Pi < 0.05",86,4.56233421750663,"Acute_Interaction___Pi < 0.05"
+"contrast","key","direction","threshold","n","pct","signed"
+"Baseline_HRvLR","Down p","Down","p",26,1.37931034482759,-1.37931034482759
+"Baseline_HRvLR","Down Pi","Down","Pi",10,0.530503978779841,-0.530503978779841
+"Baseline_HRvLR","Up p","Up","p",35,1.85676392572944,1.85676392572944
+"Baseline_HRvLR","Up Pi","Up","Pi",19,1.0079575596817,1.0079575596817
+"Training_HR","Down p","Down","p",64,3.39522546419098,-3.39522546419098
+"Training_HR","Down Pi","Down","Pi",35,1.85676392572944,-1.85676392572944
+"Training_HR","Up p","Up","p",60,3.18302387267904,3.18302387267904
+"Training_HR","Up Pi","Up","Pi",20,1.06100795755968,1.06100795755968
+"Training_LR","Down p","Down","p",35,1.85676392572944,-1.85676392572944
+"Training_LR","Down Pi","Down","Pi",8,0.424403183023873,-0.424403183023873
+"Training_LR","Up p","Up","p",52,2.75862068965517,2.75862068965517
+"Training_LR","Up Pi","Up","Pi",17,0.90185676392573,0.90185676392573
+"Training_Interaction","Down p","Down","p",31,1.64456233421751,-1.64456233421751
+"Training_Interaction","Down Pi","Down","Pi",37,1.96286472148541,-1.96286472148541
+"Training_Interaction","Up p","Up","p",21,1.11405835543767,1.11405835543767
+"Training_Interaction","Up Pi","Up","Pi",18,0.954907161803713,0.954907161803713
+"Acute_HR","Down p","Down","p",91,4.82758620689655,-4.82758620689655
+"Acute_HR","Down Pi","Down","Pi",30,1.59151193633952,-1.59151193633952
+"Acute_HR","Up p","Up","p",99,5.25198938992042,5.25198938992042
+"Acute_HR","Up Pi","Up","Pi",54,2.86472148541114,2.86472148541114
+"Acute_LR","Down p","Down","p",50,2.6525198938992,-2.6525198938992
+"Acute_LR","Down Pi","Down","Pi",15,0.795755968169761,-0.795755968169761
+"Acute_LR","Up p","Up","p",92,4.88063660477454,4.88063660477454
+"Acute_LR","Up Pi","Up","Pi",61,3.23607427055703,3.23607427055703
+"Acute_Interaction","Down p","Down","p",51,2.70557029177719,-2.70557029177719
+"Acute_Interaction","Down Pi","Down","Pi",38,2.0159151193634,-2.0159151193634
+"Acute_Interaction","Up p","Up","p",62,3.28912466843501,3.28912466843501
+"Acute_Interaction","Up Pi","Up","Pi",48,2.54641909814324,2.54641909814324

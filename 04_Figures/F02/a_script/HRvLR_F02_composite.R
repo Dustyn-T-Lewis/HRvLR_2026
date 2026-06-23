@@ -21,11 +21,15 @@ panel <- function(name) {
     theme(plot.margin = margin(2, 2, 2, 2))
 }
 
-composite <- panel("panel_a_pca") /
-  (panel("panel_f_dep_counts") | panel("panel_b_effect_size") | panel("panel_h_pathways")) /
-  (panel("panel_g_upset") | panel("panel_i_venn_training") | panel("panel_j_venn_acute")) /
-  panel("panel_m_eta2") +
-  plot_layout(heights = c(0.8, 0.95, 0.9, 0.7)) +
+# Row 2: DEP bars + histograms + pathways, equal height, histograms a touch narrower
+row_dab <- panel("panel_f_dep_counts") + panel("panel_b_effect_size") +
+  panel("panel_h_pathways") + plot_layout(widths = c(1, 0.82, 1))
+# Row 3: the two Venns, smaller (flanked by spacers)
+row_venn <- plot_spacer() + panel("panel_i_venn_training") +
+  panel("panel_j_venn_acute") + plot_spacer() + plot_layout(widths = c(0.35, 1, 1, 0.35))
+
+composite <- panel("panel_a_pca") / row_dab / row_venn / panel("panel_m_eta2") +
+  plot_layout(heights = c(1.05, 1, 0.8, 0.55)) +
   plot_annotation(
     title = "Global Proteome Overview",
     subtitle = "Structure, differential abundance, contrast overlap, and design-structured variance",
@@ -36,9 +40,9 @@ composite <- panel("panel_a_pca") /
   )
 
 ggsave(file.path(RPT, "F02_composite.png"), composite,
-  width = 420, height = 470, units = "mm", dpi = 300, bg = "white"
+  width = 400, height = 440, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(RPT, "F02_composite.pdf"), composite,
-  width = 420, height = 470, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = 400, height = 440, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 cat("F02 composite saved to", RPT, "\n")

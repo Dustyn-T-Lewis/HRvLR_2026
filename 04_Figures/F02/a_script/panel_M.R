@@ -1,6 +1,6 @@
-# F02 Panel M: variance structured by Group x Time (eta-squared) ----
-# Top proteins whose abundance variance is explained by the responder x timepoint
-# design - the proteins carrying the HR-vs-LR signal. eta2 from Stage 02 intermediates.
+# F02 Panel M: proteome-wide variance structured by Group x Time (eta-squared) ----
+# Distribution of eta2 across all proteins: how much of each protein's variance the
+# responder x timepoint design explains. The right tail = design-structured proteins.
 
 setwd(rprojroot::find_rstudio_root_file())
 if (!exists("meta")) source("04_Figures/F02/a_script/HRvLR_F02_setup.R")
@@ -9,11 +9,11 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(tibble)
   library(ggplot2)
+  library(ggrepel)
 })
 
-PM_W <- 150
-PM_H <- 120
-N_TOP <- 20
+PM_W <- 200
+PM_H <- 95
 
 int <- readRDS("02_Normalization/c_data/00_report_intermediates.rds")
 eta_df <- tibble(uniprot_id = names(int$eta2_vals), eta2 = as.numeric(int$eta2_vals)) |>
@@ -21,27 +21,45 @@ eta_df <- tibble(uniprot_id = names(int$eta2_vals), eta2 = as.numeric(int$eta2_v
   mutate(label = if_else(is.na(gene) | gene == "", uniprot_id, gene))
 
 med_eta <- median(eta_df$eta2, na.rm = TRUE)
-n_high <- sum(eta_df$eta2 > 0.5, na.rm = TRUE)
+hi_cut <- 0.5
+n_hi <- sum(eta_df$eta2 > hi_cut)
+top_lab <- eta_df |> slice_max(eta2, n = 8, with_ties = FALSE)
 
-top_df <- eta_df |>
-  slice_max(eta2, n = N_TOP, with_ties = FALSE) |>
-  mutate(label = factor(label, levels = rev(label)))
-
-pM <- ggplot(top_df, aes(eta2, label)) +
-  geom_segment(aes(x = 0, xend = eta2, yend = label), color = "grey75", linewidth = 0.5) +
-  geom_point(aes(fill = eta2), shape = 21, size = 3, color = "grey30") +
-  scale_fill_gradient(low = "#C6DBEF", high = "#08519C", guide = "none") +
-  scale_x_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
-  labs(
-    title = expression(bold("Variance Structured by Group " %*% " Time (" * eta^2 * ")")),
-    subtitle = sprintf(
-      "Top %d proteins | median eta² = %.3f | %d proteins > 0.5",
-      N_TOP, med_eta, n_high
-    ),
-    x = expression(eta^2 ~ "(Group_Time-explained variance)"), y = NULL, tag = "M"
+pM <- ggplot(eta_df, aes(eta2)) +
+  geom_histogram(aes(y = after_stat(count)),
+    bins = 60,
+    fill = "#6BAED6", color = "white", linewidth = 0.15
   ) +
-  FIG_THEME +
-  theme(axis.text.y = element_text(size = 7, face = "bold"))
+  geom_vline(xintercept = med_eta, linetype = "dashed", color = "grey30", linewidth = 0.4) +
+  annotate("rect",
+    xmin = hi_cut, xmax = Inf, ymin = 0, ymax = Inf,
+    fill = "#08519C", alpha = 0.06
+  ) +
+  geom_rug(data = top_lab, aes(eta2), color = "#08519C", linewidth = 0.4) +
+  ggrepel::geom_text_repel(
+    data = top_lab, aes(x = eta2, y = 0, label = label),
+    size = 2.2, fontface = "bold", color = "#08519C", direction = "y",
+    nudge_y = max(table(cut(eta_df$eta2, 60))) * 0.4, segment.size = 0.2,
+    max.overlaps = 20, seed = 42
+  ) +
+  annotate("text",
+    x = med_eta, y = Inf, label = sprintf("median = %.3f", med_eta),
+    hjust = -0.1, vjust = 1.5, size = 2.6, color = "grey30", fontface = "bold"
+  ) +
+  annotate("text",
+    x = hi_cut, y = Inf, label = sprintf("%d proteins > %.1f", n_hi, hi_cut),
+    hjust = -0.1, vjust = 3, size = 2.6, color = "#08519C", fontface = "bold"
+  ) +
+  scale_x_continuous(limits = c(0, max(eta_df$eta2) * 1.05), expand = expansion(mult = c(0, 0))) +
+  labs(
+    title = expression(bold("Proteome-Wide Variance Structured by Group " %*% " Time (" * eta^2 * ")")),
+    subtitle = sprintf(
+      "%s proteins | fraction of each protein's variance explained by Group_Time",
+      format(nrow(eta_df), big.mark = ",")
+    ),
+    x = expression(eta^2), y = "Proteins", tag = "M"
+  ) +
+  FIG_THEME
 
 save_panel(pM, file.path(RPT_DIR, "panel_m_eta2"), PM_W, PM_H)
 write.csv(eta_df |> arrange(desc(eta2)),
