@@ -22,6 +22,7 @@ source("04_Figures/F02/a_script/panel_I.R") # panel_i_venn_training
 source("04_Figures/F02/a_script/panel_J.R") # panel_j_venn_acute
 source("04_Figures/F02/a_script/panel_K.R") # panel_k_venn_training_p (pilot)
 source("04_Figures/F02/a_script/panel_L.R") # panel_l_venn_acute_p (pilot)
+source("04_Figures/F02/a_script/panel_M.R") # panel_m_eta2
 
 source("04_Figures/F02/a_script/HRvLR_F02_composite.R") # main composite
 source("04_Figures/F02/a_script/HRvLR_F02_composite_supp.R") # supplementary composite

@@ -23,11 +23,12 @@ panel <- function(name) {
 
 composite <- panel("panel_a_pca") /
   (panel("panel_f_dep_counts") | panel("panel_b_effect_size") | panel("panel_h_pathways")) /
-  (panel("panel_g_upset") | panel("panel_i_venn_training") | panel("panel_j_venn_acute")) +
-  plot_layout(heights = c(0.85, 1, 0.95)) +
+  (panel("panel_g_upset") | panel("panel_i_venn_training") | panel("panel_j_venn_acute")) /
+  panel("panel_m_eta2") +
+  plot_layout(heights = c(0.8, 0.95, 0.9, 0.7)) +
   plot_annotation(
     title = "Global Proteome Overview",
-    subtitle = "Structure, differential abundance, and contrast overlap",
+    subtitle = "Structure, differential abundance, contrast overlap, and design-structured variance",
     theme = theme(
       plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
       plot.subtitle = element_text(size = 10, color = "grey30", hjust = 0.5)
@@ -35,9 +36,9 @@ composite <- panel("panel_a_pca") /
   )
 
 ggsave(file.path(RPT, "F02_composite.png"), composite,
-  width = 420, height = 380, units = "mm", dpi = 300, bg = "white"
+  width = 420, height = 470, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(RPT, "F02_composite.pdf"), composite,
-  width = 420, height = 380, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = 420, height = 470, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 cat("F02 composite saved to", RPT, "\n")
