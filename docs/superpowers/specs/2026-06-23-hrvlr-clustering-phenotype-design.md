@@ -14,9 +14,10 @@ only one carries the inferential claim.
 
 ## Design constraints (carry these everywhere)
 
-- **Effective n = 15 subjects** (HR 7 / LR 8), not 45 samples. The 45 rows are three
-  correlated measurements per subject. Every method choice below is made for n = 15,
-  not 45.
+- **Effective n = 16 subjects** (HR 8 / LR 8), not 45 samples. Two HR subjects are
+  partial after QC (S28: T1 only; S29: T2/T3 only), so the 45 rows are mostly- but
+  not-fully-paired repeated measures. Every method choice below is made for ~16
+  subjects, not 45.
 - **HR-only attrition.** All three dropped samples are HR (subjects S28, S29, high
   missingness). Dropout is QC-legitimate but not group-blind, so HR-specific results
   lean on the existing 48-vs-45 outlier-sensitivity fit
@@ -104,8 +105,9 @@ handling: Li et al. 2018 (*Sci Rep*).
 - **Multiple testing**: BH across the primary engine's modules. Companion engines are
   *not* added to the same correction — they are reported as concordant/discordant with
   the primary, not as extra tests.
-- **Permutation null (falsification test)**: permute phenotype across the 15 subjects
-  (subject-level, preserving the within-subject timepoint block), recompute the largest
+- **Permutation null (falsification test)**: permute phenotype across the 16 subjects
+  (subject-level, preserving each subject's actual timepoint block — two HR subjects
+  have fewer than 3), recompute the largest
   |module–phenotype| association, B = 1000. The observed top association must beat this
   null or the "tracks phenotype" story is not supported.
 - **Cross-engine concordance**: cross-tab membership across engines (adjusted Rand
@@ -129,7 +131,7 @@ handling: Li et al. 2018 (*Sci Rep*).
 
 ## Decisions ranked by conclusion-impact
 
-1. Effective n = 15 (sets everything; forces hypothesis-generating framing).
+1. Effective n = 16, unbalanced (sets everything; forces hypothesis-generating framing).
 2. Phenotype binding + permutation scheme (open input #1).
 3. Within-subject centering for WGCNA (decides whether the *primary* modules are
    signal or subject identity).
@@ -154,8 +156,9 @@ handling: Li et al. 2018 (*Sci Rep*).
 - **3-timepoint geometry**: fuzzy c-means was built for long series; on 3 points the
   shape space is nearly enumerable, so `c` is geometry-bounded. Mfuzz is kept for the
   soft-membership down-weighting, which matters at this n. Anchor: Kumar & Futschik 2007.
-- **WGCNA at the n-floor**: ~15 independent units is the documented minimum; modules
-  are reported with stability checks and never claimed beyond the permutation null.
+- **WGCNA at the n-floor**: ~16 independent units is right at the documented minimum;
+  modules are reported with stability checks and never claimed beyond the permutation
+  null. (Empirically the 5 modules were invariant across powers and mergeCutHeights.)
 
 ## What would falsify the convergence/divergence story
 

@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Effective n = 15 subjects (HR 7 / LR 8); 45 samples are pseudo-replicated. Hypothesis-generating, not confirmatory.
+- Effective n = 16 subjects (HR 8 / LR 8), unbalanced — two HR subjects partial (S28: T1 only; S29: T2/T3 only); 45 samples are pseudo-replicated. Hypothesis-generating, not confirmatory.
 - HR-only attrition (S28, S29) — carry as a caveat on HR-specific results.
 - Clustering input AND ORA background = proteins with pi-score < 0.05 in any group (the same set).
 - Pure R: no reticulate/Python anywhere.
@@ -170,7 +170,7 @@ git commit -m "add cross-engine concordance and ora with pi-gated background"
 
 **Vignette to read first:** lmerTest + a partial-R² package (`partR2` or `r2glmm`).
 
-- [ ] **Step 1: Write the script** — for each module of the **primary** (WGCNA) engine: `lmer(ME ~ phenotype + group_arm + timepoint + (1|subject))` via lmerTest; standardised β + partial R². BH across the primary engine's modules only; companion engines reported as concordant/discordant, not added to the correction. Permutation null: permute phenotype across the 15 subjects (subject-level, keeping each subject's timepoint block intact), recompute the largest |group–phenotype| association, B = 1000 → `perm_null.csv`. Forest plot of effects with the null band.
+- [ ] **Step 1: Write the script** — for each module of the **primary** (WGCNA) engine: `lmer(ME ~ phenotype + group_arm + timepoint + (1|subject))` via lmerTest; standardised β + partial R². BH across the primary engine's modules only; companion engines reported as concordant/discordant, not added to the correction. Permutation null: permute phenotype across the 16 subjects (subject-level, keeping each subject's actual timepoint block intact — two HR subjects have <3), recompute the largest |group–phenotype| association, B = 1000 → `perm_null.csv`. Forest plot of effects with the null band.
 
 - [ ] **Step 2: Run it**
 
