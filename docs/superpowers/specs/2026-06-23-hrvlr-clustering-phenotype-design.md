@@ -103,12 +103,26 @@ handling: Li et al. 2018 (*Sci Rep*).
 
 ## `d_integration/` — the shared, honest downstream
 
-- **LMM** per group (primary engine first): `ME ~ phenotype + group + timepoint +
-  (1|subject)`, `lmerTest` for inference, standardised β + partial/semi-partial R²
-  for effect size. Random intercept only — n = 15 will not support random slopes.
-- **Multiple testing**: BH across the primary engine's modules. Companion engines are
-  *not* added to the same correction — they are reported as concordant/discordant with
-  the primary, not as extra tests.
+- **No `group_arm` in any model.** HR/LR was assigned externally from
+  `COMP.HYPERTROPHY`, a composite of these CSA/strength changes, so the continuous
+  phenotypes *are* the responder axis — including `group_arm` would double-count.
+- **Phenotype panel** (per-subject, from `00_input/HRvLR_meta.csv`): lead =
+  `COMP.HYPERTROPHY` (composite training response); components = ΔT1→T2 of fCSA-I,
+  fCSA-II, MyoVision fCSA-I, mCSA, and 1-RM (leg-press lead, leg-extension secondary).
+- **Three bounded models**, each per module × trait, 16 independent subjects:
+  1. *Tracks response* — `ME ~ ΔPheno + timepoint + (1|subject)` over all samples
+     (`lmerTest`, standardised β + partial R²; random intercept only — n won't support
+     slopes).
+  2. *Baseline predicts trainability* — `lm(ΔPheno ~ T1_ME)`: does the resting module
+     level forecast response (the least-circular framing).
+  3. *Acute* — `lm(ΔPheno ~ (T3_ME − T2_ME))`: does the acute-bout proteome shift on
+     the trained state track response.
+- **Selection caveat**: the pi-gate includes HR-vs-LR contrasts, so the protein set is
+  partly selected on the responder axis being tested. Effect sizes are optimistically
+  biased; the subject-permutation null is the honest guard and the whole layer stays
+  hypothesis-generating. State this on the figure.
+- **Multiple testing**: BH across the full trait × module grid; report the grid as an
+  exploratory heatmap with `COMP.HYPERTROPHY` highlighted as the lead.
 - **Permutation null (falsification test)**: permute phenotype across the 16 subjects
   (subject-level, preserving each subject's actual timepoint block — two HR subjects
   have fewer than 3), recompute the largest
@@ -120,18 +134,14 @@ handling: Li et al. 2018 (*Sci Rep*).
 - **ORA**: `clusterProfiler::enricher` against the pi-gated background, GO BP/CC/MF +
   Reactome, BH within each gene-set source, **no `clusterProfiler::simplify()`**.
 
-## Open inputs to confirm before `d_integration` runs
+## Resolved inputs (confirmed)
 
-1. **Phenotype variables**: which trait(s), and measured per-timepoint (T1/T2/T3) or
-   once per subject. This sets whether phenotype is a within-subject term or a
-   subject-level constant, and it sets the permutation scheme.
-   *Recommended default*: one primary trait, subject-level if that is how it was
-   measured; add a small pre-named panel only with BH across traits.
-2. **Timepoint coding** for the LMM `timepoint` term and the Mfuzz gap: T1 baseline,
-   T2 post-training, T3 acute. T3 is acute response, not simply "later than T2."
-   *Recommended default*: treat T1 → T2 as the training axis and T3 as a separate
-   acute level, not an ordered third time. (This mattered most for MEFISTO's smooth
-   covariate, now dropped; it still affects how `timepoint` is coded downstream.)
+1. **Phenotype**: subject-level. Lead `COMP.HYPERTROPHY` (T2 composite change);
+   components ΔT1→T2 for fCSA-I, fCSA-II, MyoVision fCSA-I, mCSA, 1-RM (leg-press +
+   extension). Source `00_input/HRvLR_meta.csv`, join on `Subject_ID`. `group_arm`
+   dropped (collinear with the group-defining composite).
+2. **Timepoint coding**: T1 baseline, T2 post-training (chronic axis T1→T2), T3 acute
+   bout on the trained state (a separate acute level, not an ordered third time).
 
 ## Decisions ranked by conclusion-impact
 
