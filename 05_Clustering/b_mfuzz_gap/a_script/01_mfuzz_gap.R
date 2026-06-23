@@ -6,13 +6,12 @@ pacman::p_load(here, e1071, ggplot2)
 source(here("05_Clustering", "_shared_inputs.R"))
 i <- load_clustering_inputs()
 
-# ---- standardise ----
+# Z-score each protein across timepoints; drop zero-variance rows
 gap_z <- t(scale(t(i$gap)))
 bad <- apply(gap_z, 1, function(x) any(is.nan(x)) | any(is.na(x)))
 gap_z <- gap_z[!bad, ]
 message("Zero-variance proteins dropped: ", sum(bad))
 
-# ---- mestimate ----
 # Fuzzifier m from Schwämmle & Jensen 2010 eq. 1; D = 3 (timepoints)
 n <- nrow(gap_z)
 D <- 3L
@@ -21,7 +20,6 @@ m <- 1 +
   (12.33 / n + 0.243) * D^(-0.0406 * log(n) - 0.1134)
 message("Fuzzifier m (mestimate): ", round(m, 4))
 
-# ---- c selection ----
 # Min inter-centroid distance (Dmin) for c = 2:8; cap at 4–6 for 3 timepoints
 set.seed(42)
 dmin <- vapply(2:8, function(c) {
@@ -32,19 +30,15 @@ dmin <- vapply(2:8, function(c) {
 }, numeric(1))
 names(dmin) <- as.character(2:8)
 
-# Largest drop in Dmin marks where adding clusters stops separating well
-ddmin <- -diff(dmin)
-# Sharpest drop at c=5 (ddmin[4] = 0.58); c=4 is the stable plateau
-# preceding it — fits 3 timepoints, within the [4,6] cap
+# c chosen from the printed Dmin curve (manual, Mfuzz-style),
+# capped to the 4–6 range justified by 3 timepoints
 chosen_c <- 4L
 message(
   "Dmin values c=2:8: ",
   paste(round(dmin, 3), collapse = " "),
-  " | chosen c=", chosen_c,
-  " (plateau before sharpest drop at c=5)"
+  " | chosen c=", chosen_c
 )
 
-# ---- cmeans ----
 set.seed(42)
 fit <- cmeans(gap_z, centers = chosen_c, m = m, iter.max = 200)
 
@@ -53,28 +47,39 @@ hard_cluster <- apply(fit$membership, 1, which.max)
 n_below <- sum(max_mem < 0.5)
 message("Proteins below 0.5 core cutoff: ", n_below, " / ", nrow(gap_z))
 
-# ---- seed stability ----
-# 25 seeds, co-assignment agreement (best permutation match / n proteins)
-co_agree <- function(a, b) {
-  tab <- table(a, b)
-  sum(apply(tab, 1, max)) / length(a)
+# Seed stability: ARI (label-invariant, no permutation matching needed)
+# Uses mclust::adjustedRandIndex when available; falls back to pair-counting ARI
+ari_fn <- if (requireNamespace("mclust", quietly = TRUE)) {
+  mclust::adjustedRandIndex
+} else {
+  function(a, b) {
+    tab <- table(a, b)
+    n_pts <- sum(tab)
+    sum_a <- choose(rowSums(tab), 2)
+    sum_b <- choose(colSums(tab), 2)
+    sum_ab <- sum(choose(tab, 2))
+    expected <- sum(sum_a) * sum(sum_b) / choose(n_pts, 2)
+    max_index <- (sum(sum_a) + sum(sum_b)) / 2
+    (sum_ab - expected) / (max_index - expected)
+  }
 }
+
 all_hard <- lapply(seq_len(25), function(s) {
   set.seed(s)
   f <- cmeans(gap_z, centers = chosen_c, m = m, iter.max = 200)
   apply(f$membership, 1, which.max)
 })
 pairs <- combn(25L, 2L)
-ag <- apply(pairs, 2, function(p) co_agree(all_hard[[p[1]]], all_hard[[p[2]]]))
+ag <- apply(pairs, 2, function(p) ari_fn(all_hard[[p[1]]], all_hard[[p[2]]]))
 message(
   "Seed stability (25 seeds, ", ncol(pairs), " pairs): ",
-  "median agreement = ", round(median(ag), 4),
-  ", min = ", round(min(ag), 4)
+  "median ARI = ", round(median(ag), 4),
+  ", min ARI = ", round(min(ag), 4)
 )
 
-# ---- eigengene ----
 # ME = PC1 of per-sample abundances for each cluster's proteins;
-# sign-fixed so positive ME = higher mean abundance
+# sign-fixed so positive ME = higher mean abundance.
+# scale. = FALSE because proteins are already on the log2 scale.
 compute_me <- function(proteins, abund) {
   mat <- abund[proteins, , drop = FALSE]
   pc <- prcomp(t(mat), center = TRUE, scale. = FALSE)
@@ -87,14 +92,15 @@ clust_ids <- sort(unique(hard_cluster))
 eigen_rows <- lapply(clust_ids, function(cl) {
   prots <- names(hard_cluster)[hard_cluster == cl]
   me <- compute_me(prots, i$abund)
+  # Guard: PC1 inherits sample names from colnames(abund); must match meta
+  stopifnot(identical(names(me), i$meta$sample_id))
   data.frame(
-    sample_id = i$meta$sample_id,
+    sample_id = names(me),
     subject = i$meta$subject,
     group_arm = i$meta$group_arm,
     timepoint = i$meta$timepoint,
     group_id = cl,
-    ME = me,
-    stringsAsFactors = FALSE
+    ME = me
   )
 })
 eigengene <- do.call(rbind, eigen_rows)
@@ -102,11 +108,9 @@ eigengene <- do.call(rbind, eigen_rows)
 membership <- data.frame(
   protein_id = names(hard_cluster),
   group_id = hard_cluster,
-  membership_weight = max_mem,
-  stringsAsFactors = FALSE
+  membership_weight = max_mem
 )
 
-# ---- write CSVs ----
 write.csv(
   membership,
   here("05_Clustering", "b_mfuzz_gap", "c_data", "membership.csv"),
@@ -118,7 +122,7 @@ write.csv(
   row.names = FALSE
 )
 
-# ---- gap trajectory plots (membership-shaded, Mfuzz-style) ----
+# Gap trajectory plots (membership-shaded, Mfuzz-style)
 tp_labels <- c("T1" = "Baseline", "T2" = "Trained", "T3" = "Acute")
 
 gap_df <- as.data.frame(gap_z)
@@ -166,7 +170,7 @@ p <- ggplot(gap_long, aes(x = tp_label, y = z, group = protein_id)) +
 print(p)
 dev.off()
 
-# ---- shape profiles (group-mean per cluster) ----
+# Group-mean abundance profiles per cluster
 abund_long <- as.data.frame(t(i$abund))
 abund_long$sample_id <- rownames(abund_long)
 abund_long <- merge(abund_long, i$meta, by = "sample_id")
