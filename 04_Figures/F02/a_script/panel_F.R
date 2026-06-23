@@ -59,7 +59,20 @@ lab_df <- frac_df |>
   ungroup() |>
   filter(seg > 0.25)
 
+band_levels <- levels(frac_df$contrast)
+band_df <- tibble(
+  xmin = seq_along(band_levels) - 0.5,
+  xmax = seq_along(band_levels) + 0.5,
+  band = CONTRAST_COLORS[band_levels]
+)
+
 pF <- ggplot(frac_df, aes(contrast, pct, fill = fill_key)) +
+  geom_rect(
+    data = band_df,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE, fill = scales::alpha(band_df$band, 0.14),
+    color = "grey75", linewidth = 0.2
+  ) +
   geom_col(position = "identity", width = 0.74, color = "black", linewidth = 0.25) +
   geom_text(
     data = lab_df, aes(contrast, lab_x, label = label),

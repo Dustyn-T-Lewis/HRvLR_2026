@@ -11,7 +11,7 @@ suppressPackageStartupMessages({
   library(msigdbr)
 })
 
-ONT_COLORS <- c(BP = "#1B9E77", CC = "#D95F02", MF = "#7570B3")
+ONT_COLORS <- c(BP = "#66C2A5", CC = "#FC8D62", MF = "#8DA0CB")
 
 go_sets <- function(sub) {
   g <- tryCatch(
@@ -50,7 +50,22 @@ totals <- go_counts |>
 
 PH_W <- 150
 PH_H <- 120
+
+# Per-contrast background bands tinted by the contrast code, grey borders between
+band_df <- tibble(
+  contrast = factor(MAIN_CONTRASTS, levels = MAIN_CONTRASTS),
+  xmin = seq_along(MAIN_CONTRASTS) - 0.5,
+  xmax = seq_along(MAIN_CONTRASTS) + 0.5,
+  band = CONTRAST_COLORS[MAIN_CONTRASTS]
+)
+
 pH <- ggplot(go_counts, aes(contrast, n_terms, fill = ontology)) +
+  geom_rect(
+    data = band_df,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE, fill = scales::alpha(band_df$band, 0.14),
+    color = "grey75", linewidth = 0.2
+  ) +
   geom_col(width = 0.74, color = "black", linewidth = 0.25) +
   geom_text(
     data = totals, aes(contrast, tot, label = tot),
