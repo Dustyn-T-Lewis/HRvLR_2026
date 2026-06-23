@@ -1,8 +1,22 @@
-"contrast","up","down","fdr"
-"Baseline_HRvLR",19,10,0
-"Training_HR",20,35,0
-"Training_LR",17,8,0
-"Training_Interaction",18,37,0
-"Acute_HR",54,30,2
-"Acute_LR",61,15,13
-"Acute_Interaction",48,38,0
+"contrast","threshold","n","pct","fill_key"
+"Baseline_HRvLR","p < 0.05",61,3.23607427055703,"Baseline_HRvLR___p < 0.05"
+"Baseline_HRvLR","FDR < 0.10",0,0,"Baseline_HRvLR___FDR < 0.10"
+"Baseline_HRvLR","Pi < 0.05",29,1.53846153846154,"Baseline_HRvLR___Pi < 0.05"
+"Training_HR","p < 0.05",124,6.57824933687003,"Training_HR___p < 0.05"
+"Training_HR","FDR < 0.10",0,0,"Training_HR___FDR < 0.10"
+"Training_HR","Pi < 0.05",55,2.91777188328912,"Training_HR___Pi < 0.05"
+"Training_LR","p < 0.05",87,4.61538461538461,"Training_LR___p < 0.05"
+"Training_LR","FDR < 0.10",0,0,"Training_LR___FDR < 0.10"
+"Training_LR","Pi < 0.05",25,1.3262599469496,"Training_LR___Pi < 0.05"
+"Training_Interaction","p < 0.05",52,2.75862068965517,"Training_Interaction___p < 0.05"
+"Training_Interaction","FDR < 0.10",0,0,"Training_Interaction___FDR < 0.10"
+"Training_Interaction","Pi < 0.05",55,2.91777188328912,"Training_Interaction___Pi < 0.05"
+"Acute_HR","p < 0.05",190,10.079575596817,"Acute_HR___p < 0.05"
+"Acute_HR","FDR < 0.10",2,0.106100795755968,"Acute_HR___FDR < 0.10"
+"Acute_HR","Pi < 0.05",84,4.45623342175066,"Acute_HR___Pi < 0.05"
+"Acute_LR","p < 0.05",142,7.53315649867374,"Acute_LR___p < 0.05"
+"Acute_LR","FDR < 0.10",13,0.689655172413793,"Acute_LR___FDR < 0.10"
+"Acute_LR","Pi < 0.05",76,4.03183023872679,"Acute_LR___Pi < 0.05"
+"Acute_Interaction","p < 0.05",113,5.9946949602122,"Acute_Interaction___p < 0.05"
+"Acute_Interaction","FDR < 0.10",0,0,"Acute_Interaction___FDR < 0.10"
+"Acute_Interaction","Pi < 0.05",86,4.56233421750663,"Acute_Interaction___Pi < 0.05"

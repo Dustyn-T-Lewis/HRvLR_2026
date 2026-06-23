@@ -26,14 +26,19 @@ SHAPE_TP <- c(T1 = 16, T2 = 17, T3 = 15)
 # Timepoint hues (Okabe-Ito, colourblind-safe): baseline / trained / acute
 TIME_COLORS <- c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")
 
+# Contrast codes: responder family sets the hue (HR blue / LR red / between-responder
+# green / interaction purple); timepoint sets the shade (training lighter -> acute darker,
+# baseline lightest). One palette for every contrast-keyed panel.
 CONTRAST_COLORS <- c(
-  Training_HR          = "#2166AC",
-  Training_LR          = "#B2182B",
-  Acute_HR             = "#67A9CF",
-  Acute_LR             = "#EF8A62",
-  Baseline_HRvLR       = "#4CAF50",
-  Training_Interaction = "#9B7FBF",
-  Acute_Interaction    = "#FF8F00"
+  Training_HR          = "#6BAED6", # HR, training (T2-T1)
+  Acute_HR             = "#2166AC", # HR, acute (T3-T2)
+  Training_LR          = "#FC9272", # LR, training
+  Acute_LR             = "#B2182B", # LR, acute
+  Baseline_HRvLR       = "#A1D99B", # HR vs LR, baseline (T1)
+  Trained_HRvLR        = "#41AB5D", # HR vs LR, trained (T2)
+  Acute_HRvLR          = "#238B45", # HR vs LR, acute (T3)
+  Training_Interaction = "#9E9AC8", # differential training response
+  Acute_Interaction    = "#6A51A3" # differential acute response
 )
 
 PCA_COLORS <- c(

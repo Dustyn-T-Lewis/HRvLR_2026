@@ -1,61 +1,62 @@
-# F02 Panel B: Effect Size Distribution (|logFC| Histograms) ----
-# Faceted by the 7 MAIN_CONTRASTS, median |logFC| annotation
+# F02 Panel B: Effect Size Distribution (logFC histograms) ----
+# Signed logFC per contrast, coloured by the contrast code, density overlay,
+# median |logFC| annotated. Faceted (stacked), YvO-style.
 
 setwd(rprojroot::find_rstudio_root_file())
 if (!exists("meta")) source("04_Figures/F02/a_script/HRvLR_F02_setup.R")
 
-library(dplyr)
-library(tidyr)
-library(ggplot2)
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+})
 
 PB_W <- 140
 PB_H <- 160
-dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 lfc_long <- dep_df |>
   select(gene, starts_with("logFC_")) |>
   pivot_longer(starts_with("logFC_"), names_to = "contrast", values_to = "logFC") |>
   mutate(contrast = sub("logFC_", "", contrast)) |>
   filter(contrast %in% MAIN_CONTRASTS, !is.na(logFC)) |>
-  mutate(
-    abs_lfc = abs(logFC),
-    contrast = factor(contrast, levels = MAIN_CONTRASTS)
-  )
+  mutate(contrast = factor(contrast, levels = MAIN_CONTRASTS))
 
 lfc_stats <- lfc_long |>
   group_by(contrast) |>
-  summarise(
-    med_lfc = median(logFC),
-    med_abs_lfc = median(abs_lfc),
-    n_above_05 = sum(abs_lfc > 0.5),
-    .groups = "drop"
-  )
+  summarise(med_abs_lfc = median(abs(logFC)), .groups = "drop") |>
+  mutate(annotation = sprintf("med |logFC| = %.3f", med_abs_lfc))
 
-pB <- ggplot(lfc_long, aes(x = abs_lfc)) +
-  geom_histogram(bins = 50, fill = "grey60", color = "white", linewidth = 0.2) +
-  geom_vline(
-    data = lfc_stats, aes(xintercept = med_abs_lfc),
-    linetype = "dashed", color = "red", linewidth = 0.5
+x_lim <- as.numeric(quantile(abs(lfc_long$logFC), 0.99))
+n_bins <- 50
+binwidth <- 2 * x_lim / n_bins
+
+pB <- ggplot(lfc_long, aes(logFC, fill = contrast)) +
+  geom_histogram(bins = n_bins, color = "black", linewidth = 0.15, alpha = 0.9) +
+  geom_density(aes(y = after_stat(count) * binwidth),
+    alpha = 0.12, linewidth = 0.4, color = "grey20"
   ) +
+  geom_vline(xintercept = 0, linewidth = 0.3, color = "grey50") +
   geom_text(
-    data = lfc_stats,
-    aes(
-      x = med_abs_lfc, y = Inf,
-      label = sprintf("median = %.3f", med_abs_lfc)
-    ),
-    vjust = 1.5, hjust = -0.1, size = 2.5, color = "red"
+    data = lfc_stats, aes(x = -x_lim, y = Inf, label = annotation),
+    inherit.aes = FALSE, hjust = 0, vjust = 1.4, size = 2.4,
+    color = "grey20", fontface = "bold"
   ) +
   facet_wrap(~contrast,
     ncol = 1, scales = "free_y",
     labeller = labeller(contrast = CTR_SHORT)
   ) +
+  coord_cartesian(xlim = c(-x_lim, x_lim)) +
+  scale_fill_manual(values = CONTRAST_COLORS) +
   labs(
     title = "Effect Size Distributions",
-    subtitle = "|logFC| per contrast (7 main)",
-    x = "|logFC|", y = "Count", tag = "B"
+    subtitle = "logFC per contrast (7 main)",
+    x = expression(log[2] ~ FC), y = "Count", tag = "B"
   ) +
   FIG_THEME +
-  theme(strip.text = element_text(size = 8, face = "bold"))
+  theme(
+    legend.position = "none",
+    strip.text = element_text(size = 8, face = "bold")
+  )
 
 save_panel(pB, file.path(RPT_DIR, "panel_b_effect_size"), PB_W, PB_H)
 write.csv(lfc_stats, file.path(DAT_DIR, "audit_panel_B_lfc_stats.csv"), row.names = FALSE)

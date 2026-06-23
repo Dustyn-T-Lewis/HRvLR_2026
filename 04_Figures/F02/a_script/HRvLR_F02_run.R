@@ -20,7 +20,10 @@ source("04_Figures/F02/a_script/panel_G.R") # panel_g_upset
 source("04_Figures/F02/a_script/panel_H.R") # panel_h_pathways
 source("04_Figures/F02/a_script/panel_I.R") # panel_i_venn_training
 source("04_Figures/F02/a_script/panel_J.R") # panel_j_venn_acute
+source("04_Figures/F02/a_script/panel_K.R") # panel_k_venn_training_p (pilot)
+source("04_Figures/F02/a_script/panel_L.R") # panel_l_venn_acute_p (pilot)
 
-source("04_Figures/F02/a_script/HRvLR_F02_composite.R") # F02_composite
+source("04_Figures/F02/a_script/HRvLR_F02_composite.R") # main composite
+source("04_Figures/F02/a_script/HRvLR_F02_composite_supp.R") # supplementary composite
 
-cat("F02 panels + composite rendered to", RPT_DIR, "\n")
+cat("F02 panels + composites rendered to", RPT_DIR, "\n")
