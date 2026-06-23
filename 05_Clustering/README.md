@@ -4,7 +4,7 @@ Group the pi-gated proteome with three engines, summarise each group by an eigen
 and link eigengenes to phenotype with a mixed model. Pure R (no Python). Only WGCNA
 carries the inferential claim; the rest corroborate or are quarantined.
 
-Design and rationale: `docs/superpowers/specs/2026-06-23-hrvlr-clustering-phenotype-design.md`.
+Design and rationale: `docs/design/specs/2026-06-23-hrvlr-clustering-phenotype-design.md`.
 
 | Dir | Engine | Role |
 |---|---|---|

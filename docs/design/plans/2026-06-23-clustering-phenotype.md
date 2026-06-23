@@ -1,10 +1,8 @@
 # HRvLR Clustering → Phenotype Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Group the pi-gated HRvLR proteome with three pure-R engines, summarise each group by an eigengene, and link eigengenes to phenotype with a mixed model — WGCNA inferential, the rest corroborating or quarantined.
 
-**Architecture:** Each engine is an independent script reading shared inputs via one sourced helper, writing the same two artifacts (`membership.csv`, `eigengene.csv`) to its `c_data/`. A single `d_integration` step consumes those for the LMM, permutation null, BH, cross-engine concordance, and ORA. Spec: `docs/superpowers/specs/2026-06-23-hrvlr-clustering-phenotype-design.md`.
+**Architecture:** Each engine is an independent script reading shared inputs via one sourced helper, writing the same two artifacts (`membership.csv`, `eigengene.csv`) to its `c_data/`. A single `d_integration` step consumes those for the LMM, permutation null, BH, cross-engine concordance, and ORA. Spec: `docs/design/specs/2026-06-23-hrvlr-clustering-phenotype-design.md`.
 
 **Tech Stack:** R only, no Python. `here`, `pacman`; WGCNA, Mfuzz, mixOmics, lmerTest, clusterProfiler — each used through its own maintained API.
 
