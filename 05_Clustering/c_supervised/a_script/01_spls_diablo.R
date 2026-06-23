@@ -6,16 +6,16 @@
 # confirmatory signal. See task description for framing rationale.
 
 pacman::p_load(here, mixOmics, dplyr)
+set.seed(42)
 
 source(here("05_Clustering/_shared_inputs.R"))
 i <- load_clustering_inputs()
 
 pheno <- read.csv(
-  here("05_Clustering/d_integration/c_data/phenotype.csv"),
-  stringsAsFactors = FALSE
+  here("05_Clustering/d_integration/c_data/phenotype.csv")
 )
 
-# --- build X: per-subject baseline (T1) proteome --------------------
+# per-subject baseline (T1) proteome
 t1_ids <- i$meta$sample_id[i$meta$timepoint == "T1"]
 t1_subjects <- i$meta$subject[i$meta$timepoint == "T1"]
 
@@ -37,8 +37,7 @@ names(y_vec) <- keep
 n <- length(keep)
 message("n = ", n, ", p = ", ncol(x_mat))
 
-# --- tune keepX via LOO-CV ------------------------------------------
-set.seed(42)
+# tune keepX via LOO-CV
 tune_out <- tryCatch(
   tune.spls(
     X = x_mat, Y = y_vec,
@@ -65,7 +64,6 @@ if (!is.null(tune_out)) {
   message("fixed fallback keepX: 20 per component")
 }
 
-# --- fit final sPLS -------------------------------------------------
 mod <- spls(
   X = x_mat, Y = y_vec,
   ncomp = 2,
@@ -74,7 +72,6 @@ mod <- spls(
   near.zero.var = TRUE
 )
 
-# --- honest CV performance (LOO) ------------------------------------
 perf_out <- tryCatch(
   perf(mod, validation = "loo", progressBar = FALSE),
   error = function(e) {
@@ -113,15 +110,13 @@ write.csv(cv_df,
   row.names = FALSE
 )
 
-# --- membership: nonzero loadings from both components --------------
 get_loadings <- function(mod, comp) {
   ld <- mod$loadings$X[, comp]
   ld <- ld[ld != 0]
   data.frame(
     protein_id = names(ld),
     group_id = paste0("comp", comp),
-    membership_weight = as.numeric(ld),
-    stringsAsFactors = FALSE
+    membership_weight = as.numeric(ld)
   )
 }
 
@@ -141,7 +136,6 @@ message(
   sum(membership$group_id == "comp2"), ")"
 )
 
-# --- plots ----------------------------------------------------------
 dir.create(here("05_Clustering/c_supervised/b_reports"),
   recursive = TRUE,
   showWarnings = FALSE
