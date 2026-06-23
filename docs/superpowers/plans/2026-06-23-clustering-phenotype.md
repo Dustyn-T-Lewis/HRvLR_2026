@@ -100,7 +100,7 @@ git commit -m "add within-subject-centered paired wgcna as primary clustering en
 - Consumes: `load_clustering_inputs()` (uses `gap` and `abund`/`meta`)
 - Produces: the two-artifact contract; `group_id` = Mfuzz cluster.
 
-**Vignette to read first:** Mfuzz vignette (bioconductor.org/packages/Mfuzz). Canonical: `ExpressionSet` on the gap matrix → `standardise()` → `mestimate()` for `m` → `Dmin()` to bound `c` (expect ~4–6 on 3 points) → `mfuzz()` → `acore()` for membership.
+**Engine:** `e1071::cmeans` — the fuzzy-c-means Mfuzz wraps. `Mfuzz` itself imports `tcltk`/`tkWidgets` and won't load without XQuartz (absent here), so use `cmeans` directly and reimplement the thin Mfuzz helpers: `standardise` = z-score per protein (`scale` on the transpose); `mestimate` = the Schwämmle & Jensen (2010) fuzzifier formula `m = 1 + (1418/n + 22.05) * D^-2 + (12.33/n + 0.243) * D^(-0.0406*log(n) - 0.1134)` where n = #proteins, D = #dims (3); `Dmin` = min inter-centroid distance across candidate `c`; `acore` = membership thresholding. Read the Mfuzz vignette/source (bioconductor.org/packages/Mfuzz) to match these.
 
 - [ ] **Step 1: Write the script** — cluster the 3-point `gap` trajectory. `m` from `mestimate`; `c` chosen via `Dmin` capped at the geometry (~4–6); membership cutoff ≥ 0.5; loop ≥25 seeds and report assignment stability. Eigengene = first PC of each cluster's per-sample abundances (sign-fixed so positive ME = higher mean of positive-loading proteins). Membership from `acore`. Also emit the descriptive group-mean 6-point shape plot (illustration only). Header notes gap = inference-eligible, shape = illustration.
 

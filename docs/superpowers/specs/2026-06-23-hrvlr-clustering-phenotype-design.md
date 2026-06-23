@@ -80,6 +80,10 @@ handling: Li et al. 2018 (*Sci Rep*).
   `minModuleSize` and report fewer, larger modules rather than chasing many small ones.
 
 **Mfuzz on HR−LR gap (`b_mfuzz_gap/`) — companion**
+- Engine = `e1071::cmeans` (the fuzzy-c-means Mfuzz wraps). The `Mfuzz` package itself
+  imports `tcltk`/`tkWidgets` and won't load without XQuartz, which this pure-R, low-
+  fuss stack avoids; its helpers (`standardise`, `mestimate`, `Dmin`, `acore`) are
+  reimplemented minimally and cited.
 - Feature per protein = 3-point HR−LR contrast trajectory `[ΔT1, ΔT2, ΔT3]` built
   from the limma moderated logFCs already computed in `03_DEP` (denoised,
   design-aware, sidesteps the missForest-manufactured-structure risk).
