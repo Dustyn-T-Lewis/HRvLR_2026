@@ -6,11 +6,20 @@ if (!exists("meta")) source("04_Figures/F02/a_script/HRvLR_F02_setup.R")
 suppressPackageStartupMessages(library(eulerr))
 
 venn_panel <- function(hr_contrast, lr_contrast, title, file_stem,
-                       w = 95, h = 95) {
-  hr <- dep_df$gene[which(dep_df[[paste0("sig_pi_", hr_contrast)]] != 0)]
-  lr <- dep_df$gene[which(dep_df[[paste0("sig_pi_", lr_contrast)]] != 0)]
-  hr <- unique(hr[!is.na(hr)])
-  lr <- unique(lr[!is.na(lr)])
+                       metric = c("pi", "p"), w = 95, h = 95) {
+  metric <- match.arg(metric)
+  dep_genes <- function(ct) {
+    sel <- if (metric == "pi") {
+      dep_df[[paste0("sig_pi_", ct)]] != 0
+    } else {
+      dep_df[[paste0("P.Value_", ct)]] < 0.05
+    }
+    unique(dep_df$gene[which(sel)])
+  }
+  hr <- dep_genes(hr_contrast)
+  lr <- dep_genes(lr_contrast)
+  hr <- hr[!is.na(hr)]
+  lr <- lr[!is.na(lr)]
   fit <- euler(list(HR = hr, LR = lr))
   p <- plot(fit,
     quantities = list(fontsize = 11),
