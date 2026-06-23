@@ -22,22 +22,23 @@ panel <- function(name) {
 }
 
 composite <- panel("panel_a_pca") /
-  (panel("panel_b_effect_size") | panel("panel_c_cv")) /
-  (panel("panel_d_cv_transitions") | panel("panel_e_intra_variability")) +
-  plot_layout(heights = c(0.9, 1.2, 1)) +
+  (panel("panel_f_dep_counts") | panel("panel_b_effect_size") | panel("panel_h_pathways")) /
+  (panel("panel_g_upset") | panel("panel_i_venn_training") | panel("panel_j_venn_acute")) /
+  (panel("panel_c_cv") | panel("panel_d_cv_transitions") | panel("panel_e_intra_variability")) +
+  plot_layout(heights = c(0.8, 1, 0.9, 0.9)) +
   plot_annotation(
     title = "Global Proteome Overview",
-    subtitle = "Structure, effect-size distributions, and inter-/intra-individual variability",
+    subtitle = "Structure, differential abundance, contrast overlap, and variability",
     theme = theme(
-      plot.title = element_text(face = "bold", size = 13, hjust = 0.5),
-      plot.subtitle = element_text(size = 9, color = "grey30", hjust = 0.5)
+      plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+      plot.subtitle = element_text(size = 10, color = "grey30", hjust = 0.5)
     )
   )
 
 ggsave(file.path(RPT, "F02_composite.png"), composite,
-  width = 320, height = 360, units = "mm", dpi = 300, bg = "white"
+  width = 420, height = 480, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(RPT, "F02_composite.pdf"), composite,
-  width = 320, height = 360, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = 420, height = 480, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 cat("F02 composite saved to", RPT, "\n")
