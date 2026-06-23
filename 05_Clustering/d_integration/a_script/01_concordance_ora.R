@@ -18,7 +18,7 @@ m <- read.csv(here(
   "05_Clustering", "b_mfuzz_gap", "c_data", "membership.csv"
 ))
 
-# --- concordance ----------------------------------------------------------
+# concordance
 
 shared <- inner_join(
   dplyr::select(w, protein_id, wgcna = group_id),
@@ -43,19 +43,27 @@ ari <- tryCatch(
 
 message(sprintf("Adjusted Rand Index (WGCNA vs Mfuzz): %.4f", ari))
 
+shared_ids <- intersect(w$protein_id, m$protein_id)
+w_shared <- w[w$protein_id %in% shared_ids, ]
+m_shared <- m[m$protein_id %in% shared_ids, ]
+
 jac_df <- tidyr::crossing(
-  wgcna_group = unique(w$group_id),
-  mfuzz_group = as.character(unique(m$group_id))
+  wgcna_group = unique(w_shared$group_id),
+  mfuzz_group = as.character(unique(m_shared$group_id))
 ) |>
   mutate(
     n_overlap = mapply(function(wg, mg) {
-      wset <- w$protein_id[w$group_id == wg]
-      mset <- m$protein_id[as.character(m$group_id) == mg]
+      wset <- w_shared$protein_id[w_shared$group_id == wg]
+      mset <- m_shared$protein_id[
+        as.character(m_shared$group_id) == mg
+      ]
       length(intersect(wset, mset))
     }, wgcna_group, mfuzz_group),
     n_union = mapply(function(wg, mg) {
-      wset <- w$protein_id[w$group_id == wg]
-      mset <- m$protein_id[as.character(m$group_id) == mg]
+      wset <- w_shared$protein_id[w_shared$group_id == wg]
+      mset <- m_shared$protein_id[
+        as.character(m_shared$group_id) == mg
+      ]
       length(union(wset, mset))
     }, wgcna_group, mfuzz_group),
     jaccard = ifelse(n_union > 0, n_overlap / n_union, 0)
@@ -95,12 +103,13 @@ pdf(heatmap_pdf, width = 6, height = 4)
 print(heat_p)
 dev.off()
 
-# --- ORA ------------------------------------------------------------------
+# ora
 
 reactome_t2g <- msigdbr(
   species = "Homo sapiens", collection = "C2", subcollection = "CP:REACTOME"
 ) |>
   dplyr::select(gs_name, ncbi_gene) |>
+  dplyr::mutate(ncbi_gene = as.character(ncbi_gene)) |>
   dplyr::distinct()
 
 bg_map <- bitr(
@@ -158,7 +167,7 @@ run_ora <- function(proteins_uni, grp_entrez_all) {
   list(go = go_res, reactome = react_res)
 }
 
-ora_to_df <- function(res_obj, engine, group_id, source) {
+ora_to_df <- function(res_obj, engine, group_id, term_source) {
   if (is.null(res_obj)) {
     return(NULL)
   }
@@ -168,47 +177,46 @@ ora_to_df <- function(res_obj, engine, group_id, source) {
   }
   df$engine <- engine
   df$group_id <- as.character(group_id)
-  df$source <- source
+  df$source <- term_source
   df[, c(
     "engine", "group_id", "source", "ID", "Description",
     "GeneRatio", "pvalue", "p.adjust", "Count"
   )]
 }
 
-collect <- list()
+n_slots <- (length(wgcna_groups) + length(mfuzz_groups)) * 4
+collect <- vector("list", n_slots)
+idx <- 0L
 
 for (grp in wgcna_groups) {
   proteins <- w$protein_id[w$group_id == grp]
   res <- run_ora(proteins, bg_entrez)
   for (ont in names(res$go)) {
-    collect[[length(collect) + 1]] <- ora_to_df(
-      res$go[[ont]], "wgcna", grp, ont
-    )
+    idx <- idx + 1L
+    collect[[idx]] <- ora_to_df(res$go[[ont]], "wgcna", grp, ont)
   }
-  collect[[length(collect) + 1]] <- ora_to_df(
-    res$reactome, "wgcna", grp, "Reactome"
-  )
+  idx <- idx + 1L
+  collect[[idx]] <- ora_to_df(res$reactome, "wgcna", grp, "Reactome")
 }
 
 for (grp in mfuzz_groups) {
   proteins <- m$protein_id[m$group_id == as.integer(grp)]
   res <- run_ora(proteins, bg_entrez)
   for (ont in names(res$go)) {
-    collect[[length(collect) + 1]] <- ora_to_df(
-      res$go[[ont]], "mfuzz", grp, ont
-    )
+    idx <- idx + 1L
+    collect[[idx]] <- ora_to_df(res$go[[ont]], "mfuzz", grp, ont)
   }
-  collect[[length(collect) + 1]] <- ora_to_df(
-    res$reactome, "mfuzz", grp, "Reactome"
-  )
+  idx <- idx + 1L
+  collect[[idx]] <- ora_to_df(res$reactome, "mfuzz", grp, "Reactome")
 }
 
-ora_df <- bind_rows(Filter(Negate(is.null), collect))
+ora_df <- bind_rows(Filter(Negate(is.null), collect[seq_len(idx)]))
 
 if (nrow(ora_df) == 0) {
   ora_df <- data.frame(
     engine = character(), group_id = character(), source = character(),
-    ID = character(), Description = character(), GeneRatio = character(),
+    ID = character(), Description = character(),
+    GeneRatio = character(),
     pvalue = numeric(), p.adjust = numeric(), Count = integer()
   )
   message("No ORA results — writing empty ora_results.csv")
@@ -229,7 +237,8 @@ sig_groups <- if (nrow(ora_df) > 0) {
   character()
 }
 message(sprintf(
-  "Groups with significant enrichment (p.adjust<0.05): %d", length(sig_groups)
+  "Groups with significant enrichment (p.adjust<0.05): %d",
+  length(sig_groups)
 ))
 
 if (nrow(ora_df) > 0) {
@@ -245,7 +254,8 @@ if (nrow(ora_df) > 0) {
 
   if (nrow(top_terms) > 0) {
     dot_p <- ggplot(top_terms, aes(
-      x = neg_log10_padj, y = reorder(Description, neg_log10_padj),
+      x = neg_log10_padj,
+      y = reorder(Description, neg_log10_padj),
       size = Count, color = source
     )) +
       geom_point() +
