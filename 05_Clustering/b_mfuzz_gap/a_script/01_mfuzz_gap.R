@@ -189,7 +189,7 @@ shape_rows <- lapply(clust_ids, function(cl) {
 })
 shape_df <- do.call(rbind, shape_rows)
 shape_df$timepoint <- factor(
-  shape_df$timepoint,
+  tp_labels[shape_df$timepoint],
   levels = c("Baseline", "Trained", "Acute")
 )
 

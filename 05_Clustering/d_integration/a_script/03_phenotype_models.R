@@ -6,7 +6,7 @@
 # for tracks (and the same lm as the table for baseline/acute) so the
 # null is tractable without refitting lmer thousands of times.
 
-pacman::p_load(here, dplyr, tidyr, lmerTest, ggplot2)
+pacman::p_load(here, dplyr, tidyr, lmerTest, lme4, ggplot2)
 
 traits <- c(
   "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_myovision_fcsa_I",

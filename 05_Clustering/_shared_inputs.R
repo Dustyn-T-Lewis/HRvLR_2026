@@ -15,13 +15,18 @@ load_clustering_inputs <- function() {
   stopifnot(identical(imputed$metadata$Col_ID, colnames(imputed$data)))
 
   # pi-gate: proteins with pi_score < 0.05 in any contrast
-  pi_mat <- vapply(primary$results, `[[`, numeric(nrow(primary$data)), "pi_score")
+  pi_mat <- vapply(
+    primary$results, `[[`, numeric(nrow(primary$data)), "pi_score"
+  )
   rownames(pi_mat) <- rownames(primary$data)
   pi_keep <- apply(pi_mat, 1, function(x) any(x < 0.05, na.rm = TRUE))
   pi_set <- rownames(pi_mat)[pi_keep]
   n_before <- length(pi_set)
   pi_set <- intersect(pi_set, rownames(imputed$data))
-  message(n_before - length(pi_set), " pi-gated proteins dropped (absent from imputed matrix)")
+  message(
+    n_before - length(pi_set),
+    " pi-gated proteins dropped (absent from imputed matrix)"
+  )
 
   abund <- imputed$data[pi_set, , drop = FALSE]
 
@@ -37,7 +42,10 @@ load_clustering_inputs <- function() {
 
   # gap: HR−LR logFC at each timepoint, rows restricted to pi_set
   hrvlr_contrasts <- c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR")
-  gap <- vapply(primary$results[hrvlr_contrasts], function(r) r$logFC, numeric(nrow(primary$data)))
+  gap <- vapply(
+    primary$results[hrvlr_contrasts],
+    function(r) r$logFC, numeric(nrow(primary$data))
+  )
   rownames(gap) <- rownames(primary$data)
   gap <- gap[pi_set, , drop = FALSE]
   colnames(gap) <- c("T1", "T2", "T3")
