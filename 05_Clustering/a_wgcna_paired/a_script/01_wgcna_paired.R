@@ -2,12 +2,12 @@
 # Within-subject centering removes between-subject identity from modules
 # before network construction. See Li et al. 2018 Sci Rep for rationale.
 
-pacman::p_load(here, WGCNA, dplyr)
+pacman::p_load(here, WGCNA)
 # Load data — WGCNA masks stats::cor, so qualify downstream if needed
 source(here("05_Clustering", "_shared_inputs.R"))
 i <- load_clustering_inputs()
 
-# ---- within-subject centering -----------------------------------------------
+# within-subject centering
 center_within_subject <- function(abund, meta) {
   subjects <- unique(meta$subject)
   out <- abund
@@ -22,8 +22,8 @@ center_within_subject <- function(abund, meta) {
 abund_c <- center_within_subject(i$abund, i$meta)
 expr <- t(abund_c) # 45 samples × 298 proteins
 
-# ---- soft threshold ----------------------------------------------------------
-powers <- c(1:20)
+# soft threshold
+powers <- 1:20
 sft <- pickSoftThreshold(
   expr,
   powerVector = powers,
@@ -39,15 +39,19 @@ if (length(candidates)) {
   chosen_power <- powers[candidates[1]]
   fallback <- FALSE
 } else {
-  chosen_power <- 12L # WGCNA recommendation for signed networks, n < 20
+  # fallback: scale-free R² never reached 0.8; use signed-network default
+  chosen_power <- 12L
   fallback <- TRUE
   message(
-    "No power reached scale-free R² ≥ 0.8 at n=45; ",
+    "No power reached scale-free R² ≥ 0.8; ",
     "using signed-network fallback power = ", chosen_power
   )
 }
 
-message("Chosen soft-threshold power: ", chosen_power, " (fallback: ", fallback, ")")
+message(
+  "Chosen soft-threshold power: ", chosen_power,
+  " (fallback: ", fallback, ")"
+)
 
 pdf(here("05_Clustering", "a_wgcna_paired", "b_reports", "soft_threshold.pdf"),
   width = 9, height = 4.5
@@ -66,7 +70,7 @@ plot(fit$Power, fit$mean.k.,
 abline(v = chosen_power, col = "steelblue", lty = 2)
 dev.off()
 
-# ---- blockwise modules -------------------------------------------------------
+# blockwise modules
 net <- blockwiseModules(
   expr,
   networkType = "signed",
@@ -90,8 +94,9 @@ plotDendroAndColors(
 )
 dev.off()
 
-# ---- eigengenes + sign fix ---------------------------------------------------
+# eigengenes + sign fix
 mes_all <- moduleEigengenes(expr, colors = net$colors)$eigengenes
+stopifnot(rownames(mes_all) == i$meta$sample_id)
 
 # drop the grey (unassigned) eigengene from the ME table
 grey_col <- grep("^MEgrey$", names(mes_all), value = TRUE)
@@ -112,7 +117,6 @@ n_modules <- length(module_labels)
 message("Non-grey modules: ", n_modules)
 message("Grey (unassigned) proteins: ", sum(net$colors == "grey"))
 
-# ---- module-count sensitivity ------------------------------------------------
 message("\n-- Sensitivity: powers near chosen --")
 for (p in c(chosen_power - 2L, chosen_power, chosen_power + 2L)) {
   if (p < 1 || p > 20) next
@@ -148,7 +152,7 @@ for (mch in c(0.15, 0.25, 0.35)) {
   )
 }
 
-# ---- write artifacts ---------------------------------------------------------
+# write artifacts
 membership <- data.frame(
   protein_id = colnames(expr),
   group_id = net$colors,
@@ -169,10 +173,14 @@ eigengene_rows <- lapply(seq_len(n_modules), function(j) {
 })
 eigengene <- do.call(rbind, eigengene_rows)
 
-write.csv(membership, here("05_Clustering", "a_wgcna_paired", "c_data", "membership.csv"),
+write.csv(
+  membership,
+  here("05_Clustering", "a_wgcna_paired", "c_data", "membership.csv"),
   row.names = FALSE
 )
-write.csv(eigengene, here("05_Clustering", "a_wgcna_paired", "c_data", "eigengene.csv"),
+write.csv(
+  eigengene,
+  here("05_Clustering", "a_wgcna_paired", "c_data", "eigengene.csv"),
   row.names = FALSE
 )
 
