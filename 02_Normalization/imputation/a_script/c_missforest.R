@@ -5,17 +5,13 @@
 # model for all missing values. Rows are sorted before the stochastic fit so the
 # result is reproducible. This is the arm downstream QC/figures read by default.
 
-library(proteoDA)
-library(missForest)
-
+pacman::p_load(proteoDA, here, missForest)
 set.seed(42)
-setwd(rprojroot::find_rstudio_root_file())
 
-norm_rds <- "02_Normalization/c_data/DAList_normalized.rds"
-data_dir <- "02_Normalization/imputation/c_data"
+data_dir <- here("02_Normalization", "imputation", "c_data")
 dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
 
-dal <- readRDS(norm_rds)
+dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 mat <- as.matrix(dal$data)
 cat(sprintf(
   "[missforest] %d x %d | %.1f%% missing\n",
