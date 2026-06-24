@@ -268,7 +268,9 @@ run_limma_sens <- function(mat, meta) {
 
 # Full dataset (all 48 samples, no outlier removal)
 # Reconstruct from raw data + same protein filtering as normalization
-int <- readRDS("02_Normalization/c_data/00_report_intermediates.rds")
+int <- readRDS(here(
+  "02_Normalization", "c_data", "00_report_intermediates.rds"
+))
 raw <- readxl::read_excel(here("00_input", "HRvLR_raw.xlsx"))
 ann_cols_raw <- c("uniprot_id", "protein", "gene", "description", "n_seq")
 raw_ann <- raw[, ann_cols_raw]
@@ -291,12 +293,14 @@ full_fit <- run_limma_sens(full_mat, full_meta)
 
 # Reduced dataset (45 samples, outliers removed — already normalized)
 ann_cols <- c("uniprot_id", "protein", "gene", "description")
-norm_v2 <- read_csv("02_Normalization/c_data/normalized.csv",
+norm_v2 <- read_csv(here("02_Normalization", "c_data", "normalized.csv"),
   show_col_types = FALSE
 )
 red_mat <- as.matrix(norm_v2[, setdiff(names(norm_v2), ann_cols)])
 rownames(red_mat) <- norm_v2$uniprot_id
-red_meta <- readRDS("02_Normalization/c_data/DAList_normalized.rds")$metadata
+red_meta <- readRDS(here(
+  "02_Normalization", "c_data", "DAList_normalized.rds"
+))$metadata
 red_fit <- run_limma_sens(red_mat, red_meta)
 
 pi_thresh <- 0.05
@@ -349,7 +353,7 @@ print(
         n_full, n_red
       ),
       subtitle = sprintf(
-        "Removed: %s (3-method consensus, >=2/3)",
+        "Removed: %s (4-method consensus, >=3/4)",
         outlier_str
       ),
       theme = theme(
