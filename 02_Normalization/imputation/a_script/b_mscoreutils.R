@@ -6,18 +6,13 @@
 # MsCoreUtils::impute_matrix(method = "mixed") routes the MAR subset through kNN
 # and the MNAR subset through QRILC (left-censored).
 
-library(proteoDA)
-library(MsCoreUtils)
-library(imputeLCMD)
-
+pacman::p_load(proteoDA, here, MsCoreUtils, imputeLCMD)
 set.seed(42)
-setwd(rprojroot::find_rstudio_root_file())
 
-norm_rds <- "02_Normalization/c_data/DAList_normalized.rds"
-data_dir <- "02_Normalization/imputation/c_data"
+data_dir <- here("02_Normalization", "imputation", "c_data")
 dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
 
-dal <- readRDS(norm_rds)
+dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 mat <- as.matrix(dal$data)
 cat(sprintf(
   "[mscoreutils] %d x %d | %.1f%% missing\n",

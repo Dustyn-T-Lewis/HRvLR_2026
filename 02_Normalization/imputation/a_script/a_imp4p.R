@@ -6,17 +6,13 @@
 # the matrix and the Group_Time factor. Output feeds QC and sensitivity work; the
 # primary DEP stays on the non-imputed normalized matrix.
 
-library(proteoDA)
-library(imp4p)
-
+pacman::p_load(proteoDA, here, imp4p)
 set.seed(42)
-setwd(rprojroot::find_rstudio_root_file())
 
-norm_rds <- "02_Normalization/c_data/DAList_normalized.rds"
-data_dir <- "02_Normalization/imputation/c_data"
+data_dir <- here("02_Normalization", "imputation", "c_data")
 dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
 
-dal <- readRDS(norm_rds)
+dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 mat <- as.matrix(dal$data)
 cond <- factor(dal$metadata$Group_Time[match(colnames(mat), dal$metadata$Col_ID)])
 cat(sprintf(
