@@ -7,7 +7,7 @@
 pacman::p_load(here, dplyr)
 
 load_clustering_inputs <- function() {
-  primary <- readRDS(here("03_DEP", "c_data", "01_limma_DAList.rds"))
+  primary <- readRDS(here("03_DEP", "a_non_imputed", "c_data", "01_limma_DAList.rds"))
   imputed <- readRDS(here(
     "02_Normalization", "imputation", "c_data",
     "DAList_imputed_missforest.rds"
