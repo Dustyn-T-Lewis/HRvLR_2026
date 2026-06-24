@@ -2,7 +2,7 @@
 # Run after HRvLR_F01_run.R has written the panels to b_reports.
 
 setwd(rprojroot::find_rstudio_root_file())
-source("04_Figures/shared/style.R")
+source("04_Figures/functions/style.R")
 suppressPackageStartupMessages({
   library(patchwork)
   library(ggplot2)

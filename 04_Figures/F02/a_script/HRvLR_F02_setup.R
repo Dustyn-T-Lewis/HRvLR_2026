@@ -11,7 +11,7 @@ suppressPackageStartupMessages({
 })
 
 setwd(rprojroot::find_rstudio_root_file())
-source("04_Figures/shared/style.R")
+source("04_Figures/functions/style.R")
 
 # Paths
 NORM_FILE <- "02_Normalization/c_data/normalized.csv"
