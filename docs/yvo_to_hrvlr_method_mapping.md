@@ -12,63 +12,6 @@ logic where the HRvLR design supports it, re-derive all HRvLR factor levels and
 contrasts from HRvLR metadata, and explicitly reject YvO stages whose biology
 does not transfer.
 
-## Task Routing
-
-### Use Now
-
-- Local skills
-  - `yvo-method-transfer`: primary transfer workflow and guardrails
-  - `r-proteomics-pipeline-review`: review current HRvLR stage order, path
-    contracts, metadata handling, and reproducibility
-  - `r-analysis-guardrails`: validate contrast logic, blocking structure, and
-    manuscript-safe outputs
-  - `r-tidyverse-patterns`: keep imports, joins, reshaping, and factor handling
-    small and auditable
-  - `ggplot-publication-figures`: keep figure prep tables, factor ordering, and
-    export contracts explicit
-  - `figure-style-transfer`: preserve YvO visual language only where HRvLR
-    supports the same interpretation
-- MCPs
-  - `reactome`: pathway lookup and pathway naming checks
-  - `uniprot`: protein and accession validation
-  - `pubmed`: method citation checks
-  - `ddg-search`: light web lookups when an official local source is absent
-  - `biomcp`: optional deeper biomedical lookup, not required for the core
-    transfer
-- Local docs
-  - workspace `AGENTS.md`
-  - `A_YvO_2026/README.md`
-  - `A_HRvLR_2026/README.md`
-
-### Configured But Degraded
-
-- `r-proteomics-review` MCP is present in the global config but disabled.
-- The current HRvLR repository has path drift and documentation drift:
-  stage-02 canonical script naming, figure numbering, and README run commands
-  are not internally aligned.
-
-### Strong Local Candidates
-
-- `reactome-database`: useful if pathway result interpretation needs a structured
-  Reactome review beyond the current figure scripts
-- `pyopenms`: useful only if future work moves upstream into raw MS processing
-  rather than downstream statistical analysis
-- `biopython`: useful only if future work needs sequence-level manipulation or
-  batch annotation
-
-### Strong Web Candidates Checked On 2026-04-30
-
-- OpenAI skills catalog: `https://github.com/openai/skills`
-- MCP specification: `https://modelcontextprotocol.io/specification/`
-- Reactome developer docs: `https://reactome.org/dev/content-service`
-- NCBI API docs: `https://www.ncbi.nlm.nih.gov/home/develop/api/`
-- PRIDE archive API docs: `https://www.ebi.ac.uk/pride/ws/archive/v2/docs/api-guide.html`
-- OpenMS docs: `https://openms.de/documentation/developer_tutorial.html`
-
-These are supporting references, not the primary source of transfer logic.
-Primary transfer logic comes from the validated YvO implementation and the
-actual HRvLR design.
-
 ## Target Design Summary
 
 ### YvO Reference Design
