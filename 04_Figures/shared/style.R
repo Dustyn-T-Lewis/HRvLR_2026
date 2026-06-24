@@ -61,12 +61,18 @@ PANEL_SM <- 120
 PANEL_MD <- 180
 PANEL_LG <- 280
 
+# Uniform render height (mm) for every F02 panel so they tile at one scale.
+PANEL_H <- 95
+
 BASE_PATHWAY <- 4.0
 BASE_GENE <- 3.2
 BASE_STAT <- 3.5
 BASE_QUADRANT <- 4.0
 BASE_COUNT <- 3.5
 BASE_TAG <- 18
+
+# Shared in-plot text size (mm) for counts, stat annotations, and point labels.
+FIG_GEOM_TEXT <- 2.6
 
 scale_text <- function(base_size, panel_width_mm, ref_width = PANEL_MD) {
   base_size * sqrt(panel_width_mm / ref_width)
@@ -262,4 +268,26 @@ save_panel <- function(plot, path_stem, width, height, pdf_device = PDF_DEVICE) 
   ggsave(paste0(path_stem, ".png"), plot,
     width = width, height = height, units = "mm", dpi = 300
   )
+}
+
+save_png <- function(plot, path_stem, width, height) {
+  ggsave(paste0(path_stem, ".png"), plot,
+    width = width, height = height, units = "mm", dpi = 300
+  )
+}
+
+# ── F03 cluster & database palettes ----
+
+CLUSTER_COLORS <- c(
+  c1 = "#E69F00", c2 = "#56B4E9", c3 = "#009E73", c4 = "#CC79A7"
+)
+
+DB_COLORS <- c(
+  Hallmark = "#AA336A", KEGG = "#E65100",
+  Reactome = "#1565C0", "GO:BP" = "#00796B"
+)
+
+is_light_color <- function(color_name) {
+  rgb_val <- grDevices::col2rgb(color_name)
+  (0.299 * rgb_val[1] + 0.587 * rgb_val[2] + 0.114 * rgb_val[3]) / 255 > 0.6
 }
