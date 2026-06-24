@@ -9,9 +9,9 @@ suppressPackageStartupMessages({
 
 # Pull Q2 values from spls_cv ----
 q2_df <- spls_cv |>
-  filter(metric == "Q2") |>
-  select(component, q2 = value) |>
-  mutate(component = factor(component, levels = sort(unique(component))))
+  dplyr::filter(metric == "Q2") |>
+  dplyr::select(component, q2 = value) |>
+  dplyr::mutate(component = factor(component, levels = sort(unique(component))))
 
 obs_max_t <- perm_null$observed_max_t[1]
 p_fam <- perm_null$p_perm[1]
@@ -58,10 +58,7 @@ panel_e <- (p_null | p_spls) +
   plot_layout(widths = c(1.3, 1)) +
   plot_annotation(
     title = "The module-phenotype linkage does not survive validation",
-    subtitle = paste0(
-      "Left: strongest grid signal vs subject-permuted null (family-wise p=0.096). ",
-      "Right: supervised sPLS fails out-of-sample (Q2<=0). Both null at n approx 16."
-    ),
+    subtitle = "Left: strongest grid signal vs permuted null (p=0.096). Right: sPLS Q2<=0 out-of-sample. Null at n~16.",
     tag_levels = list(c("E", "")),
     theme = theme(
       plot.title    = element_text(face = "bold", size = FIG_TITLE_SIZE),
