@@ -7,7 +7,7 @@ pacman::p_load(
   clusterProfiler, org.Hs.eg.db, msigdbr
 )
 
-source(here("05_Clustering", "_shared_inputs.R"))
+source(here("05_Clustering", "functions", "inputs.R"))
 i <- load_clustering_inputs()
 background_uni <- i$pi_set
 

@@ -3,7 +3,7 @@
 # e1071::cmeans replaces Mfuzz's Fclust (which requires tcltk/XQuartz).
 
 pacman::p_load(here, e1071, ggplot2)
-source(here("05_Clustering", "_shared_inputs.R"))
+source(here("05_Clustering", "functions", "inputs.R"))
 i <- load_clustering_inputs()
 
 # Z-score each protein across timepoints; drop zero-variance rows

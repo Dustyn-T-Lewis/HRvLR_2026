@@ -46,7 +46,7 @@ pheno_tbl <- read.csv(PHENO_FILE)
 
 # HR-LR gap matrix + pi-gated set from shared clustering inputs
 suppressMessages({
-  source("05_Clustering/_shared_inputs.R")
+  source("05_Clustering/functions/inputs.R")
   .ci <- load_clustering_inputs()
   gap_mat <- .ci$gap
   pi_set <- .ci$pi_set

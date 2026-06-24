@@ -4,7 +4,7 @@
 
 pacman::p_load(here, WGCNA)
 # Load data — WGCNA masks stats::cor, so qualify downstream if needed
-source(here("05_Clustering", "_shared_inputs.R"))
+source(here("05_Clustering", "functions", "inputs.R"))
 i <- load_clustering_inputs()
 
 # within-subject centering
