@@ -12,7 +12,7 @@ suppressPackageStartupMessages({
 })
 
 PA_W <- 200
-PA_H <- 100
+PA_H <- PANEL_H
 dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 GROUP_COLS <- GROUP_COLORS
@@ -51,7 +51,7 @@ ellipse_layers <- function(grp) {
   list(
     stat_ellipse(aes(fill = .data[[grp]]),
       geom = "polygon",
-      alpha = 0.12, level = 0.80, show.legend = FALSE
+      alpha = 0.10, level = 0.80, show.legend = FALSE
     ),
     stat_ellipse(aes(group = .data[[grp]]),
       level = 0.80,
@@ -63,10 +63,10 @@ ellipse_layers <- function(grp) {
 # Plot 1: Group coloring
 pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
   ellipse_layers("Group") +
-  geom_point(size = 2, alpha = 0.85) +
+  geom_point(size = 1.8, alpha = 0.85) +
   annotate("text",
     x = Inf, y = Inf, label = stat_label(perm_group, "Group"),
-    hjust = 1.05, vjust = 1.15, size = 2.6, color = "grey30", fontface = "bold"
+    hjust = 1.05, vjust = 1.15, size = FIG_GEOM_TEXT, color = "grey30", fontface = "bold"
   ) +
   scale_color_manual(values = GROUP_COLS) +
   scale_fill_manual(values = GROUP_COLS, guide = "none") +
@@ -81,10 +81,10 @@ pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
 # Plot 2: Timepoint coloring
 pA_time <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Timepoint)) +
   ellipse_layers("Timepoint") +
-  geom_point(size = 2, alpha = 0.85) +
+  geom_point(size = 1.8, alpha = 0.85) +
   annotate("text",
     x = Inf, y = Inf, label = stat_label(perm_time, "Time"),
-    hjust = 1.05, vjust = 1.15, size = 2.6, color = "grey30", fontface = "bold"
+    hjust = 1.05, vjust = 1.15, size = FIG_GEOM_TEXT, color = "grey30", fontface = "bold"
   ) +
   scale_color_manual(values = TIME_COLS) +
   scale_fill_manual(values = TIME_COLS, guide = "none") +
@@ -105,13 +105,13 @@ pA_combined <- (pA_group | pA_time) +
     ),
     tag_levels = list(c("A", "")),
     theme = theme(
-      plot.title    = element_text(face = "bold", size = 11),
-      plot.subtitle = element_text(size = 8, color = "grey30"),
-      plot.tag      = element_text(face = "bold", size = 15)
+      plot.title    = element_text(face = "bold", size = FIG_TITLE_SIZE),
+      plot.subtitle = element_text(face = "bold.italic", size = FIG_SUBTITLE_SIZE, color = "grey30"),
+      plot.tag      = element_text(face = "bold", size = FIG_TAG_SIZE)
     )
   )
 
-save_panel(pA_combined, file.path(RPT_DIR, "panel_a_pca"), PA_W, PA_H)
+save_png(pA_combined, file.path(RPT_DIR, "panel_a_pca"), PA_W, PA_H)
 write.csv(pca_df |> select(sample, PC1, PC2, Group, Timepoint),
   file.path(DAT_DIR, "audit_panel_A_pca_scores.csv"),
   row.names = FALSE

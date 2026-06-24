@@ -12,7 +12,9 @@ dep_sets <- lapply(MAIN_CONTRASTS, function(c) {
 names(dep_sets) <- unname(CTR_SHORT[MAIN_CONTRASTS])
 dep_sets <- dep_sets[lengths(dep_sets) > 0]
 
-file_stem <- file.path(RPT_DIR, "panel_g_upset")
+supp_dir <- file.path(RPT_DIR, "supp")
+dir.create(supp_dir, recursive = TRUE, showWarnings = FALSE)
+file_stem <- file.path(supp_dir, "panel_g_upset")
 draw_upset <- function() {
   print(upset(fromList(dep_sets),
     nsets = length(dep_sets), order.by = "freq", nintersects = 20,
@@ -21,10 +23,7 @@ draw_upset <- function() {
     matrix.color = "#2166AC", text.scale = 1.1, point.size = 2.4
   ))
 }
-png(paste0(file_stem, ".png"), width = 160, height = 120, units = "mm", res = 300, bg = "white")
+png(paste0(file_stem, ".png"), width = 160, height = PANEL_H, units = "mm", res = 300, bg = "white")
 draw_upset()
 dev.off()
-pdf(paste0(file_stem, ".pdf"), width = 160 / 25.4, height = 120 / 25.4, bg = "white")
-draw_upset()
-dev.off()
-cat("F02 Panel G done.\n")
+cat("F02 Panel G done (supp).\n")
