@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
-# HRvLR Stage 01: HPA presence filter -> myonuclei-rescue blood removal -> UniProt
-# dedup -> group-wise missingness -> 4-method outlier consensus. Writes the filtered,
-# un-normalized DAList handed to Stage 02.
+# HRvLR Stage 01: UniProt dedup -> HPA presence filter -> myonuclei-rescue blood
+# removal -> group-wise missingness -> 4-method outlier consensus. Writes the
+# filtered, un-normalized DAList handed to Stage 02.
 #
 # Blood logic follows CvH: a protein is removed iff blood-derived (secreted-to-blood |
 # immunoglobulin | erythrocyte-high) AND NOT myonuclei-expressed (rescued as real muscle).
@@ -117,9 +117,7 @@ int_mat <- as.data.frame(data.matrix(intensity))
 rownames(int_mat) <- annotation$uniprot_id
 annot_df <- as.data.frame(annotation)
 rownames(annot_df) <- annotation$uniprot_id
-meta_df <- as.data.frame(metadata)
-rownames(meta_df) <- metadata$Col_ID
-dal <- zero_to_missing(DAList(data = int_mat, annotation = annot_df, metadata = meta_df))
+dal <- zero_to_missing(DAList(data = int_mat, annotation = annot_df, metadata = metadata))
 
 n0 <- nrow(dal$data)
 dal <- filter_proteins_by_group(dal,
