@@ -347,6 +347,7 @@ run_ora_deduplicated <- function(genes, universe, pathways,
       maxSize  = max_size
     )
     db_res <- as.data.frame(db_res)
+    if (nrow(db_res) == 0) next
     db_res$database <- db
     db_results[[db]] <- db_res
   }
