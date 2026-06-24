@@ -8,7 +8,7 @@
 pacman::p_load(here, mixOmics, dplyr)
 set.seed(42)
 
-source(here("05_Clustering/_shared_inputs.R"))
+source(here("05_Clustering/functions/inputs.R"))
 i <- load_clustering_inputs()
 
 pheno <- read.csv(
