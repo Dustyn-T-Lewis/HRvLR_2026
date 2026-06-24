@@ -12,8 +12,8 @@ suppressPackageStartupMessages({
   library(grid)
 })
 
-source("04_Figures/shared/style.R")
-source("04_Figures/shared/pathway_utils.R")
+source("04_Figures/functions/style.R")
+source("04_Figures/functions/pathway_utils.R")
 
 # Paths
 WGCNA_MEM_FILE <- "05_Clustering/a_wgcna_paired/c_data/membership.csv"

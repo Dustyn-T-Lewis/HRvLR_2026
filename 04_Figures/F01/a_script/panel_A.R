@@ -1,6 +1,6 @@
 # F01 Panel A: Accumulated Volume Load ----
 setwd(rprojroot::find_rstudio_root_file())
-source("04_Figures/shared/style.R")
+source("04_Figures/functions/style.R")
 
 suppressPackageStartupMessages({
   library(dplyr)

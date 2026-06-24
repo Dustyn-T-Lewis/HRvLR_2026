@@ -2,7 +2,7 @@
 # Mixed: sig interaction (p=0.029) -> show delta bracket
 # Type I: no sig effects -> ANOVA subtitle only
 setwd(rprojroot::find_rstudio_root_file())
-source("04_Figures/shared/style.R")
+source("04_Figures/functions/style.R")
 
 suppressPackageStartupMessages({
   library(dplyr)
