@@ -1,0 +1,36 @@
+"module","trait","trait_label","beta_std","p_bh"
+"blue","comp_hypertrophy","Composite hypertrophy",0.0029971599297831,0.998961668261752
+"blue","d_1rm_ext","D.1RM leg-ext",-0.0143450490002547,0.998961668261752
+"blue","d_1rm_legpress","D.1RM leg-press",0.00572178906314451,0.998961668261752
+"blue","d_fcsa_I","D.fCSA I",0.00191625137618879,0.998961668261752
+"blue","d_fcsa_II","D.fCSA II",0.00285932199714439,0.998961668261752
+"blue","d_mcsa","D.mCSA",-0.000657966452028246,0.998961668261752
+"blue","d_myovision_fcsa_I","D.MyoVision fCSA I",-0.00475870221174988,0.998961668261752
+"brown","comp_hypertrophy","Composite hypertrophy",-0.00562880628601747,0.998961668261752
+"brown","d_1rm_ext","D.1RM leg-ext",0.0158662589218586,0.998961668261752
+"brown","d_1rm_legpress","D.1RM leg-press",-0.0107457870118472,0.998961668261752
+"brown","d_fcsa_I","D.fCSA I",-0.00359880955457078,0.998961668261752
+"brown","d_fcsa_II","D.fCSA II",-0.00536994021284638,0.998961668261752
+"brown","d_mcsa","D.mCSA",0.00123569171746984,0.998961668261752
+"brown","d_myovision_fcsa_I","D.MyoVision fCSA I",0.00893706493824688,0.998961668261752
+"green","comp_hypertrophy","Composite hypertrophy",-0.0060998824498101,0.998961668261752
+"green","d_1rm_ext","D.1RM leg-ext",0.0245698467377705,0.998961668261752
+"green","d_1rm_legpress","D.1RM leg-press",-0.0116451045341162,0.998961668261752
+"green","d_fcsa_I","D.fCSA I",-0.00389999479937138,0.998961668261752
+"green","d_fcsa_II","D.fCSA II",-0.00581935181216682,0.998961668261752
+"green","d_mcsa","D.mCSA",0.00133910705712045,0.998961668261752
+"green","d_myovision_fcsa_I","D.MyoVision fCSA I",0.00968501007132633,0.998961668261752
+"turquoise","comp_hypertrophy","Composite hypertrophy",0.00477616371254186,0.998961668261752
+"turquoise","d_1rm_ext","D.1RM leg-ext",-0.0163458362164907,0.998961668261752
+"turquoise","d_1rm_legpress","D.1RM leg-press",0.00911803238213825,0.998961668261752
+"turquoise","d_fcsa_I","D.fCSA I",0.00305366763919167,0.998961668261752
+"turquoise","d_fcsa_II","D.fCSA II",0.0045565102581033,0.998961668261752
+"turquoise","d_mcsa","D.mCSA",-0.00104851111247632,0.998961668261752
+"turquoise","d_myovision_fcsa_I","D.MyoVision fCSA I",-0.00758329263537033,0.998961668261752
+"yellow","comp_hypertrophy","Composite hypertrophy",0.00345067135779509,0.998961668261752
+"yellow","d_1rm_ext","D.1RM leg-ext",-0.00611949072832024,0.998961668261752
+"yellow","d_1rm_legpress","D.1RM leg-press",0.00658757426967479,0.998961668261752
+"yellow","d_fcsa_I","D.fCSA I",0.00220620650651373,0.998961668261752
+"yellow","d_fcsa_II","D.fCSA II",0.00329197665437021,0.998961668261752
+"yellow","d_mcsa","D.mCSA",-0.000757525805627597,0.998961668261752
+"yellow","d_myovision_fcsa_I","D.MyoVision fCSA I",-0.00547875916102642,0.998961668261752
