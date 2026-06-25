@@ -52,8 +52,9 @@ Propose the framing back and get a nod before reviewing.
 
 ### Phase 1 — Literature review
 
-For each target figure, dispatch research subagents / MCP tools (PubMed,
-OpenAlex, Semantic Scholar; verified citations only — flag anything unverifiable):
+For each target figure, dispatch research — the `deep-research` skill, or the
+project's literature MCP servers (PubMed, OpenAlex, Semantic Scholar) via
+research subagents; verified citations only — flag anything unverifiable:
 - Methods: are the analyses canonical and defensible?
 - Framing and expectations: what do comparable responder / hypertrophy-proteomics
   papers show in their figures; what will a reviewer expect; known pitfalls.
@@ -91,3 +92,9 @@ approval. On approval:
 - Nothing changes before the user's sign-off at the Phase 3 gate.
 - `/figure-audit F0x` audits only that figure; with no argument, audit all and
   also check the F01 -> F02 -> F03 narrative arc.
+
+## Out of scope
+
+- Generating new analyses or panels beyond ADD-MISSING recommendations the user
+  approves at the gate.
+- Editing manuscript prose; the skill audits figures, not the paper text.
