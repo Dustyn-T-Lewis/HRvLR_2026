@@ -1,3 +1,0 @@
-"component","metric","value","sd","note"
-1,"Q2",0.0332254596588004,NA,"LOO-CV; n=15; expect poor/negative Q2 (overfitting)"
-2,"Q2",-4.4828649756575,NA,"LOO-CV; n=15; expect poor/negative Q2 (overfitting)"
