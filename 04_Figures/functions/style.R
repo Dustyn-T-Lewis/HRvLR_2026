@@ -1,13 +1,9 @@
-# 04_Figures — HRvLR Unified Style ----
+# 04_Figures — HRvLR Unified Style
 # Single source of truth: palettes, themes, sizing constants, helpers.
 
-suppressPackageStartupMessages({
-  library(ggplot2)
-  library(scales)
-  library(grid)
-})
+pacman::p_load(ggplot2, scales, grid)
 
-# ── Colour palettes ----
+# Colour palettes
 
 GROUP_COLORS <- c(HR = "#2166AC", LR = "#B2182B")
 DIR_COLORS <- c(Up = "#D6604D", Down = "#4393C3", NS = "grey70")
@@ -55,7 +51,7 @@ PCA_SHAPES <- c(
   LR_T1 = 16, LR_T2 = 17, LR_T3 = 15
 )
 
-# ── Panel dimensions & sizing ----
+# Panel dimensions & sizing
 
 PANEL_SM <- 120
 PANEL_MD <- 180
@@ -78,7 +74,7 @@ scale_text <- function(base_size, panel_width_mm, ref_width = PANEL_MD) {
   base_size * sqrt(panel_width_mm / ref_width)
 }
 
-# ── Theme ----
+# Theme
 
 FIG_BASE_SIZE <- 10
 FIG_TITLE_SIZE <- 12
@@ -111,18 +107,18 @@ FIG_THEME <- theme_bw(base_size = FIG_BASE_SIZE) +
     panel.grid.minor = element_blank()
   )
 
-# ── Key/legend sizing ----
+# Key/legend sizing
 
 KEY_TEXT <- 2.8
 
-# ── Contrast definitions ----
+# Contrast definitions
 
 CONTRASTS <- c(
   "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
   "Baseline_HRvLR", "Training_Interaction", "Acute_Interaction"
 )
 
-# ── Contrast label mappings ----
+# Contrast label mappings
 
 CTR_FACET <- c(
   Training_HR          = "Training (HR)",
@@ -144,7 +140,7 @@ CTR_SHORT <- c(
   Acute_Interaction    = "Ac.Int."
 )
 
-# ── Helper functions ----
+# Helper functions
 
 fmt_p <- function(p) {
   if (p < 0.001) {
@@ -245,7 +241,7 @@ strip_plot_meta <- function(p) {
   p + theme(plot.title = element_blank(), plot.subtitle = element_blank())
 }
 
-# ── Device & export helpers ----
+# Device & export helpers
 
 get_pdf_device <- function() {
   tryCatch(
@@ -276,7 +272,7 @@ save_png <- function(plot, path_stem, width, height) {
   )
 }
 
-# ── F03 cluster & database palettes ----
+# F03 cluster & database palettes
 
 CLUSTER_COLORS <- c(
   c1 = "#E69F00", c2 = "#56B4E9", c3 = "#009E73", c4 = "#CC79A7"

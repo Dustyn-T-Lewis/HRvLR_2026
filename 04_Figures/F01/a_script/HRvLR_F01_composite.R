@@ -1,19 +1,14 @@
-# F01 composite — stitch the rendered phenotype panels into one figure.
-# Run after HRvLR_F01_run.R has written the panels to b_reports.
+# F01 composite: stitch the rendered phenotype panels into one figure and write
+# the source-data workbook. Run after HRvLR_F01_run.R has written the panels.
 
-setwd(rprojroot::find_rstudio_root_file())
-source("04_Figures/functions/style.R")
-suppressPackageStartupMessages({
-  library(patchwork)
-  library(ggplot2)
-  library(png)
-  library(grid)
-})
+pacman::p_load(here, patchwork, ggplot2, png, grid, readr, openxlsx)
+source(here("04_Figures", "functions", "style.R"))
 
-RPT <- "04_Figures/F01/b_reports"
+RPT <- here("04_Figures", "F01", "b_reports")
+DAT <- here("04_Figures", "F01", "c_data")
 
 panel <- function(name) {
-  path <- file.path(RPT, paste0(name, ".png"))
+  path <- file.path(RPT, "panels", paste0(name, ".png"))
   if (!file.exists(path)) stop("Missing panel: ", path, " (run HRvLR_F01_run.R first)")
   ggplot() +
     annotation_custom(rasterGrob(readPNG(path), interpolate = TRUE)) +
@@ -38,9 +33,20 @@ composite <- wrap_plots(lapply(panels, panel), ncol = 3) +
   )
 
 ggsave(file.path(RPT, "F01_composite.png"), composite,
-  width = 330, height = 330, units = "mm", dpi = 300, bg = "white"
+  width = 470, height = 340, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(RPT, "F01_composite.pdf"), composite,
-  width = 330, height = 330, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = 470, height = 340, units = "mm", device = PDF_DEVICE, bg = "white"
 )
-cat("F01 composite saved to", RPT, "\n")
+
+# One source-data workbook: one sheet per panel's audit table
+audit_files <- sort(list.files(DAT, pattern = "^audit_panel_.*\\.csv$", full.names = TRUE))
+wb <- createWorkbook()
+for (f in audit_files) {
+  sheet <- sub("^audit_", "", tools::file_path_sans_ext(basename(f)))
+  sheet <- substr(sheet, 1, 31)
+  addWorksheet(wb, sheet)
+  writeData(wb, sheet, read_csv(f, show_col_types = FALSE))
+}
+saveWorkbook(wb, file.path(DAT, "F01_source_data.xlsx"), overwrite = TRUE)
+cat("F01 composite + workbook saved to", RPT, "\n")

@@ -2,15 +2,7 @@
 # Globals resolved at call time from HRvLR_F02_setup.R: dep_df, PANEL_H, RPT_DIR,
 # FIG_THEME, FIG_GEOM_TEXT, FIG_AXIS_TEXT, DIR_COLORS, GROUP_COLORS, CONTRAST_COLORS, save_png.
 
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(tibble)
-  library(ggplot2)
-  library(ggforce)
-  library(patchwork)
-  library(eulerr)
-})
+pacman::p_load(here, dplyr, tidyr, tibble, ggplot2, ggforce, patchwork, eulerr)
 
 in_ellipse <- function(x, y, e) {
   dx <- x - e$h
