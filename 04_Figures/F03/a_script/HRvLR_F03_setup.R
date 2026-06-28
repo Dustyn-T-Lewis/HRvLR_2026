@@ -1,64 +1,50 @@
-# HRvLR_F03_setup.R — Shared setup for Figure 3 (Clustering)
-# Provides: wgcna_mem, wgcna_eig, mfuzz_mem, mfuzz_eig, spls_cv,
-#           ora_results, concordance, pheno_models, perm_null, pheno_tbl,
-#           gap_mat, pi_set, RPT_DIR, DAT_DIR
-# Plus all style.R / pathway_utils.R exports (palettes, themes, helpers)
+# HRvLR_F03_setup.R — Figure 3 (enrichVolcano ring-volcanoes).
+# Computes the fgsea enrichment cache ONCE for all 9 DEP contrasts (moderated-t
+# ranks vs Hallmark / C2:CP / GO:BP). The cache feeds the F03 ring-volcanoes here
+# and the F04/F05 NES scatters — computed once, read by all three.
+# Provides: dep (combined DEP results), fg (fgsea cache), CONTRASTS, RPT_DIR,
+# DAT_DIR + style.R / pathway_utils.R exports. Delete fgsea_cache.csv to refresh.
 
-setwd(rprojroot::find_rstudio_root_file())
+pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr)
+source(here("04_Figures", "functions", "style.R"))
+source(here("04_Figures", "functions", "pathway_utils.R"))
+set.seed(42)
 
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(patchwork)
-  library(grid)
-})
-
-source("04_Figures/functions/style.R")
-source("04_Figures/functions/pathway_utils.R")
-
-# Paths
-WGCNA_MEM_FILE <- "05_Clustering/a_wgcna_paired/c_data/membership.csv"
-WGCNA_EIG_FILE <- "05_Clustering/a_wgcna_paired/c_data/eigengene.csv"
-MFUZZ_MEM_FILE <- "05_Clustering/b_mfuzz_gap/c_data/membership.csv"
-MFUZZ_EIG_FILE <- "05_Clustering/b_mfuzz_gap/c_data/eigengene.csv"
-SPLS_CV_FILE <- "05_Clustering/c_supervised/c_data/cv_error.csv"
-ORA_FILE <- "05_Clustering/d_integration/c_data/ora_results.csv"
-CONCORDANCE_FILE <- "05_Clustering/d_integration/c_data/concordance.csv"
-PHENO_MOD_FILE <- "05_Clustering/d_integration/c_data/phenotype_models.csv"
-PERM_NULL_FILE <- "05_Clustering/d_integration/c_data/perm_null.csv"
-PHENO_FILE <- "05_Clustering/d_integration/c_data/phenotype.csv"
-
-RPT_DIR <- "04_Figures/F03/b_reports"
-DAT_DIR <- "04_Figures/F03/c_data"
-dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
+RPT_DIR <- here("04_Figures", "F03", "b_reports")
+DAT_DIR <- here("04_Figures", "F03", "c_data")
+dir.create(file.path(RPT_DIR, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-# Load clustering outputs
-wgcna_mem <- read.csv(WGCNA_MEM_FILE)
-wgcna_eig <- read.csv(WGCNA_EIG_FILE)
-mfuzz_mem <- read.csv(MFUZZ_MEM_FILE)
-mfuzz_eig <- read.csv(MFUZZ_EIG_FILE)
-spls_cv <- read.csv(SPLS_CV_FILE)
-ora_results <- read.csv(ORA_FILE)
-concordance <- read.csv(CONCORDANCE_FILE)
-pheno_models <- read.csv(PHENO_MOD_FILE)
-perm_null <- read.csv(PERM_NULL_FILE)
-pheno_tbl <- read.csv(PHENO_FILE)
+CONTRASTS <- c(
+  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
+  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
+  "Training_Interaction", "Acute_Interaction"
+)
 
-# HR-LR gap matrix + pi-gated set from shared clustering inputs
-suppressMessages({
-  source("05_Clustering/functions/inputs.R")
-  .ci <- load_clustering_inputs()
-  gap_mat <- .ci$gap
-  pi_set <- .ci$pi_set
-})
+dep <- read_csv(
+  here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv"),
+  show_col_types = FALSE
+)
 
-# Timepoint order helper
-tp_levels <- function() c("T1", "T2", "T3")
+cache_path <- file.path(DAT_DIR, "fgsea_cache.csv")
+if (file.exists(cache_path)) {
+  fg <- read_csv(cache_path, show_col_types = FALSE)
+} else {
+  pw <- build_pathway_collection(
+    min_size = 15, max_size = 500, include_goslim = TRUE, exclude_variants = TRUE
+  )
+  fg <- lapply(CONTRASTS, function(ct) {
+    d <- tibble(gene = dep$gene, t = dep[[paste0("t_", ct)]]) |>
+      filter(!is.na(gene), !is.na(t)) |>
+      distinct(gene, .keep_all = TRUE)
+    ranks <- sort(setNames(d$t, d$gene), decreasing = TRUE)
+    res <- run_fgsea_deduplicated(ranks, pw)
+    res$contrast <- ct
+    res$leadingEdge <- vapply(res$leadingEdge, function(x) paste(x, collapse = ";"), character(1))
+    res
+  }) |>
+    bind_rows()
+  write_csv(fg, cache_path)
+}
 
-cat(sprintf(
-  "Loaded: %d WGCNA modules, %d Mfuzz clusters, gap %dx%d, pi_set %d\n",
-  length(unique(wgcna_mem$group_id[wgcna_mem$group_id != "grey"])),
-  length(unique(mfuzz_mem$group_id)),
-  nrow(gap_mat), ncol(gap_mat),
-  length(pi_set)
-))
+cat(sprintf("F03 setup: %d contrasts, fgsea cache %d rows\n", length(CONTRASTS), nrow(fg)))
