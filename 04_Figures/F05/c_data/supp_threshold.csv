@@ -1,0 +1,12 @@
+quad,n,threshold
+Concordant Down,24,pi (signed)
+Concordant Up,76,pi (signed)
+Discordant,45,pi (signed)
+Concordant Down,1,FDR < 0.05
+Concordant Up,11,FDR < 0.05
+Concordant Down,1,FDR < 0.10
+Concordant Up,12,FDR < 0.10
+Discordant,1,FDR < 0.10
+Concordant Down,84,Nom. p < 0.05
+Concordant Up,115,Nom. p < 0.05
+Discordant,111,Nom. p < 0.05
