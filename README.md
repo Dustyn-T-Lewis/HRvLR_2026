@@ -50,8 +50,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries, robustness. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions |
-| `05` | `05_Clustering/` | Cluster the pi-gated proteome with three engines (WGCNA paired, Mfuzz gap, sPLS/DIABLO), summarise each module by an eigengene, and link modules to phenotype with a mixed model and permutation null; WGCNA carries the inferential claim |
+| `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions. `F03` clusters the pi-gated proteome (WGCNA paired, Mfuzz gap, sPLS/DIABLO), summarises each module by an eigengene, and links modules to phenotype with a mixed model and permutation null; WGCNA carries the inferential claim |
 
 ## Canonical Run Order
 
@@ -66,18 +65,9 @@ Rscript 03_DEP/a_non_imputed/a_script/02_dep_reports.R
 Rscript 03_DEP/a_non_imputed/a_script/03_dep_robustness.R
 ```
 
-### Clustering
-
-```sh
-Rscript 05_Clustering/a_wgcna_paired/a_script/01_wgcna_paired.R
-Rscript 05_Clustering/b_mfuzz_gap/a_script/01_mfuzz_gap.R
-Rscript 05_Clustering/c_supervised/a_script/01_spls_diablo.R
-Rscript 05_Clustering/d_integration/a_script/01_concordance_ora.R
-Rscript 05_Clustering/d_integration/a_script/02_phenotype_table.R
-Rscript 05_Clustering/d_integration/a_script/03_phenotype_models.R
-```
-
-WGCNA is the primary inferential engine; Mfuzz corroborates the temporal shape; sPLS/DIABLO is exploratory and quarantined.
+Clustering is computed self-contained inside `04_Figures/F03` (see Figures). WGCNA
+is the primary inferential engine; Mfuzz corroborates the temporal shape;
+sPLS/DIABLO is exploratory and quarantined.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
 exploratory and feeds only QC, sensitivity, and figure/WGCNA inputs. Each arm is
@@ -100,7 +90,7 @@ Three active figures, each rendered as standalone panels (no composite) into
 
 - `04_Figures/F01`: phenotype atlas
 - `04_Figures/F02`: global proteome overview and QC
-- `04_Figures/F03`: module-phenotype linkage (reads `05_Clustering`)
+- `04_Figures/F03`: module-phenotype linkage (computes WGCNA/Mfuzz/sPLS self-contained on the pi-gated set)
 
 ```sh
 Rscript 04_Figures/F01/a_script/HRvLR_F01_run.R
@@ -113,7 +103,7 @@ Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
 - `a_script/`: scripts and optional narrative notebooks
 - `b_reports/`: generated PDFs and figure renders
 - `c_data/`: stage outputs used by downstream steps
-- `functions/`: reusable helpers that scripts source — cross-figure helpers in `04_Figures/functions/`, the clustering input loader in `05_Clustering/functions/`, and figure-specific helpers in each figure's `a_script/functions/`
+- `functions/`: reusable helpers that scripts source — cross-figure helpers in `04_Figures/functions/` and figure-specific helpers in each figure's `a_script/functions/` (e.g. F03's clustering loader)
 
 ## Reproducibility Rules
 
