@@ -7,7 +7,7 @@
 
 pacman::p_load(
   dplyr, tidyr, tibble, stringr, readr, purrr, ggplot2, ggrepel,
-  patchwork, gridExtra, limma, readxl, here
+  patchwork, gridExtra, here
 )
 
 cfg <- list(
@@ -235,133 +235,6 @@ print(
     )
 )
 
-# Page 2: Outlier-Removal Sensitivity
-
-run_limma_sens <- function(mat, meta) {
-  meta$Group_Time <- factor(meta$Group_Time,
-    levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-  )
-  design <- model.matrix(~ 0 + Group_Time, data = meta)
-  colnames(design) <- gsub("^Group_Time", "", colnames(design))
-  corfit <- duplicateCorrelation(mat, design,
-    block = sub("_T[123]$", "", meta$Col_ID)
-  )
-  aw <- arrayWeights(mat, design)
-  fit <- lmFit(mat, design,
-    block = sub("_T[123]$", "", meta$Col_ID),
-    correlation = corfit$consensus.correlation, weights = aw
-  )
-  cm <- makeContrasts(
-    Training_HR = HR_T2 - HR_T1,
-    Training_LR = LR_T2 - LR_T1,
-    Acute_HR = HR_T3 - HR_T2,
-    Acute_LR = LR_T3 - LR_T2,
-    Baseline_HRvLR = HR_T1 - LR_T1,
-    Trained_HRvLR = HR_T2 - LR_T2,
-    Acute_HRvLR = HR_T3 - LR_T3,
-    Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1),
-    Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2),
-    levels = design
-  )
-  eBayes(contrasts.fit(fit, cm), robust = TRUE, trend = TRUE)
-}
-
-# Full dataset (all 48 samples, no outlier removal)
-# Reconstruct from raw data + same protein filtering as normalization
-int <- readRDS(here(
-  "02_Normalization", "c_data", "00_report_intermediates.rds"
-))
-raw <- readxl::read_excel(here("00_input", "HRvLR_raw.xlsx"))
-ann_cols_raw <- c("uniprot_id", "protein", "gene", "description", "n_seq")
-raw_ann <- raw[, ann_cols_raw]
-raw_int <- raw[, setdiff(names(raw), ann_cols_raw)]
-
-# Load full metadata (all 48 samples)
-full_meta <- as.data.frame(read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE))
-rownames(full_meta) <- full_meta$Col_ID
-raw_int <- raw_int[, full_meta$Col_ID]
-
-# Apply same protein filtering: keep proteins in the normalized set
-norm_proteins <- dal$annotation$uniprot_id
-keep_idx <- raw_ann$uniprot_id %in% norm_proteins
-raw_mat <- as.matrix(raw_int[keep_idx, ])
-rownames(raw_mat) <- raw_ann$uniprot_id[keep_idx]
-
-# Normalize full dataset with cycloess
-full_mat <- normalizeBetweenArrays(log2(raw_mat + 1), method = "cyclicloess")
-full_fit <- run_limma_sens(full_mat, full_meta)
-
-# Reduced dataset (45 samples, outliers removed — already normalized)
-ann_cols <- c("uniprot_id", "protein", "gene", "description")
-norm_v2 <- read_csv(here("02_Normalization", "c_data", "normalized.csv"),
-  show_col_types = FALSE
-)
-red_mat <- as.matrix(norm_v2[, setdiff(names(norm_v2), ann_cols)])
-rownames(red_mat) <- norm_v2$uniprot_id
-red_meta <- readRDS(here(
-  "02_Normalization", "c_data", "DAList_normalized.rds"
-))$metadata
-red_fit <- run_limma_sens(red_mat, red_meta)
-
-pi_thresh <- 0.05
-n_full <- ncol(full_mat)
-n_red <- ncol(red_mat)
-
-sens_compare <- do.call(rbind, lapply(contrast_names, function(cname) {
-  full_res <- topTable(full_fit, coef = cname, number = Inf, sort.by = "none")
-  red_res <- topTable(red_fit, coef = cname, number = Inf, sort.by = "none")
-
-  full_pi <- full_res$P.Value^abs(full_res$logFC)
-  red_pi <- red_res$P.Value^abs(red_res$logFC)
-
-  shared <- intersect(rownames(full_res), rownames(red_res))
-  tibble(
-    Contrast = cname,
-    FDR_full = sum(full_res$adj.P.Val < 0.10, na.rm = TRUE),
-    FDR_reduced = sum(red_res$adj.P.Val < 0.10, na.rm = TRUE),
-    Pi_full = sum(full_pi < pi_thresh, na.rm = TRUE),
-    Pi_reduced = sum(red_pi < pi_thresh, na.rm = TRUE),
-    Pearson_r = cor(full_res[shared, "logFC"], red_res[shared, "logFC"],
-      use = "complete.obs"
-    ),
-    Spearman_rho = cor(full_res[shared, "logFC"], red_res[shared, "logFC"],
-      use = "complete.obs", method = "spearman"
-    )
-  )
-}))
-
-write.csv(sens_compare, file.path(cfg$data_dir, "11_outlier_sensitivity.csv"), row.names = FALSE)
-
-sens_display <- sens_compare |>
-  mutate(across(c(Pearson_r, Spearman_rho), ~ sprintf("%.3f", .x)))
-
-p_sens_tbl <- tableGrob(sens_display,
-  rows = NULL,
-  theme = ttheme_minimal(
-    base_size = 10,
-    core = list(fg_params = list(hjust = 0.5)),
-    colhead = list(fg_params = list(fontface = "bold", hjust = 0.5))
-  )
-)
-
-outlier_str <- paste(int$outlier_ids, collapse = ", ")
-print(
-  wrap_elements(p_sens_tbl) +
-    plot_annotation(
-      title = sprintf(
-        "Outlier-Removal Sensitivity (%d vs %d samples)",
-        n_full, n_red
-      ),
-      subtitle = sprintf(
-        "Removed: %s (4-method consensus, >=3/4)",
-        outlier_str
-      ),
-      theme = theme(
-        plot.title = element_text(face = "bold", size = 14),
-        plot.subtitle = element_text(size = 11)
-      )
-    )
-)
 dev.off()
 
 cat("Done: 02_dep_reports.R\n")
