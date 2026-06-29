@@ -74,8 +74,10 @@ run_quadrant_ora <- function(quad_tbl, pw, n_show = 5) {
   bind_rows(out)
 }
 
-# One quadrant's ORA as a half-bar block flanking the scatter: bars grow outward
-# (left side mirrored), pathway names sit inside long bars, stars at the outer end.
+# One quadrant's ORA as a half-bar block flanking the scatter. Bars grow outward
+# from the scatter edge (left side mirrored); the pathway name sits just above
+# (top quadrants) or below (bottom quadrants) each bar, anchored at the shared
+# inner edge and read outward, so labels never overlap the bars or each other.
 make_half_bars <- function(df, fill_color, side, ylim) {
   if (is.null(df) || nrow(df) == 0) {
     return(ggplot() +
@@ -83,11 +85,12 @@ make_half_bars <- function(df, fill_color, side, ylim) {
       scale_y_continuous(limits = ylim, expand = c(0, 0)))
   }
   span <- max(abs(ylim))
+  upper <- ylim[1] >= 0
   n_bars <- min(nrow(df), 5L)
-  y_pos <- if (ylim[1] >= 0) {
-    rev(seq(0.35, span - 0.35, length.out = 5))[seq_len(n_bars)]
+  y_pos <- if (upper) {
+    rev(seq(0.45, span - 0.5, length.out = 5))[seq_len(n_bars)]
   } else {
-    seq(-0.35, -(span - 0.35), length.out = 5)[seq_len(n_bars)]
+    seq(-0.45, -(span - 0.5), length.out = 5)[seq_len(n_bars)]
   }
   bars <- df |>
     arrange(desc(neg_log10_padj)) |>
@@ -95,32 +98,25 @@ make_half_bars <- function(df, fill_color, side, ylim) {
     mutate(
       y = y_pos,
       bar_fill = ifelse(significant, scales::alpha(fill_color, 0.85),
-        scales::alpha(fill_color, 0.30)
+        scales::alpha(fill_color, 0.3)
       ),
-      star = sig_stars(padj),
-      label_inside = neg_log10_padj >= max(neg_log10_padj) * 0.5,
-      label_x = ifelse(label_inside, neg_log10_padj * 0.5,
-        neg_log10_padj + max(neg_log10_padj) * 0.03
-      ),
-      label_hjust = ifelse(label_inside, 0.5, 0),
-      label_color = ifelse(label_inside,
-        ifelse(significant, "white", "grey15"), "grey20"
-      )
+      star = sig_stars(padj)
     )
   x_max <- max(bars$neg_log10_padj)
-  star_mult <- if (side == "left") 0.12 else 0.04
+  lab_hjust <- if (side == "left") 1 else 0
+  lab_dy <- if (upper) 0.27 else -0.27
+  star_nudge <- if (side == "left") -x_max * 0.04 else x_max * 0.04
 
   p <- ggplot(bars, aes(y = y)) +
     geom_rect(
-      aes(xmin = 0, xmax = neg_log10_padj, ymin = y - 0.21, ymax = y + 0.21),
-      fill = bars$bar_fill, color = "black", linewidth = 0.25
+      aes(xmin = 0, xmax = neg_log10_padj, ymin = y - 0.13, ymax = y + 0.13),
+      fill = bars$bar_fill, color = "grey25", linewidth = 0.2
     ) +
-    geom_text(aes(x = label_x, y = y, label = pathway_label),
-      hjust = bars$label_hjust, size = 1.9, fontface = "bold",
-      color = bars$label_color, lineheight = 0.85
+    geom_text(aes(x = 0, y = y + lab_dy, label = pathway_label),
+      hjust = lab_hjust, size = 1.85, fontface = "bold", color = "grey15"
     ) +
-    geom_text(aes(x = neg_log10_padj + x_max * star_mult, label = star),
-      hjust = 0, size = 2.3, fontface = "bold", color = "black"
+    geom_text(aes(x = neg_log10_padj + star_nudge, label = star),
+      hjust = 0.5, size = 2.2, fontface = "bold", color = "black"
     ) +
     labs(x = NULL, y = NULL) +
     theme_minimal(base_size = 9) +
@@ -132,13 +128,13 @@ make_half_bars <- function(df, fill_color, side, ylim) {
     )
   x_scale <- if (side == "left") {
     scale_x_reverse(
-      limits = c(x_max * 1.18, 0), breaks = scales::pretty_breaks(3),
-      expand = expansion(mult = c(0, 0))
+      limits = c(x_max * 1.04, 0), breaks = scales::pretty_breaks(3),
+      expand = expansion(mult = c(0.02, 0))
     )
   } else {
     scale_x_continuous(
-      limits = c(0, x_max * 1.18), breaks = scales::pretty_breaks(3),
-      expand = expansion(mult = c(0, 0))
+      limits = c(0, x_max * 1.04), breaks = scales::pretty_breaks(3),
+      expand = expansion(mult = c(0, 0.02))
     )
   }
   p + x_scale +

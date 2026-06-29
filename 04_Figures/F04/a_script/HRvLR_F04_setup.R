@@ -29,7 +29,10 @@ dep <- read_csv(
   show_col_types = FALSE
 )
 da <- readRDS(here("02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"))
-cache <- read_csv(here("04_Figures", "F03", "c_data", "fgsea_cache.csv"), show_col_types = FALSE)
+cache <- as_tibble(openxlsx::read.xlsx(
+  here("04_Figures", "F03", "c_data", "F03_source_data.xlsx"),
+  sheet = "fgsea_all"
+))
 pw <- build_pathway_collection(
   min_size = 15, max_size = 500, include_goslim = FALSE, exclude_variants = TRUE
 )
