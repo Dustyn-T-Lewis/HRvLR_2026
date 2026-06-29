@@ -572,7 +572,9 @@ panel_threshold_sens <- function(dep, c_hi, c_lo) {
   list(plot = plot, data = counts)
 }
 
-# Supp: bootstrap CI on the HR-vs-LR logFC Spearman concordance.
+# Supp: bootstrap CI on the HR-vs-LR logFC Spearman concordance. Proteins are the
+# resampled unit, so this is a CI on cross-protein concordance, not subject
+# sampling variability.
 panel_rho_bootstrap <- function(dep, c_hi, c_lo, reps = 1000) {
   set.seed(42)
   d <- tibble(
@@ -595,7 +597,7 @@ panel_rho_bootstrap <- function(dep, c_hi, c_lo, reps = 1000) {
     geom_vline(xintercept = obs, linetype = "dashed", color = "#B2182B", linewidth = 0.6) +
     labs(
       x = "Spearman rho (logFC HR vs LR)", y = "Bootstrap reps",
-      subtitle = sprintf("rho = %.2f [%.2f, %.2f], %d reps", obs, ci[1], ci[2], reps)
+      subtitle = sprintf("rho = %.2f [%.2f, %.2f] (95%% CI, %d protein resamples)", obs, ci[1], ci[2], reps)
     ) +
     FIG_THEME
   list(plot = plot, data = tibble(

@@ -1,4 +1,4 @@
-# F02 Panel M: proteome-wide variance structured by Group x Time (eta-squared)
+# F02 Panel M: proteome-wide variance explained by the combined Group_Time factor (eta-squared)
 # Distribution of eta2 across all proteins: how much of each protein's variance the
 # responder x timepoint design explains. The right tail = design-structured proteins.
 
@@ -46,7 +46,7 @@ pM <- ggplot(eta_df, aes(eta2)) +
   ) +
   scale_x_continuous(limits = c(0, max(eta_df$eta2) * 1.05), expand = expansion(mult = c(0, 0))) +
   labs(
-    title = expression(bold("Proteome-Wide Variance Structured by Group " %*% " Time (" * eta^2 * ")")),
+    title = expression(bold("Proteome-Wide Variance Explained by Group_Time (" * eta^2 * ")")),
     subtitle = sprintf(
       "%s proteins | fraction of each protein's variance explained by Group_Time",
       format(nrow(eta_df), big.mark = ",")
