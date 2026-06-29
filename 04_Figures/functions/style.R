@@ -1,4 +1,4 @@
-# 04_Figures — HRvLR Unified Style
+# 04_Figures - HRvLR Unified Style
 # Single source of truth: palettes, themes, sizing constants, helpers.
 
 pacman::p_load(ggplot2, scales, grid)
@@ -254,7 +254,7 @@ get_pdf_device <- function() {
   )
 }
 
-# Cache once at source() time — avoids 12+ temp-file probes
+# Cache once at source() time - avoids 12+ temp-file probes
 PDF_DEVICE <- get_pdf_device()
 
 save_panel <- function(plot, path_stem, width, height, pdf_device = PDF_DEVICE) {
