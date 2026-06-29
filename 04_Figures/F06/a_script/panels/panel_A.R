@@ -1,18 +1,14 @@
 # F06 Panel A: WGCNA module atlas - one row per module, three aligned blocks:
-#   (1) module size, (2) baseline (T1) prediction of each training adaptation
-#   (leave-one-out cross-validated), (3) responder (HR vs LR) signal per timepoint.
+#   (1) module size, (2) baseline (T1) eigengene association with each training
+#   adaptation (within-cohort leave-one-out), (3) responder (HR vs LR) signal per timepoint.
 pacman::p_load(here, dplyr, tidyr, ggplot2, patchwork, scales)
 if (!exists("wgcna_mem")) source(here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
 
-# Modules ordered by their best out-of-sample prediction (predictive at top)
-mod_rank <- pred |>
-  group_by(group_id = module) |>
-  summarise(best_q2 = max(q2, na.rm = TRUE), .groups = "drop")
+# Modules ordered by size (largest at top), a neutral key
 mod_sizes <- wgcna_mem |>
   filter(group_id != "grey") |>
   count(group_id, name = "n_proteins") |>
-  left_join(mod_rank, by = "group_id") |>
-  arrange(desc(best_q2)) |>
+  arrange(desc(n_proteins)) |>
   mutate(mod_col = group_id, module = factor(group_id, levels = group_id))
 mod_order <- levels(mod_sizes$module)
 
@@ -33,7 +29,7 @@ resp_df <- resp |>
   )
 
 L <- max(abs(c(pred_df$r, resp_df$r)), na.rm = TRUE)
-predicts <- filter(pred_df, !is.na(q2) & q2 > 0)
+loo_pos <- filter(pred_df, !is.na(q2) & q2 > 0)
 pred_sig <- filter(pred_df, p < 0.05)
 resp_sig <- filter(resp_df, p < 0.05)
 strip_y <- theme(strip.text.y = element_blank(), strip.background.y = element_blank())
@@ -58,12 +54,12 @@ p_count <- ggplot(mod_sizes, aes(x = n_proteins, y = "")) +
     panel.grid = element_blank(), panel.spacing = unit(1.5, "pt"), plot.title = ttl()
   )
 
-# (2) baseline prediction of adaptation: fill = r, dot = predicts OOS, bold = p<0.05
+# (2) baseline association with adaptation: fill = r, dot = LOO Q2>0, bold = p<0.05
 p_pred <- ggplot(pred_df, aes(trait_label, y = "", fill = r)) +
   geom_tile(color = "grey85", linewidth = 0.3) +
   geom_tile(data = pred_sig, fill = NA, color = "black", linewidth = 0.9) +
   geom_point(
-    data = predicts, aes(trait_label, ""), inherit.aes = FALSE,
+    data = loo_pos, aes(trait_label, ""), inherit.aes = FALSE,
     shape = 21, fill = "white", color = "black", size = 1.7, stroke = 0.5
   ) +
   facet_grid(module ~ .) +
@@ -102,9 +98,9 @@ p_resp <- ggplot(resp_df, aes(timepoint, y = "", fill = r)) +
 panel_a <- p_count + p_pred + p_resp +
   plot_layout(widths = c(0.8, 3, 1.1), guides = "collect") +
   plot_annotation(
-    title = "WGCNA module atlas: size, baseline prediction of adaptation, and responder signal",
+    title = "WGCNA module atlas: size, baseline association with adaptation, and responder signal",
     subtitle = sprintf(
-      "Full-proteome signed network: %d proteins in %d modules (rows ordered by best out-of-sample prediction). Middle: correlation of each module's baseline (T1) eigengene with each training adaptation (Δ T1→T2); white dot = predicts out-of-sample (leave-one-out Q²>0), bold = in-sample p<0.05. Right: module–responder (HR−LR) correlation per timepoint. The pink module's baseline predicts Δ mCSA out-of-sample.",
+      "Full-proteome signed network: %d proteins in %d modules (rows ordered by module size). Middle: correlation of each module's baseline (T1) eigengene with each training adaptation (Δ T1→T2); white dot = positive leave-one-out Q² (within-cohort cross-validation), bold = p<0.05. Right: module–responder (HR−LR) correlation per timepoint.",
       sum(mod_sizes$n_proteins), length(mod_order)
     ),
     tag_levels = list(c("A", "", "")),
