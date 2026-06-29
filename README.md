@@ -49,7 +49,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `00` | `00_input/` | Raw intensity matrix, metadata, phenotype table, HPA annotations |
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds` |
-| `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries, robustness. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
+| `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
 | `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions. `F03` clusters the pi-gated proteome (WGCNA paired, Mfuzz gap, sPLS/DIABLO), summarises each module by an eigengene, and links modules to phenotype with a mixed model and permutation null; WGCNA carries the inferential claim |
 
 ## Canonical Run Order
@@ -61,8 +61,6 @@ Rscript 01_Filtering/a_script/01_run_filtering.R
 Rscript 02_Normalization/a_script/01_run_normalization.R
 
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
-Rscript 03_DEP/a_non_imputed/a_script/02_dep_reports.R
-Rscript 03_DEP/a_non_imputed/a_script/03_dep_robustness.R
 ```
 
 Clustering is computed self-contained inside `04_Figures/F03` (see Figures). WGCNA
