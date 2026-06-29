@@ -1,18 +1,19 @@
-# HRvLR_F03_setup.R — Figure 3 (enrichVolcano ring-volcanoes).
+# HRvLR_F03_setup.R - Figure 3 (enrichVolcano ring-volcanoes).
 # Computes the fgsea enrichment cache ONCE for all 9 DEP contrasts (moderated-t
-# ranks vs Hallmark / C2:CP / GO:BP). The cache feeds the F03 ring-volcanoes here
-# and the F04/F05 NES scatters — computed once, read by all three.
+# ranks vs Hallmark, KEGG, Reactome, GO:BP, and GO Slim). It feeds the volcanoes
+# and the F04/F05 NES scatters - computed once, read by all three.
 # Provides: dep (combined DEP results), fg (fgsea cache), CONTRASTS, RPT_DIR,
-# DAT_DIR + style.R / pathway_utils.R exports. Delete fgsea_cache.csv to refresh.
+# DAT_DIR + style.R / pathway_utils.R exports. The cache lives in the one
+# workbook F03_source_data.xlsx; delete it to recompute.
 
-pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr)
+pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr, openxlsx)
 source(here("04_Figures", "functions", "style.R"))
 source(here("04_Figures", "functions", "pathway_utils.R"))
 set.seed(42)
 
 RPT_DIR <- here("04_Figures", "F03", "b_reports")
 DAT_DIR <- here("04_Figures", "F03", "c_data")
-dir.create(file.path(RPT_DIR, "panels"), recursive = TRUE, showWarnings = FALSE)
+dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 CONTRASTS <- c(
@@ -26,9 +27,9 @@ dep <- read_csv(
   show_col_types = FALSE
 )
 
-cache_path <- file.path(DAT_DIR, "fgsea_cache.csv")
-if (file.exists(cache_path)) {
-  fg <- read_csv(cache_path, show_col_types = FALSE)
+cache_xlsx <- file.path(DAT_DIR, "F03_source_data.xlsx")
+if (file.exists(cache_xlsx)) {
+  fg <- as_tibble(read.xlsx(cache_xlsx, sheet = "fgsea_all"))
 } else {
   pw <- build_pathway_collection(
     min_size = 15, max_size = 500, include_goslim = TRUE, exclude_variants = TRUE
@@ -44,7 +45,20 @@ if (file.exists(cache_path)) {
     res
   }) |>
     bind_rows()
-  write_csv(fg, cache_path)
+  sig <- fg |>
+    filter(!is.na(padj), padj < 0.05, is.finite(NES)) |>
+    transmute(
+      contrast, database,
+      pathway = clean_pathway_name(pathway),
+      NES, padj, size, leading_edge = leadingEdge
+    ) |>
+    arrange(contrast, padj)
+  wb <- createWorkbook()
+  addWorksheet(wb, "fgsea_all")
+  writeData(wb, "fgsea_all", fg)
+  addWorksheet(wb, "fgsea_significant")
+  writeData(wb, "fgsea_significant", sig)
+  saveWorkbook(wb, cache_xlsx, overwrite = TRUE)
 }
 
 cat(sprintf("F03 setup: %d contrasts, fgsea cache %d rows\n", length(CONTRASTS), nrow(fg)))
