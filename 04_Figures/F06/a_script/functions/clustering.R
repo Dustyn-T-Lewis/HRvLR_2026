@@ -1,9 +1,8 @@
-# Clustering compute for F06 - the figure builds its WGCNA modules, Mfuzz
-# clusters and phenotype models self-contained. WGCNA runs unsupervised on the
-# full imputed proteome; Mfuzz clusters the pi-gated HR-LR gap. Methods and
-# seeds are preserved from the former standalone clustering stage; only
-# print-only diagnostics (WGCNA power / mergeCut sweeps, Mfuzz Dmin curve and
-# seed-stability) and QC PDFs are dropped.
+# Clustering compute for F06 - the figure builds its WGCNA modules and the
+# module-phenotype linkages self-contained. WGCNA runs unsupervised on the full
+# imputed proteome. Methods and seeds are preserved from the former standalone
+# clustering stage; only print-only diagnostics (WGCNA power / mergeCut sweeps)
+# and QC PDFs are dropped.
 # Heavy stats packages are called namespace-qualified (not attached) so they do
 # not collide in one process (e.g. WGCNA masking stats::cor).
 
@@ -113,10 +112,10 @@ build_phenotype_table <- function(meta_path) {
 # Unsupervised WGCNA on the full imputed proteome (no DE pre-filtering, per the
 # WGCNA FAQ; mirrors YvO F06). Signed network; soft power = first with signed
 # scale-free R^2 > 0.87, else the sample-size-derived signed fallback (Horvath
-# FAQ table: <20->18, 20-30->16, 30-40->14, >40->12). The repeated-measures /
-# paired design is handled downstream by the (1|subject) LMM in
-# run_phenotype_models (Li et al. 2018), not by centering the network.
-# Deterministic (single-threaded, fixed blockwiseModules seed).
+# FAQ table: <20->18, 20-30->16, 30-40->14, >40->12). The downstream linkages
+# (run_module_prediction, run_module_responder) reduce each subject to one row
+# per timepoint, so the paired design needs no random effect.
+# Deterministic: single-threaded; blockwiseModules runs at its default seed.
 run_wgcna <- function(abund, meta) {
   # WGCNA must be attached: moduleEigengenes resolves cor() via do.call from the
   # search path, so namespace-only loading would hit stats::cor. This masks
