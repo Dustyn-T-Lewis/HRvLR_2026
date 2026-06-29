@@ -1,0 +1,303 @@
+---
+title: "HRvLR 03 — Differential Expression"
+subtitle: "Design, contrasts, model fit, and the Pi-score, on the non-imputed matrix"
+author: "A_HRvLR_2026"
+date: today
+bibliography: references.bib
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+execute:
+  eval: true
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(here)
+knitr::opts_knit$set(root.dir = here::here())
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(readr)
+})
+```
+
+This document reproduces the primary DEP stage and shows the result of each step.
+It runs the same proteoDA workflow as `03_DEP/a_non_imputed/a_script/01_run_dep.R`:
+build the design, define the contrasts, fit limma with `duplicateCorrelation`, and
+score each protein with the Pi-score. The committed results are read back at the
+points where a step needs the fitted object.
+
+The central question of the study is whether high responders (HR) and low
+responders (LR) differ in their proteomic response to training. The design is a
+2×3 factorial — responder (HR/LR) × timepoint (T1 baseline, T2 trained, T3 acute)
+— with repeated measures on subject.
+
+# Why limma on the non-imputed matrix {#sec-why}
+
+`limma` fits a per-protein linear model and stabilizes each protein's variance by
+borrowing strength across all proteins (empirical Bayes moderation) [@ritchie2015].
+That shrinkage matters here, where each cell has only seven or eight subjects —
+too few for a stable per-protein variance on its own.
+
+Peng et al. (2024) show that limma applied directly to data with missing values,
+fitting each per-protein model on the observations that exist, outperforms
+imputing first [@peng2024]. Imputation adds distributional assumptions that can
+distort variance and inflate precision. So the **non-imputed** normalized matrix
+is the primary input; the imputed matrices are run separately as a comparison
+(`b_imputed/a_script/01_run_dep_imputed.R`).
+
+# Load data and metadata {#sec-load}
+
+The normalized matrix comes from stage 02; the canonical metadata comes from the
+normalization `DAList` rather than from parsing sample names, so the factor levels
+for `Group`, `Timepoint`, and `Group_Time` match every other stage.
+
+```{r}
+#| label: show-metadata
+library(proteoDA)
+dal_norm <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
+table(dal_norm$metadata$Group, dal_norm$metadata$Timepoint)
+cat(sprintf("Proteins: %d | Samples: %d\n", nrow(dal_norm$data), ncol(dal_norm$data)))
+```
+
+Each cell holds seven or eight subjects; a cell below eight reflects an outlier
+removed in stage 01. The runner rebuilds a tidy metadata frame with `group`
+(= `Group_Time`) and `subject` (= `Subject_ID`) and guards that the matrix columns
+match the sample sheet before any model is fit:
+
+```{r}
+#| label: dep-load
+#| eval: false
+df <- read_csv(here("02_Normalization", "c_data", "normalized.csv"), show_col_types = FALSE)
+ann_cols <- c("uniprot_id", "protein", "gene", "description")
+mat <- as.matrix(df[, setdiff(names(df), ann_cols)])
+rownames(mat) <- df$uniprot_id
+
+dal_meta <- as.data.frame(dal_norm$metadata)
+meta <- tibble(
+  sample_id = dal_meta$Col_ID,
+  responder = factor(dal_meta$Group, levels = c("HR", "LR")),
+  time = factor(dal_meta$Timepoint, levels = c("T1", "T2", "T3")),
+  group = factor(dal_meta$Group_Time,
+    levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+  ),
+  subject = dal_meta$Subject_ID
+)
+stopifnot(setequal(colnames(mat), meta$sample_id))
+```
+
+# Statistical design {#sec-design}
+
+## Cell-means parametrization
+
+The model uses a cell-means formula (`~ 0 + group`): no intercept, one coefficient
+per `Group_Time` cell. Every planned contrast is then a plain arithmetic
+expression over the six cell means, which keeps the contrasts easy to read and
+audit.
+
+## Within-subject correlation
+
+Each subject contributes three observations (T1, T2, T3). Treating them as
+independent would overstate the degrees of freedom and produce anti-conservative
+p-values. `duplicateCorrelation` [@smyth2005] estimates one average within-subject
+correlation, `rho`, by pooling across all proteins, and uses it as a fixed
+blocking correlation in the per-protein fits. Pooling keeps `rho` stable at small
+n; combined with `eBayes` moderation it is more powerful than a naive
+repeated-measures ANOVA here.
+
+```{r}
+#| label: dep-design
+#| eval: false
+dal <- add_design(dal, "~ 0 + group + (1 | subject)")
+colnames(dal$design$design_matrix) <- gsub("^group", "", colnames(dal$design$design_matrix))
+```
+
+```{r}
+#| label: show-within-cor
+dal_dep <- readRDS(here("03_DEP", "a_non_imputed", "c_data", "01_limma_DAList.rds"))
+within_cor <- dal_dep$eBayes_fit$correlation
+if (is.null(within_cor)) within_cor <- NA_real_
+cat(sprintf("Within-subject correlation (rho): %.3f\n", within_cor))
+```
+
+A positive `rho` means subjects are consistent across timepoints, and modelling
+that structure buys power. A `rho` near zero would mean the repeated-measures
+structure adds little.
+
+# Contrasts {#sec-contrasts}
+
+Nine contrasts are pre-specified. The two interaction contrasts are the analytic
+core: they ask whether the response to training (or to the acute bout) differs
+between HR and LR.
+
+| Contrast | Formula | Question |
+|:--|:--|:--|
+| Training_HR | HR_T2 − HR_T1 | Do HR change after training? |
+| Training_LR | LR_T2 − LR_T1 | Do LR change after training? |
+| Acute_HR | HR_T3 − HR_T2 | Do HR respond to the acute bout? |
+| Acute_LR | LR_T3 − LR_T2 | Do LR respond to the acute bout? |
+| Baseline_HRvLR | HR_T1 − LR_T1 | Do HR and LR differ at baseline? |
+| Trained_HRvLR | HR_T2 − LR_T2 | …after training? |
+| Acute_HRvLR | HR_T3 − LR_T3 | …after the acute bout? |
+| Training_Interaction | (HR_T2 − HR_T1) − (LR_T2 − LR_T1) | Does the training response differ by group? |
+| Acute_Interaction | (HR_T3 − HR_T2) − (LR_T3 − LR_T2) | Does the acute response differ by group? |
+
+```{r}
+#| label: dep-contrasts
+#| eval: false
+dal <- add_contrasts(dal, contrasts_vector = c(
+  "Training_HR          = HR_T2 - HR_T1",
+  "Training_LR          = LR_T2 - LR_T1",
+  "Acute_HR             = HR_T3 - HR_T2",
+  "Acute_LR             = LR_T3 - LR_T2",
+  "Baseline_HRvLR       = HR_T1 - LR_T1",
+  "Trained_HRvLR        = HR_T2 - LR_T2",
+  "Acute_HRvLR          = HR_T3 - LR_T3",
+  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
+  "Acute_Interaction    = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
+))
+```
+
+Each interaction is a difference of differences: it subtracts the LR change from
+the HR change, so a non-zero value means the two groups moved by different
+amounts.
+
+# Fit and extract {#sec-fit}
+
+`fit_limma_model()` chains `lmFit` (per-protein fit with the blocking `rho`),
+`contrasts.fit` (reparametrize into contrast space), and `eBayes` (variance
+moderation) [@ritchie2015]. `extract_DA_results()` applies Benjamini-Hochberg
+across proteins [@benjamini1995]. The FDR threshold is **0.10**: at n ≈ 8 per
+cell, strict 0.05 control would discard genuinely altered proteins with modest
+support; the Pi-score adds a fold-change requirement on top.
+
+```{r}
+#| label: dep-fit
+#| eval: false
+dal <- fit_limma_model(dal)
+dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
+```
+
+```{r}
+#| label: show-da-summary
+da_sum <- read_csv(here("03_DEP", "a_non_imputed", "c_data", "02_DA_summary.csv"),
+  show_col_types = FALSE
+)
+da_sum |>
+  filter(type != "nonsig") |>
+  select(contrast, type, any_of(c("sig.Pi", "sig.FDR.05", "sig.FDR.10")))
+```
+
+Where the FDR and Pi counts are low, that is expected for a small-n DIA study: the
+analysis is powered for large fold changes, and the interaction contrasts test a
+subtle hypothesis. The figure layer summarizes effect sizes (bootstrap CIs, fry,
+RRHO2) that stay interpretable regardless of per-protein significance.
+
+# Pi-score {#sec-pi}
+
+The Pi-score [@xiao2014] folds significance and magnitude into one value:
+
+$$\text{Pi} = p^{|\log_2 \text{FC}|}$$
+
+A large fold change drives Pi below the raw p-value; a small one pushes it above.
+A protein must show both a real change and statistical support to clear Pi < 0.05.
+
+```{r}
+#| label: pi-score
+#| eval: false
+res <- res |>
+  mutate(
+    pi_score = P.Value^abs(logFC),
+    sig_pi = case_when(
+      pi_score < 0.05 & logFC > 0 ~ 1L,
+      pi_score < 0.05 & logFC < 0 ~ -1L,
+      TRUE ~ 0L
+    )
+  )
+```
+
+```{r}
+#| label: show-per-contrast
+f <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results", "Training_HR.csv")
+if (file.exists(f)) {
+  read_csv(f, show_col_types = FALSE) |>
+    mutate(
+      pi_score = P.Value^abs(logFC),
+      sig_pi = case_when(
+        pi_score < 0.05 & logFC > 0 ~ 1L,
+        pi_score < 0.05 & logFC < 0 ~ -1L,
+        TRUE ~ 0L
+      )
+    ) |>
+    arrange(pi_score) |>
+    select(gene, logFC, P.Value, adj.P.Val, pi_score, sig_pi) |>
+    head(5)
+}
+```
+
+# Combined results {#sec-combined}
+
+All nine contrasts are assembled into one wide table, one row per protein with
+contrast-suffixed columns (`logFC_Training_HR`, `adj.P.Val_Training_HR`, …). This
+is the primary hand-off to the figure layer.
+
+```{r}
+#| label: show-combined
+f <- here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv")
+if (file.exists(f)) {
+  comb <- read_csv(f, show_col_types = FALSE)
+  cat(sprintf("Combined results: %d proteins x %d columns\n", nrow(comb), ncol(comb)))
+  comb |>
+    select(
+      uniprot_id, gene, starts_with("logFC_Training_HR"),
+      starts_with("pi_score_Training_HR")
+    ) |>
+    head(4)
+}
+```
+
+# Imputed comparison and figures {#sec-imputed}
+
+`b_imputed/a_script/01_run_dep_imputed.R` repeats this exact fit on the three
+imputed matrices (imp4p, MsCoreUtils, missForest) and reports the Spearman
+concordance of each arm's logFC against the primary, non-imputed fit. High
+concordance confirms the missing-value strategy does not reshape the effects
+[@peng2024]. The HR-vs-LR response comparison and the per-contrast volcanoes live
+in the figure layer (F03–F05); proteoDA also writes its own volcano and MA plots
+into `a_non_imputed/b_reports/` during the primary run.
+
+# Stage outputs {#sec-outputs}
+
+| File | Description |
+|:--|:--|
+| `c_data/01_limma_DAList.rds` | Fitted `proteoDA` DAList with the eBayes model |
+| `c_data/02_DA_summary.csv` | Significance counts per contrast, direction, and criterion |
+| `c_data/03_combined_results.csv` | Primary output: nine contrasts, wide format |
+| `c_data/04_per_contrast_results/` | One CSV per contrast (logFC, t, P.Value, adj.P.Val, pi_score, sig_pi) |
+| `c_data/05_results.xlsx` | Workbook, one sheet per contrast plus the summary |
+| `../b_imputed/c_data/` | Imputed-arm results and `logfc_concordance.csv` |
+
+Stage 04 reads `03_combined_results.csv` and the fitted DAList for pathway
+enrichment and figures.
+
+# Session info {#sec-session}
+
+```{r}
+#| label: session-info
+sessionInfo()
+```
+
+# References {#sec-refs}
+
+::: {#refs}
+:::

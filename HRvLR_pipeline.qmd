@@ -1,0 +1,229 @@
+---
+title: "High vs Low Responders (HRvLR) Skeletal-Muscle Proteomics"
+subtitle: "A ground-up walkthrough of the proteoDA-native pipeline: filtering → normalization → differential expression → figures"
+author: "A_HRvLR_2026"
+date: today
+bibliography: 03_DEP/a_non_imputed/a_script/references.bib
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    theme: cosmo
+    fig-cap-location: bottom
+    embed-resources: true
+execute:
+  eval: false      # documentation build: code is shown, not re-run; outputs are frozen
+  echo: true
+  warning: false
+  message: false
+---
+
+> **How to read this document.** Every code block is the *actual* code from the
+> pipeline scripts, shown for provenance but **not re-executed** (`eval: false`).
+> Numbers are frozen from the committed run. To reproduce, run the stage scripts
+> in order. Paths are relative to the project root (`A_HRvLR_2026/`). Each stage
+> also ships a live, self-verifying tutorial (`01_filtering.qmd`,
+> `02_normalization.qmd`, `03_dep.qmd`).
+
+# Overview {#sec-overview}
+
+Resistance training produces a wide range of hypertrophic outcomes across people.
+This pipeline asks whether that range is visible in the skeletal-muscle proteome:
+do **high responders (HR)** and **low responders (LR)** differ in how their
+proteomes move with training, and with an acute bout?
+
+The design is a 2×3 factorial — responder (HR/LR) × timepoint — with repeated
+measures on subject. Each subject is sampled three times: T1 (baseline), T2
+(trained, 72 h post a training block), and T3 (acute, 1 h post a final bout). The
+grouping factor `Group_Time` carries the six cells.
+
+| `Group_Time` | Meaning | n samples |
+|---|---|---|
+| `HR_T1` … `HR_T3` | High responders, three timepoints | 7 each |
+| `LR_T1` … `LR_T3` | Low responders, three timepoints | 8 each |
+
+Nine contrasts are built on this scheme:
+
+| Contrast | Definition | Question |
+|---|---|---|
+| `Training_HR` / `Training_LR` | `*_T2 − *_T1` | Training response within each group |
+| `Acute_HR` / `Acute_LR` | `*_T3 − *_T2` | Acute-bout response within each group |
+| `Baseline_HRvLR` | `HR_T1 − LR_T1` | Group difference at baseline |
+| `Trained_HRvLR` / `Acute_HRvLR` | `HR_T2 − LR_T2` / `HR_T3 − LR_T3` | Group difference after training / acute |
+| `Training_Interaction` | `(HR_T2 − HR_T1) − (LR_T2 − LR_T1)` | Does the training response differ by group? |
+| `Acute_Interaction` | `(HR_T3 − HR_T2) − (LR_T3 − LR_T2)` | Does the acute response differ by group? |
+
+The interaction contrasts are the analytic core: they ask the responder question
+directly.
+
+Architecture (shared house style): each stage is a numbered folder with
+`a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
+hand-offs + a consolidated `.xlsx`). Stages are self-cleaning: a re-run wipes its
+own outputs first.
+
+```
+00_input/         raw matrix, metadata, HPA reference
+01_Filtering/     contaminant + missingness + outlier filtering  → DAList_filtered.rds
+02_Normalization/ cycloess + (missforest | imp4p | mscoreutils)  → DAList_normalized.rds
+03_DEP/
+  a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
+  b_imputed/      imputed DE (concordance check)
+04_Figures/       F01–F06 publication composites
+```
+
+# Stage 00 — Inputs {#sec-inputs}
+
+| File | Contents |
+|---|---|
+| `00_input/HRvLR_raw.xlsx` | DIA-MS protein matrix, 2,400 protein groups × (5 annotation cols + 48 samples) |
+| `00_input/HRvLR_meta.csv` | Sample sheet (`Col_ID`, `Subject_ID`, `Group`, `Timepoint`, `Group_Time`, plus phenotype columns) |
+| `00_input/HPA_annotations.tsv` | Human Protein Atlas reference: secretome location, blood concentration, single-cell nCPM, protein class |
+
+The matrix is aligned to the sample sheet by `Col_ID`; a mismatch errors
+immediately.
+
+# Stage 01 — Filtering {#sec-filtering}
+
+The filter removes blood-plasma contaminants from a muscle biopsy without
+discarding real muscle biology. A protein is flagged **remove** if it is
+plasma-origin **and not** muscle-origin, sourced entirely from the Human Protein
+Atlas:
+
+- **plasma-origin** = HPA "Secreted to blood", an immunoglobulin gene, or a high
+  erythrocyte single-cell signal (`Erythrocytes ≥ 5000 nCPM`, the hemoglobins);
+- **muscle rescue** = high skeletal-myonuclei signal (`Myonuclei ≥ 50 nCPM`),
+  unless the measured blood concentration marks it as a true plasma protein
+  (`blood_conc ≥ 1e9`).
+
+```{r}
+#| label: blood-classifier
+bl <- readr::read_tsv(here::here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) |>
+  dplyr::transmute(
+    gene = Gene, protein_class = `Protein class`, secretome = `Secretome location`,
+    blood_conc = suppressWarnings(as.numeric(`Blood concentration - Conc. blood MS [pg/L]`)),
+    ery = suppressWarnings(as.numeric(`Single Cell Type RNA - Erythrocytes [nCPM]`)),
+    myo = suppressWarnings(as.numeric(`Single Cell Type RNA - Myonuclei [nCPM]`))
+  ) |>
+  dplyr::mutate(
+    secreted_blood = secretome == "Secreted to blood" & !is.na(secretome),
+    is_ig = stringr::str_detect(dplyr::coalesce(protein_class, ""), "Immunoglobulin genes"),
+    is_erythrocyte = !is.na(ery) & ery >= 5000,
+    muscle_keep = !is.na(myo) & myo >= 50 & (is.na(blood_conc) | blood_conc < 1e9),
+    verdict = dplyr::if_else(!muscle_keep & (secreted_blood | is_ig | is_erythrocyte),
+      "remove", "keep"
+    )
+  )
+```
+
+After dedup (one row per accession), HPA presence, blood removal, and a group-wise
+missingness filter (`filter_proteins_by_group`, ≥5 of 8 detected in ≥1 cell), the
+matrix is screened for outlier samples by a four-method consensus — missingness
+(with a within-subject arm), PCA Mahalanobis distance, a Hampel rule on median
+intensity, and median inter-sample correlation — dropping a sample only when ≥3 of
+4 agree.
+
+```{r}
+#| label: filter-and-outliers
+dal <- zero_to_missing(DAList(data = int_mat, annotation = annot_df, metadata = metadata))
+dal <- filter_proteins_by_group(dal, min_reps = 5, min_groups = 1, grouping_column = "Group_Time")
+# 4-method consensus -> filter_samples(dal, !(Col_ID %in% outlier_ids))
+```
+
+Stage 01 turns the 2,400 × 48 spreadsheet into a clean **1,885 × 45** `DAList`
+(three samples — `S29_T1`, `S28_T2`, `S28_T3` — trip ≥3 flags), saved to
+`01_Filtering/c_data/DAList_filtered.rds`.
+
+# Stage 02 — Normalization & imputation {#sec-norm}
+
+Cyclic-loess normalization levels per-sample loading differences with a single
+native call; `write_norm_report()` compares candidate methods first, and
+`write_qc_report()` audits before and after.
+
+```{r}
+#| label: normalize
+dal <- readRDS(here::here("01_Filtering", "c_data", "DAList_filtered.rds"))
+dal <- normalize_data(dal, norm_method = "cycloess") # limma defaults: span 0.7
+saveRDS(dal, here::here("02_Normalization", "c_data", "DAList_normalized.rds"))
+```
+
+Normalization rescales but never fills values; the normalized, **non-imputed**
+matrix is the primary input to the DE test, because limma handles per-protein NAs
+and imputing first inflates false positives. The stage also records a per-protein
+eta-squared (variance explained by `Group_Time`) for the figure layer.
+
+Three imputation arms supply a complete matrix for methods that need one (PCA,
+WGCNA, rotation tests). **missForest is canonical** (figures and WGCNA read it);
+imp4p and the MsCoreUtils kNN/QRILC hybrid are kept as comparisons.
+
+```{r}
+#| label: impute
+set.seed(42)
+mf <- missForest::missForest(as.matrix(dal$data), maxiter = 10, ntree = 100) # canonical arm
+```
+
+# Stage 03 — Differential expression {#sec-dep}
+
+The primary DE fits limma with `duplicateCorrelation` on the non-imputed matrix.
+The cell-means design gives one coefficient per `Group_Time` cell; the
+`(1 | subject)` block pools a single within-subject correlation across all
+proteins [@smyth2005], and `eBayes` moderates each protein's variance
+[@ritchie2015].
+
+```{r}
+#| label: dep-fit
+dal <- add_design(dal, "~ 0 + group + (1 | subject)")
+dal <- add_contrasts(dal, contrasts_vector = c(
+  "Training_HR = HR_T2 - HR_T1", "Training_LR = LR_T2 - LR_T1",
+  "Acute_HR = HR_T3 - HR_T2", "Acute_LR = LR_T3 - LR_T2",
+  "Baseline_HRvLR = HR_T1 - LR_T1", "Trained_HRvLR = HR_T2 - LR_T2",
+  "Acute_HRvLR = HR_T3 - LR_T3",
+  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
+  "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
+))
+dal <- fit_limma_model(dal)
+dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
+```
+
+Significance uses the Pi-score [@xiao2014], `Pi = p^|logFC| < 0.05`, on top of a
+BH-FDR threshold of 0.10 [@benjamini1995] — appropriate for a small-n DIA study
+powered for large effects. The comparison arm
+(`b_imputed/a_script/01_run_dep_imputed.R`) repeats the fit on the three imputed
+matrices and reports Spearman concordance of each arm's logFC against the primary;
+high concordance confirms imputation does not reshape the effects [@peng2024].
+
+# Stage 04 — Figures {#sec-figures}
+
+| Figure | Content |
+|---|---|
+| F01 | Proteome overview: detection, missingness, PCA, sample composition |
+| F02 | DEP landscape, set overlaps, and the eta-squared protein-variance panel |
+| F03 | Per-contrast volcanoes |
+| F04 | Training concordance: HR vs LR (quadrant ORA, NES scatter, fry, RRHO2, bootstrap) |
+| F05 | Acute concordance: HR vs LR |
+| F06 | WGCNA modules on the missForest-imputed matrix |
+
+The HR-vs-LR response question is answered in F04/F05, where the two groups'
+contrasts are compared directly with rotation tests and rank-rank overlap.
+
+# Reproducing {#sec-repro}
+
+Run the stage scripts in order from the project root:
+
+```bash
+Rscript 01_Filtering/a_script/01_run_filtering.R
+Rscript 02_Normalization/a_script/01_run_normalization.R
+Rscript 02_Normalization/imputation/a_script/a_imp4p.R
+Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R
+Rscript 02_Normalization/imputation/a_script/c_missforest.R
+Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
+Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R
+```
+
+# References {#sec-refs}
+
+::: {#refs}
+:::
