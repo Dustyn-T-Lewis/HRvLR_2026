@@ -18,8 +18,6 @@ meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE) %>%
     hypertrophy_pct = readr::parse_number(COMP.HYPERTROPHY)
   )
 
-stats_G <- t.test(hypertrophy_pct ~ Group, data = meta)
-
 bar_colors <- c(
   HR = unname(GROUP_FILL["HR_T2"]),
   LR = unname(GROUP_FILL["LR_T2"])
@@ -38,12 +36,6 @@ pG <- ggplot(meta, aes(x = Group, y = hypertrophy_pct, fill = Group)) +
     width = 0.15, size = 1.5, alpha = 0.5,
     shape = 16, color = "grey30"
   ) +
-  geom_signif(
-    comparisons = list(c("HR", "LR")),
-    annotations = fmt_p(stats_G$p.value),
-    textsize = KEY_TEXT, tip_length = 0.02,
-    y_position = bracket_pos(meta$hypertrophy_pct)
-  ) +
   scale_fill_manual(values = bar_colors) +
   scale_x_discrete(labels = c(
     HR = sprintf("HR (n = %d)", sum(meta$Group == "HR")),
@@ -54,8 +46,8 @@ pG <- ggplot(meta, aes(x = Group, y = hypertrophy_pct, fill = Group)) +
     labels = function(x) paste0(x, "%")
   ) +
   labs(
-    title = "Hypertrophy Composite", y = "Composite hypertrophy (%)", x = NULL,
-    tag = "G"
+    title = "Hypertrophy Composite", subtitle = "Groups defined by this composite",
+    y = "Composite hypertrophy (%)", x = NULL, tag = "G"
   ) +
   coord_cartesian(clip = "off") +
   FIG_THEME +
@@ -72,8 +64,7 @@ audit_G <- meta %>%
     sd = sd(hypertrophy_pct),
     sem = sd(hypertrophy_pct) / sqrt(n()),
     .groups = "drop"
-  ) %>%
-  mutate(t_test_p = stats_G$p.value)
+  )
 write_csv(audit_G, file.path(DAT, "audit_panel_G_hypertrophy_composite.csv"))
 
 save_panel(pG, file.path(RPT, "panels", "panel_g_hypertrophy_composite"), PW, PH)
