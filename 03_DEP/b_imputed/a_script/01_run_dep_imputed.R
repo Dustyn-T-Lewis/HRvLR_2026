@@ -46,9 +46,14 @@ runs <- imap(methods, function(rds, m) {
   ))
   out_dir <- here("03_DEP", "b_imputed", "c_data", m)
 
-  dal <- add_design(dal, "~ 0 + Group_Time + (1 | Subject_ID)")
+  dal$metadata$group <- factor(
+    dal$metadata$Group_Time,
+    levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+  )
+  dal$metadata$subject <- dal$metadata$Subject_ID
+  dal <- add_design(dal, "~ 0 + group + (1 | subject)")
   colnames(dal$design$design_matrix) <- gsub(
-    "^Group_Time", "",
+    "^group", "",
     colnames(dal$design$design_matrix)
   )
   dal <- add_contrasts(dal, contrasts_vector = contrasts_vec)
