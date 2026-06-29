@@ -1,11 +1,9 @@
-# F03 ring-volcano grid (enrichVolcano): one volcano-in-ring per contrast, all 9
-# in a 3x3 grid. Volcano = DEP logFC/P; ring arcs = fgsea NES (top 7 per
-# direction) with thickness = -log10(padj). Cache + DEP read from setup.
-pacman::p_load(here, dplyr, readr, tibble, enrichVolcano, ggplot2, patchwork, openxlsx)
+# F03 ring-volcanoes: one volcano-in-ring per contrast (volcano = DEP logFC/P;
+# ring arcs = fgsea NES, top 7 per direction, thickness = -log10 padj). Two
+# composites: the within-group HR/LR responses, and the baseline + interactions.
+pacman::p_load(here, dplyr, readr, tibble, enrichVolcano, ggplot2, patchwork)
 if (!exists("dep")) source(here("04_Figures", "F03", "a_script", "HRvLR_F03_setup.R"))
 
-# Named lists (one frame per contrast) so a contrast with no significant
-# enrichment (e.g. Trained_HRvLR) still draws its volcano with a bare ring.
 volc_dfs <- lapply(CONTRASTS, function(ct) {
   tibble(
     gene = dep$gene,
@@ -17,7 +15,6 @@ volc_dfs <- lapply(CONTRASTS, function(ct) {
 })
 names(volc_dfs) <- CONTRASTS
 
-# Enrichment: significant terms, top 7 per direction, names cleaned (0-row ok)
 enrich_dfs <- lapply(CONTRASTS, function(ct) {
   base <- fg |> filter(contrast == ct, is.finite(NES))
   e <- base |>
@@ -26,7 +23,7 @@ enrich_dfs <- lapply(CONTRASTS, function(ct) {
     group_by(dir) |>
     slice_min(padj, n = 7, with_ties = FALSE) |>
     ungroup()
-  if (nrow(e) == 0) e <- slice_min(base, padj, n = 1) # no sig term: show the best one
+  if (nrow(e) == 0) e <- slice_min(base, padj, n = 1)
   tibble(
     pathway = clean_pathway_name(e$pathway),
     NES = e$NES, padj = e$padj, size = e$size,
@@ -35,32 +32,26 @@ enrich_dfs <- lapply(CONTRASTS, function(ct) {
 })
 names(enrich_dfs) <- CONTRASTS
 
-g <- suppressMessages(volcano_ring_grid(
-  volc_dfs, enrich_dfs,
-  contrasts = CONTRASTS, ncol = 3, genes_sep = ";"
-))
+save_grid <- function(contrasts, stem, ncol, width, height) {
+  g <- suppressMessages(volcano_ring_grid(
+    volc_dfs, enrich_dfs,
+    contrasts = contrasts, ncol = ncol, genes_sep = ";"
+  ))
+  ggsave(file.path(RPT_DIR, paste0(stem, ".png")), g$plot,
+    width = width, height = height, units = "mm", dpi = 200, bg = "white"
+  )
+  ggsave(file.path(RPT_DIR, paste0(stem, ".pdf")), g$plot,
+    width = width, height = height, units = "mm", device = PDF_DEVICE, bg = "white"
+  )
+}
 
-# The 3x3 ring-volcano grid is the whole figure, so it is the composite.
-ggsave(file.path(RPT_DIR, "F03_composite.png"), g$plot,
-  width = 380, height = 380, units = "mm", dpi = 200, bg = "white"
+save_grid(c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR"),
+  "F03_responses",
+  ncol = 2, width = 380, height = 380
 )
-ggsave(file.path(RPT_DIR, "F03_composite.pdf"), g$plot,
-  width = 380, height = 380, units = "mm", device = PDF_DEVICE, bg = "white"
+save_grid(c("Baseline_HRvLR", "Training_Interaction", "Acute_Interaction"),
+  "F03_differential",
+  ncol = 3, width = 570, height = 210
 )
 
-# Source-data workbook: the significant enrichment behind every ring
-sig <- fg |>
-  filter(!is.na(padj), padj < 0.05, is.finite(NES)) |>
-  transmute(
-    contrast, database,
-    pathway = clean_pathway_name(pathway),
-    NES, padj, size, leading_edge = leadingEdge
-  ) |>
-  arrange(contrast, padj)
-wb <- createWorkbook()
-addWorksheet(wb, "fgsea_significant")
-writeData(wb, "fgsea_significant", sig)
-addWorksheet(wb, "fgsea_all")
-writeData(wb, "fgsea_all", fg)
-saveWorkbook(wb, file.path(DAT_DIR, "F03_source_data.xlsx"), overwrite = TRUE)
-cat("F03 composite + workbook done.\n")
+cat("F03 two composites done.\n")
