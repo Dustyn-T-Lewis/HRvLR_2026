@@ -1,9 +1,0 @@
-comparison,test,statistic,p_value,interpretation
-Training (HR vs LR),Kolmogorov-Smirnov,0.13472893183038154,4.116328750116441e-15,Distributions differ significantly
-Training (HR vs LR),Fligner-Killeen,80.1272439502837,3.5105849086208087e-19,Variance differs (differential response magnitude)
-Training (HR vs LR),Wilcoxon signed-rank,1126671,0,Paired |logFC| shift significant
-Training (HR vs LR),Cliff's delta,0.21309715512614064,NA,Small effect (delta = 0.213; >0 = Training_HR responds more)
-Acute (HR vs LR),Kolmogorov-Smirnov,0.12406015037593923,7.162496924422178e-13,Distributions differ significantly
-Acute (HR vs LR),Fligner-Killeen,9.133942955981748,0.002509103831071549,Variance differs (differential response magnitude)
-Acute (HR vs LR),Wilcoxon signed-rank,1035572,4.0123460109953157e-13,Paired |logFC| shift significant
-Acute (HR vs LR),Cliff's delta,0.16326530612244897,NA,Small effect (delta = 0.163; >0 = Acute_HR responds more)
