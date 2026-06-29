@@ -11,4 +11,11 @@ archive/
 ~$*
 *.tmp
 *.log
+Rplots.pdf
 .superpowers/
+
+# Quarto render artifacts (source .qmd is tracked, html/cache are regenerated)
+*_files/
+*_cache/
+**/a_script/*.html
+HRvLR_pipeline.html
