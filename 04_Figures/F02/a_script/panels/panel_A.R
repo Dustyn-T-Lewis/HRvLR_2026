@@ -26,12 +26,21 @@ pca_df <- as.data.frame(pca_res$x[, 1:2]) |>
     by = c("sample" = "Col_ID")
   )
 
-# PERMANOVA: Group is between-subject; Timepoint within-subject (permute within blocks)
+# PERMANOVA: Timepoint is within-subject (permute within subject blocks). Group
+# is between-subject, so collapse to one mean profile per subject and test with
+# subjects as independent units - the unbalanced design (S28/S29 partial) rules
+# out whole-plot permutation of unequal blocks.
+set.seed(42)
 dist_mat <- vegdist(mat, method = "euclidean")
-perm_group <- adonis2(dist_mat ~ Group, data = pca_df, permutations = 999)
 perm_time <- adonis2(dist_mat ~ Timepoint,
   data = pca_df, permutations = 999,
   strata = pca_df$Subject_ID
+)
+subj_mat <- rowsum(mat, pca_df$Subject_ID)
+subj_mat <- subj_mat / as.integer(table(pca_df$Subject_ID)[rownames(subj_mat)])
+subj_group <- pca_df$Group[match(rownames(subj_mat), pca_df$Subject_ID)]
+perm_group <- adonis2(vegdist(subj_mat, method = "euclidean") ~ subj_group,
+  permutations = 999
 )
 stat_label <- function(res, term) {
   sprintf(
