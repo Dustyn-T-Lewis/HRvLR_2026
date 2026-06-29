@@ -44,67 +44,12 @@ write_qc_report(dal,
   color_column = "Group_Time", output_dir = report_dir,
   filename = "qc_pre.pdf", overwrite = TRUE
 )
-dal_pre <- dal
 dal <- normalize_data(dal, norm_method = "cycloess")
 write_qc_report(dal,
   color_column = "Group_Time", output_dir = report_dir,
   filename = "qc_post.pdf", overwrite = TRUE
 )
 cat(sprintf("Normalized (cycloess): %d proteins x %d samples\n", nrow(dal$data), ncol(dal$data)))
-
-#### Normalization method ranking (PRONE-style) ####
-
-norm_metric <- function(mat, groups, metric) {
-  grp_list <- split(seq_len(ncol(mat)), groups)
-  if (metric == "cor") {
-    vals <- unlist(lapply(grp_list, function(idx) {
-      sub <- mat[, idx, drop = FALSE]
-      if (ncol(sub) < 2) {
-        return(numeric(0))
-      }
-      cm <- cor(sub, use = "pairwise.complete.obs")
-      cm[lower.tri(cm)]
-    }))
-    return(mean(vals, na.rm = TRUE))
-  }
-  vals <- unlist(lapply(grp_list, function(idx) {
-    sub <- mat[, idx, drop = FALSE]
-    apply(sub, 1, function(x) {
-      x <- x[!is.na(x)]
-      if (length(x) < 2) {
-        return(NA_real_)
-      }
-      if (metric == "cv") sd(x) / abs(mean(x)) else mad(x, constant = 1)
-    })
-  }))
-  median(vals, na.rm = TRUE)
-}
-
-dal_pre$metadata$group <- factor(dal_pre$metadata$Group_Time)
-methods <- c("log2", "median", "mean", "vsn", "quantile", "cycloess", "rlr", "gi")
-norm_scores <- lapply(methods, function(m) {
-  dal_n <- tryCatch(normalize_data(dal_pre, norm_method = m), error = function(e) NULL)
-  if (is.null(dal_n)) {
-    return(NULL)
-  }
-  mat <- as.matrix(dal_n$data)
-  grps <- dal_n$metadata$group
-  tibble(
-    method = m,
-    PCV = round(norm_metric(mat, grps, "cv"), 4),
-    PMAD = round(norm_metric(mat, grps, "mad"), 4),
-    COR = round(norm_metric(mat, grps, "cor"), 4)
-  )
-}) |>
-  bind_rows() |>
-  mutate(
-    PCV_rank = rank(PCV), PMAD_rank = rank(PMAD), COR_rank = rank(-COR),
-    composite = round((PCV_rank + PMAD_rank + COR_rank) / 3, 2)
-  ) |>
-  arrange(composite)
-write_csv(norm_scores, file.path(data_dir, "norm_quality_scores.csv"))
-cat("Norm ranking:\n")
-print(norm_scores |> select(method, PCV, PMAD, COR, composite))
 
 #### Export ####
 
@@ -142,7 +87,7 @@ pca_post <- run_pca(dal$data, dal$metadata, log_transform = FALSE)
 filt <- readRDS(here("01_Filtering", "c_data", "filtering_intermediates.rds"))
 intermediates <- c(filt, list(
   pca_post = pca_post, subj_var = subj_var, eta2_vals = eta2_vals,
-  norm_scores = norm_scores, dal_nrow = nrow(dal$data), dal_ncol = ncol(dal$data)
+  dal_nrow = nrow(dal$data), dal_ncol = ncol(dal$data)
 ))
 saveRDS(intermediates, file.path(data_dir, "00_report_intermediates.rds"))
 
