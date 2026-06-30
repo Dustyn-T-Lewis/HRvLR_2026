@@ -6,6 +6,7 @@
 # concordance against the non-imputed fit.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tibble, purrr)
+source(here("03_DEP", "contrasts.R"))
 
 CANONICAL <- "missforest"
 clear_dir <- function(d) {
@@ -20,18 +21,6 @@ methods <- c(
   missforest = "DAList_imputed_missforest.rds",
   imp4p = "DAList_imputed_imp4p.rds",
   mscoreutils = "DAList_imputed_mscoreutils.rds"
-)
-
-contrasts_vec <- c(
-  "Training_HR = HR_T2 - HR_T1",
-  "Training_LR = LR_T2 - LR_T1",
-  "Acute_HR = HR_T3 - HR_T2",
-  "Acute_LR = LR_T3 - LR_T2",
-  "Baseline_HRvLR = HR_T1 - LR_T1",
-  "Trained_HRvLR = HR_T2 - LR_T2",
-  "Acute_HRvLR = HR_T3 - LR_T3",
-  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
-  "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 )
 
 # DEP per imputed matrix
@@ -55,7 +44,7 @@ runs <- imap(methods, function(rds, m) {
     "^group", "",
     colnames(dal$design$design_matrix)
   )
-  dal <- add_contrasts(dal, contrasts_vector = contrasts_vec)
+  dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
   dal <- fit_limma_model(dal)
   dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
 
@@ -66,8 +55,8 @@ runs <- imap(methods, function(rds, m) {
       mutate(
         pi_score = P.Value^abs(logFC),
         sig_pi = case_when(
-          pi_score < 0.05 & logFC > 0 ~ 1L,
-          pi_score < 0.05 & logFC < 0 ~ -1L, TRUE ~ 0L
+          pi_score < PI_THRESH & logFC > 0 ~ 1L,
+          pi_score < PI_THRESH & logFC < 0 ~ -1L, TRUE ~ 0L
         ),
         contrast = cname
       ) |>

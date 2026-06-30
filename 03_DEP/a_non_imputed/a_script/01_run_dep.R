@@ -22,6 +22,7 @@
 #     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3
 
 pacman::p_load(dplyr, tidyr, tibble, readr, purrr, proteoDA, here)
+source(here("03_DEP", "contrasts.R"))
 
 cfg <- list(
   norm_csv = here("02_Normalization", "c_data", "normalized.csv"),
@@ -32,7 +33,7 @@ cfg <- list(
   pval_thresh = 0.10,
   lfc_thresh = 0,
   adj_method = "BH",
-  pi_thresh = 0.05
+  pi_thresh = PI_THRESH
 )
 
 dir.create(cfg$data_dir, recursive = TRUE, showWarnings = FALSE)
@@ -112,17 +113,7 @@ colnames(dal$design$design_matrix) <- gsub(
 
 # contrasts
 
-dal <- add_contrasts(dal, contrasts_vector = c(
-  "Training_HR = HR_T2 - HR_T1",
-  "Training_LR = LR_T2 - LR_T1",
-  "Acute_HR = HR_T3 - HR_T2",
-  "Acute_LR = LR_T3 - LR_T2",
-  "Baseline_HRvLR = HR_T1 - LR_T1",
-  "Trained_HRvLR = HR_T2 - LR_T2",
-  "Acute_HRvLR = HR_T3 - LR_T3",
-  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
-  "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
-))
+dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
 
 # fit and extract
 
