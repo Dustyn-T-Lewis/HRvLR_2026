@@ -4,9 +4,8 @@
 # Exports:
 #   build_pathway_collection()      assemble GO:BP + Reactome + Hallmark + KEGG
 #   run_fgsea_deduplicated()        fgsea + collapsePathways for one contrast
-#   run_enrichment_pipeline()       fGSEA across all contrasts + databases
 #   run_ora_deduplicated()          over-representation analysis with Jaccard dedup
-#   classify_database() / classify_pathway_func()  category labels for plotting
+#   classify_database()             database label for plotting
 
 deduplicate_enrichment_flat <- function(results, pathways, jaccard_cutoff = 0.5) {
   if (nrow(results) == 0) {
@@ -246,86 +245,6 @@ run_fgsea_deduplicated <- function(ranks, pathways, jaccard_cutoff = 0.5,
 }
 
 
-run_enrichment_pipeline <- function(stats_list, pw_list,
-                                    jaccard_cutoff = 0.35,
-                                    nperm = 10000,
-                                    min_size = 15, max_size = 500,
-                                    padj_cutoff = 0.05) {
-  requireNamespace("fgsea", quietly = TRUE)
-
-  all_results <- list()
-
-  for (ctr in names(stats_list)) {
-    message(sprintf("\n--- %s ---", ctr))
-    ranks <- stats_list[[ctr]]
-
-    res_dt <- fgsea::fgseaMultilevel(
-      pathways    = pw_list,
-      stats       = ranks,
-      minSize     = min_size,
-      maxSize     = max_size,
-      nPermSimple = nperm,
-      eps         = 0
-    )
-
-    sig_dt <- res_dt[!is.na(res_dt$padj) & res_dt$padj < padj_cutoff, ]
-    if (nrow(sig_dt) > 0) {
-      collapsed <- fgsea::collapsePathways(
-        fgseaRes     = sig_dt,
-        pathways     = pw_list,
-        stats        = ranks
-      )
-      independent <- collapsed$mainPathways
-      message(sprintf(
-        "collapsePathways: %d sig -> %d independent",
-        nrow(sig_dt), length(independent)
-      ))
-      drop_pw <- setdiff(sig_dt$pathway, independent)
-      if (length(drop_pw)) {
-        res_dt$padj[res_dt$pathway %in% drop_pw] <- 1
-      }
-    }
-
-    res <- as.data.frame(res_dt)
-    res$database <- classify_database(res$pathway)
-    res$contrast <- ctr
-
-    sig_after <- res[!is.na(res$padj) & res$padj < padj_cutoff, ]
-    sig_dedup <- deduplicate_enrichment(sig_after, pw_list, jaccard_cutoff)
-    n_removed <- nrow(sig_after) - nrow(sig_dedup)
-    message(sprintf(
-      "Jaccard dedup (%.2f): %d -> %d (removed %d)",
-      jaccard_cutoff, nrow(sig_after), nrow(sig_dedup), n_removed
-    ))
-
-    survived <- sig_dedup$pathway
-    dedup_drop <- setdiff(sig_after$pathway, survived)
-    if (length(dedup_drop)) {
-      res$padj[res$pathway %in% dedup_drop] <- 1
-    }
-
-    all_results[[ctr]] <- tibble::as_tibble(res)
-  }
-
-  long_df <- dplyr::bind_rows(all_results)
-
-  sig_union <- unique(long_df$pathway[!is.na(long_df$padj) & long_df$padj < padj_cutoff])
-  message(sprintf("\nUnion of sig pathways: %d", length(sig_union)))
-
-  long_df <- long_df[long_df$pathway %in% sig_union, ]
-
-  for (ctr in names(stats_list)) {
-    sub <- long_df[long_df$contrast == ctr, ]
-    n_sig <- sum(!is.na(sub$padj) & sub$padj < padj_cutoff)
-    n_up <- sum(!is.na(sub$padj) & sub$padj < padj_cutoff & sub$NES > 0)
-    n_dn <- sum(!is.na(sub$padj) & sub$padj < padj_cutoff & sub$NES < 0)
-    message(sprintf("  %s: %d sig (%d up, %d down)", ctr, n_sig, n_up, n_dn))
-  }
-
-  list(long_df = long_df, sig_union = sig_union)
-}
-
-
 run_ora_deduplicated <- function(genes, universe, pathways,
                                  jaccard_cutoff = 0.5,
                                  min_size = 10, max_size = 500,
@@ -389,74 +308,4 @@ classify_database <- function(pathway_names) {
     grepl("^GOBP_", pathway_names) ~ "GO:BP",
     TRUE ~ "Other"
   )
-}
-
-
-# MSigDB pathway ID -> 15 consolidated categories (keyword rules)
-CONSOLIDATED_PATHWAY_ORDER <- c(
-  "Muscle & Contractile", "Cytoskeleton & Motility", "ECM & Adhesion",
-  "Lipid Metabolism", "Carbohydrate & Energy Metabolism",
-  "Amino Acid & Cofactor Metabolism",
-  "Mitochondria & Energy", "Protein Homeostasis",
-  "Transport", "Translation & Ribosome", "Transcription & Chromatin",
-  "Immune & Inflammation", "DNA & Cell Cycle", "Circulatory System",
-  "Development", "Other"
-)
-
-CONSOLIDATED_COLORS <- c(
-  "Muscle & Contractile"              = "#E57373",
-  "Cytoskeleton & Motility"           = "#FFB74D",
-  "ECM & Adhesion"                    = "#FFF176",
-  "Lipid Metabolism"                  = "#AED581",
-  "Carbohydrate & Energy Metabolism"  = "#81C784",
-  "Amino Acid & Cofactor Metabolism"  = "#66BB6A",
-  "Mitochondria & Energy"             = "#4DB6AC",
-  "Protein Homeostasis"               = "#4FC3F7",
-  "Transport"                         = "#7986CB",
-  "Translation & Ribosome"            = "#BA68C8",
-  "Transcription & Chromatin"         = "#AB47BC",
-  "Immune & Inflammation"             = "#A1887F",
-  "DNA & Cell Cycle"                  = "#90A4AE",
-  "Circulatory System"                = "#CE93D8",
-  "Development"                       = "#B0BEC5",
-  "Other"                             = "#D0D0D0"
-)
-
-classify_pathway_func <- function(ids) {
-  rules <- list(
-    "Muscle & Contractile"              = "MYOGEN|MYOFIBRIL|SARCOMERE|MUSCLE_|CONTRACTILE|ACTOMYOSIN|MYOSIN|I_BAND",
-    "Cytoskeleton & Motility"           = "CYTOSKELET|ACTIN_BIND|STRUCTURAL_MOLECULE|MOTIL|SUPRAMOLECUL",
-    "ECM & Adhesion"                    = "EXTRACELLULAR_MATRIX|COLLAGEN|BASEMENT_MEMBRANE|ADHESION|APICAL_JUNCTION|EMT|ENCAPSULATING",
-    "Lipid Metabolism"                  = "FATTY_ACID|LIPID|ADIPOGEN|STEROID|SPHINGOLIPID|PHOSPHOLIPID|KETONE",
-    "Carbohydrate & Energy Metabolism"  = "GLYCOLY|GLUCONEO|CARBOHYDRATE|PENTOSE|PRECURSOR_METABOL",
-    "Amino Acid & Cofactor Metabolism"  = "AMINO_ACID|VITAMIN|COFACTOR|NITROGEN|DETOXIF|DIGEST|XENOBIOT",
-    "Mitochondria & Energy"             = "MITOCHOND|OXIDATIVE_PHOSPH|ELECTRON_TRANSFER|RESPIRATORY|OXIDOREDUCT",
-    "Protein Homeostasis"               = "PROTEASOM|UBIQUITIN|AUTOPHAGY|MTORC1|PROTEIN_FOLD",
-    "Transport"                         = "TRANSPORT(?!.*ELECTRON)|VESICLE|ENDOCYT|SECRETI",
-    "Translation & Ribosome"            = "TRANSLAT|RIBOSOM|TRNA|MYC_TARGET",
-    "Transcription & Chromatin"         = "TRANSCRIPT|SPLICEOSOM|E2F_TARGET|CHROMATIN|MRNA_PROC",
-    "Immune & Inflammation"             = "IMMUN|INFLAMMA|INTERFERON|IL2|IL6|TNFA|NF.KB|COMPLEMENT",
-    "DNA & Cell Cycle"                  = "DNA_REPAIR|CELL_CYCLE|MITOTIC|P53_PATHWAY",
-    "Circulatory System"                = "ANGIOGEN|BLOOD_VESSEL|HYPOXIA",
-    "Development"                       = "UV_RESPONSE|GROWTH_FACTOR|WNT|HEDGEHOG|NOTCH|TGF_BETA|KRAS"
-  )
-  vapply(toupper(ids), function(id) {
-    matches <- character(0)
-    for (cat in names(rules)) {
-      if (grepl(rules[[cat]], id, perl = TRUE)) matches <- c(matches, cat)
-    }
-    if (length(matches) > 1) {
-      warning(
-        "classify_pathway_func: '", id, "' matches multiple categories [",
-        paste(matches, collapse = ", "), "]; using first match: ", matches[1]
-      )
-    }
-    if (length(matches) >= 1) {
-      return(matches[1])
-    }
-    if (grepl("METABOL", id, perl = TRUE)) {
-      return("Amino Acid & Cofactor Metabolism")
-    }
-    "Other"
-  }, character(1), USE.NAMES = FALSE)
 }
