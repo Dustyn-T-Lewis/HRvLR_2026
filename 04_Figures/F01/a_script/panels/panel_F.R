@@ -1,6 +1,6 @@
 # F01 Panel F: MyoVision Fiber Counts (Mixed + Type I)
-# Mixed: sig interaction (p=0.029) -> show delta bracket
-# Type I: no sig effects -> ANOVA subtitle only
+# Mixed shows the delta bracket only when the interaction is significant; Type I
+# shows the ANOVA subtitle only.
 pacman::p_load(here, dplyr, tidyr, readr, patchwork, ggsignif, rstatix)
 source(here("04_Figures", "functions", "style.R"))
 
