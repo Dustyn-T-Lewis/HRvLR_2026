@@ -199,12 +199,12 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 
 | Figure | Content |
 |---|---|
-| F01 | Proteome overview: detection, missingness, PCA, sample composition |
-| F02 | DEP landscape, set overlaps, and the eta-squared protein-variance panel |
-| F03 | Per-contrast volcanoes |
+| F01 | Phenotype atlas: HR vs LR growth and strength despite matched training |
+| F02 | Proteome overview and QC: PCA, DEP counts, effect sizes, set overlaps, eta-squared |
+| F03 | enrichVolcano ring-volcanoes per contrast |
 | F04 | Training concordance: HR vs LR (quadrant ORA, NES scatter, fry, RRHO2, bootstrap) |
 | F05 | Acute concordance: HR vs LR |
-| F06 | WGCNA modules on the missForest-imputed matrix |
+| F06 | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
 
 The HR-vs-LR response question is answered in F04/F05, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap.

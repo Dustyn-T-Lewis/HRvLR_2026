@@ -67,10 +67,9 @@ Clustering is computed self-contained inside `04_Figures/F06` (see Figures);
 WGCNA is the inferential engine for the module-phenotype linkage.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
-exploratory and feeds only QC, sensitivity, and figure/WGCNA inputs. Each arm is
-independent and writes a method-tagged `DAList_imputed_<method>.rds`; the
-`missForest` arm is the one downstream figures and the DEP sensitivity check read
-by default:
+exploratory and feeds only QC and figure/WGCNA inputs. Each arm is independent
+and writes a method-tagged `DAList_imputed_<method>.rds`; the `missForest` arm is
+the one downstream figures and the imputed-DEP concordance check read by default:
 
 ```sh
 Rscript 02_Normalization/imputation/a_script/c_missforest.R    # default downstream arm
@@ -91,7 +90,7 @@ run F03 before F04/F05.
 - `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea cache)
 - `04_Figures/F04`: HR-vs-LR training-phase concordance
 - `04_Figures/F05`: HR-vs-LR acute-phase concordance
-- `04_Figures/F06`: WGCNA module-phenotype linkage (self-contained on the pi-gated set)
+- `04_Figures/F06`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
 
 ```sh
 Rscript 04_Figures/F01/a_script/HRvLR_F01_run.R
