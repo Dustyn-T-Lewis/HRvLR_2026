@@ -50,7 +50,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | Figure scripts and outputs; direct YvO analogues plus HRvLR-specific extensions. `F03` clusters the pi-gated proteome (WGCNA paired, Mfuzz gap, sPLS/DIABLO), summarises each module by an eigengene, and links modules to phenotype with a mixed model and permutation null; WGCNA carries the inferential claim |
+| `04` | `04_Figures/` | Six figures: F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea cache; F04/F05 HR-vs-LR training/acute concordance, which read that cache; F06 WGCNA module-phenotype linkage |
 
 ## Canonical Run Order
 
@@ -63,9 +63,8 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `04_Figures/F03` (see Figures). WGCNA
-is the primary inferential engine; Mfuzz corroborates the temporal shape;
-sPLS/DIABLO is exploratory and quarantined.
+Clustering is computed self-contained inside `04_Figures/F06` (see Figures);
+WGCNA is the inferential engine for the module-phenotype linkage.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
 exploratory and feeds only QC, sensitivity, and figure/WGCNA inputs. Each arm is
@@ -83,17 +82,24 @@ Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imp
 
 ### Figures
 
-Three active figures, each rendered as standalone panels (no composite) into
-`b_reports`; rerun only after stages `01` to `03` complete cleanly.
+Six active figures, rendered into `b_reports`; rerun only after stages `01` to
+`03` complete cleanly. F03 builds the fgsea cache once and F04/F05 read it, so
+run F03 before F04/F05.
 
 - `04_Figures/F01`: phenotype atlas
 - `04_Figures/F02`: global proteome overview and QC
-- `04_Figures/F03`: module-phenotype linkage (computes WGCNA/Mfuzz/sPLS self-contained on the pi-gated set)
+- `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea cache)
+- `04_Figures/F04`: HR-vs-LR training-phase concordance
+- `04_Figures/F05`: HR-vs-LR acute-phase concordance
+- `04_Figures/F06`: WGCNA module-phenotype linkage (self-contained on the pi-gated set)
 
 ```sh
 Rscript 04_Figures/F01/a_script/HRvLR_F01_run.R
 Rscript 04_Figures/F02/a_script/HRvLR_F02_run.R
 Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
+Rscript 04_Figures/F04/a_script/HRvLR_F04_run.R
+Rscript 04_Figures/F05/a_script/HRvLR_F05_run.R
+Rscript 04_Figures/F06/a_script/HRvLR_F06_run.R
 ```
 
 ## Repository Conventions
