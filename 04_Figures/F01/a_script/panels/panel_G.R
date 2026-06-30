@@ -32,9 +32,9 @@ pG <- ggplot(meta, aes(x = Group, y = hypertrophy_pct, fill = Group)) +
     stat = "summary", fun.data = mean_se,
     width = 0.2, linewidth = 0.4
   ) +
-  geom_jitter(
-    width = 0.15, size = 1.5, alpha = 0.5,
-    shape = 16, color = "grey30"
+  geom_point(
+    position = position_jitter(width = 0.15, height = 0, seed = 42),
+    size = 1.5, alpha = 0.5, shape = 16, color = "grey30"
   ) +
   scale_fill_manual(values = bar_colors) +
   scale_x_discrete(labels = c(

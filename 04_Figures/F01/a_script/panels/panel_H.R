@@ -1,142 +1,16 @@
 # F01 Panel H: 1RM Extension (Pre/Post x Group + Delta)
-pacman::p_load(here, dplyr, tidyr, readr, patchwork, ggsignif, rstatix)
+pacman::p_load(here, readr)
 source(here("04_Figures", "functions", "style.R"))
-
-PW <- 150
-PH <- 100
+source(here("04_Figures", "F01", "a_script", "functions", "prepost.R"))
 
 RPT <- here("04_Figures", "F01", "b_reports")
 DAT <- here("04_Figures", "F01", "c_data")
 dir.create(file.path(RPT, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
 
-meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE) %>%
-  filter(Timepoint %in% c("T1", "T2"), !is.na(X1RM._Ext_Pre)) %>%
-  mutate(
-    subject_key = sub("_T[123]$", "", Col_ID),
-    Group = factor(Group, levels = c("HR", "LR")),
-    Timepoint = factor(Timepoint, levels = c("T1", "T2")),
-    Group_Time = factor(Group_Time, levels = c("HR_T1", "HR_T2", "LR_T1", "LR_T2"))
-  ) %>%
-  rename(value = X1RM._Ext_Pre)
-
-pheno_wide <- meta %>%
-  select(subject_key, Group, Timepoint, value) %>%
-  pivot_wider(names_from = Timepoint, values_from = value) %>%
-  mutate(delta = T2 - T1)
-
-stats_anova <- rstatix::anova_test(
-  data = meta, dv = value, wid = subject_key,
-  between = Group, within = Timepoint
+out <- prepost_delta_panel(
+  "X1RM._Ext_Pre", "1RM Extension", "1RM (kg)", expression(Delta ~ "1RM (kg)"), "H",
+  y_comma = FALSE
 )
-
-hr_wide <- pheno_wide %>% filter(Group == "HR", !is.na(T1), !is.na(T2))
-lr_wide <- pheno_wide %>% filter(Group == "LR", !is.na(T1), !is.na(T2))
-stats_paired_hr <- t.test(hr_wide$T2, hr_wide$T1, paired = TRUE)
-stats_paired_lr <- t.test(lr_wide$T2, lr_wide$T1, paired = TRUE)
-stats_delta <- t.test(delta ~ Group, data = pheno_wide)
-
-anova_tbl <- as.data.frame(stats_anova)
-anova_sub <- sprintf(
-  "Group %s   Time %s   Interaction %s",
-  fmt_p(anova_tbl$p[anova_tbl$Effect == "Group"]),
-  fmt_p(anova_tbl$p[anova_tbl$Effect == "Timepoint"]),
-  fmt_p(anova_tbl$p[anova_tbl$Effect == "Group:Timepoint"])
-)
-
-fill_4 <- GROUP_FILL[c("HR_T1", "HR_T2", "LR_T1", "LR_T2")]
-sig_y_left <- bracket_pos(meta$value)
-
-pH_left <- ggplot(meta, aes(x = Group_Time, y = value, fill = Group_Time)) +
-  geom_bar(
-    stat = "summary", fun = mean, width = 0.65,
-    color = "black", linewidth = 0.3
-  ) +
-  geom_errorbar(
-    stat = "summary", fun.data = mean_se,
-    width = 0.2, linewidth = 0.4
-  ) +
-  geom_jitter(
-    width = 0.12, size = 1.2, alpha = 0.5,
-    shape = 21, color = "black", stroke = 0.3
-  ) +
-  geom_signif(
-    comparisons = list(c("HR_T1", "HR_T2")),
-    annotations = fmt_p(stats_paired_hr$p.value),
-    y_position = sig_y_left, textsize = KEY_TEXT, tip_length = 0.01
-  ) +
-  geom_signif(
-    comparisons = list(c("LR_T1", "LR_T2")),
-    annotations = fmt_p(stats_paired_lr$p.value),
-    y_position = sig_y_left, textsize = KEY_TEXT, tip_length = 0.01
-  ) +
-  annotate("text",
-    x = 1.5, y = -Inf, label = "HR",
-    vjust = 4.2, fontface = "bold", size = 3.2, color = "grey25"
-  ) +
-  annotate("text",
-    x = 3.5, y = -Inf, label = "LR",
-    vjust = 4.2, fontface = "bold", size = 3.2, color = "grey25"
-  ) +
-  scale_fill_manual(values = fill_4) +
-  scale_x_discrete(labels = c(
-    HR_T1 = "Pre", HR_T2 = "Post",
-    LR_T1 = "Pre", LR_T2 = "Post"
-  )) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.22))) +
-  coord_cartesian(clip = "off") +
-  labs(
-    title = "1RM Extension", subtitle = anova_sub,
-    y = "1RM (kg)", x = NULL, tag = "H"
-  ) +
-  FIG_THEME +
-  theme(
-    plot.subtitle = element_text(size = 7, color = "grey40", face = "italic"),
-    plot.margin = margin(5, 5, 20, 5), legend.position = "none"
-  )
-
-delta_colors <- c(
-  HR = unname(GROUP_FILL["HR_T2"]),
-  LR = unname(GROUP_FILL["LR_T2"])
-)
-
-pH_right <- ggplot(pheno_wide, aes(x = Group, y = delta, fill = Group)) +
-  geom_bar(
-    stat = "summary", fun = mean, width = 0.55,
-    color = "black", linewidth = 0.3
-  ) +
-  geom_errorbar(
-    stat = "summary", fun.data = mean_se,
-    width = 0.15, linewidth = 0.4
-  ) +
-  geom_jitter(
-    width = 0.12, size = 1.2, alpha = 0.5,
-    shape = 21, color = "black", stroke = 0.3
-  ) +
-  geom_signif(
-    comparisons = list(c("HR", "LR")),
-    annotations = fmt_p(stats_delta$p.value),
-    textsize = KEY_TEXT, tip_length = 0.02,
-    y_position = bracket_pos(pheno_wide$delta)
-  ) +
-  scale_fill_manual(values = delta_colors) +
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.25))) +
-  labs(y = expression(Delta ~ "1RM (kg)"), x = NULL) +
-  FIG_THEME +
-  theme(legend.position = "none")
-
-pH <- (pH_left | pH_right) + plot_layout(widths = c(0.65, 0.35))
-
-audit_H <- pheno_wide %>%
-  group_by(Group) %>%
-  summarise(
-    n = sum(!is.na(delta)),
-    delta_mean = mean(delta, na.rm = TRUE),
-    delta_sd = sd(delta, na.rm = TRUE),
-    delta_sem = delta_sd / sqrt(n),
-    .groups = "drop"
-  ) %>%
-  mutate(delta_t_test_p = stats_delta$p.value)
-write_csv(audit_H, file.path(DAT, "audit_panel_H_1rm_ext.csv"))
-
-save_panel(pH, file.path(RPT, "panels", "panel_h_1rm_ext"), PW, PH)
+save_panel(out$plot, file.path(RPT, "panels", "panel_h_1rm_ext"), 150, 100)
+write_csv(out$audit, file.path(DAT, "audit_panel_H_1rm_ext.csv"))

@@ -72,9 +72,9 @@ build_fiber_panel <- function(meta_df, col_name, title, y_lab, tag) {
       stat = "summary", fun.data = mean_se,
       width = 0.2, linewidth = 0.4
     ) +
-    geom_jitter(
-      width = 0.12, size = 1.0, alpha = 0.5,
-      shape = 21, color = "black", stroke = 0.3
+    geom_point(
+      position = position_jitter(width = 0.12, height = 0, seed = 42),
+      size = 1.0, alpha = 0.5, shape = 21, color = "black", stroke = 0.3
     )
 
   if ((interaction_sig || time_sig) && tt_hr$p.value < 0.05) {
@@ -129,9 +129,9 @@ build_fiber_panel <- function(meta_df, col_name, title, y_lab, tag) {
       stat = "summary", fun.data = mean_se,
       width = 0.15, linewidth = 0.4
     ) +
-    geom_jitter(
-      width = 0.12, size = 1.0, alpha = 0.5,
-      shape = 21, color = "black", stroke = 0.3
+    geom_point(
+      position = position_jitter(width = 0.12, height = 0, seed = 42),
+      size = 1.0, alpha = 0.5, shape = 21, color = "black", stroke = 0.3
     )
 
   if (interaction_sig && tt_delta$p.value < 0.05) {
