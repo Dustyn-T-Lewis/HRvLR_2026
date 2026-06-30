@@ -5,8 +5,8 @@ pacman::p_load(here, UpSetR)
 
 if (!exists("meta")) source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
 
-dep_sets <- lapply(MAIN_CONTRASTS, function(c) {
-  g <- dep_df$gene[which(dep_df[[paste0("sig_pi_", c)]] != 0)]
+dep_sets <- lapply(MAIN_CONTRASTS, function(ct) {
+  g <- dep_df$gene[which(dep_df[[paste0("sig_pi_", ct)]] != 0)]
   unique(g[!is.na(g)])
 })
 names(dep_sets) <- unname(CTR_SHORT[MAIN_CONTRASTS])
@@ -26,4 +26,10 @@ draw_upset <- function() {
 png(paste0(file_stem, ".png"), width = 160, height = PANEL_H, units = "mm", res = 300, bg = "white")
 draw_upset()
 dev.off()
+
+membership <- data.frame(
+  contrast = rep(names(dep_sets), lengths(dep_sets)),
+  gene = unlist(dep_sets, use.names = FALSE)
+)
+write.csv(membership, file.path(DAT_DIR, "audit_panel_G_upset.csv"), row.names = FALSE)
 cat("F02 Panel G done (supp).\n")
