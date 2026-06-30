@@ -27,7 +27,6 @@ load_clustering_inputs <- function() {
   pi_set <- rownames(pi_mat)[pi_keep]
   pi_set <- intersect(pi_set, rownames(imputed$data))
 
-  abund <- imputed$data[pi_set, , drop = FALSE]
   full_abund <- imputed$data
 
   md <- imputed$metadata
@@ -40,24 +39,12 @@ load_clustering_inputs <- function() {
     stringsAsFactors = FALSE
   )
 
-  hrvlr_contrasts <- c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR")
-  gap <- vapply(
-    primary$results[hrvlr_contrasts],
-    function(r) r$logFC, numeric(nrow(primary$data))
-  )
-  rownames(gap) <- rownames(primary$data)
-  gap <- gap[pi_set, , drop = FALSE]
-  colnames(gap) <- c("T1", "T2", "T3")
-
   stopifnot(
-    ncol(abund) == 45, ncol(gap) == 3,
-    nrow(abund) == length(pi_set), !anyNA(abund),
-    ncol(full_abund) == 45, nrow(full_abund) >= nrow(abund), !anyNA(full_abund),
-    identical(meta$sample_id, colnames(abund)),
-    identical(colnames(full_abund), colnames(abund))
+    ncol(full_abund) == 45, !anyNA(full_abund),
+    identical(meta$sample_id, colnames(full_abund))
   )
 
-  list(abund = abund, full_abund = full_abund, meta = meta, gap = gap, pi_set = pi_set)
+  list(full_abund = full_abund, meta = meta, pi_set = pi_set)
 }
 
 # Per-subject phenotype table: T2 composite hypertrophy + the six T1->T2 deltas.
