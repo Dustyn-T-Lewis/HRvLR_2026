@@ -113,7 +113,10 @@ fig_pred <- ggplot(top_pred, aes(q2, term, fill = beats_null)) +
   labs(
     x = "leave-one-out Q-squared (baseline GSVA -> phenotype)", y = NULL,
     title = "Baseline pathway activity rarely predicts the response",
-    subtitle = "Dotted line = 95th percentile of the permutation null (best of 64 pathways)"
+    subtitle = sprintf(
+      "Dotted line = 95th percentile of the permutation null (best of %d pathways)",
+      nrow(scores)
+    )
   ) +
   FIG_THEME +
   scale_y_reordered() +
