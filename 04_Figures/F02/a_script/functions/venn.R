@@ -1,6 +1,7 @@
 # Baseline-anchored 3-set Euler/venn helpers shared by F02 panels I and J.
 # Globals resolved at call time from HRvLR_F02_setup.R: dep_df, PANEL_H, RPT_DIR,
-# FIG_THEME, FIG_GEOM_TEXT, FIG_AXIS_TEXT, DIR_COLORS, GROUP_COLORS, CONTRAST_COLORS, save_png.
+# DAT_DIR, FIG_THEME, FIG_GEOM_TEXT, FIG_AXIS_TEXT, DIR_COLORS, GROUP_COLORS,
+# CONTRAST_COLORS, save_png.
 
 pacman::p_load(here, dplyr, tidyr, tibble, ggplot2, ggforce, patchwork, eulerr)
 
@@ -215,8 +216,11 @@ venn3_panel <- function(hr_ct, lr_ct, base_ct, title, file_stem,
     Baseline = unname(CONTRAST_COLORS[["Baseline_HRvLR"]])
   )
   metric_lab <- if (metric == "pi") "Pi < 0.05" else "p < 0.05"
-  euler_gg(sets, cols, region_bar_df(hr_ct, lr_ct, base_ct, metric),
-    title, metric_lab, file_stem,
-    w = w, h = h
+  bar_df <- region_bar_df(hr_ct, lr_ct, base_ct, metric)
+  write.csv(
+    as.data.frame(bar_df[c("region", "direction", "n")]),
+    file.path(DAT_DIR, paste0("audit_", basename(file_stem), ".csv")),
+    row.names = FALSE
   )
+  euler_gg(sets, cols, bar_df, title, metric_lab, file_stem, w = w, h = h)
 }

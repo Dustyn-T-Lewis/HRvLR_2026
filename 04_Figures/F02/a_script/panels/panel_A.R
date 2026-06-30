@@ -9,8 +9,6 @@ PA_W <- 200
 PA_H <- PANEL_H
 dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-GROUP_COLS <- GROUP_COLORS
-TIME_COLS <- TIME_COLORS
 
 # PCA on imputed matrix (samples as rows)
 samp_ids <- meta$Col_ID[meta$Col_ID %in% colnames(imp_mat)]
@@ -71,8 +69,8 @@ pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
     x = Inf, y = Inf, label = stat_label(perm_group, "Group"),
     hjust = 1.05, vjust = 1.15, size = FIG_GEOM_TEXT, color = "grey30", fontface = "bold"
   ) +
-  scale_color_manual(values = GROUP_COLS) +
-  scale_fill_manual(values = GROUP_COLS, guide = "none") +
+  scale_color_manual(values = GROUP_COLORS) +
+  scale_fill_manual(values = GROUP_COLORS, guide = "none") +
   labs(
     x = sprintf("PC1 (%.1f%%)", var_pct[1]),
     y = sprintf("PC2 (%.1f%%)", var_pct[2]),
@@ -89,8 +87,8 @@ pA_time <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Timepoint)) +
     x = Inf, y = Inf, label = stat_label(perm_time, "Time"),
     hjust = 1.05, vjust = 1.15, size = FIG_GEOM_TEXT, color = "grey30", fontface = "bold"
   ) +
-  scale_color_manual(values = TIME_COLS) +
-  scale_fill_manual(values = TIME_COLS, guide = "none") +
+  scale_color_manual(values = TIME_COLORS) +
+  scale_fill_manual(values = TIME_COLORS, guide = "none") +
   labs(
     x = sprintf("PC1 (%.1f%%)", var_pct[1]),
     y = sprintf("PC2 (%.1f%%)", var_pct[2]),
