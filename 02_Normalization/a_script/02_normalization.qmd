@@ -143,19 +143,21 @@ c(entries_imputed = sum(was_missing), pct_of_matrix = round(100 * mean(was_missi
 ## missForest (canonical) {#sec-missforest}
 
 `missForest` is a non-parametric random-forest imputer: each protein's missing
-values are predicted from the multivariate structure of the other samples. It is
-stochastic, so the seed is fixed:
+values are predicted from the multivariate structure of the other proteins, so
+the matrix is transposed to put proteins in the columns. It is stochastic, so the
+seed is fixed and rows are ordered before the fit:
 
 ```{r}
 #| label: missforest
 #| cache: true
 library(missForest)
 set.seed(42)
-mf <- missForest(mat, maxiter = 10, ntree = 100, verbose = FALSE)
-imp <- mf$ximp
+ord <- order(rownames(mat))
+mf <- missForest(t(mat[ord, ]), maxiter = 10, ntree = 100, verbose = FALSE)
+imp <- t(mf$ximp)[rownames(mat), ]
 dimnames(imp) <- dimnames(mat)
 
-c(na_remaining = sum(is.na(imp)), OOB_NRMSE = round(unname(mf$OOBerror["NRMSE"]), 4))
+c(na_remaining = sum(is.na(imp)), OOB_error = round(mf$OOBerror[1], 4))
 ```
 
 ## imp4p (comparison) {#sec-imp4p}

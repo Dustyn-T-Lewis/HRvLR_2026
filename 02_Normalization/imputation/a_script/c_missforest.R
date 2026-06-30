@@ -19,7 +19,7 @@ cat(sprintf(
 ))
 
 ord <- order(rownames(mat)) # deterministic order before the stochastic fit
-mf <- missForest(t(mat[ord, ]), maxiter = 10, ntree = 100, verbose = TRUE)
+mf <- missForest(t(mat[ord, ]), maxiter = 10, ntree = 100, verbose = FALSE)
 imp <- t(mf$ximp)[rownames(mat), ]
 dimnames(imp) <- dimnames(mat)
 stopifnot(sum(is.na(imp)) == 0, identical(dim(imp), dim(mat)))
