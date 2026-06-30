@@ -1,15 +1,18 @@
 #!/usr/bin/env Rscript
-# F05 Acute concordance/divergence - render the panels, then stitch + workbook.
+# F05 Acute concordance: HR vs LR over T2 to T3. Same builders as F04 on the
+# acute contrast pair. Rendered by the shared concordance driver.
 pacman::p_load(here)
-source(here("04_Figures", "F05", "a_script", "HRvLR_F05_setup.R"))
+source(here("04_Figures", "functions", "concordance_figure.R"))
 
-source(here("04_Figures", "F05", "a_script", "panels", "panel_A_quadrant_ora.R"))
-source(here("04_Figures", "F05", "a_script", "panels", "panel_B_nes_scatter.R"))
-
-source(here("04_Figures", "F05", "a_script", "supp", "supp_fry.R"))
-source(here("04_Figures", "F05", "a_script", "supp", "supp_rrho2.R"))
-source(here("04_Figures", "F05", "a_script", "supp", "supp_threshold.R"))
-source(here("04_Figures", "F05", "a_script", "supp", "supp_bootstrap.R"))
-
-source(here("04_Figures", "F05", "a_script", "HRvLR_F05_composite.R"))
-cat("F05 complete.\n")
+render_concordance_figure(list(
+  fig_id = "F05",
+  c_hi = "Acute_HR", c_lo = "Acute_LR", c_int = "Acute_Interaction",
+  hi_levels = c("HR_T2", "HR_T3"), lo_levels = c("LR_T2", "LR_T3"),
+  labels = list(
+    hi = "HR", lo = "LR", phase = "Acute",
+    x = "HR acute logFC", y = "LR acute logFC",
+    x_short = "HR acute", y_short = "LR acute"
+  ),
+  title = "Figure 5. Acute response: shared signal and responder-specific divergence",
+  subtitle = "HR vs LR over T2 to T3. Diagonal = concordant; off-diagonal and orange = interaction-significant divergence."
+))

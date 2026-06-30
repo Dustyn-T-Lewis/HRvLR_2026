@@ -1,15 +1,18 @@
 #!/usr/bin/env Rscript
-# F04 Training concordance/divergence - render the panels, then stitch + workbook.
+# F04 Training concordance: HR vs LR over T1 to T2. Where the two groups adapt
+# together and where they diverge. Rendered by the shared concordance driver.
 pacman::p_load(here)
-source(here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
+source(here("04_Figures", "functions", "concordance_figure.R"))
 
-source(here("04_Figures", "F04", "a_script", "panels", "panel_A_quadrant_ora.R"))
-source(here("04_Figures", "F04", "a_script", "panels", "panel_B_nes_scatter.R"))
-
-source(here("04_Figures", "F04", "a_script", "supp", "supp_fry.R"))
-source(here("04_Figures", "F04", "a_script", "supp", "supp_rrho2.R"))
-source(here("04_Figures", "F04", "a_script", "supp", "supp_threshold.R"))
-source(here("04_Figures", "F04", "a_script", "supp", "supp_bootstrap.R"))
-
-source(here("04_Figures", "F04", "a_script", "HRvLR_F04_composite.R"))
-cat("F04 complete.\n")
+render_concordance_figure(list(
+  fig_id = "F04",
+  c_hi = "Training_HR", c_lo = "Training_LR", c_int = "Training_Interaction",
+  hi_levels = c("HR_T1", "HR_T2"), lo_levels = c("LR_T1", "LR_T2"),
+  labels = list(
+    hi = "HR", lo = "LR", phase = "Training",
+    x = "HR training logFC", y = "LR training logFC",
+    x_short = "HR training", y_short = "LR training"
+  ),
+  title = "Figure 4. Training response: shared adaptation and responder-specific divergence",
+  subtitle = "HR vs LR over T1 to T2. Diagonal = concordant; off-diagonal and orange = interaction-significant divergence."
+))
