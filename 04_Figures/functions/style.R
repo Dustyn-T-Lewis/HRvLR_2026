@@ -3,8 +3,12 @@
 
 pacman::p_load(ggplot2, scales, grid)
 
-# Colour palettes
-
+# Colour palettes. Two blue/red mappings coexist and must not be conflated:
+# GROUP_COLORS encode responder (HR = dark blue, LR = dark red); DIR_COLORS encode
+# logFC direction (Up = light red, Down = light blue). The group hues are the
+# darker shades so a responder legend never reads as a direction legend. These are
+# HRvLR-specific: the YvO/Mito suites use the lighter #4393C3/#D6604D for their own
+# groups, so blue/red meaning does not carry across suites - always read the legend.
 GROUP_COLORS <- c(HR = "#2166AC", LR = "#B2182B")
 DIR_COLORS <- c(Up = "#D6604D", Down = "#4393C3", NS = "grey70")
 
