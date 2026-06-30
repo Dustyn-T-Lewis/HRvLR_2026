@@ -92,7 +92,7 @@ immunoglobulins) are abundant enough to drown out the muscle signal. A protein i
 flagged for removal if it looks like blood (HPA "Secreted to blood", an
 immunoglobulin, or a strong erythrocyte signal) **and** does not look like muscle
 (rescued by a strong skeletal-myonuclei signal, unless its measured blood
-concentration marks it as a true plasma protein). The classifier is built from
+concentration identifies it as a true plasma protein). The classifier is built from
 the Human Protein Atlas annotations:
 
 ```{r}

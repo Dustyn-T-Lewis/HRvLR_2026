@@ -175,8 +175,8 @@ amounts.
 # Fit and extract {#sec-fit}
 
 `fit_limma_model()` chains `lmFit` (per-protein fit with the blocking `rho`),
-`contrasts.fit` (reparametrize into contrast space), and `eBayes` (variance
-moderation) [@ritchie2015]. `extract_DA_results()` applies Benjamini-Hochberg
+`contrasts.fit` (reparametrize into contrast space), and `eBayes` with
+`robust = TRUE` (outlier-resistant variance moderation) [@ritchie2015]. `extract_DA_results()` applies Benjamini-Hochberg
 across proteins [@benjamini1995]. The FDR threshold is **0.10**: at n ≈ 8 per
 cell, strict 0.05 control would discard genuinely altered proteins with modest
 support; the Pi-score adds a fold-change requirement on top.

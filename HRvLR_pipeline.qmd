@@ -96,7 +96,7 @@ Atlas:
 - **plasma-origin** = HPA "Secreted to blood", an immunoglobulin gene, or a high
   erythrocyte single-cell signal (`Erythrocytes ≥ 5000 nCPM`, the hemoglobins);
 - **muscle rescue** = high skeletal-myonuclei signal (`Myonuclei ≥ 50 nCPM`),
-  unless the measured blood concentration marks it as a true plasma protein
+  unless the measured blood concentration identifies it as a true plasma protein
   (`blood_conc ≥ 1e9`).
 
 ```{r}
