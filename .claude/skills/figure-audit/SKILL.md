@@ -14,15 +14,19 @@ any file changes. Invoke `/figure-audit` (all figures) or `/figure-audit F02`
 ## Anchor: hypothesis and figure roles
 
 **Hypothesis.** In resistance-trained skeletal muscle, high vs low hypertrophy
-responders diverge in their proteome — characterized phenotypically (F01), in
-the differential and enriched proteome (F02), and mechanistically and
-predictively via co-expression modules linked to the adaptation (F03).
+responders diverge in the magnitude and trajectory of their proteomic training
+response, not merely in baseline state — characterized phenotypically (F01), in
+the differential and enriched proteome (F02, F03), in HR-vs-LR concordance of the
+response (F04, F05), and via co-expression modules linked to the adaptation (F06).
 
 | Figure | Role | Question it must answer |
 | --- | --- | --- |
 | F01 | Descriptive overview | Who are the responders? HR vs LR phenotype (growth/strength) despite matched training. |
-| F02 | Proteome overview + enrichment volcanoes | What is different? DEPs per contrast plus enriched biology (enrichVolcano rings). |
-| F03 | Clustering — mechanistic + predictive | How, and can we predict? Modules linked to adaptation (mechanism) and baseline proteome predicting the response (prediction). |
+| F02 | Proteome overview + QC | What is different? DEPs per contrast, effect sizes, variance structure. |
+| F03 | enrichVolcano ring-volcanoes | What moves where? logFC/pi volcanoes with fgsea NES rings per contrast; also builds the shared fgsea cache. |
+| F04 | Training-phase concordance | Do HR and LR move the same biology the same way from T1 to T2, or diverge? |
+| F05 | Acute-phase concordance | Same question for the acute bout, T2 to T3. |
+| F06 | WGCNA module-phenotype | Which co-expression modules track the adaptation (within-cohort association)? |
 
 Extend this table if figures are added.
 
