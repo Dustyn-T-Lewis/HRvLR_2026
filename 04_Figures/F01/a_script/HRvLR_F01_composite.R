@@ -18,7 +18,7 @@ panel <- function(name) {
 
 panels <- c(
   "panel_a_volume_load", "panel_b_1rm_leg", "panel_c_fcsa_mixed",
-  "panel_d_fcsa_type1", "panel_e_fcsa_type2", "panel_f_fiber_counts",
+  "panel_d_fcsa_type1", "panel_e_fcsa_type2", "panel_f_myovision_fcsa",
   "panel_g_hypertrophy_composite", "panel_h_1rm_ext", "panel_i_mcsa"
 )
 
