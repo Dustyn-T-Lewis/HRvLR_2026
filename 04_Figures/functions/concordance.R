@@ -292,7 +292,7 @@ panel_nes_scatter <- function(nes_wide, c_hi, c_lo, labels) {
     ) +
     ggrepel::geom_text_repel(
       data = lab_d, aes(label = clean_pathway_name(pathway, 30)),
-      color = "#8A4500", size = 2.1, max.overlaps = 18, segment.size = 0.2
+      color = "#8A4500", size = 2.1, max.overlaps = 18, segment.size = 0.2, seed = 42
     ) +
     coord_fixed(xlim = c(-lim, lim), ylim = c(-lim, lim)) +
     labs(
