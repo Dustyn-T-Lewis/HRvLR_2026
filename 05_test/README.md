@@ -16,6 +16,13 @@ subject random effects, adds to the contrast-based concordance work in `04_`.
 4. `03_lmm_phenotype.R` — `score ~ phenotype * timepoint + (1|subject)` (does the
    trajectory track the response), and baseline (T1) score → phenotype with
    leave-one-out CV referenced to a permutation null.
+5. `04_multidb.R` — repeat GSVA and ssGSEA across all five databases, fit the
+   group × timepoint LMM per pathway per method, and correct within each database
+   (each has its own size and redundancy), keeping nominal p alongside the FDR.
+6. `05_parallel_figures.R` — method-agreement and per-database summary figures
+   comparing GSVA and ssGSEA.
+
+`run.R` sources `setup.R` then `01`–`05`.
 
 ## Method validity (verified citations)
 

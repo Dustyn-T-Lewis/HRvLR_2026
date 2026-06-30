@@ -3,7 +3,6 @@
 # has its own size and redundancy, so pooled BH is the wrong reference). Keeps
 # nominal p alongside the within-database FDR.
 if (!exists("expr")) source(here::here("05_test", "a_script", "setup.R"))
-pacman::p_load(GSVA, lme4, lmerTest)
 
 pw_full <- build_pathway_collection(
   min_size = 15, max_size = 500, include_goslim = TRUE, exclude_variants = TRUE
