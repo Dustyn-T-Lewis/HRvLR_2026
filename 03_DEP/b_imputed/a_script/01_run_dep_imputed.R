@@ -6,7 +6,6 @@
 # concordance against the non-imputed fit.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tibble, purrr)
-set.seed(42)
 
 CANONICAL <- "missforest"
 clear_dir <- function(d) {
@@ -35,7 +34,7 @@ contrasts_vec <- c(
   "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 )
 
-#### DEP per imputed matrix ####
+# DEP per imputed matrix
 # Same limma + duplicateCorrelation workflow as the primary arm, once per matrix.
 
 runs <- imap(methods, function(rds, m) {
@@ -79,7 +78,7 @@ runs <- imap(methods, function(rds, m) {
   res
 })
 
-#### logFC concordance vs non-imputed ####
+# logFC concordance vs non-imputed
 # Spearman per contrast against the primary per-contrast results; high rho means
 # imputation did not distort the effect estimates.
 
