@@ -11,7 +11,6 @@ pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, stringr, openxlsx,
   ggplot2, forcats, patchwork
 )
-set.seed(42)
 
 data_dir <- here("01_Filtering", "c_data")
 report_dir <- here("01_Filtering", "b_reports")
@@ -46,7 +45,7 @@ run_pca <- function(mat, metadata, log_transform = TRUE) {
   list(pca = pca, scores = pc, var_exp = ve)
 }
 
-#### Load matrix + metadata ####
+# Load matrix + metadata
 
 raw <- read_excel(here("00_input", "HRvLR_raw.xlsx"))
 annot_cols <- c("uniprot_id", "protein", "gene", "description", "n_seq")
@@ -71,7 +70,7 @@ if (any(duplicated(annotation$uniprot_id))) { # keep highest-mean row per access
   cat(sprintf("Deduplicated: %d proteins\n", nrow(annotation)))
 }
 
-#### HPA presence + myonuclei-rescue blood removal ####
+# HPA presence + myonuclei-rescue blood removal
 
 bl <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) |>
   transmute(
@@ -111,7 +110,7 @@ flog <- bind_rows(flog, tibble(step = "Blood contaminant removal", n_after = sum
 annotation <- annotation[keep, ]
 intensity <- intensity[keep, ]
 
-#### Build DAList + missingness filter ####
+# Build DAList + missingness filter
 
 int_mat <- as.data.frame(data.matrix(intensity))
 rownames(int_mat) <- annotation$uniprot_id
@@ -135,7 +134,7 @@ filtered_proteins <- annot_df |>
   filter(!uniprot_id %in% rownames(dal$data)) |>
   select(uniprot_id, gene, description)
 
-#### Outlier consensus (4-method, >=3/4) ####
+# Outlier consensus (4-method, >=3/4)
 
 # Method 1: sample missingness, with a within-subject delta arm
 pct_missing <- colMeans(is.na(dal$data)) * 100
@@ -199,7 +198,7 @@ meta_pre_outlier <- dal$metadata
 if (n_outliers > 0) dal <- filter_samples(dal, !(Col_ID %in% outlier_ids))
 cat(sprintf("%d samples remain\n", ncol(dal$data)))
 
-#### Export ####
+# Export
 
 saveRDS(dal, file.path(data_dir, "DAList_filtered.rds"))
 

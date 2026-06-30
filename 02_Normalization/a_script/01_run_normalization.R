@@ -5,7 +5,6 @@
 # cycloess uses limma's defaults (span = 0.7, adaptive.span = FALSE), matching YvO.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tidyr, stringr, tibble)
-set.seed(42)
 
 data_dir <- here("02_Normalization", "c_data")
 report_dir <- here("02_Normalization", "b_reports")
@@ -29,12 +28,12 @@ run_pca <- function(mat, metadata, log_transform = TRUE) {
   list(pca = pca, scores = pc, var_exp = ve)
 }
 
-#### Load filtered DAList ####
+# Load filtered DAList
 
 dal <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
 cat(sprintf("Loaded filtered DAList: %d proteins x %d samples\n", nrow(dal$data), ncol(dal$data)))
 
-#### Normalize (cycloess) + QC ####
+# Normalize (cycloess) + QC
 
 write_norm_report(dal,
   grouping_column = "Group_Time", output_dir = report_dir,
@@ -51,7 +50,7 @@ write_qc_report(dal,
 )
 cat(sprintf("Normalized (cycloess): %d proteins x %d samples\n", nrow(dal$data), ncol(dal$data)))
 
-#### Export ####
+# Export
 
 export_df <- bind_cols(
   as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
@@ -60,7 +59,7 @@ export_df <- bind_cols(
 write_csv(export_df, file.path(data_dir, "normalized.csv"))
 saveRDS(dal, file.path(data_dir, "DAList_normalized.rds"))
 
-#### Combined report intermediates (filtering + normalization) ####
+# Combined report intermediates (filtering + normalization)
 
 subj_var <- dal$metadata |>
   mutate(
