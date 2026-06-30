@@ -1,4 +1,4 @@
-# F01 Panel F: MyoVision Fiber Counts (Mixed + Type I)
+# F01 Panel F: MyoVision fCSA (Mixed + Type I)
 # Mixed shows the delta bracket only when the interaction is significant; Type I
 # shows the ANOVA subtitle only.
 pacman::p_load(here, dplyr, tidyr, readr, patchwork, ggsignif, rstatix)
@@ -156,11 +156,11 @@ build_fiber_panel <- function(meta_df, col_name, title, y_lab, tag) {
 # Build panels
 pF_mixed <- build_fiber_panel(
   meta, "MyoVision_fCSA_mixed_Pre",
-  "MyoVision fCSA Mixed", "Fiber count", "F"
+  "MyoVision fCSA Mixed", "MyoVision fCSA", "F"
 )
 pF_type1 <- build_fiber_panel(
   meta, "MyoVision_fCSA_Type_I__Pre",
-  "MyoVision fCSA Type I", "Fiber count", NULL
+  "MyoVision fCSA Type I", "MyoVision fCSA", NULL
 )
 
 pF <- pF_mixed / pF_type1
@@ -176,16 +176,16 @@ fiber_long <- meta %>%
   ) %>%
   pivot_longer(
     cols = c(Mixed, Type_I),
-    names_to = "fiber_type", values_to = "count"
+    names_to = "fiber_type", values_to = "fcsa"
   ) %>%
-  filter(!is.na(count))
+  filter(!is.na(fcsa))
 
 audit_F <- fiber_long %>%
   group_by(fiber_type, Group, Timepoint) %>%
   summarise(
-    n = n(), mean = mean(count), sd = sd(count),
-    sem = sd(count) / sqrt(n()), .groups = "drop"
+    n = n(), mean = mean(fcsa), sd = sd(fcsa),
+    sem = sd(fcsa) / sqrt(n()), .groups = "drop"
   )
-write_csv(audit_F, file.path(DAT, "audit_panel_F_fiber_counts.csv"))
+write_csv(audit_F, file.path(DAT, "audit_panel_F_myovision_fcsa.csv"))
 
-save_panel(pF, file.path(RPT, "panels", "panel_f_fiber_counts"), PW, PH)
+save_panel(pF, file.path(RPT, "panels", "panel_f_myovision_fcsa"), PW, PH)
