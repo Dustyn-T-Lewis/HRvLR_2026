@@ -102,7 +102,7 @@ build_phenotype_table <- function(meta_path) {
 # FAQ table: <20->18, 20-30->16, 30-40->14, >40->12). The downstream linkages
 # (run_module_prediction, run_module_responder) reduce each subject to one row
 # per timepoint, so the paired design needs no random effect.
-# Deterministic: single-threaded; blockwiseModules runs at its default seed.
+# Deterministic: single-threaded, fixed blockwiseModules randomSeed.
 run_wgcna <- function(abund, meta) {
   # WGCNA must be attached: moduleEigengenes resolves cor() via do.call from the
   # search path, so namespace-only loading would hit stats::cor. This masks
@@ -130,7 +130,8 @@ run_wgcna <- function(abund, meta) {
   net <- WGCNA::blockwiseModules(
     expr,
     networkType = "signed", power = chosen_power,
-    minModuleSize = 30, mergeCutHeight = 0.25, deepSplit = 2, verbose = 0
+    minModuleSize = 30, mergeCutHeight = 0.25, deepSplit = 2,
+    randomSeed = 12345, verbose = 0
   )
 
   mes_all <- WGCNA::moduleEigengenes(expr, colors = net$colors)$eigengenes
