@@ -26,9 +26,11 @@ composite <- wrap_plots(lapply(panels, panel), ncol = 3) +
   plot_annotation(
     title = "Phenotype Atlas (HR vs LR)",
     subtitle = "Training volume, strength, and fiber/muscle cross-sectional area",
+    caption = "Bars: group mean ± SEM. n = 8 per group; a partial subject drops out where its timepoint is missing.",
     theme = theme(
       plot.title = element_text(face = "bold", size = 13, hjust = 0.5),
-      plot.subtitle = element_text(size = 9, color = "grey30", hjust = 0.5)
+      plot.subtitle = element_text(size = 9, color = "grey30", hjust = 0.5),
+      plot.caption = element_text(size = 8, color = "grey30", hjust = 0.5)
     )
   )
 
