@@ -18,6 +18,7 @@ Rplots.pdf
 *_files/
 *_cache/
 **/a_script/*.html
+**/b_reports/**/*.html
 HRvLR_pipeline.html
 
 # 05_test is an exploratory branch; its figures are regenerated, not deliverables
