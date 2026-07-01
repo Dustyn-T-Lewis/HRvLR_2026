@@ -10,8 +10,8 @@ DAT <- here("04_Figures", "F01", "c_data")
 dir.create(file.path(RPT, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
 
-meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE) %>%
-  filter(Timepoint == "T2", !is.na(COMP.HYPERTROPHY)) %>%
+meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE) |>
+  filter(Timepoint == "T2", !is.na(COMP.HYPERTROPHY)) |>
   transmute(
     Subject_ID,
     Group = factor(Group, levels = c("HR", "LR")),
@@ -56,8 +56,8 @@ pG <- ggplot(meta, aes(x = Group, y = hypertrophy_pct, fill = Group)) +
     plot.margin = margin(5, 5, 5, 5)
   )
 
-audit_G <- meta %>%
-  group_by(Group) %>%
+audit_G <- meta |>
+  group_by(Group) |>
   summarise(
     n = n(),
     mean = mean(hypertrophy_pct),

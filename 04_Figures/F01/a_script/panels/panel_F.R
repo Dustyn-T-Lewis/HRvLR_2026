@@ -12,8 +12,8 @@ DAT <- here("04_Figures", "F01", "c_data")
 dir.create(file.path(RPT, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
 
-meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE) %>%
-  filter(Timepoint %in% c("T1", "T2")) %>%
+meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE) |>
+  filter(Timepoint %in% c("T1", "T2")) |>
   mutate(
     subject_key = sub("_T[123]$", "", Col_ID),
     Group = factor(Group, levels = c("HR", "LR")),
@@ -31,8 +31,8 @@ delta_colors <- c(
 
 # Helper: build Pre/Post + Delta panel pair for a fiber measure
 build_fiber_panel <- function(meta_df, col_name, title, y_lab, tag) {
-  sub <- meta_df %>%
-    filter(!is.na(.data[[col_name]])) %>%
+  sub <- meta_df |>
+    filter(!is.na(.data[[col_name]])) |>
     rename(value = !!col_name)
 
   stats_anova <- rstatix::anova_test(
@@ -48,13 +48,13 @@ build_fiber_panel <- function(meta_df, col_name, title, y_lab, tag) {
     fmt_p(anova_tbl$p[anova_tbl$Effect == "Group:Timepoint"])
   )
 
-  wide <- sub %>%
-    select(subject_key, Group, Timepoint, value) %>%
-    pivot_wider(names_from = Timepoint, values_from = value) %>%
+  wide <- sub |>
+    select(subject_key, Group, Timepoint, value) |>
+    pivot_wider(names_from = Timepoint, values_from = value) |>
     mutate(delta = T2 - T1)
 
-  hr_w <- wide %>% filter(Group == "HR")
-  lr_w <- wide %>% filter(Group == "LR")
+  hr_w <- wide |> filter(Group == "HR")
+  lr_w <- wide |> filter(Group == "LR")
   tt_hr <- t.test(hr_w$T2, hr_w$T1, paired = TRUE)
   tt_lr <- t.test(lr_w$T2, lr_w$T1, paired = TRUE)
   tt_delta <- t.test(delta ~ Group, data = wide)
@@ -165,23 +165,23 @@ pF_type1 <- build_fiber_panel(
 
 pF <- pF_mixed / pF_type1
 
-fiber_long <- meta %>%
+fiber_long <- meta |>
   select(
     subject_key, Group, Timepoint, Group_Time,
     MyoVision_fCSA_mixed_Pre, MyoVision_fCSA_Type_I__Pre
-  ) %>%
+  ) |>
   rename(
     Mixed = MyoVision_fCSA_mixed_Pre,
     Type_I = MyoVision_fCSA_Type_I__Pre
-  ) %>%
+  ) |>
   pivot_longer(
     cols = c(Mixed, Type_I),
     names_to = "fiber_type", values_to = "fcsa"
-  ) %>%
+  ) |>
   filter(!is.na(fcsa))
 
-audit_F <- fiber_long %>%
-  group_by(fiber_type, Group, Timepoint) %>%
+audit_F <- fiber_long |>
+  group_by(fiber_type, Group, Timepoint) |>
   summarise(
     n = n(), mean = mean(fcsa), sd = sd(fcsa),
     sem = sd(fcsa) / sqrt(n()), .groups = "drop"
