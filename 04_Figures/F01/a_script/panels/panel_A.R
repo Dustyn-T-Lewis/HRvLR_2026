@@ -12,9 +12,9 @@ dir.create(DAT, recursive = TRUE, showWarnings = FALSE)
 
 meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE)
 
-vl_df <- meta %>%
-  filter(Timepoint == "T3", !is.na(ACCUM_VL)) %>%
-  select(Subject_ID, Group, ACCUM_VL) %>%
+vl_df <- meta |>
+  filter(Timepoint == "T3", !is.na(ACCUM_VL)) |>
+  select(Subject_ID, Group, ACCUM_VL) |>
   mutate(Group = factor(Group, levels = c("HR", "LR")))
 
 stats_A <- t.test(ACCUM_VL ~ Group, data = vl_df)
@@ -63,12 +63,12 @@ pA <- ggplot(vl_df, aes(x = Group, y = ACCUM_VL, fill = Group)) +
     plot.margin = margin(5, 5, 5, 5)
   )
 
-audit_A <- vl_df %>%
-  group_by(Group) %>%
+audit_A <- vl_df |>
+  group_by(Group) |>
   summarise(
     n = n(), mean = mean(ACCUM_VL), sd = sd(ACCUM_VL),
     sem = sd(ACCUM_VL) / sqrt(n()), .groups = "drop"
-  ) %>%
+  ) |>
   mutate(t_test_p = stats_A$p.value)
 write_csv(audit_A, file.path(DAT, "audit_panel_A_volume_load.csv"))
 
