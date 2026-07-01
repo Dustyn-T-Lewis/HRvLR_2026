@@ -66,7 +66,7 @@ c(proteins = n_raw, samples = ncol(intensity))
 table(metadata$Group, metadata$Timepoint) # eight subjects per responder x timepoint cell
 ```
 
-# Step 1: collapse duplicate accessions {#sec-dedup}
+# Collapse duplicate accessions {#sec-dedup}
 
 A few UniProt accessions appear on more than one row. The highest-mean-intensity
 row is kept for each, so the matrix carries one measurement per protein:
@@ -85,7 +85,7 @@ if (any(duplicated(annotation$uniprot_id))) {
 nrow(annotation)
 ```
 
-# Step 2: remove blood contaminants {#sec-contaminants}
+# Remove blood contaminants {#sec-contaminants}
 
 Muscle biopsies carry blood, and plasma proteins (albumin, hemoglobins,
 immunoglobulins) are abundant enough to drown out the muscle signal. A protein is
@@ -191,7 +191,7 @@ identical(colnames(dal$data), rownames(dal$metadata)) # samples aligned
 round(100 * mean(is.na(dal$data)), 1) # percent missing after zero -> NA
 ```
 
-# Step 3: drop barely-detected proteins {#sec-missingness}
+# Drop barely-detected proteins {#sec-missingness}
 
 `filter_proteins_by_group()` is the native proteoDA filter. With `min_reps = 5,
 min_groups = 1` it keeps a protein detected in at least 5 of the 8 samples in **at
@@ -210,7 +210,7 @@ flog <- flog |> mutate(pct_of_raw = round(n_after / n_raw * 100, 1))
 flog # full cascade, raw -> final, with % of raw retained
 ```
 
-# Step 4: detect and remove outlier samples {#sec-outliers}
+# Detect and remove outlier samples {#sec-outliers}
 
 Whether a whole sample is untrustworthy is decided by a consensus of four
 independent heuristics — high missingness (with a within-subject arm comparing the
