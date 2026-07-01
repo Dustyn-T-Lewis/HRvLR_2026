@@ -99,10 +99,10 @@ panel_a <- p_count + p_pred + p_resp +
   plot_layout(widths = c(0.8, 3, 1.1), guides = "collect") +
   plot_annotation(
     title = "WGCNA module atlas: size, baseline association with adaptation, and responder signal",
-    subtitle = sprintf(
+    subtitle = paste(strwrap(sprintf(
       "Full-proteome signed network: %d proteins in %d modules (rows ordered by module size). Middle: correlation of each module's baseline (T1) eigengene with each training adaptation (Δ T1→T2); white dot = positive leave-one-out Q² (within-cohort cross-validation), bold = p<0.05. Right: module–responder (HR−LR) correlation per timepoint.",
       sum(mod_sizes$n_proteins), length(mod_order)
-    ),
+    ), width = 135), collapse = "\n"),
     tag_levels = list(c("A", "", "")),
     theme = theme(
       plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),

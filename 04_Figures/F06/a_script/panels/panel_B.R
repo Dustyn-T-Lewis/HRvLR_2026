@@ -72,10 +72,10 @@ p_b <- ggplot(top_df, aes(log10_padj, yk)) +
   guides(colour = guide_legend(override.aes = list(fill = "white"))) +
   labs(
     title = "Module biology: pathway over-representation by WGCNA module",
-    subtitle = sprintf(
+    subtitle = paste(strwrap(sprintf(
       "Hypergeometric ORA with Jaccard de-duplication against the full measured proteome (%d proteins); top 5 pathways per module, adj. p < 0.05. Bar = module colour, outline = source database.",
       length(universe_syms)
-    ),
+    ), width = 125), collapse = "\n"),
     x = expression(-log[10] ~ adj. ~ p), y = NULL, tag = "B"
   ) +
   FIG_THEME +
