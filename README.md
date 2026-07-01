@@ -106,7 +106,7 @@ Rscript 04_Figures/F06/a_script/HRvLR_F06_run.R
 - `a_script/`: scripts and optional narrative notebooks
 - `b_reports/`: generated PDFs and figure renders
 - `c_data/`: stage outputs used by downstream steps
-- `functions/`: reusable helpers that scripts source — cross-figure helpers in `04_Figures/functions/` and figure-specific helpers in each figure's `a_script/functions/` (e.g. F03's clustering loader)
+- `functions/`: reusable helpers that scripts source — cross-figure helpers in `04_Figures/functions/` and figure-specific helpers in each figure's `a_script/functions/` (e.g. F06's clustering loader)
 
 ## Reproducibility Rules
 
