@@ -118,12 +118,13 @@ make_half_bars <- function(df, fill_color, side, ylim) {
     geom_text(aes(x = neg_log10_padj + star_nudge, label = star),
       hjust = 0.5, size = 2.2, fontface = "bold", color = "black"
     ) +
-    labs(x = NULL, y = NULL) +
+    labs(x = expression(-log[10](p[adj])), y = NULL) +
     theme_minimal(base_size = 9) +
     theme(
       panel.grid = element_blank(),
       axis.text.y = element_blank(), axis.ticks.y = element_blank(),
       axis.text.x = element_text(size = 6),
+      axis.title.x = element_text(size = 6),
       axis.line.x = element_line(color = "grey60", linewidth = 0.3)
     )
   x_scale <- if (side == "left") {
