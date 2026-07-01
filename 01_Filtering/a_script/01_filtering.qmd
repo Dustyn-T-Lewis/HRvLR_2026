@@ -279,9 +279,10 @@ dim(dal$data)
 
 # Result and verification {#sec-recap}
 
-proteoDA logs every operation in the `tags` slot. Stage 01 turns a 2,400 × 48
-spreadsheet into a clean **1,885 × 45** `DAList`. The live result matches the
-committed `DAList_filtered.rds` exactly:
+proteoDA logs every operation in the `tags` slot. Stage 01 reduces the raw
+`r n_raw`-protein spreadsheet to a clean **`r nrow(dal$data)` × `r ncol(dal$data)`**
+`DAList` (proteins × samples). The live result matches the committed
+`DAList_filtered.rds` exactly:
 
 ```{r}
 #| label: verify
