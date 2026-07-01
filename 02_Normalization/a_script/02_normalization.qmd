@@ -57,7 +57,7 @@ single native call (limma defaults: `span = 0.7`, `adaptive.span = FALSE`):
 #| label: normalize
 before <- apply(log2(as.matrix(dal$data)), 2, median, na.rm = TRUE)
 dal <- normalize_data(dal, norm_method = "cycloess")
-after <- apply(log2(as.matrix(dal$data)), 2, median, na.rm = TRUE)
+after <- apply(as.matrix(dal$data), 2, median, na.rm = TRUE)
 
 rbind(before = summary(before), after = summary(after)) # spread collapses to a tight band
 dal$tags # new 'normalized' + 'norm_method' tags
@@ -106,7 +106,7 @@ and it feeds the F02 protein-variance panel:
 
 ```{r}
 #| label: eta2
-log_dat <- log2(dal$data + 1)
+log_dat <- dal$data
 grp_vec <- dal$metadata$Group_Time[match(colnames(log_dat), dal$metadata$Col_ID)]
 eta2_vals <- apply(log_dat, 1, function(x) {
   ok <- !is.na(x)
