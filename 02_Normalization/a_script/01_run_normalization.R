@@ -63,12 +63,12 @@ saveRDS(dal, file.path(data_dir, "DAList_normalized.rds"))
 
 subj_var <- dal$metadata |>
   mutate(
-    iqr = apply(log2(dal$data[, Col_ID] + 1), 2, IQR, na.rm = TRUE),
+    iqr = apply(dal$data[, Col_ID], 2, IQR, na.rm = TRUE),
     Subject_ID = str_remove(Col_ID, "_T[123]$")
   ) |>
   select(Col_ID, Subject_ID, Group, Timepoint, Group_Time, iqr)
 
-log_dat <- log2(dal$data + 1)
+log_dat <- dal$data
 grp_vec <- dal$metadata$Group_Time[match(colnames(log_dat), dal$metadata$Col_ID)]
 eta2_vals <- apply(log_dat, 1, function(x) {
   ok <- !is.na(x)
