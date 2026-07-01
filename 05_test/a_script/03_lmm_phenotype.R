@@ -31,7 +31,12 @@ fit_pheno <- function(pw_name, trait) {
         p_pheno_time = a[sprintf("%s:timepoint", trait), "Pr(>F)"]
       )
     },
-    error = function(e) NULL
+    error = function(e) {
+      tibble(
+        pathway = pw_name, trait = trait,
+        p_pheno = NA_real_, p_pheno_time = NA_real_
+      )
+    }
   )
 }
 pheno_lmm <- bind_rows(lapply(TRAITS, function(tr) {

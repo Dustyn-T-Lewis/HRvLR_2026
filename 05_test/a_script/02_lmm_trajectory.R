@@ -31,7 +31,13 @@ fit_one <- function(pw_name) {
         hr_minus_lr_slope = hr_change - lr_change
       )
     },
-    error = function(e) NULL
+    error = function(e) {
+      tibble(
+        pathway = pw_name,
+        p_interaction = NA_real_, p_group = NA_real_, p_time = NA_real_,
+        hr_minus_lr_slope = NA_real_
+      )
+    }
   )
   out
 }
