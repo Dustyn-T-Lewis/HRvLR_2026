@@ -115,24 +115,7 @@ FIG_THEME <- theme_bw(base_size = FIG_BASE_SIZE) +
 
 KEY_TEXT <- 2.8
 
-# Contrast definitions
-
-CONTRASTS <- c(
-  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
-  "Baseline_HRvLR", "Training_Interaction", "Acute_Interaction"
-)
-
 # Contrast label mappings
-
-CTR_FACET <- c(
-  Training_HR          = "Training (HR)",
-  Training_LR          = "Training (LR)",
-  Acute_HR             = "Acute (HR)",
-  Acute_LR             = "Acute (LR)",
-  Baseline_HRvLR       = "Baseline (HR vs LR)",
-  Training_Interaction = "Training Interaction",
-  Acute_Interaction    = "Acute Interaction"
-)
 
 CTR_SHORT <- c(
   Training_HR          = "Tr.(HR)",
