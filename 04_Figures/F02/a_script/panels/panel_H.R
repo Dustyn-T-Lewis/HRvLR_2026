@@ -34,18 +34,10 @@ go_counts <- lapply(display_contrasts, function(cn) {
   ranks <- ranks[!is.na(ranks) & !is.na(names(ranks)) & !duplicated(names(ranks))]
   ranks <- sort(ranks, decreasing = TRUE)
   lapply(names(ONT_COLORS), function(ont) {
-    res <- tryCatch(
-      fgsea(pathways[[ont]], ranks, minSize = 10, maxSize = 500),
-      error = function(e) NULL
-    )
-    if (is.null(res)) {
-      n_up <- 0L
-      n_dn <- 0L
-    } else {
-      sig <- res[!is.na(res$padj) & res$padj < 0.05, ]
-      n_up <- sum(sig$NES > 0)
-      n_dn <- sum(sig$NES < 0)
-    }
+    res <- fgsea(pathways[[ont]], ranks, minSize = 10, maxSize = 500)
+    sig <- res[!is.na(res$padj) & res$padj < 0.05, ]
+    n_up <- sum(sig$NES > 0)
+    n_dn <- sum(sig$NES < 0)
     tibble(contrast = cn, ontology = ont, Up = n_up, Down = n_dn)
   }) |> bind_rows()
 }) |>
