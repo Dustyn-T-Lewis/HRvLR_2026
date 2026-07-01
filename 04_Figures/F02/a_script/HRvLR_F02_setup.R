@@ -1,6 +1,6 @@
 # HRvLR_F02_setup.R - Shared setup for Figure 2 (QC)
 # Provides: norm_df, imp_df, dep_df, meta, samp_names (norm), imp_samps (imp),
-#           ann_cols, imp_mat, BEST_IMP_METHOD, MAIN_CONTRASTS, RPT_DIR, DAT_DIR
+#           ann_cols, imp_mat, MAIN_CONTRASTS, RPT_DIR, DAT_DIR
 # Plus all style.R exports (palettes, themes, helpers)
 
 pacman::p_load(here, tidyverse, patchwork, grid, vegan)
@@ -19,12 +19,6 @@ dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 MAIN_CONTRASTS <- c(
-  "Baseline_HRvLR",
-  "Training_HR", "Training_LR", "Training_Interaction",
-  "Acute_HR", "Acute_LR", "Acute_Interaction"
-)
-
-DISPLAY_ORDER <- c(
   "Baseline_HRvLR",
   "Training_HR", "Training_LR", "Training_Interaction",
   "Acute_HR", "Acute_LR", "Acute_Interaction"
@@ -70,18 +64,6 @@ cat(sprintf(
   nrow(norm_df), length(samp_names), nrow(imp_df), length(imp_samps), nrow(dep_df)
 ))
 
-# Imputation method (from DAList provenance)
-BEST_IMP_METHOD <- toupper(trimws(imp_dal$imputation$method))
-if (length(BEST_IMP_METHOD) == 0 || is.na(BEST_IMP_METHOD)) {
-  BEST_IMP_METHOD <- "IMPUTED"
-}
-
 # Imputed matrix (proteins x samples)
 imp_mat <- as.matrix(imp_df[, imp_samps])
 rownames(imp_mat) <- imp_df$gene
-
-# Cliff's delta (non-parametric effect size) - used by panels C and D
-cliffs_delta <- function(x, y) {
-  d <- outer(x, y, function(a, b) sign(a - b))
-  sum(d) / (length(x) * length(y))
-}
