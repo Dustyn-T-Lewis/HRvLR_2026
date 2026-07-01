@@ -155,17 +155,8 @@ between HR and LR.
 ```{r}
 #| label: dep-contrasts
 #| eval: false
-dal <- add_contrasts(dal, contrasts_vector = c(
-  "Training_HR          = HR_T2 - HR_T1",
-  "Training_LR          = LR_T2 - LR_T1",
-  "Acute_HR             = HR_T3 - HR_T2",
-  "Acute_LR             = LR_T3 - LR_T2",
-  "Baseline_HRvLR       = HR_T1 - LR_T1",
-  "Trained_HRvLR        = HR_T2 - LR_T2",
-  "Acute_HRvLR          = HR_T3 - LR_T3",
-  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
-  "Acute_Interaction    = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
-))
+source(here("03_DEP", "contrasts.R"))
+dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
 ```
 
 Each interaction is a difference of differences: it subtracts the LR change from
@@ -228,14 +219,15 @@ res <- res |>
 
 ```{r}
 #| label: show-per-contrast
+source(here("03_DEP", "contrasts.R"))
 f <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results", "Training_HR.csv")
 if (file.exists(f)) {
   read_csv(f, show_col_types = FALSE) |>
     mutate(
       pi_score = P.Value^abs(logFC),
       sig_pi = case_when(
-        pi_score < 0.05 & logFC > 0 ~ 1L,
-        pi_score < 0.05 & logFC < 0 ~ -1L,
+        pi_score < PI_THRESH & logFC > 0 ~ 1L,
+        pi_score < PI_THRESH & logFC < 0 ~ -1L,
         TRUE ~ 0L
       )
     ) |>
