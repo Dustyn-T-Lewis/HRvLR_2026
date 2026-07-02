@@ -1,6 +1,6 @@
 ---
 title: "HRvLR 01 — Filtering"
-subtitle: "The DAList object; contaminant, missingness, and outlier removal"
+subtitle: "Building the DAList: contaminant, missingness, and outlier removal"
 author: "A_HRvLR_2026"
 date: today
 format:
@@ -25,22 +25,37 @@ library(here)
 knitr::opts_knit$set(root.dir = here::here())
 ```
 
-This document reproduces stage 01 of the HRvLR pipeline and shows the result of
-each step. It runs the same logic as `01_Filtering/a_script/01_run_filtering.R`,
-but entirely in memory: it computes the filtered object live and writes no files.
-The final section confirms the live result matches the committed
-`DAList_filtered.rds`.
+## What stage 01 does
 
-The study is a 2×3 design: high responders (HR) and low responders (LR), each
-sampled at three timepoints (T1 baseline, T2 trained, T3 acute). The grouping
-factor `Group_Time` carries the six cells (`HR_T1` … `LR_T3`).
+Stage 01 turns the raw DIA-MS spreadsheet into a filtered `DAList`, the proteoDA
+object every later stage builds on. It collapses duplicate accessions, removes
+blood-plasma contamination, drops proteins too sparsely detected to model, and
+removes any sample that fails a consensus of outlier checks.
 
-# Load the raw matrix and sample sheet {#sec-load}
+This page runs that logic live and in memory, the same as
+`01_Filtering/a_script/01_run_filtering.R`, and writes nothing. The last section
+confirms the in-memory result matches the committed `DAList_filtered.rds`.
 
-Stage 01 begins with a raw DIA-MS spreadsheet (`00_input/HRvLR_raw.xlsx`). The
-annotation columns (protein identity) are separated from the sample-intensity
-columns. The sample sheet `00_input/HRvLR_meta.csv` supplies one row per sample,
-including `Group_Time`. The matrix is aligned to the sheet by `Col_ID`.
+The design is repeated measures: high responders (HR) and low responders (LR),
+each sampled at T1 (baseline), T2 (trained), and T3 (acute). The factor
+`Group_Time` carries the six cells (`HR_T1` … `LR_T3`) and is the grouping column
+for the missingness filter.
+
+## Reads and writes
+
+The stage reads three files from `00_input/`: the protein matrix
+`HRvLR_raw.xlsx`, the sample sheet `HRvLR_meta.csv`, and the contaminant evidence
+`HPA_annotations.tsv`. The runnable script writes `DAList_filtered.rds` (the
+input to stage 02), `filtering_intermediates.rds` (reused by the stage-02 report
+and the figure layer), `filtering_report.xlsx`, and a contaminant plot to
+`b_reports/`. This document recomputes the object but saves none of it.
+
+## Load the matrix and sample sheet {#sec-load}
+
+The raw spreadsheet holds protein identity in leading annotation columns and one
+intensity column per sample. The two blocks are split, and the intensity columns
+are aligned to the sample sheet by `Col_ID`, which is what lets data and metadata
+stay paired without a manual key.
 
 ```{r}
 #| label: load
@@ -59,17 +74,18 @@ intensity <- raw[, setdiff(names(raw), annot_cols)]
 metadata <- as.data.frame(read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE))
 rownames(metadata) <- metadata$Col_ID
 stopifnot(setequal(colnames(intensity), metadata$Col_ID))
-intensity <- intensity[, metadata$Col_ID] # errors if matrix/metadata IDs disagree
+intensity <- intensity[, metadata$Col_ID]
 n_raw <- nrow(annotation)
 
 c(proteins = n_raw, samples = ncol(intensity))
-table(metadata$Group, metadata$Timepoint) # eight subjects per responder x timepoint cell
+table(metadata$Group, metadata$Timepoint)
 ```
 
-# Collapse duplicate accessions {#sec-dedup}
+## Collapse duplicate accessions {#sec-dedup}
 
-A few UniProt accessions appear on more than one row. The highest-mean-intensity
-row is kept for each, so the matrix carries one measurement per protein:
+A few UniProt accessions appear on more than one row. Keeping the
+highest-mean-intensity row leaves one measurement per protein, and picking by mean
+intensity favours the better-quantified copy.
 
 ```{r}
 #| label: dedup
@@ -85,15 +101,15 @@ if (any(duplicated(annotation$uniprot_id))) {
 nrow(annotation)
 ```
 
-# Remove blood contaminants {#sec-contaminants}
+## Remove blood contaminants {#sec-contaminants}
 
-Muscle biopsies carry blood, and plasma proteins (albumin, hemoglobins,
-immunoglobulins) are abundant enough to drown out the muscle signal. A protein is
-flagged for removal if it looks like blood (HPA "Secreted to blood", an
-immunoglobulin, or a strong erythrocyte signal) **and** does not look like muscle
-(rescued by a strong skeletal-myonuclei signal, unless its measured blood
-concentration identifies it as a true plasma protein). The classifier is built from
-the Human Protein Atlas annotations:
+A muscle biopsy carries blood, and plasma proteins (albumin, hemoglobins,
+immunoglobulins) are abundant enough to bury the muscle signal. A protein is
+flagged for removal when it looks blood-derived (HPA "Secreted to blood", an
+immunoglobulin, or a strong erythrocyte marker) and does not clear the muscle
+rescue: a high skeletal-myonuclei signal keeps it, unless its measured blood
+concentration marks it as a genuine plasma protein. The rule is built from the
+Human Protein Atlas table.
 
 ```{r}
 #| label: classifier
@@ -126,12 +142,12 @@ bl <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) 
     verdict = if_else(str_starts(reason, "remove"), "remove", "keep")
   )
 
-table(bl$verdict) # how the HPA genes split
+table(bl$verdict)
 ```
 
-Removal is plain subsetting, applied to `annotation` and `intensity` together so
-they stay aligned. The cascade keeps only proteins present in HPA, then drops the
-blood-flagged ones; each step is logged:
+Removal is plain subsetting applied to `annotation` and `intensity` together, so
+the two stay aligned. The cascade keeps only proteins present in HPA, then drops
+the blood-flagged ones, logging each step.
 
 ```{r}
 #| label: apply-contaminants
@@ -151,7 +167,7 @@ intensity <- intensity[keep, ]
 flog
 ```
 
-The removed and rescued proteins, with the HPA evidence behind each call:
+The removed and rescued proteins, each with the HPA evidence behind the call:
 
 ```{r}
 #| label: removed-rescued
@@ -168,14 +184,14 @@ bl |>
   head(6)
 ```
 
-# Build the `DAList` {#sec-build}
+## Build the DAList {#sec-build}
 
-proteoDA operates on a `DAList` — a named list holding three name-aligned tables:
-`data` (intensity matrix), `annotation` (one row per protein), and `metadata`
-(one row per sample). The row names of `data` equal the row names of
-`annotation`, and the column names of `data` equal the row names of `metadata`.
-`zero_to_missing()` turns DIA zeros into `NA`, since a reported zero means "not
-detected" rather than a measured zero:
+A `DAList` holds three name-aligned tables: `data` (the intensity matrix),
+`annotation` (one row per protein), and `metadata` (one row per sample). The row
+names of `data` match `annotation`, and the column names of `data` match the row
+names of `metadata`. `zero_to_missing()` converts DIA zeros to `NA`, because a
+reported zero means not detected rather than a measured zero, and the downstream
+filters and limma both treat absence as missing.
 
 ```{r}
 #| label: build-dalist
@@ -186,17 +202,18 @@ rownames(annot_df) <- annotation$uniprot_id
 
 dal <- zero_to_missing(DAList(data = int_mat, annotation = annot_df, metadata = metadata))
 
-identical(rownames(dal$data), rownames(dal$annotation)) # proteins aligned
-identical(colnames(dal$data), rownames(dal$metadata)) # samples aligned
-round(100 * mean(is.na(dal$data)), 1) # percent missing after zero -> NA
+identical(rownames(dal$data), rownames(dal$annotation))
+identical(colnames(dal$data), rownames(dal$metadata))
+round(100 * mean(is.na(dal$data)), 1)
 ```
 
-# Drop barely-detected proteins {#sec-missingness}
+## Drop barely-detected proteins {#sec-missingness}
 
-`filter_proteins_by_group()` is the native proteoDA filter. With `min_reps = 5,
-min_groups = 1` it keeps a protein detected in at least 5 of the 8 samples in **at
-least one** `Group_Time` cell — a protein switched on in one responder group but
-off in the other is kept, since detection is not required everywhere:
+`filter_proteins_by_group()` is proteoDA's native missingness filter. With
+`min_reps = 5, min_groups = 1` it keeps a protein detected in at least 5 of the 8
+samples in at least one `Group_Time` cell. Requiring presence in only one cell is
+deliberate: a protein switched on in one responder group and off in the other
+carries real signal and is kept rather than filtered as sparse.
 
 ```{r}
 #| label: missingness
@@ -207,16 +224,16 @@ flog <- bind_rows(flog, tibble(
   n_after = nrow(dal$data), n_removed = n0 - nrow(dal$data)
 ))
 flog <- flog |> mutate(pct_of_raw = round(n_after / n_raw * 100, 1))
-flog # full cascade, raw -> final, with % of raw retained
+flog
 ```
 
-# Detect and remove outlier samples {#sec-outliers}
+## Remove outlier samples {#sec-outliers}
 
-Whether a whole sample is untrustworthy is decided by a consensus of four
-independent heuristics — high missingness (with a within-subject arm comparing the
-three timepoints of one subject), off intensity level (Hampel 3×MAD), multivariate
-position in PCA space, and low correlation with the other samples. A sample is
-dropped only if at least **three of four** agree:
+Whether a whole sample is untrustworthy is decided by four independent
+heuristics: high missingness (with a within-subject arm comparing a subject's
+three timepoints), off intensity level (Hampel 3×MAD), multivariate position in
+PCA space, and low correlation with the other samples. Requiring at least three of
+four to agree keeps any single noisy metric from dropping a good sample.
 
 ```{r}
 #| label: outliers
@@ -224,7 +241,7 @@ mahal_p <- 0.01
 mad_k <- 3
 outlier_k <- 3
 
-# Method 1: sample missingness, plus a within-subject spread across timepoints
+# missingness, with a within-subject spread across timepoints
 pct_missing <- colMeans(is.na(dal$data)) * 100
 miss_info <- dal$metadata |>
   select(Col_ID, Subject_ID, Group, Timepoint) |>
@@ -232,26 +249,26 @@ miss_info <- dal$metadata |>
   group_by(prefix) |>
   mutate(delta_missing = sapply(pct_missing, \(x) max(abs(x - pct_missing)))) |>
   ungroup()
-miss_thresh <- quantile(pct_missing, 0.75) + 1.5 * IQR(pct_missing) # Tukey upper fence
+miss_thresh <- quantile(pct_missing, 0.75) + 1.5 * IQR(pct_missing)
 delta_thresh <- quantile(miss_info$delta_missing, 0.75) + 1.5 * IQR(miss_info$delta_missing)
 miss_info$miss_flag <- miss_info$pct_missing > miss_thresh | miss_info$delta_missing > delta_thresh
 
-# Method 2: PCA Mahalanobis distance on PC1-3 (complete proteins only)
+# PCA Mahalanobis distance on PC1-3 (complete proteins only)
 complete_mat <- dal$data[rowSums(is.na(dal$data)) == 0, ]
 pc3 <- prcomp(t(log2(complete_mat + 1)), center = TRUE, scale. = TRUE)$x[, 1:3]
 mahal <- mahalanobis(pc3, colMeans(pc3), cov(pc3))
 pca_flags <- tibble(Col_ID = colnames(dal$data), pca_flag = mahal > qchisq(1 - mahal_p, df = 3))
 
-# Method 3: Hampel rule on per-sample median intensity
+# Hampel rule on per-sample median intensity
 samp_med <- apply(log2(dal$data + 1), 2, median, na.rm = TRUE)
 mad_flags <- tibble(
   Col_ID = names(samp_med),
   mad_flag = abs(samp_med - median(samp_med)) > mad_k * mad(samp_med)
 )
 
-# Method 4: low median correlation with the other samples
+# low median correlation with the other samples
 cor_mat <- cor(log2(dal$data + 1), use = "pairwise.complete.obs")
-med_cor <- apply(cor_mat, 2, function(x) median(x[x < 1], na.rm = TRUE)) # x<1 drops self
+med_cor <- apply(cor_mat, 2, function(x) median(x[x < 1], na.rm = TRUE))
 cor_flags <- tibble(
   Col_ID = names(med_cor),
   cor_flag = med_cor < median(med_cor) - mad_k * mad(med_cor)
@@ -268,7 +285,7 @@ outlier_diag <- miss_info |>
 outlier_ids <- outlier_diag$Col_ID[outlier_diag$consensus_outlier]
 
 head(outlier_diag[order(-outlier_diag$n_flags), c("Col_ID", "miss_flag", "pca_flag", "mad_flag", "cor_flag", "n_flags")], 6)
-outlier_ids # samples tripping >= 3 of 4 flags
+outlier_ids
 ```
 
 ```{r}
@@ -277,12 +294,12 @@ if (length(outlier_ids)) dal <- filter_samples(dal, !(Col_ID %in% outlier_ids))
 dim(dal$data)
 ```
 
-# Result and verification {#sec-recap}
+## Result and verification {#sec-recap}
 
-proteoDA logs every operation in the `tags` slot. Stage 01 reduces the raw
-`r n_raw`-protein spreadsheet to a clean **`r nrow(dal$data)` × `r ncol(dal$data)`**
-`DAList` (proteins × samples). The live result matches the committed
-`DAList_filtered.rds` exactly:
+proteoDA records every operation in the `tags` slot. Stage 01 reduces the raw
+`r n_raw`-protein spreadsheet to a `r nrow(dal$data)` × `r ncol(dal$data)`
+`DAList` (proteins × samples). The in-memory result matches the committed
+`DAList_filtered.rds`.
 
 ```{r}
 #| label: verify
@@ -297,16 +314,8 @@ c(
 )
 ```
 
-The side-effecting script additionally writes `filtering_report.xlsx` (the
-classifier verdicts, filter cascade, and outlier diagnostics shown above), a
-contaminant plot to `b_reports/`, and a `filtering_intermediates.rds` that the
-stage-02 report and the figure layer reuse, then saves `DAList_filtered.rds` for
-stage 02. Key points:
-
-- A `DAList` is three name-aligned tables; keeping them in step is what proteoDA
-  relies on. The native filters preserve the alignment; hand-subsetting must move
-  `data` and `annotation` together.
-- `zero_to_missing()` reflects that DIA zeros are missing values.
-- `filter_proteins_by_group()` and `filter_samples()` are the native filters.
-
-Stage 02 picks up this file and normalizes it.
+Two proteoDA habits carry through the rest of the pipeline. A `DAList` is three
+name-aligned tables, so the native filters preserve alignment and any
+hand-subsetting moves `data` and `annotation` together. DIA zeros are missing
+values, not measured zeros. Stage 02 picks up `DAList_filtered.rds` and
+normalizes it.
