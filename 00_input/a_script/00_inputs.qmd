@@ -1,0 +1,136 @@
+---
+title: "HRvLR 00 — Inputs"
+subtitle: "The raw DIA-MS matrix, sample sheet, phenotype table, and HPA annotations"
+author: "A_HRvLR_2026"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+execute:
+  eval: true
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(here)
+knitr::opts_knit$set(root.dir = here::here())
+library(readr)
+library(readxl)
+library(dplyr)
+```
+
+Stage 00 holds the four files the pipeline reads and never writes. Nothing is
+computed here. This page records what each file is, why it is shaped the way it
+is, and which downstream stage consumes it, so the contract is explicit before
+any filtering or modelling begins.
+
+The study is a two-group repeated-measures design: eight high responders (HR)
+and eight low responders (LR), each sampled at three timepoints (T1 baseline,
+T2 post-training, T3 post-acute-bout). Two subjects are partial, so 48
+subject-timepoint slots reduce to 45 quantified samples downstream.
+
+# The protein matrix: `HRvLR_raw.xlsx`
+
+The DIA-MS quantification, one row per protein group and one column per sample,
+plus leading annotation columns.
+
+```{r}
+#| label: raw
+raw <- read_excel(here("00_input", "HRvLR_raw.xlsx"))
+dim(raw)
+names(raw)[1:8]
+```
+
+The first five columns identify the protein (`uniprot_id`, `protein`, `gene`,
+`description`, `n_seq`); the remaining columns are intensities named
+`Subject_Timepoint` (`S03_T1`, `S03_T2`, …). proteoDA does not read a wide sheet
+directly — stage 01 splits it into the annotation table and the intensity matrix
+and pairs the intensity columns to the sample sheet by name. Keeping the sample
+columns named exactly as `Col_ID` in the metadata is what lets that pairing
+succeed without a manual key.
+
+Intensities arrive linear, with unquantified proteins recorded as zero. Stage 01
+converts those zeros to `NA` (`zero_to_missing`) because the missing-value filter
+and, later, limma treat absence as missing rather than as a measured zero.
+
+# The sample sheet: `HRvLR_meta.csv`
+
+One row per sample-timepoint. The left block defines the experimental design; the
+right block carries the phenotype measurements used by the Figure 1 atlas.
+
+```{r}
+#| label: meta
+meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE)
+dim(meta)
+names(meta)
+```
+
+- `Col_ID` matches the intensity column names in the protein matrix; it is the
+  join key between data and metadata.
+- `Subject_ID` groups the three timepoints of one person. It becomes the
+  blocking factor in stage 03, where `duplicateCorrelation` uses it to account
+  for repeated measures on the same subject.
+- `Group` (HR/LR), `Timepoint` (T1/T2/T3), and their interaction `Group_Time`
+  (six cells: `HR_T1` … `LR_T3`) define the cell-means design. `Group_Time` is
+  also the grouping column for the missingness filter, so a protein is kept when
+  it is quantified in enough samples of at least one timepoint cell.
+- The phenotype columns (`ACCUM_VL`, `mCSA_Pre`, the `fCSA_*` and
+  `MyoVision_*` fibre areas, `COMP.HYPERTROPHY`) are strength and
+  cross-sectional-area readouts. Figure 1 reads them directly; the proteomics
+  stages ignore them.
+
+# The responder definition: `Phenotype.xlsx`
+
+```{r}
+#| label: pheno
+excel_sheets(here("00_input", "Phenotype.xlsx"))
+```
+
+The `RES&NR data` sheet is the source for the HR/LR split. Group membership is
+defined by the `COMP.HYPERTROPHY` composite, not assigned by proteome — Figure 1
+states this openly so the composite is read as the grouping variable rather than
+as an outcome the proteome predicts.
+
+# The contaminant reference: `HPA_annotations.tsv`
+
+Human Protein Atlas evidence, keyed by UniProt, that stage 01 uses to remove
+blood-plasma leakage from a muscle-biopsy proteome.
+
+```{r}
+#| label: hpa
+hpa <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE)
+names(hpa)
+```
+
+A muscle biopsy carries blood, so abundant plasma and erythrocyte proteins can
+masquerade as muscle signal. The gate combines several HPA lines of evidence:
+secretome/immunoglobulin status and erythrocyte marker RNA flag a protein as
+blood-derived, while a high myonuclei RNA value (`Single Cell Type RNA -
+Myonuclei`) with a low measured blood concentration rescues genuine muscle
+proteins. A protein is dropped only when it looks blood-derived and does not
+clear the muscle-rescue test.
+
+`HPA_skeletal_muscle_annotations.tsv` sits alongside as a muscle-specific HPA
+reference. The current filter does not read it; it is retained for provenance and
+possible future use.
+
+# What stage 01 reads
+
+| File | Read by | Purpose |
+|:--|:--|:--|
+| `HRvLR_raw.xlsx` | `01_run_filtering.R` | protein intensities + annotation |
+| `HRvLR_meta.csv` | `01_run_filtering.R` | sample sheet, design, phenotype |
+| `HPA_annotations.tsv` | `01_run_filtering.R` | blood-contaminant evidence |
+| `Phenotype.xlsx` | Figure 1 | responder grouping, phenotype source |
+
+Stage 01 turns the matrix and sample sheet into a filtered `DAList`, the object
+every later stage builds on.
