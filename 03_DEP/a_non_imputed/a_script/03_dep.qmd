@@ -31,36 +31,57 @@ suppressPackageStartupMessages({
 })
 ```
 
-This document reproduces the primary DEP stage and shows the result of each step.
-It runs the same proteoDA workflow as `03_DEP/a_non_imputed/a_script/01_run_dep.R`:
-build the design, define the contrasts, fit limma with `duplicateCorrelation`, and
-score each protein with the Pi-score. The committed results are read back at the
-points where a step needs the fitted object.
+## What stage 03 does
 
-The central question of the study is whether high responders (HR) and low
-responders (LR) differ in their proteomic response to training. The design is a
-2×3 factorial — responder (HR/LR) × timepoint (T1 baseline, T2 trained, T3 acute)
-— with repeated measures on subject.
+Stage 03 fits the limma differential-abundance model on the non-imputed
+normalized matrix from stage 02, extracts nine pre-specified contrasts, and scores
+every protein with the Pi-score. It is the primary differential-expression stage:
+the wide results table it writes is what the figure layer reads.
 
-# Why limma on the non-imputed matrix {#sec-why}
+This page runs the same proteoDA workflow as
+`03_DEP/a_non_imputed/a_script/01_run_dep.R` and shows the result of each step. The
+chunks that fit the model are illustrative here (`eval: false`); the committed
+results are read back where a step needs the fitted object.
+
+The design is 2×3 factorial: responder (HR high, LR low) crossed with timepoint
+(T1 baseline, T2 trained, T3 acute), n = 16 subjects (8 HR, 8 LR) with repeated
+measures and 45 samples in all. The question is whether HR and LR differ in how
+their proteome responds to training.
+
+The imputed arm (`b_imputed`) repeats this fit on imputed matrices as a
+concordance check. The non-imputed matrix here is the reported analysis.
+
+## Reads and writes
+
+The stage reads two files from stage 02: the normalized intensity matrix
+`normalized.csv` and the normalization `DAList_normalized.rds`, which carries the
+canonical metadata so the factor levels match every other stage. The runner writes
+the fitted `01_limma_DAList.rds`, the per-contrast significance counts
+`02_DA_summary.csv`, the wide `03_combined_results.csv` (the primary hand-off to
+the figure layer), one CSV per contrast under `04_per_contrast_results/`, the
+formatted workbook `05_results.xlsx`, and the proteoDA interactive Glimma report
+under `b_reports/`. This document recomputes the pieces it needs and saves none of
+them.
+
+## Why limma on the non-imputed matrix {#sec-why}
 
 `limma` fits a per-protein linear model and stabilizes each protein's variance by
-borrowing strength across all proteins (empirical Bayes moderation) [@ritchie2015].
-That shrinkage matters here, where each cell has only seven or eight subjects —
-too few for a stable per-protein variance on its own.
+borrowing strength across all proteins with empirical Bayes moderation
+[@ritchie2015]. That shrinkage matters when each cell holds only seven or eight
+subjects, too few for a stable per-protein variance on its own.
 
-Peng et al. (2024) show that limma applied directly to data with missing values,
-fitting each per-protein model on the observations that exist, outperforms
-imputing first [@peng2024]. Imputation adds distributional assumptions that can
-distort variance and inflate precision. So the **non-imputed** normalized matrix
-is the primary input; the imputed matrices are run separately as a comparison
+Peng et al. (2024) show that fitting limma directly on the observations that
+exist, without imputing the missing values first, outperforms imputing
+[@peng2024]. Imputation adds distributional assumptions that can distort variance
+and overstate precision. The non-imputed normalized matrix is the input here, and
+the imputed matrices run separately as a comparison
 (`b_imputed/a_script/01_run_dep_imputed.R`).
 
-# Load data and metadata {#sec-load}
+## Load the matrix and metadata {#sec-load}
 
-The normalized matrix comes from stage 02; the canonical metadata comes from the
-normalization `DAList` rather than from parsing sample names, so the factor levels
-for `Group`, `Timepoint`, and `Group_Time` match every other stage.
+The normalized matrix comes from stage 02. The metadata comes from the
+normalization `DAList` rather than from parsing sample names, so the levels of
+`responder`, `time`, and `group` (= `Group_Time`) are set the same way everywhere.
 
 ```{r}
 #| label: show-metadata
@@ -70,10 +91,9 @@ table(dal_norm$metadata$Group, dal_norm$metadata$Timepoint)
 cat(sprintf("Proteins: %d | Samples: %d\n", nrow(dal_norm$data), ncol(dal_norm$data)))
 ```
 
-Each cell holds seven or eight subjects; a cell below eight reflects an outlier
-removed in stage 01. The runner rebuilds a tidy metadata frame with `group`
-(= `Group_Time`) and `subject` (= `Subject_ID`) and guards that the matrix columns
-match the sample sheet before any model is fit:
+Each cell holds seven or eight subjects; a cell below eight is a sample dropped as
+an outlier in stage 01. The runner rebuilds a tidy metadata frame keyed by
+`sample_id` and checks that the matrix columns match it before any model is fit:
 
 ```{r}
 #| label: dep-load
@@ -96,24 +116,22 @@ meta <- tibble(
 stopifnot(setequal(colnames(mat), meta$sample_id))
 ```
 
-# Statistical design {#sec-design}
+## The design and within-subject correlation {#sec-design}
 
-## Cell-means parametrization
+The model formula is `~ 0 + group + (1 | subject)`. The `0 + group` part is a
+cell-means parametrization: no intercept, one coefficient per `Group_Time` cell,
+so every contrast is a plain arithmetic expression over the six cell means and
+reads the same as it is written.
 
-The model uses a cell-means formula (`~ 0 + group`): no intercept, one coefficient
-per `Group_Time` cell. Every planned contrast is then a plain arithmetic
-expression over the six cell means, which keeps the contrasts easy to read and
-audit.
-
-## Within-subject correlation
-
-Each subject contributes three observations (T1, T2, T3). Treating them as
-independent would overstate the degrees of freedom and produce anti-conservative
-p-values. `duplicateCorrelation` [@smyth2005] estimates one average within-subject
-correlation, `rho`, by pooling across all proteins, and uses it as a fixed
-blocking correlation in the per-protein fits. Pooling keeps `rho` stable at small
-n; combined with `eBayes` moderation it is more powerful than a naive
-repeated-measures ANOVA here.
+The `(1 | subject)` term is what makes the fit multi-level. Each subject
+contributes three timepoints, and treating those as independent would overstate
+the degrees of freedom and give anti-conservative p-values. `fit_limma_model`
+routes the subject term through `limma::duplicateCorrelation` [@smyth2005], which
+pools across all proteins to estimate one average within-subject correlation `rho`
+and uses it as a fixed blocking correlation in each per-protein fit. The three
+timepoints of one person are no longer counted as three independent samples, and
+the between-subject HR-vs-LR contrasts are tested at the right error level. Pooling
+keeps `rho` stable at small n.
 
 ```{r}
 #| label: dep-design
@@ -121,6 +139,8 @@ repeated-measures ANOVA here.
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 colnames(dal$design$design_matrix) <- gsub("^group", "", colnames(dal$design$design_matrix))
 ```
+
+The committed fit records the estimated `rho`:
 
 ```{r}
 #| label: show-within-cor
@@ -134,11 +154,16 @@ A positive `rho` means subjects are consistent across timepoints, and modelling
 that structure buys power. A `rho` near zero would mean the repeated-measures
 structure adds little.
 
-# Contrasts {#sec-contrasts}
+## The nine contrasts {#sec-contrasts}
 
-Nine contrasts are pre-specified. The two interaction contrasts are the analytic
-core: they ask whether the response to training (or to the acute bout) differs
-between HR and LR.
+The nine contrasts are pre-specified in `03_DEP/contrasts.R`, the single source of
+truth both DEP arms source so the two cannot drift. They fall into three families.
+Four within-group contrasts ask whether one group changed over time (training as
+HR_T2 − HR_T1, acute as HR_T3 − HR_T2, and the LR equivalents). Three
+between-group contrasts compare HR against LR at each timepoint (HR − LR at
+baseline, trained, acute). The two interactions are the analytic core: each is a
+difference of differences that subtracts the LR change from the HR change, so a
+non-zero value means the two groups responded by different amounts.
 
 | Contrast | Formula | Question |
 |:--|:--|:--|
@@ -159,18 +184,19 @@ source(here("03_DEP", "contrasts.R"))
 dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
 ```
 
-Each interaction is a difference of differences: it subtracts the LR change from
-the HR change, so a non-zero value means the two groups moved by different
-amounts.
+## Fit the model and extract results {#sec-fit}
 
-# Fit and extract {#sec-fit}
+`fit_limma_model()` runs `lmFit` with the blocking `rho`, reparametrizes into
+contrast space with `contrasts.fit`, and moderates the variances with
+`eBayes(robust = TRUE)`, which keeps a few high-variance proteins from inflating
+the prior [@ritchie2015]. `extract_DA_results()` then applies Benjamini-Hochberg
+within each contrast [@benjamini1995].
 
-`fit_limma_model()` chains `lmFit` (per-protein fit with the blocking `rho`),
-`contrasts.fit` (reparametrize into contrast space), and `eBayes` with
-`robust = TRUE` (outlier-resistant variance moderation) [@ritchie2015]. `extract_DA_results()` applies Benjamini-Hochberg
-across proteins [@benjamini1995]. The FDR threshold is **0.10**: at n ≈ 8 per
-cell, strict 0.05 control would discard genuinely altered proteins with modest
-support; the Pi-score adds a fold-change requirement on top.
+The FDR threshold is 0.10 and there is no fold-change gate. At roughly eight
+subjects per cell, strict 0.05 control would drop genuinely altered proteins with
+modest support, and a hard logFC cutoff would discard small but real changes that
+label-free DIA can still resolve. The Pi-score adds the effect-size requirement
+instead.
 
 ```{r}
 #| label: dep-fit
@@ -194,14 +220,18 @@ analysis is powered for large fold changes, and the interaction contrasts test a
 subtle hypothesis. The figure layer summarizes effect sizes (bootstrap CIs, fry,
 RRHO2) that stay interpretable regardless of per-protein significance.
 
-# Pi-score {#sec-pi}
+## The Pi-score {#sec-pi}
 
 The Pi-score [@xiao2014] folds significance and magnitude into one value:
 
 $$\text{Pi} = p^{|\log_2 \text{FC}|}$$
 
 A large fold change drives Pi below the raw p-value; a small one pushes it above.
-A protein must show both a real change and statistical support to clear Pi < 0.05.
+The `sig_pi` gate flags a protein when its Pi clears `PI_THRESH` (0.05, from
+`contrasts.R`), signed by the direction of change. Pi is computed on the raw
+p-value, not the BH-adjusted one, so it is an effect-size-weighted filter and is
+deliberately not FDR-controlled. It complements the BH counts above and is read
+alongside them, not in place of them.
 
 ```{r}
 #| label: pi-score
@@ -237,7 +267,7 @@ if (file.exists(f)) {
 }
 ```
 
-# Combined results {#sec-combined}
+## Combined results {#sec-combined}
 
 All nine contrasts are assembled into one wide table, one row per protein with
 contrast-suffixed columns (`logFC_Training_HR`, `adj.P.Val_Training_HR`, …). This
@@ -258,7 +288,7 @@ if (file.exists(f)) {
 }
 ```
 
-# Imputed comparison and figures {#sec-imputed}
+## Imputed comparison and figures {#sec-imputed}
 
 `b_imputed/a_script/01_run_dep_imputed.R` repeats this exact fit on the three
 imputed matrices (imp4p, MsCoreUtils, missForest) and reports the Spearman
@@ -268,7 +298,7 @@ concordance confirms the missing-value strategy does not reshape the effects
 in the figure layer (F03–F05); proteoDA also writes its own volcano and MA plots
 into `a_non_imputed/b_reports/` during the primary run.
 
-# Stage outputs {#sec-outputs}
+## Stage outputs {#sec-outputs}
 
 | File | Description |
 |:--|:--|
@@ -282,14 +312,14 @@ into `a_non_imputed/b_reports/` during the primary run.
 Stage 04 reads `03_combined_results.csv` and the fitted DAList for pathway
 enrichment and figures.
 
-# Session info {#sec-session}
+## Session info {#sec-session}
 
 ```{r}
 #| label: session-info
 sessionInfo()
 ```
 
-# References {#sec-refs}
+## References {#sec-refs}
 
 ::: {#refs}
 :::
