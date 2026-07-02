@@ -25,16 +25,37 @@ library(here)
 knitr::opts_knit$set(root.dir = here::here())
 ```
 
-This document reproduces stage 02 of the HRvLR pipeline and shows the result of
-each step. It runs the same logic as `02_Normalization/a_script/01_run_normalization.R`
-(plus the three imputation arms in `02_Normalization/imputation/a_script/`), in
-memory, writing no files. Normalization makes samples comparable; imputation is
-applied only for the methods that need a complete matrix.
+## What stage 02 does
 
-# Load the filtered `DAList` {#sec-load}
+Stage 02 takes the filtered `DAList` from stage 01 and makes its samples
+comparable. Cyclic loess normalization removes the sample-to-sample intensity
+drift that comes from uneven loading, and a per-protein eta-squared scan records
+how much of each protein's variance the `Group_Time` cells explain. Stage 02
+also fills the missing values three different ways, but those imputed matrices
+are for downstream figures and clustering. The differential-expression test in
+stage 03 runs on the normalized matrix with its gaps intact.
+
+This page runs that logic live and in memory, the same as
+`02_Normalization/a_script/01_run_normalization.R` and the three imputation arms
+in `02_Normalization/imputation/a_script/`, and writes nothing. The last section
+confirms the in-memory result matches the committed `DAList_normalized.rds`.
+
+## Reads and writes
+
+The stage reads one file, stage 01's `DAList_filtered.rds`. The runnable script
+writes `DAList_normalized.rds` and `normalized.csv` (the primary hand-off to
+stage 03), `00_report_intermediates.rds` (the eta-squared scan, the
+post-normalization PCA, and the stage-01 intermediates, reused by the report and
+figure layers), and proteoDA's QC PDFs to `b_reports/`. The three imputation
+scripts each read the normalized object and write `DAList_imputed_imp4p.rds`,
+`DAList_imputed_mscoreutils.rds`, and `DAList_imputed_missforest.rds` to
+`imputation/c_data/`. This document recomputes the objects but saves none of
+them.
+
+## Load the filtered `DAList` {#sec-load}
 
 Stage 01 hands off a filtered, un-normalized object that still carries its
-missing values:
+missing values. Its `tags` slot records the group filter that produced it.
 
 ```{r}
 #| label: load
@@ -46,12 +67,16 @@ miss_before # missing fraction, not yet imputed
 dal$tags # provenance so far: the group filter
 ```
 
-# Normalize with cyclic loess {#sec-normalize}
+## Normalize with cyclic loess {#sec-normalize}
 
-Samples load onto the instrument slightly differently, so whole samples sit
-higher or lower for technical reasons. This shows in each sample's median
-log-intensity. `normalize_data(norm_method = "cycloess")` evens it out with a
-single native call (limma defaults: `span = 0.7`, `adaptive.span = FALSE`):
+Samples load onto the instrument slightly differently, so a whole sample can sit
+higher or lower for reasons that have nothing to do with biology. That offset
+shows up in each sample's median log-intensity and would distort any cross-sample
+comparison. `normalize_data(norm_method = "cycloess")` is proteoDA's wrapper
+around limma's cyclic loess, which fits smooth curves between pairs of samples to
+pull them onto a common scale (limma defaults: `span = 0.7`,
+`adaptive.span = FALSE`). It log2-transforms internally, so the normalized matrix
+comes back on the log2 scale.
 
 ```{r}
 #| label: normalize
@@ -63,8 +88,8 @@ rbind(before = summary(before), after = summary(after)) # spread collapses to a 
 dal$tags # new 'normalized' + 'norm_method' tags
 ```
 
-Normalization **rescales** but does not fill anything in — the missingness is
-unchanged:
+Normalization rescales the observed values but fills nothing in, so the missing
+fraction is unchanged:
 
 ```{r}
 #| label: missing-unchanged
@@ -75,10 +100,10 @@ c(
 ```
 
 The script writes proteoDA's audit PDFs to `b_reports/`. `write_norm_report()`
-compares the candidate normalization methods on the filtered matrix **before** the
+compares the candidate normalization methods on the filtered matrix before the
 choice is committed, and `write_qc_report()` inspects the matrix before and after.
-Those calls (shown here, run by the script) make the cycloess choice reviewable
-without re-implementing the comparison by hand:
+The calls are shown here and run by the script, which keeps the cycloess choice
+reviewable without re-implementing the comparison by hand.
 
 ```{r}
 #| label: qc-reports
@@ -93,16 +118,17 @@ write_qc_report(dal,
 ) # inspects the chosen result
 ```
 
-This normalized, **non-imputed** object is the primary hand-off to stage 03 —
-`limma` handles missing values per protein, so imputing before the test would
-inflate false positives.
+This normalized, non-imputed object is the primary hand-off to stage 03. The
+imputation section below covers why the test runs on it rather than on a filled
+matrix.
 
-# The eta-squared scan {#sec-eta2}
+## The eta-squared scan {#sec-eta2}
 
 For the figure layer, the script records how much of each protein's variance the
-six `Group_Time` cells explain (eta-squared, the between-group sum of squares over
-the total). This is a one-way decomposition per protein on the log-intensities,
-and it feeds the F02 protein-variance panel:
+six `Group_Time` cells explain: eta-squared, the between-group sum of squares
+over the total. It is a one-way decomposition computed per protein directly on
+the normalized values, which are already on the log2 scale, so no further
+transform is applied. It feeds the F02 protein-variance panel.
 
 ```{r}
 #| label: eta2
@@ -125,13 +151,20 @@ summary(eta2_vals) # most proteins low; a tail is strongly group-structured
 The script bundles `eta2_vals`, the post-normalization PCA, and the stage-01
 intermediates into `00_report_intermediates.rds` for the reports and figures.
 
-# Imputation for methods that need a complete matrix {#sec-impute}
+## Imputation for methods that need a complete matrix {#sec-impute}
 
-PCA, clustering, WGCNA, and the rotation tests need a matrix with no gaps. Three
-independent imputation methods are kept so the choice can be checked. Each
-operates on the normalized matrix and fills every missing value. **missForest is
-the canonical imputed arm** — the figures and WGCNA read it — with imp4p and the
-MsCoreUtils hybrid kept as comparisons.
+PCA, clustering, WGCNA, and the rotation tests cannot run on a matrix with gaps.
+Three imputation methods fill the normalized matrix, kept side by side so the
+choice can be checked against alternatives. missForest is the canonical arm that
+the figures and WGCNA read; imp4p and the MsCoreUtils hybrid are comparisons.
+
+None of them feeds the differential-expression test. An imputed value is a
+prediction, not a measurement, and it carries none of the measurement error the
+real values do. Testing on a filled matrix understates each protein's variance,
+shrinks its standard error, and calls more proteins significant than the data
+support (Webb-Robertson et al. 2015, PMID 25855118). limma avoids this by fitting
+each protein on the samples where it was actually observed, so the test runs on
+the non-imputed matrix and imputation stays downstream.
 
 ```{r}
 #| label: impute-input
@@ -140,12 +173,13 @@ was_missing <- is.na(mat)
 c(entries_imputed = sum(was_missing), pct_of_matrix = round(100 * mean(was_missing), 1))
 ```
 
-## missForest (canonical) {#sec-missforest}
+### missForest (canonical) {#sec-missforest}
 
 `missForest` is a non-parametric random-forest imputer: each protein's missing
 values are predicted from the multivariate structure of the other proteins, so
-the matrix is transposed to put proteins in the columns. It is stochastic, so the
-seed is fixed and rows are ordered before the fit:
+the matrix is transposed to put proteins in the columns. The fit is stochastic,
+so the seed is fixed and the rows are ordered before it runs (Stekhoven and
+Buhlmann 2012).
 
 ```{r}
 #| label: missforest
@@ -160,11 +194,11 @@ dimnames(imp) <- dimnames(mat)
 c(na_remaining = sum(is.na(imp)), OOB_error = round(mf$OOBerror[1], 4))
 ```
 
-## imp4p (comparison) {#sec-imp4p}
+### imp4p (comparison) {#sec-imp4p}
 
-`imp4p` is mechanism-aware: it estimates the per-protein mix of values missing at
-random vs missing because the protein is too low to detect, then imputes each
-accordingly:
+`imp4p` is mechanism-aware. It estimates, per protein, the mix of values missing
+at random against values missing because the protein sits below the detection
+limit, then imputes each part with a method suited to it (Giai Gianetto et al.):
 
 ```{r}
 #| label: imp4p
@@ -180,11 +214,12 @@ dimnames(imp4p_mat) <- dimnames(mat)
 c(na_remaining = sum(is.na(imp4p_mat))) # 0 remaining — complete matrix
 ```
 
-## MsCoreUtils hybrid (comparison) {#sec-mscoreutils}
+### MsCoreUtils hybrid (comparison) {#sec-mscoreutils}
 
-The third method classifies each protein missing-at-random (MAR) vs not via
-`imputeLCMD::model.Selector()`, then routes MAR features to kNN and MNAR features
-to a left-censored QRILC draw:
+The third method splits the proteins first. `imputeLCMD::model.Selector()`
+classifies each protein as missing-at-random or not (Lazar et al. 2016), then
+`MsCoreUtils::impute_matrix()` routes the MAR features through kNN and the MNAR
+features through a left-censored QRILC draw:
 
 ```{r}
 #| label: mscoreutils
@@ -197,17 +232,19 @@ ms_mat <- impute_matrix(mat, method = "mixed", randna = randna, mar = "knn", mna
 c(MAR_features = sum(randna), MNAR_features = sum(!randna), na_remaining = sum(is.na(ms_mat)))
 ```
 
-# Where stage 02 stands {#sec-recap}
+## Result and verification {#sec-recap}
 
-The normalized matrix is saved to `02_Normalization/c_data/`; the three imputation
-arms write to `02_Normalization/imputation/c_data/`:
+The runnable script saves the normalized matrix to `02_Normalization/c_data/`;
+the three imputation arms save to `02_Normalization/imputation/c_data/`.
 
 | File | Location | Missing values? | Used by |
 |---|---|---|---|
-| `DAList_normalized.rds` | `c_data/` | kept | the DE test (stage 03) — **primary** |
+| `DAList_normalized.rds` | `c_data/` | kept | the DE test (stage 03), primary |
 | `DAList_imputed_missforest.rds` | `imputation/c_data/` | filled | figures, WGCNA (canonical) |
 | `DAList_imputed_imp4p.rds` | `imputation/c_data/` | filled | the imputed-DEP comparison |
 | `DAList_imputed_mscoreutils.rds` | `imputation/c_data/` | filled | the imputed-DEP comparison |
+
+The in-memory object matches the committed `DAList_normalized.rds`:
 
 ```{r}
 #| label: verify
@@ -219,6 +256,6 @@ c(
 )
 ```
 
-Normalization levels the samples but never invents data; imputation is applied
-only for methods that cannot run on an incomplete matrix, and never before the DE
-test. Stage 03 fits the model on the non-imputed matrix.
+Normalization levels the samples without inventing any data, and imputation is
+applied only where a method cannot run on an incomplete matrix. Stage 03 fits the
+model on the non-imputed normalized matrix.
