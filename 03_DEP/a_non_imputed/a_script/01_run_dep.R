@@ -155,12 +155,7 @@ dal$annotation$gene_symbol <- dal$annotation$gene
 
 saveRDS(dal, file.path(cfg$data_dir, "01_limma_DAList.rds"))
 
-# proteoDA reports (non-essential; warn on failure)
-
-tryCatch(
-  write_limma_reports(dal, output_dir = cfg$proteoDA_dir, overwrite = TRUE),
-  error = function(e) warning("write_limma_reports failed: ", conditionMessage(e), call. = FALSE)
-)
+# proteoDA interactive report (non-essential; warn on failure)
 
 tryCatch(
   write_limma_plots(dal,
