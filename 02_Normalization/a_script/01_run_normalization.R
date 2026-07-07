@@ -5,6 +5,7 @@
 # cycloess uses limma's defaults (span = 0.7, adaptive.span = FALSE), matching YvO.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tidyr, stringr, tibble)
+source(here("shared", "pca.R"))
 
 data_dir <- here("02_Normalization", "c_data")
 report_dir <- here("02_Normalization", "b_reports")
@@ -14,19 +15,6 @@ clear_dir <- function(d) {
 }
 clear_dir(data_dir)
 clear_dir(report_dir)
-
-run_pca <- function(mat, metadata, log_transform = TRUE) {
-  for (j in seq_len(ncol(mat))) {
-    mat[is.na(mat[, j]), j] <- median(mat[, j], na.rm = TRUE)
-  }
-  if (log_transform) mat <- log2(mat + 1)
-  pca <- prcomp(t(mat), center = TRUE, scale. = TRUE)
-  ve <- round(summary(pca)$importance[2, 1:3] * 100, 1)
-  pc <- as.data.frame(pca$x[, 1:3]) |>
-    mutate(Col_ID = rownames(pca$x)) |>
-    left_join(metadata, by = "Col_ID")
-  list(pca = pca, scores = pc, var_exp = ve)
-}
 
 # Load filtered DAList
 
