@@ -32,10 +32,6 @@ assoc <- bind_rows(lapply(TRAITS, function(tr) {
   ungroup()
 write_csv(assoc, file.path(DAT_DIR, "module_phenotype.csv"))
 
-trait_lab <- c(
-  comp_hypertrophy = "Comp. hypertrophy", d_mcsa = "d mCSA", d_fcsa_I = "d fCSA I",
-  d_fcsa_II = "d fCSA II", d_1rm_legpress = "d 1RM leg", d_1rm_ext = "d 1RM ext"
-)
 panel_c <- ggplot(
   assoc |> mutate(trait = factor(trait_lab[trait], levels = trait_lab)),
   aes(trait, module, fill = r)

@@ -13,6 +13,7 @@ dir.create(file.path(RPT_DIR, "panels"), recursive = TRUE, showWarnings = FALSE)
 source(here("04_Figures", "F06", "a_script", "panels", "panel_A.R"))
 source(here("04_Figures", "F06", "a_script", "panels", "panel_B.R"))
 source(here("04_Figures", "F06", "a_script", "panels", "panel_C.R"))
+source(here("04_Figures", "F06", "a_script", "panels", "panel_S_phenotype_lmm.R"))
 
 source(here("04_Figures", "F06", "a_script", "HRvLR_F06_composite.R"))
 cat("F06 complete.\n")

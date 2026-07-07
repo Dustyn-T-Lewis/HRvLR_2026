@@ -60,9 +60,11 @@ Writes (to `c_data/`):
 - `module_phenotype.csv` — eigengene change vs trait (Panel C).
 - `module_prediction.csv` — baseline-to-adaptation association (Panel A middle).
 - `module_responder.csv` — HR vs LR signal per timepoint (Panel A right).
+- `module_phenotype_lmm.csv` — trajectory-moderation LMM per module (Panel S).
 - `phenotype.csv` — the per-subject trait table.
-- Panel PNG/PDF pairs in `b_reports/panels/`, the stitched
-  `b_reports/F06_composite.png` / `.pdf`, and `c_data/F06_source_data.xlsx`.
+- Panel PNG/PDF pairs in `b_reports/panels/`, the Panel S supplement in
+  `b_reports/supp/`, the stitched `b_reports/F06_composite.png` / `.pdf`, and
+  `c_data/F06_source_data.xlsx`.
 
 The `module_prediction` name is kept for continuity with the earlier
 standalone clustering stage. The figure itself is framed as association, not
@@ -95,6 +97,7 @@ wgcna_eig <- wg$eigengene
 
 pred <- run_module_prediction(wgcna_eig, pheno_tbl)
 resp <- run_module_responder(wgcna_eig)
+pheno_lmm <- run_module_phenotype_lmm(wgcna_eig, pheno_tbl)
 ```
 
 WGCNA and AnnotationDbi attach functions that mask tidyverse verbs (WGCNA
@@ -298,6 +301,30 @@ Each tile shows the correlation. The r value is printed only when p < 0.05, and
 a star is added only when the BH-adjusted FDR clears 0.05. This too is a
 within-cohort association: a module whose T1→T3 shift tracks the size of the
 response in these subjects, not a validated marker.
+
+## Supplement — trajectory moderation (LMM)
+
+Panel C reduces each module to one T1→T3 delta before correlating. The
+supplementary LMM keeps all three timepoints instead:
+
+```{r}
+#| label: pheno-lmm
+#| eval: false
+run_module_phenotype_lmm(wgcna_eig, pheno_tbl)
+# ME ~ trait * timepoint + (1 | subject), per module x trait
+```
+
+The `trait:timepoint` interaction is the direct test of trajectory moderation,
+whether a module's whole time-course bends with the size of the response, which
+the collapsed delta cannot ask. It carries the repeated-measures design through a
+subject random intercept, matching the model the `05_test` GSVA sandbox uses on
+pathway scores. The read-out is another null: no module-trait interaction clears
+FDR. The `trait` main effect is reported alongside in `module_phenotype_lmm.csv`
+but not surfaced in the panel, because a time-invariant trait can drive the
+random-intercept variance to zero (the `singular` flag), which inflates that main
+effect. The panel plots the interaction only, framed as the null it is.
+
+![](../b_reports/supp/panel_s_phenotype_lmm.png)
 
 ## No cherry-picking
 
