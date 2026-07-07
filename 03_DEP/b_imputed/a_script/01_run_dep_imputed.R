@@ -20,7 +20,8 @@ nd <- here("02_Normalization", "imputation", "c_data")
 methods <- c(
   missforest = "DAList_imputed_missforest.rds",
   imp4p = "DAList_imputed_imp4p.rds",
-  mscoreutils = "DAList_imputed_mscoreutils.rds"
+  mscoreutils = "DAList_imputed_mscoreutils.rds",
+  perseus = "DAList_imputed_perseus.rds"
 )
 
 # DEP per imputed matrix
@@ -40,10 +41,6 @@ runs <- imap(methods, function(rds, m) {
   )
   dal$metadata$subject <- dal$metadata$Subject_ID
   dal <- add_design(dal, "~ 0 + group + (1 | subject)")
-  colnames(dal$design$design_matrix) <- gsub(
-    "^group", "",
-    colnames(dal$design$design_matrix)
-  )
   dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
   dal <- fit_limma_model(dal)
   dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
