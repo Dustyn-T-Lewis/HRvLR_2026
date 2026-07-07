@@ -60,11 +60,12 @@ It writes into `b_reports/` and `c_data/`:
 - `c_data/F03_source_data.xlsx` — the fgsea cache, with a `fgsea_all`
   sheet (every pathway result) and a `fgsea_significant` sheet.
 
-The Excel workbook is both the source-data export and the cache. The
-fgsea run is the slow part of this figure, and the same enrichment feeds
-the F04 and F05 NES scatters. Computing it once and reading it back keeps
-the three figures consistent and avoids paying for GSEA three times.
-Deleting `F03_source_data.xlsx` forces a recompute.
+The Excel workbook is both the source-data export and the cache for the
+downstream figures. F03 recomputes the fgsea enrichment fresh on every run,
+seeded for reproducibility, and overwrites the workbook. The fgsea run is the slow
+part of this figure, and the same enrichment feeds the F04 and F05 NES scatters,
+which read the workbook instead of rerunning GSEA. So the three figures stay
+consistent and the enrichment is paid for once per F03 run.
 
 ## The two colour scales are different things
 
@@ -94,7 +95,8 @@ the arc is coloured by NES, not by that padj.
 ### Setup: ranks and the fgsea cache
 
 The setup script builds moderated-t ranks per contrast and runs fgsea
-against the pathway collection, then caches the result.
+against the pathway collection fresh on every run, seeded for
+reproducibility, then writes the result to the source-data workbook.
 
 ```{r}
 #| eval: false
@@ -114,24 +116,22 @@ dep <- read_csv(
 )
 
 cache_xlsx <- file.path(DAT_DIR, "F03_source_data.xlsx")
-if (file.exists(cache_xlsx)) {
-  fg <- as_tibble(read.xlsx(cache_xlsx, sheet = "fgsea_all"))
-} else {
-  pw <- build_pathway_collection(
-    min_size = 15, max_size = 500, include_goslim = TRUE, exclude_variants = TRUE
-  )
-  fg <- lapply(CONTRASTS, function(ct) {
-    d <- tibble(gene = dep$gene, t = dep[[paste0("t_", ct)]]) |>
-      filter(!is.na(gene), !is.na(t)) |>
-      distinct(gene, .keep_all = TRUE)
-    ranks <- sort(setNames(d$t, d$gene), decreasing = TRUE)
-    res <- run_fgsea_deduplicated(ranks, pw)
-    res$contrast <- ct
-    res$leadingEdge <- vapply(res$leadingEdge, function(x) paste(x, collapse = ";"), character(1))
-    res
-  }) |>
-    bind_rows()
-}
+
+pw <- build_pathway_collection(
+  min_size = 15, max_size = 500, include_goslim = TRUE, exclude_variants = TRUE
+)
+set.seed(42)
+fg <- lapply(CONTRASTS, function(ct) {
+  d <- tibble(gene = dep$gene, t = dep[[paste0("t_", ct)]]) |>
+    filter(!is.na(gene), !is.na(t)) |>
+    distinct(gene, .keep_all = TRUE)
+  ranks <- sort(setNames(d$t, d$gene), decreasing = TRUE)
+  res <- run_fgsea_deduplicated(ranks, pw)
+  res$contrast <- ct
+  res$leadingEdge <- vapply(res$leadingEdge, function(x) paste(x, collapse = ";"), character(1))
+  res
+}) |>
+  bind_rows()
 ```
 
 The rank for each contrast is the moderated-t statistic from limma, sorted
