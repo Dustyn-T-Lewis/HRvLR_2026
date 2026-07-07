@@ -47,8 +47,9 @@ The stage reads three files from `00_input/`: the protein matrix
 `HRvLR_raw.xlsx`, the sample sheet `HRvLR_meta.csv`, and the contaminant evidence
 `HPA_annotations.tsv`. The runnable script writes `DAList_filtered.rds` (the
 input to stage 02), `filtering_intermediates.rds` (reused by the stage-02 report
-and the figure layer), `filtering_report.xlsx`, and a contaminant plot to
-`b_reports/`. This document recomputes the object but saves none of it.
+and the figure layer), `filtering_report.xlsx`, `hpa_absent_dropped.csv` (the
+accessions with no HPA match), and a contaminant plot to `b_reports/`. This
+document recomputes the object but saves none of it.
 
 ## Load the matrix and sample sheet {#sec-load}
 
@@ -145,21 +146,32 @@ bl <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) 
 table(bl$verdict)
 ```
 
-Removal is plain subsetting applied to `annotation` and `intensity` together, so
-the two stay aligned. The cascade keeps only proteins present in HPA, then drops
-the blood-flagged ones, logging each step.
+The HPA table keys on UniProt accession, so the match is on accession, not gene
+symbol. Each accession is stripped of its isoform suffix and HPA's comma-separated
+multi-accession cells are split so every accession matches on its own. Removal is
+plain subsetting applied to `annotation` and `intensity` together, so the two stay
+aligned. The cascade keeps only proteins with an HPA accession match, logging the
+dropped ones to `hpa_absent_dropped.csv`, then drops the blood-flagged ones.
 
 ```{r}
 #| label: apply-contaminants
-hpa_genes <- unique(bl$gene)
-remove_genes <- bl$gene[bl$verdict == "remove"]
+strip_iso <- function(x) sub("-\\d+$", "", x)
+hpa_acc <- bl |>
+  filter(!is.na(uniprot), uniprot != "") |>
+  separate_longer_delim(uniprot, delim = ", ") |>
+  mutate(acc = strip_iso(uniprot))
+hpa_present <- unique(hpa_acc$acc)
+remove_acc <- unique(hpa_acc$acc[hpa_acc$verdict == "remove"])
 
 flog <- tibble(step = "Raw input", n_after = nrow(annotation), n_removed = NA_integer_)
-keep <- annotation$gene %in% hpa_genes
+acc <- strip_iso(annotation$uniprot_id)
+keep <- acc %in% hpa_present
+dropped_ids <- annotation$uniprot_id[!keep]
 flog <- bind_rows(flog, tibble(step = "HPA presence", n_after = sum(keep), n_removed = sum(!keep)))
 annotation <- annotation[keep, ]
 intensity <- intensity[keep, ]
-keep <- !(annotation$gene %in% remove_genes)
+acc <- strip_iso(annotation$uniprot_id)
+keep <- !(acc %in% remove_acc)
 flog <- bind_rows(flog, tibble(step = "Blood contaminant removal", n_after = sum(keep), n_removed = sum(!keep)))
 annotation <- annotation[keep, ]
 intensity <- intensity[keep, ]
