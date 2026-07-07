@@ -97,15 +97,27 @@ bl <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) 
     ),
     verdict = if_else(str_starts(reason, "remove"), "remove", "keep")
   )
-hpa_genes <- unique(bl$gene)
-remove_genes <- bl$gene[bl$verdict == "remove"]
+strip_iso <- function(x) sub("-\\d+$", "", x)
+hpa_acc <- bl |>
+  filter(!is.na(uniprot), uniprot != "") |>
+  tidyr::separate_longer_delim(uniprot, delim = ", ") |>
+  mutate(acc = strip_iso(uniprot))
+hpa_present <- unique(hpa_acc$acc)
+remove_acc <- unique(hpa_acc$acc[hpa_acc$verdict == "remove"])
 
 flog <- tibble(step = "Raw input", n_after = nrow(annotation), n_removed = NA_integer_)
-keep <- annotation$gene %in% hpa_genes
+acc <- strip_iso(annotation$uniprot_id)
+keep <- acc %in% hpa_present
+dropped_ids <- annotation$uniprot_id[!keep]
 flog <- bind_rows(flog, tibble(step = "HPA presence", n_after = sum(keep), n_removed = sum(!keep)))
 annotation <- annotation[keep, ]
 intensity <- intensity[keep, ]
-keep <- !(annotation$gene %in% remove_genes)
+readr::write_csv(
+  tibble(uniprot_id = dropped_ids),
+  here("01_Filtering", "c_data", "hpa_absent_dropped.csv")
+)
+acc <- strip_iso(annotation$uniprot_id)
+keep <- !(acc %in% remove_acc)
 flog <- bind_rows(flog, tibble(step = "Blood contaminant removal", n_after = sum(keep), n_removed = sum(!keep)))
 annotation <- annotation[keep, ]
 intensity <- intensity[keep, ]
