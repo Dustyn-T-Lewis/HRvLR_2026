@@ -1,6 +1,6 @@
-# F02 Panel F: DEPs per contrast (diverging down/up, nested p / Pi)
-# Down (left) / up (right) % of proteome; each direction nested: nominal p < 0.05
-# (light) then Pi < 0.05 (dark) drawn on top. Per-contrast background bands carry the
+# F02 Panel F: DEPs per contrast (diverging down/up, p and Pi counts)
+# Down (left) / up (right) % of proteome; per direction two bars overlaid from zero:
+# nominal p < 0.05 (light) and Pi < 0.05 (dark). Per-contrast background bands carry the
 # contrast code; Pi counts sit at the bar tips.
 
 pacman::p_load(here, dplyr, tidyr, tibble, ggplot2)
@@ -72,7 +72,7 @@ pF <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
   labs(
     title = "DEPs per Contrast",
     subtitle = sprintf(
-      "%s proteins | down / up, nested p < 0.05 (light) + Pi < 0.05 (dark)",
+      "%s proteins | down / up, p < 0.05 (light) and Pi < 0.05 (dark) overlaid from zero",
       format(n_total, big.mark = ",")
     ),
     x = NULL, y = "% of proteome", tag = "F"

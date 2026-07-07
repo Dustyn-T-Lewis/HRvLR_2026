@@ -28,7 +28,7 @@ n_bins <- 50
 binwidth <- 2 * x_lim / n_bins
 
 pB <- ggplot(lfc_long, aes(logFC, fill = contrast)) +
-  geom_histogram(bins = n_bins, color = "black", linewidth = 0.15, alpha = 0.9) +
+  geom_histogram(binwidth = binwidth, color = "black", linewidth = 0.15, alpha = 0.9) +
   geom_density(aes(y = after_stat(count) * binwidth),
     alpha = 0.12, linewidth = 0.4, color = "grey20"
   ) +
