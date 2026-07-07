@@ -176,40 +176,34 @@ file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 # DA summary
 # proteoDA's summarize_contrast_DA lacks Pi-score columns, so we build our own.
 
+da_count_row <- function(res, cname, type) {
+  if (type == "nonsig") {
+    n_pval <- sum(res$P.Value >= cfg$pval_thresh, na.rm = TRUE)
+    n_fdr <- sum(res$adj.P.Val >= cfg$pval_thresh, na.rm = TRUE)
+    n_pi <- sum(res$sig_pi == 0, na.rm = TRUE)
+    n_05 <- sum(res$adj.P.Val >= 0.05, na.rm = TRUE)
+    n_10 <- sum(res$adj.P.Val >= 0.10, na.rm = TRUE)
+  } else {
+    dir <- if (type == "up") res$logFC > 0 else res$logFC < 0
+    pi_target <- if (type == "up") 1L else -1L
+    n_pval <- sum(res$P.Value < cfg$pval_thresh & dir, na.rm = TRUE)
+    n_fdr <- sum(res$adj.P.Val < cfg$pval_thresh & dir, na.rm = TRUE)
+    n_pi <- sum(res$sig_pi == pi_target, na.rm = TRUE)
+    n_05 <- sum(res$adj.P.Val < 0.05 & dir, na.rm = TRUE)
+    n_10 <- sum(res$adj.P.Val < 0.10 & dir, na.rm = TRUE)
+  }
+  tibble(
+    contrast = cname, type = type,
+    sig.PVal = n_pval, sig.FDR = n_fdr,
+    pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
+    p_adj_method = cfg$adj_method,
+    sig.Pi = n_pi, sig.FDR.05 = n_05, sig.FDR.10 = n_10
+  )
+}
+
 da_summary <- map_dfr(contrast_names, function(cname) {
   res <- dal$results[[cname]]
-  bind_rows(
-    tibble(
-      contrast = cname, type = "up",
-      sig.PVal = sum(res$P.Value < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
-      sig.FDR = sum(res$adj.P.Val < cfg$pval_thresh & res$logFC > 0, na.rm = TRUE),
-      pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-      p_adj_method = cfg$adj_method,
-      sig.Pi = sum(res$sig_pi == 1, na.rm = TRUE),
-      sig.FDR.05 = sum(res$adj.P.Val < 0.05 & res$logFC > 0, na.rm = TRUE),
-      sig.FDR.10 = sum(res$adj.P.Val < 0.10 & res$logFC > 0, na.rm = TRUE)
-    ),
-    tibble(
-      contrast = cname, type = "down",
-      sig.PVal = sum(res$P.Value < cfg$pval_thresh & res$logFC < 0, na.rm = TRUE),
-      sig.FDR = sum(res$adj.P.Val < cfg$pval_thresh & res$logFC < 0, na.rm = TRUE),
-      pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-      p_adj_method = cfg$adj_method,
-      sig.Pi = sum(res$sig_pi == -1, na.rm = TRUE),
-      sig.FDR.05 = sum(res$adj.P.Val < 0.05 & res$logFC < 0, na.rm = TRUE),
-      sig.FDR.10 = sum(res$adj.P.Val < 0.10 & res$logFC < 0, na.rm = TRUE)
-    ),
-    tibble(
-      contrast = cname, type = "nonsig",
-      sig.PVal = sum(res$P.Value >= cfg$pval_thresh, na.rm = TRUE),
-      sig.FDR = sum(res$adj.P.Val >= cfg$pval_thresh, na.rm = TRUE),
-      pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-      p_adj_method = cfg$adj_method,
-      sig.Pi = sum(res$sig_pi == 0, na.rm = TRUE),
-      sig.FDR.05 = sum(res$adj.P.Val >= 0.05, na.rm = TRUE),
-      sig.FDR.10 = sum(res$adj.P.Val >= 0.10, na.rm = TRUE)
-    )
-  )
+  map_dfr(c("up", "down", "nonsig"), function(type) da_count_row(res, cname, type))
 })
 
 write_csv(da_summary, file.path(cfg$data_dir, "02_DA_summary.csv"))
