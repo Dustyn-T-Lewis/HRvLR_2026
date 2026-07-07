@@ -48,7 +48,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | --- | --- | --- |
 | `00` | `00_input/` | Raw intensity matrix, metadata, phenotype table, HPA annotations |
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
-| `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`), each writing a method-tagged `DAList_imputed_<method>.rds` |
+| `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
 | `04` | `04_Figures/` | Six figures: F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea cache; F04/F05 HR-vs-LR training/acute concordance, which read that cache; F06 WGCNA module-phenotype linkage |
 
@@ -75,22 +75,26 @@ the one downstream figures and the imputed-DEP concordance check read by default
 Rscript 02_Normalization/imputation/a_script/c_missforest.R    # default downstream arm
 Rscript 02_Normalization/imputation/a_script/a_imp4p.R         # exploratory alternative
 Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R   # exploratory alternative
+Rscript 02_Normalization/imputation/a_script/d_perseus.R       # exploratory alternative (MNAR)
 
-Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imputed DEP
+Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imputed DEP, all four arms
 ```
 
 ### Figures
 
-Six active figures, rendered into `b_reports`; rerun only after stages `01` to
-`03` complete cleanly. F03 builds the fgsea cache once and F04/F05 read it, so
-run F03 before F04/F05.
+Six active figures plus one supplement, rendered into `b_reports`; rerun only
+after stages `01` to `03` complete cleanly. F03 recomputes the fgsea enrichment
+fresh each run and writes it for F04/F05 to read, so run F03 before F04/F05. The
+`S_imputation` supplement reads the `03_DEP/b_imputed` concordance outputs, so run
+it after the imputed DEP.
 
 - `04_Figures/F01`: phenotype atlas
 - `04_Figures/F02`: global proteome overview and QC
-- `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea cache)
+- `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
 - `04_Figures/F04`: HR-vs-LR training-phase concordance
 - `04_Figures/F05`: HR-vs-LR acute-phase concordance
 - `04_Figures/F06`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
+- `04_Figures/S_imputation`: imputation-method comparison supplement (non-imputed reference vs the four arms)
 
 ```sh
 Rscript 04_Figures/F01/a_script/HRvLR_F01_run.R
@@ -99,6 +103,7 @@ Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
 Rscript 04_Figures/F04/a_script/HRvLR_F04_run.R
 Rscript 04_Figures/F05/a_script/HRvLR_F05_run.R
 Rscript 04_Figures/F06/a_script/HRvLR_F06_run.R
+Rscript 04_Figures/S_imputation/a_script/HRvLR_S_imputation.R
 ```
 
 ## Repository Conventions
