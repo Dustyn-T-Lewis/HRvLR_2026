@@ -86,7 +86,7 @@ pC <- ggplot(cv_df, aes(cv_HR, cv_LR)) +
   labs(
     title = "Per-Protein Variability (CV%)",
     subtitle = sprintf(
-      "linear-scale CV per protein, HR vs LR within timepoint (Brenes 2024) | r: T1 %.2f, T2 %.2f, T3 %.2f",
+      "linear-scale CV per protein on the imputed matrix, HR vs LR within timepoint (Brenes 2024) | r: T1 %.2f, T2 %.2f, T3 %.2f",
       r_stats$r[r_stats$timepoint == "T1"],
       r_stats$r[r_stats$timepoint == "T2"],
       r_stats$r[r_stats$timepoint == "T3"]

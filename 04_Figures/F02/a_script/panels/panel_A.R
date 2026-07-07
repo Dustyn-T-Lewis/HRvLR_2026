@@ -61,7 +61,6 @@ ellipse_layers <- function(grp) {
   )
 }
 
-# Plot 1: Group coloring
 pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
   ellipse_layers("Group") +
   geom_point(size = 1.8, alpha = 0.85) +
@@ -79,7 +78,6 @@ pA_group <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Group)) +
   FIG_THEME +
   theme(legend.position = "bottom")
 
-# Plot 2: Timepoint coloring
 pA_time <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Timepoint)) +
   ellipse_layers("Timepoint") +
   geom_point(size = 1.8, alpha = 0.85) +
