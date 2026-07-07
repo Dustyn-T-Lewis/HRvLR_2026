@@ -31,6 +31,7 @@ resp_df <- resp |>
 L <- max(abs(c(pred_df$r, resp_df$r)), na.rm = TRUE)
 loo_pos <- filter(pred_df, !is.na(q2) & q2 > 0)
 pred_sig <- filter(pred_df, p < 0.05)
+pred_fdr <- filter(pred_df, !is.na(p_bh) & p_bh < 0.05)
 resp_sig <- filter(resp_df, p < 0.05)
 strip_y <- theme(strip.text.y = element_blank(), strip.background.y = element_blank())
 ttl <- function() element_text(hjust = 0.5, size = FIG_SUBTITLE_SIZE, face = "bold")
@@ -61,6 +62,10 @@ p_pred <- ggplot(pred_df, aes(trait_label, y = "", fill = r)) +
   geom_point(
     data = loo_pos, aes(trait_label, ""), inherit.aes = FALSE,
     shape = 21, fill = "white", color = "black", size = 1.7, stroke = 0.5
+  ) +
+  geom_text(
+    data = pred_fdr, aes(trait_label, "", label = "*"), inherit.aes = FALSE,
+    size = 3, fontface = "bold", vjust = 0.72
   ) +
   facet_grid(module ~ .) +
   scale_fill_gradient2(
@@ -100,7 +105,7 @@ panel_a <- p_count + p_pred + p_resp +
   plot_annotation(
     title = "WGCNA module atlas: size, baseline association with adaptation, and responder signal",
     subtitle = paste(strwrap(sprintf(
-      "Full-proteome signed network: %d proteins in %d modules (rows ordered by module size). Middle: correlation of each module's baseline (T1) eigengene with each training adaptation (Δ T1→T2); white dot = positive leave-one-out Q² (within-cohort cross-validation), bold = p<0.05. Right: module–responder (HR−LR) correlation per timepoint.",
+      "Full-proteome signed network: %d proteins in %d modules (rows ordered by module size). Middle: correlation of each module's baseline (T1) eigengene with each training adaptation (Δ T1→T2); white dot = positive leave-one-out Q² (within-cohort cross-validation), bold = p<0.05, * = FDR<0.05. Right: module–responder (HR−LR) correlation per timepoint.",
       sum(mod_sizes$n_proteins), length(mod_order)
     ), width = 135), collapse = "\n"),
     tag_levels = list(c("A", "", "")),
