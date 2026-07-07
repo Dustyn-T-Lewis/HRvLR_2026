@@ -474,6 +474,13 @@ panel_fry <- function(fry_out, labels) {
     ora_bars(fry_out$ora_down, COMP_BLUE) +
     plot_layout(
       design = design, heights = c(2, 0.25, 2, 0.25, 0.7), widths = c(1.7, 1.5)
+    ) +
+    plot_annotation(
+      caption = paste(
+        "fry set-level p on the imputed matrix;",
+        "ES curves and leading-edge ORA rank on the non-imputed moderated-t"
+      ),
+      theme = theme(plot.caption = element_text(size = 6.5, color = "grey40"))
     )
 }
 

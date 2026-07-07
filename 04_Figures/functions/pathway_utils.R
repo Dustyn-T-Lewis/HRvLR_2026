@@ -26,9 +26,9 @@ deduplicate_enrichment_flat <- function(results, pathways, jaccard_cutoff = 0.5)
 
     is_redundant <- FALSE
     for (j in seq_along(kept_sets)) {
-      inter <- length(intersect(pw_genes, kept_sets[[j]]))
-      union <- length(union(pw_genes, kept_sets[[j]]))
-      if (union > 0 && (inter / union) > jaccard_cutoff) {
+      inter_n <- length(intersect(pw_genes, kept_sets[[j]]))
+      union_n <- length(union(pw_genes, kept_sets[[j]]))
+      if (union_n > 0 && (inter_n / union_n) > jaccard_cutoff) {
         is_redundant <- TRUE
         break
       }
