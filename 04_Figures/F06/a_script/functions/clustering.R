@@ -8,9 +8,14 @@
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble)
 
-# pi-gated input set (Xiao pi-value < 0.05 in any contrast) from the canonical
-# non-imputed limma fit; abundance from the missForest-imputed matrix; gap =
-# HR-LR logFC at T1/T2/T3.
+ADAPTATION_TRAITS <- c(
+  "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_myovision_fcsa_I",
+  "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
+)
+
+# pi_set records the pi-gated proteins (Xiao pi-value < 0.05 in any contrast) from the
+# canonical non-imputed limma fit, kept for provenance only; WGCNA runs on the full
+# missForest-imputed proteome (full_abund), not this subset.
 load_clustering_inputs <- function() {
   primary <- readRDS(here("03_DEP", "a_non_imputed", "c_data", "01_limma_DAList.rds"))
   imputed <- readRDS(here(
@@ -169,13 +174,9 @@ run_wgcna <- function(abund, meta) {
 # predict each training-adaptation trait? In-sample correlation + leave-one-out
 # cross-validated Q^2 (Q2 > 0 = predicts out of sample), BH across the grid.
 run_module_prediction <- function(wgcna_eig, pheno) {
-  traits <- c(
-    "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_myovision_fcsa_I",
-    "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
-  )
+  traits <- ADAPTATION_TRAITS
   t1 <- wgcna_eig[wgcna_eig$timepoint == "T1", c("subject", "group_id", "ME")]
   loo <- function(d) {
-    d <- d[stats::complete.cases(d), ]
     if (nrow(d) < 6) {
       return(NA_real_)
     }
@@ -214,5 +215,62 @@ run_module_responder <- function(wgcna_eig) {
     )
   }))
   res$p_bh <- p.adjust(res$p, "BH")
+  res
+}
+
+# Per-module phenotype LMM: each module eigengene modelled over time with a
+# continuous trait as moderator and a subject random intercept,
+#   ME ~ trait * timepoint + (1 | subject).
+# The trait:timepoint term is the trajectory moderator (does the module's
+# time-course bend with the size of the response); the trait term is the overall
+# between-subject association. BH within trait, per term. This keeps the full
+# repeated-measures structure that run_module_prediction (T1 only) and Panel C
+# (T1->T3 delta) collapse away. Singular fits are flagged, not dropped: a
+# time-invariant trait can drive the random-intercept variance to zero, which
+# inflates the trait main effect, so the interaction is the term to trust.
+run_module_phenotype_lmm <- function(wgcna_eig, pheno) {
+  if (!requireNamespace("lmerTest", quietly = TRUE) ||
+    !requireNamespace("lme4", quietly = TRUE)) {
+    stop("run_module_phenotype_lmm needs the lmerTest and lme4 packages")
+  }
+  traits <- ADAPTATION_TRAITS
+  modules <- setdiff(unique(wgcna_eig$group_id), "grey")
+
+  fit_cell <- function(module, trait) {
+    d <- merge(
+      wgcna_eig[wgcna_eig$group_id == module, c("subject", "timepoint", "ME")],
+      pheno[, c("subject", trait)]
+    )
+    names(d)[names(d) == trait] <- "trait"
+    d$timepoint <- factor(d$timepoint)
+    d <- d[stats::complete.cases(d[, c("ME", "trait")]), ]
+    out <- data.frame(
+      module = module, trait = trait, n = nrow(d),
+      p_trait = NA_real_, p_trait_time = NA_real_, singular = NA
+    )
+    fit <- tryCatch(
+      suppressWarnings(
+        lmerTest::lmer(ME ~ trait * timepoint + (1 | subject), data = d)
+      ),
+      error = function(e) NULL
+    )
+    if (is.null(fit)) {
+      return(out)
+    }
+    a <- anova(fit)
+    out$p_trait <- a["trait", "Pr(>F)"]
+    out$p_trait_time <- a["trait:timepoint", "Pr(>F)"]
+    out$singular <- lme4::isSingular(fit)
+    out
+  }
+
+  grid <- expand.grid(module = modules, trait = traits, stringsAsFactors = FALSE)
+  res <- do.call(rbind, Map(fit_cell, grid$module, grid$trait))
+  res <- do.call(rbind, lapply(split(res, res$trait), function(s) {
+    s$fdr_trait <- p.adjust(s$p_trait, "BH")
+    s$fdr_trait_time <- p.adjust(s$p_trait_time, "BH")
+    s
+  }))
+  rownames(res) <- NULL
   res
 }

@@ -33,16 +33,32 @@ ggsave(file.path(RPT_DIR, "F06_composite.pdf"), composite,
   width = 460, height = 420, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
-sheets <- c(
-  "wgcna_membership", "wgcna_eigengene", "module_prediction",
-  "module_responder", "module_ora", "module_phenotype", "phenotype"
+sheet_desc <- c(
+  wgcna_membership = "Protein-to-module assignment (WGCNA, full imputed proteome)",
+  wgcna_eigengene = "Module eigengenes per sample and timepoint",
+  module_prediction = "Baseline (T1) eigengene LOO-CV prediction of adaptation traits",
+  module_responder = "Per-module responder (HR vs LR) signal per timepoint",
+  module_ora = "Panel B: over-representation per module",
+  module_phenotype = "Panel C: module eigengene delta vs response trait",
+  module_phenotype_lmm = "Panel S: module-phenotype linear mixed model",
+  phenotype = "Per-subject phenotype table (T2 composite + T1->T2 deltas)"
+)
+present <- names(sheet_desc)[file.exists(
+  file.path(DAT_DIR, paste0(names(sheet_desc), ".csv"))
+)]
+overview <- data.frame(
+  sheet = substr(present, 1, 31), description = unname(sheet_desc[present]),
+  stringsAsFactors = FALSE
 )
 wb <- createWorkbook()
-for (s in sheets) {
-  f <- file.path(DAT_DIR, paste0(s, ".csv"))
-  if (!file.exists(f)) next
+addWorksheet(wb, "overview")
+writeData(wb, "overview", overview)
+for (s in present) {
   addWorksheet(wb, substr(s, 1, 31))
-  writeData(wb, substr(s, 1, 31), read_csv(f, show_col_types = FALSE))
+  writeData(wb, substr(s, 1, 31), read_csv(
+    file.path(DAT_DIR, paste0(s, ".csv")),
+    show_col_types = FALSE
+  ))
 }
 saveWorkbook(wb, file.path(DAT_DIR, "F06_source_data.xlsx"), overwrite = TRUE)
 cat("F06 composite + workbook saved to", RPT_DIR, "\n")
