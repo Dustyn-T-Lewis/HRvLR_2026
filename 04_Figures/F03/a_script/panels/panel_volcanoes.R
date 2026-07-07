@@ -1,7 +1,8 @@
 # F03 ring-volcanoes: one volcano-in-ring per contrast (volcano = DEP logFC vs
 # -log10 P, points coloured by the pipeline pi-gate pi_score < 0.05; ring arcs =
-# fgsea NES, top 7 per direction, thickness = -log10 padj). Two composites: the
-# within-group HR/LR responses, and the between-responder + interaction contrasts.
+# fgsea NES, top 7 per direction, thickness = -log10 padj). Three composites: the
+# between-responder states (baseline/trained/acute), the interactions, and the
+# within-group HR/LR responses.
 pacman::p_load(here, dplyr, readr, tibble, enrichVolcano, ggplot2, patchwork)
 if (!exists("dep")) source(here("04_Figures", "F03", "a_script", "HRvLR_F03_setup.R"))
 
@@ -46,17 +47,17 @@ save_grid <- function(contrasts, stem, ncol, width, height) {
   )
 }
 
+save_grid(c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR"),
+  "F03_differential",
+  ncol = 3, width = 570, height = 230
+)
+save_grid(c("Training_Interaction", "Acute_Interaction"),
+  "F03_interaction",
+  ncol = 2, width = 380, height = 230
+)
 save_grid(c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR"),
   "F03_responses",
   ncol = 2, width = 380, height = 380
 )
-save_grid(
-  c(
-    "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-    "Training_Interaction", "Acute_Interaction"
-  ),
-  "F03_differential",
-  ncol = 3, width = 570, height = 420
-)
 
-cat("F03 two composites done.\n")
+cat("F03 three composites done.\n")
