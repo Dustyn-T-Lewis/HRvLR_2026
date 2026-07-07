@@ -7,7 +7,7 @@ source(here("04_Figures", "functions", "concordance_figure.R"))
 render_concordance_figure(list(
   fig_id = "F04",
   c_hi = "Training_HR", c_lo = "Training_LR", c_int = "Training_Interaction",
-  hi_levels = c("HR_T1", "HR_T2"), lo_levels = c("LR_T1", "LR_T2"),
+  lo_levels = c("LR_T1", "LR_T2"),
   labels = list(
     hi = "HR", lo = "LR", phase = "Training",
     x = "HR training logFC", y = "LR training logFC",

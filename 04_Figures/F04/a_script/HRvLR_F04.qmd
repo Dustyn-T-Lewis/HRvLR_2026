@@ -72,7 +72,7 @@ Writes, under `04_Figures/F04/`:
 render_concordance_figure(list(
   fig_id = "F04",
   c_hi = "Training_HR", c_lo = "Training_LR", c_int = "Training_Interaction",
-  hi_levels = c("HR_T1", "HR_T2"), lo_levels = c("LR_T1", "LR_T2"),
+  lo_levels = c("LR_T1", "LR_T2"),
   labels = list(
     hi = "HR", lo = "LR", phase = "Training",
     x = "HR training logFC", y = "LR training logFC",
@@ -92,8 +92,9 @@ concordant quadrants hold proteins that move the same direction in both groups
 (up in both, down in both); the two off-diagonal quadrants hold proteins that
 move opposite ways. Points are coloured by class: divergent (interaction
 significant), shared (significant in both arms), HR-only, LR-only, or NS. The
-dashed identity line is where perfect agreement would fall, and the Spearman
-correlation of the two logFC vectors summarises how tightly the cloud hugs it.
+dashed identity line is where perfect agreement would fall; the Spearman
+correlation of the two logFC vectors, quantified with a bootstrap CI in the
+supplement, summarises how tightly the cloud hugs it.
 
 ```r
 build_quadrant_table <- function(dep, c_hi, c_lo, c_int) {
