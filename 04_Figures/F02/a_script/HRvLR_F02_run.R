@@ -18,11 +18,18 @@ for (p in c("A", "B", "C", "F", "H", "I", "J", "M")) {
 source(here("04_Figures", "F02", "a_script", "supp", "panel_G.R"))
 
 audit_files <- sort(list.files(DAT_DIR, pattern = "^audit_panel_.*\\.csv$", full.names = TRUE))
+sheets <- substr(sub("^audit_", "", tools::file_path_sans_ext(basename(audit_files))), 1, 31)
+overview <- data.frame(
+  sheet = sheets,
+  description = gsub("_", " ", sub("^panel_([A-Za-z])_", "Panel \\U\\1: ", sheets, perl = TRUE)),
+  stringsAsFactors = FALSE
+)
 wb <- createWorkbook()
-for (f in audit_files) {
-  sheet <- substr(sub("^audit_", "", tools::file_path_sans_ext(basename(f))), 1, 31)
-  addWorksheet(wb, sheet)
-  writeData(wb, sheet, read_csv(f, show_col_types = FALSE))
+addWorksheet(wb, "overview")
+writeData(wb, "overview", overview)
+for (i in seq_along(audit_files)) {
+  addWorksheet(wb, sheets[i])
+  writeData(wb, sheets[i], read_csv(audit_files[i], show_col_types = FALSE))
 }
 saveWorkbook(wb, file.path(DAT_DIR, "F02_source_data.xlsx"), overwrite = TRUE)
 
