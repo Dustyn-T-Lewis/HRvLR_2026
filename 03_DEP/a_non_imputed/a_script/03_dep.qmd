@@ -290,8 +290,8 @@ if (file.exists(f)) {
 
 ## Imputed comparison and figures {#sec-imputed}
 
-`b_imputed/a_script/01_run_dep_imputed.R` repeats this exact fit on the three
-imputed matrices (imp4p, MsCoreUtils, missForest) and reports the Spearman
+`b_imputed/a_script/01_run_dep_imputed.R` repeats this exact fit on the four
+imputed matrices (missForest, imp4p, MsCoreUtils, Perseus) and reports the Spearman
 concordance of each arm's logFC against the primary, non-imputed fit. High
 concordance confirms the missing-value strategy does not reshape the effects
 [@peng2024]. The HR-vs-LR response comparison and the per-contrast volcanoes live

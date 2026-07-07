@@ -155,9 +155,10 @@ matrix is the primary input to the DE test, because limma handles per-protein NA
 and imputing first inflates false positives. The stage also records a per-protein
 eta-squared (variance explained by `Group_Time`) for the figure layer.
 
-Three imputation arms supply a complete matrix for methods that need one (PCA,
+Four imputation arms supply a complete matrix for methods that need one (PCA,
 WGCNA, rotation tests). **missForest is canonical** (figures and WGCNA read it);
-imp4p and the MsCoreUtils kNN/QRILC hybrid are kept as comparisons.
+imp4p, the MsCoreUtils kNN/QRILC hybrid, and the Perseus MNAR draw are kept as
+comparisons.
 
 ```{r}
 #| label: impute
@@ -194,7 +195,7 @@ dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = 
 Significance uses the Pi-score [@xiao2014], `Pi = p^|logFC| < 0.05`, on top of a
 BH-FDR threshold of 0.10 [@benjamini1995] — appropriate for a small-n DIA study
 powered for large effects. The comparison arm
-(`b_imputed/a_script/01_run_dep_imputed.R`) repeats the fit on the three imputed
+(`b_imputed/a_script/01_run_dep_imputed.R`) repeats the fit on the four imputed
 matrices and reports Spearman concordance of each arm's logFC against the primary;
 high concordance confirms imputation does not reshape the effects [@peng2024].
 
@@ -222,6 +223,7 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 02_Normalization/imputation/a_script/a_imp4p.R
 Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R
 Rscript 02_Normalization/imputation/a_script/c_missforest.R
+Rscript 02_Normalization/imputation/a_script/d_perseus.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R
 ```
