@@ -162,7 +162,10 @@ imp4p and the MsCoreUtils kNN/QRILC hybrid are kept as comparisons.
 ```{r}
 #| label: impute
 set.seed(42)
-mf <- missForest::missForest(as.matrix(dal$data), maxiter = 10, ntree = 100) # canonical arm
+mat <- as.matrix(dal$data)
+ord <- order(rownames(mat)) # deterministic order before the stochastic fit
+mf <- missForest::missForest(t(mat[ord, ]), maxiter = 10, ntree = 100) # canonical arm
+imp <- t(mf$ximp)[rownames(mat), ] # proteins back to rows
 ```
 
 # Stage 03 — Differential expression {#sec-dep}
