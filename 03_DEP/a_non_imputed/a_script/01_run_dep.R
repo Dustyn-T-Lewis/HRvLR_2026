@@ -3,16 +3,7 @@
 # T1 = baseline, T2 = 72hr post-training, T3 = 1hr acute post-bout
 # Input:  cycloess-normalized, non-imputed (limma handles NAs per-protein)
 #
-# 9 Contrasts:
-#   Training_HR            = HR_T2 - HR_T1
-#   Training_LR            = LR_T2 - LR_T1
-#   Acute_HR               = HR_T3 - HR_T2
-#   Acute_LR               = LR_T3 - LR_T2
-#   Baseline_HRvLR         = HR_T1 - LR_T1
-#   Trained_HRvLR          = HR_T2 - LR_T2
-#   Acute_HRvLR            = HR_T3 - LR_T3
-#   Training_Interaction   = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)
-#   Acute_Interaction      = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)
+# Contrasts: nine, defined in 03_DEP/contrasts.R (HRVLR_CONTRASTS)
 #
 # References:
 #   Ritchie et al. 2015, Nucleic Acids Res 43(7):e47 — limma
@@ -100,16 +91,12 @@ dal <- DAList(
   data       = mat,
   annotation = as.data.frame(ann),
   metadata   = meta_df,
-  tags       = list(norm_method = "cycloess")
+  tags       = list(norm_method = "cycloess", normalized = TRUE)
 )
 
 # design
 
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
-colnames(dal$design$design_matrix) <- gsub(
-  "^group", "",
-  colnames(dal$design$design_matrix)
-)
 
 # contrasts
 
