@@ -11,6 +11,7 @@ pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, stringr, openxlsx,
   ggplot2, forcats, patchwork
 )
+source(here("shared", "pca.R"))
 
 data_dir <- here("01_Filtering", "c_data")
 report_dir <- here("01_Filtering", "b_reports")
@@ -31,19 +32,6 @@ cfg <- list(
   myo_cut         = 50, # myonuclei nCPM at/above = candidate for muscle rescue
   blood_max       = 1e9 # rescue only if blood conc below this; above = true plasma protein
 )
-
-run_pca <- function(mat, metadata, log_transform = TRUE) {
-  for (j in seq_len(ncol(mat))) {
-    mat[is.na(mat[, j]), j] <- median(mat[, j], na.rm = TRUE)
-  }
-  if (log_transform) mat <- log2(mat + 1)
-  pca <- prcomp(t(mat), center = TRUE, scale. = TRUE)
-  ve <- round(summary(pca)$importance[2, 1:3] * 100, 1)
-  pc <- as.data.frame(pca$x[, 1:3]) |>
-    mutate(Col_ID = rownames(pca$x)) |>
-    left_join(metadata, by = "Col_ID")
-  list(pca = pca, scores = pc, var_exp = ve)
-}
 
 # Load matrix + metadata
 
