@@ -35,7 +35,9 @@ where the two groups' proteomes diverge, and where their exercise
 responses diverge. The within-group contrasts are the plainer question of
 what moves inside each group from one state to the next.
 
-![Between-group and interaction contrasts.](../b_reports/F03_differential.png)
+![Between-responder states: baseline, trained, acute.](../b_reports/F03_differential.png)
+
+![Responder-by-timepoint interactions.](../b_reports/F03_interaction.png)
 
 ![Within-group responses.](../b_reports/F03_responses.png)
 
@@ -49,8 +51,10 @@ The figure reads one file, the combined DEP table from stage 03:
 
 It writes into `b_reports/` and `c_data/`:
 
-- `b_reports/F03_differential.png` / `.pdf` — the five between-group and
-  interaction contrasts.
+- `b_reports/F03_differential.png` / `.pdf` — the three between-responder
+  states (baseline, trained, acute).
+- `b_reports/F03_interaction.png` / `.pdf` — the two responder-by-timepoint
+  interactions.
 - `b_reports/F03_responses.png` / `.pdf` — the four within-group
   responses.
 - `c_data/F03_source_data.xlsx` — the fgsea cache, with a `fgsea_all`
@@ -199,17 +203,17 @@ save_grid <- function(contrasts, stem, ncol, width, height) {
   )
 }
 
+save_grid(c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR"),
+  "F03_differential",
+  ncol = 3, width = 570, height = 230
+)
+save_grid(c("Training_Interaction", "Acute_Interaction"),
+  "F03_interaction",
+  ncol = 2, width = 380, height = 230
+)
 save_grid(c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR"),
   "F03_responses",
   ncol = 2, width = 380, height = 380
-)
-save_grid(
-  c(
-    "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-    "Training_Interaction", "Acute_Interaction"
-  ),
-  "F03_differential",
-  ncol = 3, width = 570, height = 420
 )
 ```
 
@@ -223,21 +227,24 @@ the ring legible rather than crowding it with every marginal hit. Because
 one NES legend is shared across all panels in a grid, arc colours are
 comparable from one contrast to the next.
 
-## Why the split is 5 + 4
+## Why the split is 3 + 2 + 4
 
-The nine contrasts are two different kinds of comparison, and mixing them
-on one sheet would invite reading them as if they answered the same
-question.
+The nine contrasts are three kinds of comparison, and mixing them on one
+sheet would invite reading them as if they answered the same question.
 
-`F03_differential.png` holds the five that compare the two responder
-groups or their responses: `Baseline_HRvLR`, `Trained_HRvLR`,
-`Acute_HRvLR`, `Training_Interaction`, and `Acute_Interaction`. These are
-where HR and LR differ, and where their exercise responses differ. This is
-the responder story.
+`F03_differential.png` holds the three between-responder states:
+`Baseline_HRvLR`, `Trained_HRvLR`, and `Acute_HRvLR`. Each asks where HR
+and LR differ at one state, from the untrained baseline through the trained
+and acute-exercise states.
+
+`F03_interaction.png` holds the two responder-by-timepoint interactions:
+`Training_Interaction` and `Acute_Interaction`. These ask where the two
+groups' *responses* diverge, over training and over the acute bout, which
+is a different question from a difference measured at a single state.
 
 `F03_responses.png` holds the four within-group contrasts: `Training_HR`,
 `Training_LR`, `Acute_HR`, and `Acute_LR`. These ask what moves inside one
 group from one state to the next, without reference to the other group.
 
-A between-group difference and a within-group change are not the same
-measurement, so they get separate composites.
+A between-group difference, a difference in response, and a within-group
+change are not the same measurement, so they get separate composites.
