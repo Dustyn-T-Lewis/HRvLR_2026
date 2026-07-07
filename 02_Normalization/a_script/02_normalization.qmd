@@ -31,12 +31,12 @@ Stage 02 takes the filtered `DAList` from stage 01 and makes its samples
 comparable. Cyclic loess normalization removes the sample-to-sample intensity
 drift that comes from uneven loading, and a per-protein eta-squared scan records
 how much of each protein's variance the `Group_Time` cells explain. Stage 02
-also fills the missing values three different ways, but those imputed matrices
+also fills the missing values four different ways, but those imputed matrices
 are for downstream figures and clustering. The differential-expression test in
 stage 03 runs on the normalized matrix with its gaps intact.
 
 This page runs that logic live and in memory, the same as
-`02_Normalization/a_script/01_run_normalization.R` and the three imputation arms
+`02_Normalization/a_script/01_run_normalization.R` and the four imputation arms
 in `02_Normalization/imputation/a_script/`, and writes nothing. The last section
 confirms the in-memory result matches the committed `DAList_normalized.rds`.
 
@@ -46,11 +46,11 @@ The stage reads one file, stage 01's `DAList_filtered.rds`. The runnable script
 writes `DAList_normalized.rds` and `normalized.csv` (the primary hand-off to
 stage 03), `00_report_intermediates.rds` (the eta-squared scan, the
 post-normalization PCA, and the stage-01 intermediates, reused by the report and
-figure layers), and proteoDA's QC PDFs to `b_reports/`. The three imputation
+figure layers), and proteoDA's QC PDFs to `b_reports/`. The four imputation
 scripts each read the normalized object and write `DAList_imputed_imp4p.rds`,
-`DAList_imputed_mscoreutils.rds`, and `DAList_imputed_missforest.rds` to
-`imputation/c_data/`. This document recomputes the objects but saves none of
-them.
+`DAList_imputed_mscoreutils.rds`, `DAList_imputed_missforest.rds`, and
+`DAList_imputed_perseus.rds` to `imputation/c_data/`. This document recomputes the
+objects but saves none of them.
 
 ## Load the filtered `DAList` {#sec-load}
 
@@ -154,9 +154,10 @@ intermediates into `00_report_intermediates.rds` for the reports and figures.
 ## Imputation for methods that need a complete matrix {#sec-impute}
 
 PCA, clustering, WGCNA, and the rotation tests cannot run on a matrix with gaps.
-Three imputation methods fill the normalized matrix, kept side by side so the
+Four imputation methods fill the normalized matrix, kept side by side so the
 choice can be checked against alternatives. missForest is the canonical arm that
-the figures and WGCNA read; imp4p and the MsCoreUtils hybrid are comparisons.
+the figures and WGCNA read; imp4p, the MsCoreUtils hybrid, and Perseus are
+comparisons.
 
 None of them feeds the differential-expression test. An imputed value is a
 prediction, not a measurement, and it carries none of the measurement error the
@@ -232,10 +233,25 @@ ms_mat <- impute_matrix(mat, method = "mixed", randna = randna, mar = "knn", mna
 c(MAR_features = sum(randna), MNAR_features = sum(!randna), na_remaining = sum(is.na(ms_mat)))
 ```
 
+### Perseus MNAR (comparison) {#sec-perseus}
+
+`perseus_impute()` reproduces the Perseus default: every missing value is drawn
+from a Gaussian shifted down into the low-intensity tail, the pattern expected when
+a value is missing because it fell below detection. It is the MNAR counterpart to
+missForest, which treats the gaps as missing at random (Tyanova et al. 2016).
+
+```{r}
+#| label: perseus
+perseus_dal <- perseus_impute(dal, shift = 1.8, width = 0.3, robust = TRUE, seed = 42)
+perseus_mat <- as.matrix(perseus_dal$data)
+
+c(na_remaining = sum(is.na(perseus_mat)), shift = 1.8, width = 0.3) # 0 remaining — complete matrix
+```
+
 ## Result and verification {#sec-recap}
 
 The runnable script saves the normalized matrix to `02_Normalization/c_data/`;
-the three imputation arms save to `02_Normalization/imputation/c_data/`.
+the four imputation arms save to `02_Normalization/imputation/c_data/`.
 
 | File | Location | Missing values? | Used by |
 |---|---|---|---|
@@ -243,6 +259,7 @@ the three imputation arms save to `02_Normalization/imputation/c_data/`.
 | `DAList_imputed_missforest.rds` | `imputation/c_data/` | filled | figures, WGCNA (canonical) |
 | `DAList_imputed_imp4p.rds` | `imputation/c_data/` | filled | the imputed-DEP comparison |
 | `DAList_imputed_mscoreutils.rds` | `imputation/c_data/` | filled | the imputed-DEP comparison |
+| `DAList_imputed_perseus.rds` | `imputation/c_data/` | filled | the imputed-DEP comparison |
 
 The in-memory object matches the committed `DAList_normalized.rds`:
 
