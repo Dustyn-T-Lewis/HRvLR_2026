@@ -41,14 +41,20 @@ ggsave(file.path(RPT, "F01_composite.pdf"), composite,
   width = 470, height = 340, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
-# One source-data workbook: one sheet per panel's audit table
+# One source-data workbook: an overview sheet, then one sheet per panel's audit table
 audit_files <- sort(list.files(DAT, pattern = "^audit_panel_.*\\.csv$", full.names = TRUE))
+sheets <- substr(sub("^audit_", "", tools::file_path_sans_ext(basename(audit_files))), 1, 31)
+overview <- data.frame(
+  sheet = sheets,
+  description = gsub("_", " ", sub("^panel_([A-Za-z])_", "Panel \\U\\1: ", sheets, perl = TRUE)),
+  stringsAsFactors = FALSE
+)
 wb <- createWorkbook()
-for (f in audit_files) {
-  sheet <- sub("^audit_", "", tools::file_path_sans_ext(basename(f)))
-  sheet <- substr(sheet, 1, 31)
-  addWorksheet(wb, sheet)
-  writeData(wb, sheet, read_csv(f, show_col_types = FALSE))
+addWorksheet(wb, "overview")
+writeData(wb, "overview", overview)
+for (i in seq_along(audit_files)) {
+  addWorksheet(wb, sheets[i])
+  writeData(wb, sheets[i], read_csv(audit_files[i], show_col_types = FALSE))
 }
 saveWorkbook(wb, file.path(DAT, "F01_source_data.xlsx"), overwrite = TRUE)
 cat("F01 composite + workbook saved to", RPT, "\n")
