@@ -12,7 +12,7 @@
 #   Xiao et al. 2014, Bioinformatics 30(6):801-807 — Pi-score
 #     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3
 
-pacman::p_load(dplyr, tidyr, tibble, readr, purrr, proteoDA, here)
+pacman::p_load(dplyr, tibble, readr, purrr, proteoDA, here)
 source(here("03_DEP", "contrasts.R"))
 
 cfg <- list(
