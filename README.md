@@ -115,7 +115,7 @@ Rscript 04_Figures/S_imputation/a_script/HRvLR_S_imputation.R
 
 ## Reproducibility Rules
 
-- Working directory resolution uses `rprojroot::find_rstudio_root_file()`
+- Path resolution uses `here::here()` from the project root
 - stochastic steps use `set.seed(42)`
 - primary DEP uses the non-imputed normalized matrix
 - repeated-measures blocking uses authoritative `Subject_ID` metadata
