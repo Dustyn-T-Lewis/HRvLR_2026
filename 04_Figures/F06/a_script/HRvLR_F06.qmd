@@ -194,7 +194,6 @@ and Q² > 0 means the model beats predicting the mean.
 ```{r}
 #| label: loo-q2
 loo <- function(d) {
-  d <- d[stats::complete.cases(d), ]
   if (nrow(d) < 6) {
     return(NA_real_)
   }
