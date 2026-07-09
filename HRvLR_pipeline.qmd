@@ -68,7 +68,7 @@ own outputs first.
 ```
 00_input/         raw matrix, metadata, HPA reference
 01_Filtering/     contaminant + missingness + outlier filtering  → DAList_filtered.rds
-02_Normalization/ cycloess + (missforest | imp4p | mscoreutils)  → DAList_normalized.rds
+02_Normalization/ cycloess normalize; 4 imputation arms          → DAList_normalized.rds
 03_DEP/
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
@@ -133,7 +133,7 @@ dal <- filter_proteins_by_group(dal, min_reps = 5, min_groups = 1, grouping_colu
 # 4-method consensus -> filter_samples(dal, !(Col_ID %in% outlier_ids))
 ```
 
-Stage 01 turns the 2,400 × 48 spreadsheet into a clean **1,885 × 45** `DAList`
+Stage 01 turns the 2,400 × 48 spreadsheet into a clean **1,896 × 45** `DAList`
 (three samples — `S29_T1`, `S28_T2`, `S28_T3` — trip ≥3 flags), saved to
 `01_Filtering/c_data/DAList_filtered.rds`.
 
