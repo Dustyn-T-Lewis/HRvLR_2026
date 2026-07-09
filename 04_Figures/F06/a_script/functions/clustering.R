@@ -7,6 +7,7 @@
 # not collide in one process (e.g. WGCNA masking stats::cor).
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble)
+source(here("03_DEP", "contrasts.R"))
 
 ADAPTATION_TRAITS <- c(
   "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_myovision_fcsa_I",
@@ -28,7 +29,7 @@ load_clustering_inputs <- function() {
     primary$results, `[[`, numeric(nrow(primary$data)), "pi_score"
   )
   rownames(pi_mat) <- rownames(primary$data)
-  pi_keep <- apply(pi_mat, 1, function(x) any(x < 0.05, na.rm = TRUE))
+  pi_keep <- apply(pi_mat, 1, function(x) any(x < PI_THRESH, na.rm = TRUE))
   pi_set <- rownames(pi_mat)[pi_keep]
   pi_set <- intersect(pi_set, rownames(imputed$data))
 
