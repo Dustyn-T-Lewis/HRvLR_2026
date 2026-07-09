@@ -9,17 +9,14 @@
 pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr, openxlsx)
 source(here("04_Figures", "functions", "style.R"))
 source(here("04_Figures", "functions", "pathway_utils.R"))
+source(here("03_DEP", "contrasts.R"))
 
 RPT_DIR <- here("04_Figures", "F03", "b_reports")
 DAT_DIR <- here("04_Figures", "F03", "c_data")
 dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-CONTRASTS <- c(
-  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
+CONTRASTS <- sub(" =.*$", "", HRVLR_CONTRASTS)
 
 dep <- read_csv(
   here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv"),
