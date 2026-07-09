@@ -11,6 +11,7 @@ archive/
 *.tmp
 *.log
 Rplots.pdf
+docs/
 
 # Quarto render artifacts (source .qmd is tracked, html/cache are regenerated)
 *_files/
