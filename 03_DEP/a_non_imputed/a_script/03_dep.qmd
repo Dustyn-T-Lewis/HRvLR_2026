@@ -22,13 +22,9 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-library(here)
+pacman::p_load(here)
 knitr::opts_knit$set(root.dir = here::here())
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(readr)
-})
+pacman::p_load(dplyr, tidyr, readr)
 ```
 
 ## What stage 03 does
@@ -85,7 +81,7 @@ normalization `DAList` rather than from parsing sample names, so the levels of
 
 ```{r}
 #| label: show-metadata
-library(proteoDA)
+pacman::p_load(proteoDA)
 dal_norm <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 table(dal_norm$metadata$Group, dal_norm$metadata$Timepoint)
 cat(sprintf("Proteins: %d | Samples: %d\n", nrow(dal_norm$data), ncol(dal_norm$data)))

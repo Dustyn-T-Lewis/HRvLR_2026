@@ -21,7 +21,7 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-library(here)
+pacman::p_load(here)
 knitr::opts_knit$set(root.dir = here::here())
 ```
 
@@ -60,12 +60,7 @@ stay paired without a manual key.
 
 ```{r}
 #| label: load
-library(proteoDA)
-library(readxl)
-library(readr)
-library(dplyr)
-library(tidyr)
-library(stringr)
+pacman::p_load(proteoDA, readxl, readr, dplyr, tidyr, stringr)
 
 raw <- read_excel(here("00_input", "HRvLR_raw.xlsx"))
 annot_cols <- c("uniprot_id", "protein", "gene", "description", "n_seq")
