@@ -13,6 +13,7 @@ archive/
 *.log
 Rplots.pdf
 .superpowers/
+docs/
 
 # Quarto render artifacts (source .qmd is tracked, html/cache are regenerated)
 *_files/
