@@ -21,11 +21,8 @@ execute:
 ```{r}
 #| label: setup
 #| include: false
-library(here)
+pacman::p_load(here, readr, readxl, dplyr)
 knitr::opts_knit$set(root.dir = here::here())
-library(readr)
-library(readxl)
-library(dplyr)
 ```
 
 Stage 00 holds the four files the pipeline reads and never writes. Nothing is
