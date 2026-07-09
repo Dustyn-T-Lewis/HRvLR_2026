@@ -4,7 +4,7 @@
 # non-imputed; the imputation/ arms add exploratory imputed DALists alongside.
 # cycloess uses limma's defaults (span = 0.7, adaptive.span = FALSE), matching YvO.
 
-pacman::p_load(proteoDA, here, readr, dplyr, tidyr, stringr, tibble)
+pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
 source(here("shared", "pca.R"))
 
 data_dir <- here("02_Normalization", "c_data")

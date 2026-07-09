@@ -42,11 +42,13 @@ confirms the in-memory result matches the committed `DAList_normalized.rds`.
 
 ## Reads and writes
 
-The stage reads one file, stage 01's `DAList_filtered.rds`. The runnable script
-writes `DAList_normalized.rds` and `normalized.csv` (the primary hand-off to
-stage 03), `00_report_intermediates.rds` (the eta-squared scan, the
-post-normalization PCA, and the stage-01 intermediates, reused by the report and
-figure layers), and proteoDA's QC PDFs to `b_reports/`. The four imputation
+The stage reads two stage-01 files: `DAList_filtered.rds` (the matrix it
+normalizes) and `filtering_intermediates.rds` (passed straight through into the
+report bundle). The runnable script writes `DAList_normalized.rds` and
+`normalized.csv` (the primary hand-off to stage 03), `00_report_intermediates.rds`
+(the eta-squared scan, the post-normalization PCA, and those stage-01
+intermediates, reused by the report and figure layers), and proteoDA's QC PDFs to
+`b_reports/`. The four imputation
 scripts each read the normalized object and write `DAList_imputed_imp4p.rds`,
 `DAList_imputed_mscoreutils.rds`, `DAList_imputed_missforest.rds`, and
 `DAList_imputed_perseus.rds` to `imputation/c_data/`. This document recomputes the
