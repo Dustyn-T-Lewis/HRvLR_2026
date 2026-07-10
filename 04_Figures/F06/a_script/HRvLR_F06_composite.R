@@ -1,36 +1,90 @@
-# F06 composite: stitch the rendered module panels (A atlas, B ORA, C phenotype)
-# and write the source-data workbook. Run after the panels exist.
-pacman::p_load(here, patchwork, ggplot2, png, grid, readr, openxlsx)
+# F06 composite: WGCNA module-trait atlas (A) beside the module-level NES
+# scatters (B), stitched with cowplot::ggdraw so Panel A overlaps and hides
+# Panel B's left margin. Then the source-data workbook.
+pacman::p_load(here, ggplot2, cowplot, png, grid, readr, openxlsx)
 source(here("04_Figures", "functions", "style.R"))
 
 RPT_DIR <- here("04_Figures", "F06", "b_reports")
 DAT_DIR <- here("04_Figures", "F06", "c_data")
+PANEL_DIR <- file.path(RPT_DIR, "panels")
 
 read_panel <- function(name) {
-  path <- file.path(RPT_DIR, "panels", paste0(name, ".png"))
+  path <- file.path(PANEL_DIR, paste0(name, ".png"))
   if (!file.exists(path)) stop("Missing panel: ", path, " (run HRvLR_F06_run.R first)")
-  ggplot() +
-    annotation_custom(rasterGrob(readPNG(path), interpolate = TRUE)) +
-    theme_void()
+  rasterGrob(readPNG(path), interpolate = TRUE)
 }
+pA_grob <- read_panel("panel_a_wgcna_map")
+pB_grob <- read_panel("panel_b_nes_scatters")
+pB_leg_grob <- read_panel("panel_b_nes_legend")
 
-composite <- (read_panel("panel_a_wgcna_map") /
-  (read_panel("panel_b_wgcna_ora") | read_panel("panel_c_module_phenotype"))) +
-  plot_layout(heights = c(1.1, 1)) +
-  plot_annotation(
-    title = "Figure 6. Co-expression module atlas and phenotype links",
-    subtitle = "Unsupervised WGCNA modules, their enriched biology, and how each module's response tracks the phenotype.",
-    theme = theme(
-      plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-      plot.subtitle = element_text(size = 9, color = "grey30", hjust = 0.5)
-    )
+COMP_W <- 470
+COMP_H <- 300
+mm2x <- function(mm) mm / COMP_W
+mm2y <- function(mm) mm / COMP_H
+
+crop_l <- 0.01
+crop_r <- 0.80
+crop_b <- 0.17
+crop_t <- 0.85
+save_w <- COMP_W * (crop_r - crop_l)
+save_h <- COMP_H * (crop_t - crop_b)
+
+grid_top <- 0.80
+grid_bot <- 0.22
+b_x <- 0.43
+b_w <- 0.55
+b_grid_h <- grid_top - grid_bot
+
+tag_sz <- 14
+title_sz <- 12
+subtitle_sz <- 9
+
+composite <- ggdraw(xlim = c(crop_l, crop_r), ylim = c(crop_b, crop_t)) +
+  theme(plot.background = element_rect(fill = "white", color = NA)) +
+  draw_grob(pB_grob,
+    x = b_x, y = grid_bot, width = b_w, height = b_grid_h,
+    hjust = 0, vjust = 0
+  ) +
+  draw_grob(pB_leg_grob,
+    x = 0.70, y = 0.195, width = 0.24, height = 0.04,
+    hjust = 0.5, vjust = 0.5
+  ) +
+  draw_grob(pA_grob,
+    x = 0.01, y = 0, width = 0.60, height = 0.96,
+    hjust = 0, vjust = 0
+  ) +
+  draw_label("A",
+    x = mm2x(15), y = mm2y(248),
+    size = tag_sz, fontface = "bold", hjust = 0, vjust = 1
+  ) +
+  draw_label("WGCNA Module–Trait Associations",
+    x = mm2x(58), y = mm2y(248),
+    size = title_sz, fontface = "bold", hjust = 0, vjust = 1
+  ) +
+  draw_label("Baseline (T1) → adaptation | Responder (HR − LR) per timepoint",
+    x = mm2x(58), y = mm2y(243),
+    size = subtitle_sz, fontface = "bold.italic", colour = "grey40",
+    hjust = 0, vjust = 1
+  ) +
+  draw_label("B",
+    x = mm2x(285), y = mm2y(248),
+    size = tag_sz, fontface = "bold", hjust = 0, vjust = 1
+  ) +
+  draw_label("Module–Level NES Scatters",
+    x = mm2x(294), y = mm2y(248),
+    size = title_sz, fontface = "bold", hjust = 0, vjust = 1
+  ) +
+  draw_label("fgsea on module-member moderated-t ranks",
+    x = mm2x(294), y = mm2y(243),
+    size = subtitle_sz, fontface = "bold.italic", colour = "grey40",
+    hjust = 0, vjust = 1
   )
 
 ggsave(file.path(RPT_DIR, "F06_composite.png"), composite,
-  width = 460, height = 420, units = "mm", dpi = 200, bg = "white"
+  width = save_w, height = save_h, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(RPT_DIR, "F06_composite.pdf"), composite,
-  width = 460, height = 420, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = save_w, height = save_h, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
 sheet_desc <- c(
@@ -38,9 +92,10 @@ sheet_desc <- c(
   wgcna_eigengene = "Module eigengenes per sample and timepoint",
   module_prediction = "Baseline (T1) eigengene LOO-CV prediction of adaptation traits",
   module_responder = "Per-module responder (HR vs LR) signal per timepoint",
-  module_ora = "Panel B: over-representation per module",
-  module_phenotype = "Panel C: module eigengene delta vs response trait",
-  module_phenotype_lmm = "Panel S: module-phenotype linear mixed model",
+  module_ora = "Over-representation per module (supplement ORA bars)",
+  panel_b_module_fgsea = "Panel B: module-level fgsea NES across contrasts",
+  module_phenotype = "Supplement: module eigengene delta vs response trait",
+  module_phenotype_lmm = "Supplement: module-phenotype linear mixed model",
   phenotype = "Per-subject phenotype table (T2 composite + T1->T2 deltas)"
 )
 present <- names(sheet_desc)[file.exists(
@@ -61,4 +116,4 @@ for (s in present) {
   ))
 }
 saveWorkbook(wb, file.path(DAT_DIR, "F06_source_data.xlsx"), overwrite = TRUE)
-cat("F06 composite + workbook saved to", RPT_DIR, "\n")
+message("F06 composite + workbook saved to ", RPT_DIR)
