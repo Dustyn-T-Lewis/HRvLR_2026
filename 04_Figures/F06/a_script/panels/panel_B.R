@@ -89,5 +89,6 @@ p_b <- ggplot(top_df, aes(log10_padj, yk)) +
     plot.tag = element_text(face = "bold", size = FIG_TAG_SIZE)
   )
 
-save_panel(p_b, file.path(RPT_DIR, "panels", "panel_b_wgcna_ora"), 250, 230)
-cat("F06 Panel B done.\n")
+dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
+save_panel(p_b, file.path(RPT_DIR, "supp", "module_ora_bars"), 250, 230)
+cat("F06 module ORA (supplement) done.\n")

@@ -29,6 +29,12 @@ trait_lab <- c(
 wg <- run_wgcna(ci$full_abund, ci$meta)
 wgcna_mem <- wg$membership
 wgcna_eig <- wg$eigengene
+# Network internals kept in memory for the WGCNA-QC supplements (soft-threshold
+# sweep, gene dendrogram); not persisted, so c_data stays limited to the tables.
+wgcna_sft <- wg$sft
+wgcna_net <- wg$net
+wgcna_power <- wg$chosen_power
+wgcna_colors <- wg$module_colors
 
 pred <- run_module_prediction(wgcna_eig, pheno_tbl)
 resp <- run_module_responder(wgcna_eig)

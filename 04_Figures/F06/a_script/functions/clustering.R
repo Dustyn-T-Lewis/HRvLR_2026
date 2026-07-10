@@ -168,7 +168,11 @@ run_wgcna <- function(abund, meta) {
     )
   }))
 
-  list(membership = membership, eigengene = eigengene)
+  list(
+    membership = membership, eigengene = eigengene,
+    sft = sft, net = net, chosen_power = chosen_power,
+    module_colors = net$colors
+  )
 }
 
 # Per-module baseline prediction: does each module's baseline (T1) eigengene

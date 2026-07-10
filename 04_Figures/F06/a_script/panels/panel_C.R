@@ -53,4 +53,5 @@ panel_c <- ggplot(
   FIG_THEME +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
-save_panel(panel_c, file.path(RPT_DIR, "panels", "panel_c_module_phenotype"), 170, 140)
+dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
+save_panel(panel_c, file.path(RPT_DIR, "supp", "panel_c_module_phenotype"), 170, 140)
