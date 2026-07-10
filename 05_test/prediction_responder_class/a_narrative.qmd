@@ -1,0 +1,117 @@
+---
+title: "Predicting responder class from the muscle proteome"
+subtitle: "Nested leave-one-subject-out, honestly scored against a permutation null"
+author: "HRvLR proteomics"
+format:
+  html:
+    self-contained: true
+    toc: true
+---
+
+# The question
+
+Can the muscle proteome tell a high responder (HR) from a low responder
+(LR) *out of sample*? We ask it three ways, one per phase:
+
+- **baseline** — the T1 proteome, before any training.
+- **training** — the T1 to T2 change, the adaptation to the programme.
+- **acute** — the T2 to T3 change, the response to a single bout.
+
+Within each phase we compare three feature spaces — singscore pathway
+scores (primary), individual proteins, and the F06 module eigengenes —
+and two models, an elastic net (`glmnet`) and sparse PLS-DA (`mixOmics`).
+
+Sixteen subjects is a small cohort, so a single accuracy number is close
+to meaningless. Everything below is cross-validated and every number
+carries a permutation p. A null result here is a real result: it is the
+honest answer to "is there anything an out-of-sample model can grab?"
+
+# Why this is leakage-free
+
+The danger with a cohort this size is that a preprocessing step quietly
+peeks at the held-out subject and hands the model an unfair hint. Two
+choices rule that out.
+
+**singscore is single-sample.** Each sample's pathway score is built from
+that sample's own within-sample gene ranks. It never looks at the rest of
+the cohort, so scoring all 45 samples at once cannot leak the held-out
+subject into the training features. That is the whole reason we score
+with singscore rather than a cohort-relative method such as GSVA, whose
+scores shift when you add or remove a sample.
+
+**Everything else is fit train-only, inside the fold.** The outer loop
+leaves one subject out. On the remaining subjects we z-score the features
+(centre and scale learned on the training subjects, then applied to the
+held-out subject), and we tune the model — `glmnet`'s alpha and lambda,
+sPLS's keepX — with a second, inner leave-one-subject-out loop that never
+sees the held-out subject. Only then is the held-out subject predicted.
+The permutation null re-runs that entire nested procedure on shuffled
+labels, 200 times, so the null carries the same optimism the real fit
+does.
+
+# The results
+
+```{r}
+#| message: false
+pacman::p_load(here, dplyr, readr, purrr, knitr)
+
+phases <- c("baseline", "training", "acute")
+metrics <- map_dfr(phases, function(ph) {
+  read_csv(
+    here(
+      "05_test", "prediction_responder_class", ph, "c_data",
+      "class_metrics.csv"
+    ),
+    show_col_types = FALSE
+  )
+})
+
+metrics |>
+  transmute(phase, space, model, n,
+    AUC = round(estimate, 2),
+    CI = sprintf("[%.2f, %.2f]", ci_lo, ci_hi),
+    perm_p = round(perm_p, 3),
+    BH_q = round(q_bh, 3)
+  ) |>
+  arrange(perm_p) |>
+  kable()
+```
+
+A few things to read off the table.
+
+**The effective sample size is small and phase-dependent.** Baseline uses
+15 subjects (S29 has no T1), training 14 (S28 and S29 each miss an end of
+the T1-to-T2 window), acute 15 (S28 has no post samples). Leave-one-out on
+14-15 subjects is about as thin as cross-validation gets.
+
+**Point AUCs wander below 0.5, and that is expected.** With leave-one-out
+on an unbalanced cohort, removing an HR subject shifts the training
+majority toward LR, which nudges the held-out prediction the wrong way.
+An intercept-only model can therefore land at an AUC well under chance.
+This is exactly why the reference is the permutation null and not the
+0.5 line: the same bias sits in every permutation, so the p-value stays
+honest.
+
+**Nothing survives multiple testing.** The strongest single cell is the
+baseline singscore sPLS-DA classifier, and even it does not clear a
+nominal permutation p, let alone BH correction across the six cells in
+its leaf. Read together with the near-chance protein and eigengene
+models, the message is consistent: the baseline proteome does not
+separate future responders out of sample, and the training and acute
+windows do not rescue it.
+
+# Recap
+
+- Prediction was scored with nested leave-one-subject-out and a
+  200-permutation null, because point estimates on n = 16 cannot be
+  trusted on their own.
+- singscore was chosen precisely because it is single-sample and rank
+  based, so full-cohort scoring introduces no leakage; every fold-specific
+  transform stayed train-only.
+- Across three phases, three feature spaces, and two models, no classifier
+  separated HR from LR beyond its permutation null after BH correction.
+  At this sample size that null is the finding, not a failure.
+
+```{r}
+sessionInfo()
+```
