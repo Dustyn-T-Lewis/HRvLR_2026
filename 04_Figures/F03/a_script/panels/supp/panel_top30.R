@@ -1,42 +1,83 @@
-# Supplement: the no-dedup top-30 up and top-30 down pathways by FDR for each of
-# the seven main-composite contrasts, so the rings' parsimony is auditable against
-# the full ranked enrichment. Bars point up (right) or down (left) and are filled
-# by database; each pathway name runs along its bar, freeing the label gutter.
-MAIN_CONTRASTS <- c(
+# Supplement: one figure per contrast, the top-30 down- and up-regulated pathways
+# by NES sitting back to back and aligned strongest-at-top, no dedup, so the rings'
+# parsimony is auditable against the full ranked enrichment. Bars are filled by
+# database with the name inside in white bold and the FDR at each tip.
+TOP30_CONTRASTS <- c(
   "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
-  "Baseline_HRvLR", "Training_Interaction", "Acute_Interaction"
+  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
+  "Training_Interaction", "Acute_Interaction"
 )
+TOP30_N <- 30L
 
-top30_bar <- function(tab, ct) {
-  d <- tab |>
-    filter(contrast == ct) |>
+top_pathways <- function(g, direction) {
+  g <- if (direction == "up") filter(g, NES > 0) else filter(g, NES < 0)
+  g |>
+    slice_max(if (direction == "up") NES else -NES, n = TOP30_N, with_ties = FALSE) |>
+    arrange(if (direction == "up") NES else desc(NES))
+}
+
+top30_side <- function(g, direction) {
+  up <- direction == "up"
+  d <- g |>
     mutate(
-      pathway = stats::reorder(pathway, NES),
-      label_x = if_else(NES > 0, 0.02, -0.02),
-      label_h = if_else(NES > 0, 0, 1)
+      rid = factor(paste(database, pathway), levels = paste(database, pathway)),
+      name = clean_pathway_name(pathway, max_chars = 32),
+      fdr = if_else(padj < 0.001,
+        formatC(padj, format = "e", digits = 0),
+        formatC(padj, format = "f", digits = 3)
+      )
     )
-  m <- max(abs(d$NES)) * 1.55
-  ggplot(d, aes(NES, pathway, fill = database)) +
-    geom_col(width = 0.85) +
-    geom_text(aes(x = label_x, label = pathway, hjust = label_h),
-      size = 2.4, colour = "grey10"
+  ggplot(d, aes(NES, rid, fill = database)) +
+    geom_col(width = 0.8, colour = "black", linewidth = 0.25) +
+    shadowtext::geom_shadowtext(aes(label = name),
+      x = if (up) 0.05 else -0.05, hjust = if (up) 0 else 1,
+      size = 2.5, fontface = "bold", colour = "white", bg.colour = "grey20"
     ) +
-    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey40") +
-    scale_fill_manual(values = DB_COLORS, drop = FALSE) +
-    scale_x_continuous(limits = c(-m, m)) +
-    labs(title = ct, x = "NES", y = NULL, fill = "Database") +
+    geom_text(aes(label = fdr),
+      hjust = if (up) -0.18 else 1.18,
+      size = 1.95, fontface = "bold", colour = "grey20"
+    ) +
+    scale_fill_manual(values = DB_COLORS, name = NULL, drop = FALSE) +
+    scale_y_discrete(labels = NULL) +
+    scale_x_continuous(
+      limits = if (up) c(0, max(d$NES)) else c(min(d$NES), 0),
+      expand = expansion(mult = if (up) c(0.02, 0.16) else c(0.16, 0.02))
+    ) +
+    coord_cartesian(clip = "off") +
+    labs(title = if (up) "Up-regulated" else "Down-regulated", x = "NES", y = NULL) +
     FIG_THEME +
     theme(
+      plot.title = element_text(hjust = 0.5),
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank(),
       panel.grid.major.y = element_blank()
     )
 }
 
-panel_top30 <- function(fg) {
-  tab <- bind_rows(lapply(MAIN_CONTRASTS, function(ct) top30_updown(fg, ct)))
-  plots <- lapply(MAIN_CONTRASTS, function(ct) top30_bar(tab, ct))
-  combined <- patchwork::wrap_plots(plots, ncol = 2, guides = "collect") &
+top30_figure <- function(gsea, ct) {
+  g <- filter(gsea, contrast == ct)
+  (top30_side(top_pathways(g, "down"), "down") |
+    top30_side(top_pathways(g, "up"), "up")) +
+    plot_layout(guides = "collect") +
+    plot_annotation(
+      title = sprintf("%s: top %d up / %d down by NES, no dedup", ct, TOP30_N, TOP30_N),
+      theme = theme(plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE))
+    ) &
     theme(legend.position = "bottom")
-  list(plot = combined, table = tab)
+}
+
+panel_top30 <- function(fg) {
+  gsea <- fg |> filter(contrast %in% TOP30_CONTRASTS, is.finite(NES), !is.na(padj))
+  plots <- lapply(TOP30_CONTRASTS, function(ct) top30_figure(gsea, ct))
+  names(plots) <- TOP30_CONTRASTS
+  table <- bind_rows(lapply(TOP30_CONTRASTS, function(ct) {
+    g <- filter(gsea, contrast == ct)
+    bind_rows(up = top_pathways(g, "up"), down = top_pathways(g, "down"), .id = "direction") |>
+      transmute(
+        contrast = ct, direction, database,
+        pathway = clean_pathway_name(pathway),
+        NES = round(NES, 2), padj = signif(padj, 3), size
+      )
+  }))
+  list(plots = plots, table = table)
 }
