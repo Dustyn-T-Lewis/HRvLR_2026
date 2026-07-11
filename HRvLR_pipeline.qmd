@@ -3,7 +3,7 @@ title: "High vs Low Responders (HRvLR) Skeletal-Muscle Proteomics"
 subtitle: "A ground-up walkthrough of the proteoDA-native pipeline: filtering → normalization → differential expression → figures"
 author: "A_HRvLR_2026"
 date: today
-bibliography: 03_DEP/a_non_imputed/a_script/references.bib
+bibliography: shared/references.bib
 format:
   html:
     toc: true
