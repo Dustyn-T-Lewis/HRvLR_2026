@@ -10,6 +10,6 @@ if (!exists("venn3_panel")) source(here("04_Figures", "F02", "a_script", "functi
 venn3_panel(
   "Training_HR", "Training_LR", "Baseline_HRvLR",
   "Training Response (T2 - T1)",
-  file.path(RPT_DIR, "panels", "panel_i_venn_training")
+  file.path(RPT_DIR, "supp", "panel_i_venn_training")
 )
 cat("F02 Panel I done.\n")

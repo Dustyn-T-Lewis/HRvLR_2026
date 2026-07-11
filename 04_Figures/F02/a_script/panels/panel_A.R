@@ -5,7 +5,7 @@ pacman::p_load(here, dplyr, ggplot2, patchwork, vegan)
 
 if (!exists("meta")) source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
 
-PA_W <- 200
+PA_W <- 140
 PA_H <- PANEL_H
 dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -95,20 +95,7 @@ pA_time <- ggplot(pca_df, aes(x = PC1, y = PC2, color = Timepoint)) +
   FIG_THEME +
   theme(legend.position = "bottom")
 
-pA_combined <- (pA_group | pA_time) +
-  plot_annotation(
-    title = "PCA of Imputed Proteome",
-    subtitle = sprintf(
-      "%s proteins (imputed), %d samples | 80%% shaded ellipses",
-      format(nrow(imp_df), big.mark = ","), nrow(pca_df)
-    ),
-    tag_levels = list(c("A", "")),
-    theme = theme(
-      plot.title    = element_text(face = "bold", size = FIG_TITLE_SIZE),
-      plot.subtitle = element_text(face = "bold.italic", size = FIG_SUBTITLE_SIZE, color = "grey30"),
-      plot.tag      = element_text(face = "bold", size = FIG_TAG_SIZE)
-    )
-  )
+pA_combined <- (pA_group | pA_time)
 
 save_png(pA_combined, file.path(RPT_DIR, "panels", "panel_a_pca"), PA_W, PA_H)
 write.csv(pca_df |> select(sample, PC1, PC2, Group, Timepoint),

@@ -9,13 +9,16 @@ source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
 unlink(setdiff(list.files(RPT_DIR, full.names = TRUE), file.path(RPT_DIR, ".gitkeep")),
   recursive = TRUE
 )
+unlink(list.files(DAT_DIR, pattern = "^audit_panel_.*\\.csv$", full.names = TRUE))
 dir.create(file.path(RPT_DIR, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
 
-for (p in c("A", "B", "C", "F", "H", "I", "J", "M")) {
+for (p in c("A", "B", "C", "D", "E", "F")) {
   source(here("04_Figures", "F02", "a_script", "panels", sprintf("panel_%s.R", p)))
 }
-source(here("04_Figures", "F02", "a_script", "supp", "panel_G.R"))
+for (s in c("direction", "C", "M", "CAP", "G", "I", "J")) {
+  source(here("04_Figures", "F02", "a_script", "supp", sprintf("panel_%s.R", s)))
+}
 
 audit_files <- sort(list.files(DAT_DIR, pattern = "^audit_panel_.*\\.csv$", full.names = TRUE))
 sheets <- substr(sub("^audit_", "", tools::file_path_sans_ext(basename(audit_files))), 1, 31)

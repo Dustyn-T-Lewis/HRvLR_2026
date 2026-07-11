@@ -1,0 +1,16 @@
+"contrast","ontology","Up","Down"
+"Baseline_HRvLR","BP",6,14
+"Baseline_HRvLR","CC",8,7
+"Baseline_HRvLR","MF",11,8
+"Training_HR","BP",8,10
+"Training_HR","CC",5,7
+"Training_HR","MF",11,7
+"Training_LR","BP",0,0
+"Training_LR","CC",8,2
+"Training_LR","MF",0,0
+"Acute_HR","BP",39,18
+"Acute_HR","CC",24,9
+"Acute_HR","MF",22,12
+"Acute_LR","BP",1,0
+"Acute_LR","CC",7,3
+"Acute_LR","MF",2,0

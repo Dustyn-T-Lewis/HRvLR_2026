@@ -1,6 +1,6 @@
 ---
 title: "HRvLR F02 — Global Proteome Overview"
-subtitle: "PCA, effect sizes, replicate CV, DEP counts, and variance by design"
+subtitle: "State, response trajectory, divergence, and the QC layer"
 author: "A_HRvLR_2026"
 date: today
 format:
@@ -21,365 +21,256 @@ execute:
 ## What Figure 2 is
 
 Figure 2 is the proteome-wide overview that comes before the contrast-specific
-figures. It answers three questions about the dataset as a whole: does the design
-structure (responder group, timepoint) show up in the unsupervised geometry, is
-replicate quality even enough across groups and timepoints to trust the contrasts,
-and how much signal is there once we do test. The panels cover PCA with PERMANOVA,
-effect-size distributions, per-protein CV, differential-protein counts, pathway
-counts, and a variance decomposition. Nothing here is contrast-specific biology;
-this is the quality-control and orientation layer.
+figures. It asks one question three ways: at the whole-proteome scale, do high and
+low responders differ, and if so, where? The hypothesis is that HR and LR diverge in
+the magnitude and trajectory of their response, not in baseline state. Figure 2 tests
+exactly that, and the answer shapes the layout: global state, global response, and
+global variance structure are all shared, so the figure locates the divergence at the
+protein and pathway level rather than in any global geometry.
 
 The study is 8 HR versus 8 LR subjects sampled at up to three timepoints, 45
 quantified samples in all. Two subjects are partial (S28 is T1-only, S29 is
-T2/T3-only), so the repeated-measures design is unbalanced. Several panels are
-built to respect that, most visibly the PERMANOVA in Panel A.
+T2/T3-only), so the repeated-measures design is unbalanced. Several panels are built
+to respect that: the PERMANOVA in Panel A permutes within subject, and the trajectory
+tests in Panel D use only the subjects with a complete pre/post pair.
+
+The reading order is: A and B set the overview (state, effect sizes); D is the
+response-trajectory test; E, F, and H carry the signal (divergent proteins, DEP
+counts, enriched pathways). The supplement holds the variability, variance-partition,
+supervised-ordination, and set-overlap panels.
 
 ## Reads and writes
 
-Setup (`HRvLR_F02_setup.R`) loads everything the panels share and defines the
-paths, the contrast list, and the metadata join. The panels read from it rather
-than re-loading.
+Setup (`HRvLR_F02_setup.R`) loads everything the panels share and defines the paths,
+the contrast list, and the metadata join. The panels read from it rather than
+re-loading.
 
 Reads:
 
 - `02_Normalization/c_data/normalized.csv` — normalized log2 intensities.
 - `02_Normalization/imputation/c_data/DAList_imputed_missforest.rds` — the
-  missForest-imputed DAList (the analysis-ready sample set; QC can drop samples
-  during imputation, so it may hold fewer columns than the normalized table).
+  missForest-imputed DAList (the analysis-ready sample set).
 - `03_DEP/a_non_imputed/c_data/03_combined_results.csv` — the stage-03 contrast
-  results (logFC, moderated-t, P.Value, and the pi-score significance flags).
+  results (logFC, moderated-t, P.Value, and the pi-score flags), including the two
+  interaction contrasts Panel E depends on.
 - `00_input/HRvLR_meta.csv` — sample metadata (subject, group, timepoint).
 
 Writes:
 
-- Panel PNGs to `04_Figures/F02/b_reports/panels` (and `supp` for Panel G).
+- Main panel PNGs to `04_Figures/F02/b_reports/panels`, supplement to `.../supp`.
 - Per-panel audit CSVs to `04_Figures/F02/c_data`.
 - `04_Figures/F02/c_data/F02_source_data.xlsx`, one sheet per audit CSV.
+- `04_Figures/F02/b_reports/F02_composite.{png,pdf}` from the composite stitcher.
 
 ```{r setup}
-pacman::p_load(here, tidyverse, patchwork, grid, vegan)
+pacman::p_load(here, tidyverse, patchwork, grid, vegan, RRPP)
 
 source(here("04_Figures", "functions", "style.R"))
-
-NORM_FILE <- here("02_Normalization", "c_data", "normalized.csv")
-IMP_FILE <- here("02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds")
-DEP_FILE <- here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv")
-META_FILE <- here("00_input", "HRvLR_meta.csv")
-
-MAIN_CONTRASTS <- c(
-  "Baseline_HRvLR",
-  "Training_HR", "Training_LR", "Training_Interaction",
-  "Acute_HR", "Acute_LR", "Acute_Interaction"
-)
-
-norm_df <- read_csv(NORM_FILE, show_col_types = FALSE)
-imp_dal <- readRDS(IMP_FILE)
-imp_df <- bind_cols(
-  as_tibble(imp_dal$annotation[, c("uniprot_id", "protein", "gene", "description")]),
-  as_tibble(imp_dal$data)
-)
-dep_df <- read_csv(DEP_FILE, show_col_types = FALSE)
-
-ann_cols <- c("uniprot_id", "protein", "gene", "description")
-imp_samps <- setdiff(names(imp_df), intersect(names(imp_df), ann_cols))
-imp_mat <- as.matrix(imp_df[, imp_samps])
-rownames(imp_mat) <- imp_df$gene
+source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
 ```
 
-Metadata is joined onto the imputed sample set, so `meta` and `imp_mat` always
-line up. `Group_Time` is the crossed responder-by-timepoint factor several panels
-key off.
+The QC panels (A, C, M) run on the imputed matrix, so `meta` and `imp_mat` always line
+up. `Group_Time` is the crossed responder-by-timepoint factor several panels key off.
+The imputed basis is a deliberate caveat: missForest borrows information across
+proteins and samples, which shrinks per-protein variance and inflates cross-sample
+correlation, so the QC panels read the imputed structure, not raw measurement noise.
+The DEP results (Panels E, F, H) come from the non-imputed arm.
 
-```{r meta}
-meta_raw <- read_csv(META_FILE, show_col_types = FALSE)
-meta <- tibble(sample_id = imp_samps) |>
-  left_join(meta_raw |> select(Col_ID, Subject_ID, Group, Timepoint, Group_Time),
-    by = c("sample_id" = "Col_ID")
-  ) |>
-  mutate(
-    Col_ID = sample_id,
-    Group = factor(Group, levels = c("HR", "LR")),
-    Timepoint = factor(Timepoint, levels = c("T1", "T2", "T3"))
-  )
-```
-
-The panels are PNG-only. There is no composite script; the eight main panels are
-stitched into the figure by hand at one shared height (`PANEL_H = 95` mm) so they
-align when placed side by side.
-
-## Panel A — PCA and PERMANOVA
+## Panel A — Global proteome state (PCA, PERMANOVA)
 
 PCA on the imputed matrix (samples as rows, zero-variance proteins dropped, scaled)
-gives the unsupervised layout. The same scores are drawn twice, once colored by
-Group and once by Timepoint, each with 80% ellipses. The point of the two colorings
-is that Group and Timepoint enter the design differently, so they need different
-significance tests.
+gives the unsupervised layout, drawn twice: coloured by Group and by Timepoint, each
+with 80% ellipses. PERMANOVA is a permutation test of whether group centroids differ
+in multivariate space. It enters differently for the two factors because they enter
+the design differently. Timepoint is within-subject, so its permutations are
+restricted to within-subject blocks (`strata = Subject_ID`); permuting timepoints
+across subjects would test the wrong null. Group is between-subject, so each subject
+is collapsed to one mean profile and the test runs with subjects as the independent
+units, which keeps the partial subjects (S28, S29) from acting as unequal whole-plot
+blocks.
 
-The PERMANOVA split is what respects the repeated-measures design. Timepoint is a
-within-subject factor, so its permutations are restricted to within-subject blocks
-(`strata = Subject_ID`); permuting timepoints across subjects would test the wrong
-null. Group is between-subject, so each subject is collapsed to one mean profile and
-the test runs with subjects as the independent units. Collapsing first is what keeps
-the unbalanced partial subjects (S28, S29) from acting as unequal whole-plot blocks,
-which restricted permutation of the raw samples could not handle cleanly.
+The Group result is null (R² ≈ 0.06, p ≈ 0.62) and the Timepoint result is weak
+(R² ≈ 0.06, p ≈ 0.02). Read this as "no detectable global shift," not "HR equals LR":
+an unsupervised PCA on ~1,900 scaled proteins gives equal weight to the overwhelmingly
+null majority, so a real effect in a protein subset washes out. The null is consistent
+with the hypothesis (shared state, divergent response) and is followed up in Panel D.
+One caveat for the reader: PERMANOVA confounds centroid location with dispersion, so a
+significant term can reflect unequal spread rather than a mean shift (Anderson 2001,
+doi:10.1111/j.1442-9993.2001.01070.pp.x); the dispersion is tested directly in
+supplement Panel C.
 
-```{r panelA}
-samp_ids <- meta$Col_ID[meta$Col_ID %in% colnames(imp_mat)]
-mat <- t(imp_mat[, samp_ids])
-mat <- mat[, apply(mat, 2, var, na.rm = TRUE) > 0]
-
-pca_res <- prcomp(mat, center = TRUE, scale. = TRUE)
-var_pct <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
-
-pca_df <- as.data.frame(pca_res$x[, 1:2]) |>
-  mutate(sample = rownames(pca_res$x)) |>
-  left_join(meta |> select(Col_ID, Group, Timepoint, Group_Time, Subject_ID),
-    by = c("sample" = "Col_ID")
-  )
-
-set.seed(42)
-dist_mat <- vegdist(mat, method = "euclidean")
-perm_time <- adonis2(dist_mat ~ Timepoint,
-  data = pca_df, permutations = 999,
-  strata = pca_df$Subject_ID
-)
-subj_mat <- rowsum(mat, pca_df$Subject_ID)
-subj_mat <- subj_mat / as.integer(table(pca_df$Subject_ID)[rownames(subj_mat)])
-subj_group <- pca_df$Group[match(rownames(subj_mat), pca_df$Subject_ID)]
-perm_group <- adonis2(vegdist(subj_mat, method = "euclidean") ~ subj_group,
-  permutations = 999
-)
-```
-
-![PCA of the imputed proteome, colored by Group and by Timepoint, with 80% ellipses and the two PERMANOVA results.](../b_reports/panels/panel_a_pca.png)
+![Global proteome state: PCA coloured by Group and by Timepoint, 80% ellipses, two PERMANOVA results.](../b_reports/panels/panel_a_pca.png)
 
 ## Panel B — Effect-size distributions
 
-Signed logFC per contrast, one facet each, with a density overlay and the median
-absolute logFC annotated. The two interaction contrasts are dropped, leaving the
-five main effects. This shows how large the changes are before any significance
-filter, which is the context for reading the DEP counts in Panel F.
+Signed logFC per contrast, drawn as a horizontal violin on the shared contrast axis so
+down sits left and up sits right, matching Panels F and H. The median absolute logFC is
+annotated. Effects are small and symmetric across every contrast (median |logFC| 0.15
+to 0.22), which is the context for reading the DEP counts in Panel F: the changes are
+modest, so the counts, not the magnitudes, carry the between-contrast contrast.
 
-```{r panelB}
-display_contrasts <- setdiff(MAIN_CONTRASTS, c("Training_Interaction", "Acute_Interaction"))
+![logFC distribution per contrast, down/up about zero, median |logFC| annotated.](../b_reports/panels/panel_b_effect_size.png)
 
-lfc_long <- dep_df |>
-  select(gene, starts_with("logFC_")) |>
-  pivot_longer(starts_with("logFC_"), names_to = "contrast", values_to = "logFC") |>
-  mutate(contrast = sub("logFC_", "", contrast)) |>
-  filter(contrast %in% display_contrasts, !is.na(logFC)) |>
-  mutate(contrast = factor(contrast, levels = display_contrasts))
+## Panel D — Response trajectories (RRPP)
 
-lfc_stats <- lfc_long |>
-  group_by(contrast) |>
-  summarise(med_abs_lfc = median(abs(logFC)), .groups = "drop") |>
-  mutate(annotation = sprintf("%.2f", med_abs_lfc))
-```
+Since global state does not separate responders, the test moves to the response: each
+subject's within-subject change vector, training (T2 − T1) and acute (T3 − T2). A
+change vector has two separable properties, and RRPP tests each by residual
+randomisation, which is valid when variables far exceed subjects (Collyer, Sekora &
+Adams 2015, doi:10.1038/hdy.2014.75; Adams & Collyer 2009,
+doi:10.1111/j.1558-5646.2009.00649.x). Magnitude ‖Δ‖ is how far the proteome moved;
+the panel plots it per subject and tests the group difference. Direction is where it
+moved; the Δ-score PCA shows the geometry and the angle between the two group-mean
+vectors summarises it, with the overall change-vector difference tested as well.
 
-![logFC distribution per contrast, with median absolute logFC annotated.](../b_reports/panels/panel_b_effect_size.png)
+Both are null. HR and LR move the same distance (training Z = 0.35, p = 0.38; acute
+Z = −1.44, p = 0.92) and in indistinguishable directions (vector p = 0.87 and 0.18).
+The null is robust: restricting ‖Δ‖ to the top 1000, 500, 200, 100, or 50
+most-variable proteins never brings either test near significance. So responders do
+not remodel more, and they do not remodel differently, at the whole-proteome scale.
 
-## Panel C — Per-protein CV
+```{r panelD}
+subject_of <- function(ids) sub("_T[123]$", "", ids)
+subj_group <- setNames(meta$Group, subject_of(meta$Col_ID))
 
-Inter-individual CV% per protein, computed within each responder group at each
-timepoint, plotted HR against LR so a point off the diagonal is a protein that is
-noisier in one group than the other. CV is computed on the linear scale
-(`2^imp_mat`), not on the log2 values. CV is a ratio of a standard deviation to a
-mean, which is only interpretable when the mean is on a ratio scale with a true
-zero; log intensities have neither, so a CV on log values would not mean what CV is
-supposed to mean. This is the Brenes 2024 convention. The Fisher-z confidence
-interval on the HR-vs-LR correlation is annotated per timepoint.
-
-```{r panelC}
-lin_mat <- 2^as.matrix(imp_mat)
-
-group_cv <- function(ids) {
-  ids <- intersect(ids, colnames(lin_mat))
-  if (length(ids) < 2) {
-    return(rep(NA_real_, nrow(lin_mat)))
-  }
-  apply(lin_mat[, ids, drop = FALSE], 1, function(x) {
-    x <- x[!is.na(x)]
-    if (length(x) < 2) {
-      return(NA_real_)
-    }
-    sd(x) / mean(x) * 100
-  })
+delta_matrix <- function(from_tp, to_tp) {
+  from_ids <- meta$Col_ID[meta$Timepoint == from_tp & meta$Col_ID %in% colnames(imp_mat)]
+  to_ids <- meta$Col_ID[meta$Timepoint == to_tp & meta$Col_ID %in% colnames(imp_mat)]
+  paired <- intersect(subject_of(from_ids), subject_of(to_ids))
+  d <- t(imp_mat[, to_ids[match(paired, subject_of(to_ids))]]) -
+    t(imp_mat[, from_ids[match(paired, subject_of(from_ids))]])
+  rownames(d) <- paired
+  d[, apply(d, 2, var) > 0]
 }
 
-timepoints <- c("T1", "T2", "T3")
-cv_df <- lapply(timepoints, function(tp) {
-  hr_ids <- meta$Col_ID[meta$Group == "HR" & meta$Timepoint == tp]
-  lr_ids <- meta$Col_ID[meta$Group == "LR" & meta$Timepoint == tp]
-  tibble(
-    uniprot_id = imp_df$uniprot_id,
-    gene = imp_df$gene,
-    timepoint = tp,
-    cv_HR = group_cv(hr_ids),
-    cv_LR = group_cv(lr_ids)
-  )
-}) |>
-  bind_rows() |>
-  filter(!is.na(cv_HR), !is.na(cv_LR)) |>
-  mutate(timepoint = factor(timepoint, levels = timepoints))
+dm <- delta_matrix("T2", "T3")
+grp <- droplevels(subj_group[rownames(dm)])
+mag <- sqrt(rowSums(dm^2))
+set.seed(42)
+anova(lm.rrpp(mag ~ grp, data = rrpp.data.frame(mag = mag, grp = grp), iter = 999))
 ```
 
-![Per-protein CV%, HR versus LR, one facet per timepoint, with the correlation and Fisher-z interval annotated.](../b_reports/panels/panel_c_cv_scatter.png)
+![Response trajectories: per-subject magnitude and Δ-score direction, RRPP permutation tests.](../b_reports/panels/panel_d_trajectory.png)
+
+## Panel E — Responder divergence (protein level)
+
+The divergence lives here. For each protein the panel plots the training/acute logFC
+in HR against the same in LR; on-diagonal is a concordant response, off-diagonal is
+divergent. The key point is what defines "divergent": not set subtraction of two
+separately-thresholded lists, which cannot show a group difference (the difference
+between significant and non-significant is not itself significant, Gelman & Stern
+2006), but the interaction contrast directly. Proteins with `sig_pi` on
+`Training_Interaction` or `Acute_Interaction` are the ones whose HR-versus-LR
+difference is significant, highlighted and labelled. This is why the interaction
+contrasts, dropped from the count panels, are the honest test of the hypothesis: 55
+proteins diverge in training, 86 in the acute bout.
+
+```{r panelE}
+diverg <- tibble(
+  gene = dep_df$gene,
+  hr = dep_df$logFC_Acute_HR,
+  lr = dep_df$logFC_Acute_LR,
+  divergent = dep_df$sig_pi_Acute_Interaction != 0
+)
+```
+
+![Responder divergence: HR vs LR logFC per protein, interaction-significant proteins highlighted.](../b_reports/panels/panel_e_divergence.png)
 
 ## Panel F — DEP counts per contrast
 
 Diverging bars, down on the left and up on the right, as a percent of the proteome.
-Each direction is nested: nominal p < 0.05 in the light shade with the pi-score
-gate (`sig_pi`) drawn on top in the dark shade. The counts at the bar tips are the
-pi-gated calls. Using `sig_pi` here keeps Figure 2 consistent with stage 03, where
-the pi-score is the significance rule that combines effect size and evidence rather
-than thresholding p alone.
+Each direction nests nominal p < 0.05 (light) with the pi-score gate (dark), and the
+counts at the tips are the pi-gated calls. The dotted lines mark the expected-by-chance
+fraction: at α = 0.05 across ~1,900 proteins, roughly 2.5% of the proteome per
+direction is a false positive, so a light bar near that line is indistinguishable from
+noise. Using `sig_pi` for the reported counts keeps Figure 2 consistent with stage 03,
+where the pi-score combines effect size and evidence rather than thresholding p alone.
 
-```{r panelF}
-n_total <- nrow(dep_df)
+![DEPs per contrast as a percent of the proteome, nominal p nested with the pi gate, chance line dotted.](../b_reports/panels/panel_f_dep_counts.png)
 
-frac_df <- lapply(display_contrasts, function(ct) {
-  p <- dep_df[[paste0("P.Value_", ct)]]
-  lfc <- dep_df[[paste0("logFC_", ct)]]
-  pi <- dep_df[[paste0("sig_pi_", ct)]]
-  tibble(
-    contrast = ct,
-    key = c("Down p", "Down Pi", "Up p", "Up Pi"),
-    direction = c("Down", "Down", "Up", "Up"),
-    threshold = c("p", "Pi", "p", "Pi"),
-    n = c(
-      sum(p < 0.05 & lfc < 0, na.rm = TRUE), sum(pi == -1, na.rm = TRUE),
-      sum(p < 0.05 & lfc > 0, na.rm = TRUE), sum(pi == 1, na.rm = TRUE)
-    )
-  )
-}) |>
-  bind_rows() |>
-  mutate(pct = 100 * n / n_total)
-```
+## Panel H — Pathway enrichment (GO GSEA, deduplicated)
 
-![DEPs per contrast as a percent of the proteome, down/up, nominal p nested with the pi gate.](../b_reports/panels/panel_f_dep_counts.png)
+fgsea on the per-contrast moderated-t ranks against the three GO ontologies (BP, CC,
+MF from MSigDB C5). Ranking on the moderated-t uses the full ordered list rather than a
+hard cutoff, so enrichment picks up coordinated shifts a per-protein threshold misses.
+The raw significant-set count is inflated by GO redundancy, where nested and
+overlapping terms co-fire, so each ontology's significant sets (BH < 0.05) are
+collapsed to non-redundant representatives with `fgsea::collapsePathways` before
+counting (Korotkevich et al. 2021, doi:10.1101/060012). The layout mirrors Panel F. The
+deduplicated counts show a broad HR pathway response, strongest acutely (85 up versus
+LR's 10), which is the pathway-level counterpart to Panel E's divergence.
 
-## Panel H — GO GSEA counts
+![Non-redundant significant GO sets (BH < 0.05) per contrast, up above and down below zero, by ontology.](../b_reports/panels/panel_h_pathways.png)
 
-fgsea on the per-contrast moderated-t ranks against the three GO ontologies (BP,
-CC, MF from MSigDB C5). Ranking on the moderated-t statistic uses the full ordered
-list rather than a hard DEP cutoff, so enrichment picks up coordinated shifts that
-per-protein thresholds miss. The panel counts significant gene sets (BH < 0.05),
-split by NES sign so up-regulated sets go above zero and down-regulated below,
-stacked by ontology.
+## Supplement C — Responder heterogeneity and per-protein CV
 
-```{r panelH}
-pacman::p_load(fgsea, msigdbr)
+Reframes replicate variability from QC to biology: do HR and LR differ in how spread
+out their proteomes are? PERMDISP tests homogeneity of multivariate dispersion, each
+subject's distance to its group centroid, per timepoint (Anderson 2006,
+doi:10.1111/j.1541-0420.2005.00440.x). No timepoint shows a difference (p = 0.33, 0.20,
+0.35), so responders are equally heterogeneous. The CV scatter underneath is the
+per-protein detail: CV on the linear scale (`2^imp_mat`), since a coefficient of
+variation is only interpretable on a ratio scale with a true zero, which log
+intensities lack (Brenes et al. 2019, doi:10.1074/mcp.RA119.001472).
 
-ONT_COLORS <- c(BP = "#66C2A5", CC = "#FC8D62", MF = "#8DA0CB")
+![Multivariate dispersion (PERMDISP) per timepoint, with the per-protein CV scatter.](../b_reports/supp/panel_c_variability.png)
 
-go_sets <- function(sub) {
-  g <- tryCatch(
-    msigdbr(species = "Homo sapiens", collection = "C5", subcollection = paste0("GO:", sub)),
-    error = function(e) msigdbr(species = "Homo sapiens", category = "C5", subcategory = paste0("GO:", sub))
-  )
-  split(g$gene_symbol, g$gs_name)
-}
-pathways <- lapply(c(BP = "BP", CC = "CC", MF = "MF"), go_sets)
+## Supplement M — Variance explained by design (bias-corrected ω²)
 
-set.seed(42)
-go_counts <- lapply(display_contrasts, function(cn) {
-  ranks <- setNames(dep_df[[paste0("t_", cn)]], dep_df$gene)
-  ranks <- ranks[!is.na(ranks) & !is.na(names(ranks)) & !duplicated(names(ranks))]
-  ranks <- sort(ranks, decreasing = TRUE)
-  lapply(names(ONT_COLORS), function(ont) {
-    res <- fgsea(pathways[[ont]], ranks, minSize = 10, maxSize = 500)
-    sig <- res[!is.na(res$padj) & res$padj < 0.05, ]
-    tibble(contrast = cn, ontology = ont, Up = sum(sig$NES > 0), Down = sum(sig$NES < 0))
-  }) |> bind_rows()
-}) |>
-  bind_rows()
-```
+For each protein, how much of its variance the Group_Time design explains. Raw η² is
+upward-biased, worst in this small-df regime: with 5 between-group and ~39 residual df
+the null expectation is about 5/44 ≈ 0.11, so a raw-η² histogram places the median
+protein at the chance level and reads as structure where there is none. This panel uses
+ω², which subtracts the null expectation so unstructured proteins centre on zero
+(Lakens 2013, doi:10.3389/fpsyg.2013.00863; Olejnik & Algina 2003,
+doi:10.1037/1082-989X.8.4.434), overlaid on a label-permuted null. The observed
+distribution sits on the null for the bulk (median ω² ≈ 0) with a modest right tail
+that exceeds the null 95th percentile, the honest version of "a minority of proteins
+are design-structured."
 
-![Counts of significant GO gene sets (BH < 0.05) per contrast, up above and down below zero, by ontology.](../b_reports/panels/panel_h_pathways.png)
+![Bias-corrected ω² per protein against a label-permuted null; line marks the null 95th percentile.](../b_reports/supp/panel_m_omega2.png)
 
-## Panel M — Variance explained by design (eta-squared)
+## Supplement N — Supervised ordination (CAP)
 
-For each protein, eta-squared is the between-`Group_Time` sum of squares over the
-total sum of squares, the fraction of that protein's variance the responder-by-
-timepoint design accounts for. The panel is the distribution of eta2 across all
-proteins, with the median marked and the high tail (eta2 > 0.5) flagged and
-labeled. Most proteins sit low, which is expected; the right tail is the set whose
-variance is genuinely structured by the design and where the contrast signal lives.
-The per-protein eta2 values are read from the stage-02 report intermediates.
+Where the PCA is unsupervised, CAP seeks the axis that best discriminates HR from LR on
+the sample distance matrix, conditioned on timepoint, but stays honest with a
+permutation test and leave-one-out misclassification (Anderson & Willis 2003,
+doi:10.1890/0012-9658(2003)084[0511:CAOPCA]2.0.CO;2). Even when a separating axis is
+sought, it does not generalise (p ≈ 0.22, LOO error ≈ 40%), corroborating the null PCA
+rather than contradicting it. A supervised method such as PLS-DA would separate 8
+versus 8 in high dimensions every time, even on shuffled labels, so CAP's cross-
+validated allocation is the honest choice.
 
-```{r panelM}
-pacman::p_load(ggrepel)
+![CAP constrained on Group, conditioned on timepoint, with permutation p and leave-one-out error.](../b_reports/supp/panel_n_cap.png)
 
-int <- readRDS(here("02_Normalization", "c_data", "00_report_intermediates.rds"))
-eta_df <- tibble(uniprot_id = names(int$eta2_vals), eta2 = as.numeric(int$eta2_vals)) |>
-  left_join(distinct(dep_df, uniprot_id, gene), by = "uniprot_id") |>
-  mutate(label = if_else(is.na(gene) | gene == "", uniprot_id, gene))
+## Supplement G, I, J — Set overlap
 
-med_eta <- median(eta_df$eta2, na.rm = TRUE)
-hi_cut <- 0.5
-n_hi <- sum(eta_df$eta2 > hi_cut)
-top_lab <- eta_df |> slice_max(eta2, n = 8, with_ties = FALSE)
-```
+Panel G is an UpSet of the pi-gated DEP sets across all main contrasts. Panels I and J
+are baseline-anchored three-set Eulers of the training and acute responder sets, kept
+in the supplement because set overlap describes shared membership but cannot test
+responder divergence; Panel E does that.
 
-![Distribution of per-protein eta-squared against Group_Time, median marked, high tail labeled.](../b_reports/panels/panel_m_eta2.png)
-
-## Panels I and J — Baseline-anchored overlap (Euler)
-
-Panels I and J ask which proteins move in HR, in LR, or in both, laid over the
-baseline HR-vs-LR difference set. Both call `venn3_panel` (in `functions/venn.R`),
-which builds a three-set Euler from the pi-gated DEP sets of the two responder
-contrasts and the baseline contrast, plus a companion up/down bar per region. Panel
-I uses the training response (T2 − T1), Panel J the acute response (T3 − T2). The
-overlap of the two responder sets is the shared response; the group-specific
-regions are what separates HR from LR.
-
-```{r panelIJ}
-source(here("04_Figures", "F02", "a_script", "functions", "venn.R"))
-
-venn3_panel(
-  "Training_HR", "Training_LR", "Baseline_HRvLR",
-  "Training Response (T2 - T1)",
-  file.path(RPT_DIR, "panels", "panel_i_venn_training")
-)
-
-venn3_panel(
-  "Acute_HR", "Acute_LR", "Baseline_HRvLR",
-  "Acute Response (T3 - T2)",
-  file.path(RPT_DIR, "panels", "panel_j_venn_acute")
-)
-```
-
-![Training-response overlap: HR, LR, and baseline sets.](../b_reports/panels/panel_i_venn_training.png)
-
-![Acute-response overlap: HR, LR, and baseline sets.](../b_reports/panels/panel_j_venn_acute.png)
-
-## Supplement Panel G — Contrast overlap (UpSet)
-
-Panel G is an UpSet of the pi-gated DEP sets across all main contrasts, showing
-which proteins are shared across which combinations. It is the many-set counterpart
-to the three-set Eulers and lives in `supp` rather than the main figure.
-
-```{r panelG}
-pacman::p_load(UpSetR)
-
-dep_sets <- lapply(MAIN_CONTRASTS, function(ct) {
-  g <- dep_df$gene[which(dep_df[[paste0("sig_pi_", ct)]] != 0)]
-  unique(g[!is.na(g)])
-})
-names(dep_sets) <- unname(CTR_SHORT[MAIN_CONTRASTS])
-dep_sets <- dep_sets[lengths(dep_sets) > 0]
-
-upset(fromList(dep_sets),
-  nsets = length(dep_sets), order.by = "freq", nintersects = 20,
-  mainbar.y.label = "Shared DEPs", sets.x.label = "DEPs / contrast"
-)
-```
-
-![UpSet of pi-gated DEP overlap across contrasts (supplement).](../b_reports/supp/panel_g_upset.png)
+![UpSet of pi-gated DEP overlap across contrasts.](../b_reports/supp/panel_g_upset.png)
 
 ## Assembly
 
-Every F02 panel is a PNG rendered at the shared `PANEL_H` height. `HRvLR_F02_run.R`
-clears `b_reports`, sources the panels in order, and writes the audit CSVs into one
-`F02_source_data.xlsx` workbook. There is no composite plotting step; the panels are
-placed into the final figure by hand.
+`HRvLR_F02_run.R` clears `b_reports`, sources the six main panels then the six
+supplement panels, and writes the audit CSVs into one `F02_source_data.xlsx`.
+`HRvLR_F02_composite.R` rasterises the six main panel PNGs and tiles them at native
+aspect in a three-row YvO-style grid (A and B; D full width; E, F, H), saving
+`F02_composite.{png,pdf}`.
+
+## Recap
+
+- Global proteome state does not separate responders (A), and neither does the global
+  response in magnitude or direction (D), robustly to feature selection.
+- Responders are equally heterogeneous (C), the design explains little variance beyond
+  chance (M), and even a supervised axis fails to classify them (N).
+- The divergence is protein-specific (E, 55 training / 86 acute) and shows as a broader
+  HR pathway response (H, 85 vs 10 acute up).
+- The honest claim is shared global response, protein-specific divergence, which is the
+  hypothesis restated at the scale the data support.
+
+```{r sessioninfo}
+sessionInfo()
+```
