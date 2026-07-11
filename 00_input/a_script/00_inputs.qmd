@@ -11,6 +11,7 @@ format:
     theme: cosmo
     embed-resources: true
     df-print: paged
+bibliography: ../../shared/references.bib
 execute:
   eval: true
   echo: true
@@ -34,6 +35,34 @@ The study is a two-group repeated-measures design: eight high responders (HR)
 and eight low responders (LR), each sampled at three timepoints (T1 baseline,
 T2 post-training, T3 post-acute-bout). Two subjects are partial, so 48
 subject-timepoint slots reduce to 45 quantified samples downstream.
+
+# What DIA-MS is, and what it means for the matrix
+
+The subtitle says DIA, so it is worth saying what that is before reading a single
+number. In data-independent acquisition the mass spectrometer marches through a
+fixed ladder of m/z windows and fragments *everything* inside each window, every
+cycle, in every run. The older alternative, data-dependent acquisition (DDA),
+instead looks at each survey scan and picks the top-N most intense precursors to
+fragment. That choice is made on the fly and depends on what else happened to be
+eluting at that instant, so two runs of the same sample can fragment different
+peptides.
+
+The consequence for us is a matter of consistency. Because the DIA windows are
+fixed in advance, the same peptide is targeted in every run, and quantification
+across the 45 samples is far more consistent than DDA would give. What DIA does
+not do is fill the matrix. There are still gaps, and the interpretation of a gap
+is specific: it almost always means the protein fell below detection in that run,
+not that the protein was absent from that person's muscle. That is the whole
+reason stage 01 converts a reported zero to `NA`. A zero would tell the model "we
+measured this and it was nothing," which is a claim the instrument never made.
+
+One more piece of vocabulary. A row in the matrix is a **protein group**, not
+necessarily a gene. Mass spectrometry sees peptides, and when several proteins
+share the peptides that were actually observed, no amount of arithmetic can tell
+them apart. Those indistinguishable proteins are reported together as one group,
+carrying one intensity. So a row is a group of proteins that the evidence cannot
+separate; most of the time it maps to one gene, but the identifier is a claim
+about what was measurable, not about what was present.
 
 # The protein matrix: `HRvLR_raw.xlsx`
 
@@ -99,8 +128,8 @@ as an outcome the proteome predicts.
 
 # The contaminant reference: `HPA_annotations.tsv`
 
-Human Protein Atlas evidence, keyed by UniProt, that stage 01 uses to remove
-blood-plasma leakage from a muscle-biopsy proteome.
+Human Protein Atlas evidence [@uhlen2015], keyed by UniProt, that stage 01 uses
+to remove blood-plasma leakage from a muscle-biopsy proteome.
 
 ```{r}
 #| label: hpa
@@ -130,4 +159,67 @@ possible future use.
 | `Phenotype.xlsx` | Figure 1 | responder grouping, phenotype source |
 
 Stage 01 turns the matrix and sample sheet into a filtered `DAList`, the object
-every later stage builds on.
+every later stage builds on. A `DAList` is proteoDA's container [@thurman2023]:
+three name-aligned tables held together, `data` (the intensity matrix, one row per
+protein and one column per sample), `annotation` (one row per protein), and
+`metadata` (one row per sample). The alignment is the point — the row names of
+`data` match `annotation`, the column names of `data` match the row names of
+`metadata`, and every proteoDA filter preserves that correspondence, so a protein
+can never drift away from its own annotation. Stage 01 builds it and defines it in
+full; it is named here because everything downstream of this page speaks in terms
+of it.
+
+## Key terms
+
+**DIA (data-independent acquisition)** — the mass spectrometer fragments
+everything inside a fixed ladder of m/z windows on every cycle, rather than
+choosing the most intense precursors as it goes. Quantification is consistent
+across runs, but the matrix still has gaps.
+
+**DDA (data-dependent acquisition)** — the older alternative, which picks the
+top-N most intense precursors in each survey scan. Which peptides get fragmented
+depends on what happened to be eluting, so runs disagree with each other.
+
+**Protein group** — one row of the matrix. A set of proteins that share the
+observed peptides and therefore cannot be told apart. The row is the group, not
+guaranteed to be a single gene.
+
+**Missing, not zero** — an unquantified protein arrives as a zero and becomes
+`NA` in stage 01. The gap usually means "below detection in this run", not
+"absent from this muscle", and a zero would assert a measurement that was never
+made.
+
+**`Col_ID`** — the join key. It names an intensity column in the protein matrix
+and a row in the sample sheet, which is what pairs data to design without a
+manual key.
+
+**`Group_Time`** — the six-cell interaction factor (`HR_T1` … `LR_T3`). It is the
+cell-means design in stage 03 and the grouping column for the missingness filter
+in stage 01.
+
+**`DAList`** — proteoDA's three-table container (`data`, `annotation`,
+`metadata`), name-aligned so filtering can never desynchronize a protein from its
+annotation or a sample from its design.
+
+## Recap
+
+- Stage 00 is read-only. Four files enter the pipeline here and nothing is
+  computed or written.
+- The design is 8 HR and 8 LR across three timepoints; two partial subjects turn
+  48 slots into 45 quantified samples.
+- DIA gives consistent quantification but a gapped matrix, and the gaps mean
+  "below detection", which is why zeros become `NA`.
+- `Col_ID` pairs the matrix to the sample sheet, and `Group_Time` carries the six
+  design cells used by both the missingness filter and the models.
+- HPA evidence is the raw material for the blood-contaminant rule; `Phenotype.xlsx`
+  defines the HR/LR split and is read only by Figure 1.
+- Everything downstream is a `DAList`, which stage 01 builds.
+
+```{r sessioninfo}
+sessionInfo()
+```
+
+## References
+
+::: {#refs}
+:::
