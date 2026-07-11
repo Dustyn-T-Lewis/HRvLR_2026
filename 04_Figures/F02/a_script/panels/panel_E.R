@@ -7,8 +7,8 @@ pacman::p_load(here, dplyr, tidyr, tibble, ggplot2)
 
 if (!exists("meta")) source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
 
-PF_W <- 130
-PF_H <- PANEL_H
+PF_W <- 120
+PF_H <- 110
 n_total <- nrow(dep_df)
 
 display_contrasts <- setdiff(MAIN_CONTRASTS, c("Training_Interaction", "Acute_Interaction"))
@@ -50,7 +50,7 @@ band_df <- tibble(
 pi_lab <- frac_df |> filter(threshold == "Pi", n > 0)
 chance_pct <- 100 * 0.05 / 2
 
-pF <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
+pE <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
   geom_rect(
     data = band_df, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
     inherit.aes = FALSE, fill = scales::alpha(band_df$band, 0.14),
@@ -82,6 +82,6 @@ pF <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
     plot.margin = margin(6, 6, 4, 4)
   )
 
-save_png(pF, file.path(RPT_DIR, "panels", "panel_e_dep_counts"), PF_W, PF_H)
+save_png(pE, file.path(RPT_DIR, "panels", "panel_e_dep_counts"), PF_W, PF_H)
 write.csv(frac_df, file.path(DAT_DIR, "audit_panel_E_dep_counts.csv"), row.names = FALSE)
 cat("F02 Panel E done.\n")
