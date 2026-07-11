@@ -11,6 +11,7 @@ format:
     theme: cosmo
     embed-resources: true
     df-print: paged
+bibliography: ../../shared/references.bib
 execute:
   eval: true
   echo: true
@@ -28,7 +29,9 @@ knitr::opts_knit$set(root.dir = here::here())
 ## What stage 02 does
 
 Stage 02 takes the filtered `DAList` from stage 01 and makes its samples
-comparable. Cyclic loess normalization removes the sample-to-sample intensity
+comparable. The stage is built on proteoDA [@thurman2023], which supplies the
+`DAList` container, the normalization wrapper, and the QC reports used below.
+Cyclic loess normalization [@bolstad2003] removes the sample-to-sample intensity
 drift that comes from uneven loading, and a per-protein eta-squared scan records
 how much of each protein's variance the `Group_Time` cells explain. Stage 02
 also fills the missing values four different ways, but those imputed matrices
@@ -75,10 +78,14 @@ Samples load onto the instrument slightly differently, so a whole sample can sit
 higher or lower for reasons that have nothing to do with biology. That offset
 shows up in each sample's median log-intensity and would distort any cross-sample
 comparison. `normalize_data(norm_method = "cycloess")` is proteoDA's wrapper
-around limma's cyclic loess, which fits smooth curves between pairs of samples to
-pull them onto a common scale (limma defaults: `span = 0.7`,
-`adaptive.span = FALSE`). It log2-transforms internally, so the normalized matrix
-comes back on the log2 scale.
+around limma's cyclic loess [@bolstad2003; @ritchie2015], which fits smooth curves
+between pairs of samples to pull them onto a common scale (limma defaults:
+`span = 0.7`, `adaptive.span = FALSE`). It log2-transforms internally, so the
+normalized matrix comes back on the log2 scale. Cyclic loess rests on two
+assumptions: that most proteins do not change between samples, and that whatever
+bias exists varies smoothly with intensity rather than jumping around. Both are
+standard for label-free LC-MS and are the same assumptions that motivate
+normalizing at all [@karpievitch2012; @arend2025].
 
 ```{r}
 #| label: normalize
@@ -120,6 +127,24 @@ write_qc_report(dal,
 ) # inspects the chosen result
 ```
 
+Be clear about what that does and does not show here. `write_norm_report()` puts all
+eight methods proteoDA offers — log2, median, mean, vsn, quantile, cycloess, rlr,
+and gi — side by side on the same filtered matrix and scores each one on five
+within-group dispersion metrics: pooled coefficient of variation (PCV), pooled
+median absolute deviation (PMAD), pooled estimate of variance (PEV), intragroup
+correlation (COR), and the density of log2 ratios. A method that levels the samples
+without distorting them should shrink the first three, raise the fourth, and centre
+the log2-ratio density on zero.
+
+The catch is that the output is a multi-page PDF — `b_reports/norm_comparison.pdf`,
+with `qc_pre.pdf` and `qc_post.pdf` for the before and after — and a PDF cannot be
+embedded in this page. So the comparison is not reproduced here. The cycloess choice
+is asserted on this page, not demonstrated on it, and a reader is being asked to take
+it on trust unless they open `norm_comparison.pdf` and read the eight panels
+themselves. The call that generates the comparison is directly above; the result of
+that comparison is not summarized here, because summarizing a figure nobody has shown
+you is how an unchecked choice becomes a fact.
+
 This normalized, non-imputed object is the primary hand-off to stage 03. The
 imputation section below covers why the test runs on it rather than on a filled
 matrix.
@@ -150,6 +175,25 @@ eta2_vals <- apply(log_dat, 1, function(x) {
 summary(eta2_vals) # most proteins low; a tail is strongly group-structured
 ```
 
+Read those numbers with the sample size in mind. Eta-squared is upward-biased: it is
+the ratio of between-group to total sum of squares in the sample, and it never
+subtracts the variance the grouping soaks up purely by chance. With six `Group_Time`
+cells there are 5 between-group degrees of freedom against roughly 39 residual, so
+even if the groups were assigned at random the expected eta-squared is already about
+5 / 44 ≈ 0.11. A protein sitting near 0.11 is showing you the null, not structure.
+Only the tail well above it is worth reading as group-driven, and even the tail is
+a screening signal rather than a test — nothing here is corrected for the thousands
+of proteins scanned.
+
+This is why the F02 supplement reports bias-corrected omega-squared instead, which
+subtracts the expected chance contribution and so has a null expectation near zero.
+The bias is not even constant across proteins: the scan above drops missing values
+per protein (`ok <- !is.na(x)`), so a protein observed in fewer samples has fewer
+residual degrees of freedom and therefore *more* inflation than a fully observed one.
+The gappiest proteins are flattered most. That makes the raw eta-squared usable as a
+descriptive spread for the F02 panel, but not as a clean between-protein ranking, and
+it is another reason the omega-squared version is the one that carries any claim.
+
 The script bundles `eta2_vals`, the post-normalization PCA, and the stage-01
 intermediates into `00_report_intermediates.rds` for the reports and figures.
 
@@ -161,13 +205,68 @@ choice can be checked against alternatives. missForest is the canonical arm that
 the figures and WGCNA read; imp4p, the MsCoreUtils hybrid, and Perseus are
 comparisons.
 
-None of them feeds the differential-expression test. An imputed value is a
-prediction, not a measurement, and it carries none of the measurement error the
-real values do. Testing on a filled matrix understates each protein's variance,
-shrinks its standard error, and calls more proteins significant than the data
-support (Webb-Robertson et al. 2015, PMID 25855118). limma avoids this by fitting
-each protein on the samples where it was actually observed, so the test runs on
-the non-imputed matrix and imputation stays downstream.
+### Why a gap is not just a gap: MAR and MNAR {#sec-mar-mnar}
+
+Every method below turns on one question, so it is worth answering before the
+acronyms start appearing: *why* is this value missing?
+
+**MAR — missing at random.** The gap has nothing to do with the protein's true
+abundance. The peptide failed to be identified in that run, the peak was not picked,
+the search engine lost it. The protein was there at whatever level it was there at,
+and the reason we cannot see it is unrelated to that level. A MAR gap carries no
+information about the value it hides, which is what licenses predicting it from other
+proteins: the neighbours are as informative as anything else, because the gap itself
+tells you nothing.
+
+**MNAR — missing not at random.** The gap exists *because of* the value. The protein
+fell below the instrument's detection limit, so the very fact that it is missing tells
+you something: it means **low**. An MNAR gap is data. Filling it by prediction from
+other proteins throws away the one thing you knew about it and, worse, will typically
+fill it with something far too high, because the other proteins have no idea it was
+scraping the floor.
+
+Real DIA data is a mixture of the two, skewed toward MNAR — the low-abundance end of
+the dynamic range is exactly where dropouts concentrate, and that is not a
+coincidence, it is the detection limit doing its job [@lazar2016; @webbrobertson2015].
+
+This is the whole reason the four arms below disagree, and they disagree by design
+rather than by accident. missForest treats every gap as MAR and predicts it from the
+multivariate structure of the other proteins. The Perseus draw treats every gap as
+MNAR and fills it from a downshifted low-intensity Gaussian. Handed the same missing
+cell, one asks "what do this protein's neighbours imply it should be?" and the other
+asks "how low is low?" — and they answer differently. imp4p and the MsCoreUtils hybrid
+sit between them: both try to estimate which gaps are which, then route each kind to a
+method suited to it. Keeping all four side by side is how the pipeline avoids
+pretending it knows the mixture exactly.
+
+### Why none of this touches the DE test {#sec-no-impute-de}
+
+None of the four arms feeds the differential-expression test, and this is the most
+consequential decision in the stage.
+
+An imputed value is a prediction, not a measurement. It is a number the model made up,
+and — this is the part that bites — it arrives with none of the measurement error a
+real observation would carry. A filled cell looks *more certain* to a downstream test
+than any cell that was actually measured. Fill a protein's gaps and you have quietly
+told the test that you measured it more times, and more cleanly, than you did.
+
+The consequence is mechanical. Testing on a filled matrix understates each protein's
+variance, which shrinks its standard error, which inflates its t-statistic, which
+calls more proteins significant than the data support. The false positives are not a
+side effect; they follow directly from the variance you erased
+[@webbrobertson2015; @peng2024]. And the damage is worst precisely where the imputation
+was most confident — a protein whose gaps were all filled from a tight distribution
+comes out looking like the most reliably measured protein in the experiment.
+
+limma does not need the gaps filled [@ritchie2015]. It fits each protein on the samples
+where that protein was actually observed, letting the residual degrees of freedom drop
+for proteins with more missingness — which is the honest bookkeeping: a protein seen in
+fewer samples *is* known with less confidence, and the model's error bars should say so.
+Fitting limma without imputing has been shown to outperform imputing first [@peng2024].
+So the test runs on the non-imputed matrix, and imputation stays strictly downstream,
+where it serves methods (PCA, WGCNA, clustering) that are descriptive and cannot run on
+gaps at all — methods where a wrong fill distorts a picture rather than manufacturing a
+p-value.
 
 ```{r}
 #| label: impute-input
@@ -181,8 +280,19 @@ c(entries_imputed = sum(was_missing), pct_of_matrix = round(100 * mean(was_missi
 `missForest` is a non-parametric random-forest imputer: each protein's missing
 values are predicted from the multivariate structure of the other proteins, so
 the matrix is transposed to put proteins in the columns. The fit is stochastic,
-so the seed is fixed and the rows are ordered before it runs (Stekhoven and
-Buhlmann 2012).
+so the seed is fixed and the rows are ordered before it runs [@stekhoven2012].
+Note what the previous section implies about this arm: it is a MAR imputer, and
+our gaps are skewed MNAR, so it is expected to fill below-detection values too
+high. It is the canonical arm because it is well behaved on the descriptive uses
+(PCA, WGCNA) it feeds, not because its missingness assumption is the right one.
+
+`maxiter = 10` and `ntree = 100` are the values in the call, and they are
+conventional defaults rather than anything tuned on this dataset. `ntree = 100` is
+the size of each protein's forest; `maxiter = 10` is a ceiling on the iterations,
+not a target, because missForest stops early on its own once the imputed matrix
+stops changing between passes. Both trade compute against a small amount of
+stability, and neither was selected by comparing outcomes here — which is worth
+saying plainly rather than letting the numbers sit there looking chosen.
 
 ```{r}
 #| label: missforest
@@ -197,11 +307,34 @@ dimnames(imp) <- dimnames(mat)
 c(na_remaining = sum(is.na(imp)), OOB_error = round(mf$OOBerror[1], 4))
 ```
 
+That `OOB_error` is the one diagnostic missForest gives you for free, and it should
+not go past unread. Each tree in a random forest is grown on a bootstrap sample of
+the data, which leaves roughly a third of the observations *out of the bag* for that
+tree — unseen during its training. Predicting those held-out observations and scoring
+the error gives a held-out error estimate without any separate validation split. For
+continuous data missForest reports it as a normalized root mean squared error: the
+prediction error scaled by the variance of the observed values.
+
+The scale is the useful part. Zero would be perfect prediction. **One** is the number
+to anchor on: an OOB error of 1 means the forest predicts a missing value no better
+than simply guessing that protein's mean, because the error is as large as the spread
+it was trying to explain. Values comfortably below 1 mean the other proteins genuinely
+carry information about the missing one; values near or above 1 mean the imputation is
+adding noise dressed up as data. In a correlated proteomic matrix a value well under 1
+is the expected and reassuring result — proteins covary, so neighbours predict. Read
+the printed number against that benchmark rather than against zero.
+
+One caution: a low OOB error says the forest predicts *observed* values well. It says
+nothing about whether the values it invented for the below-detection gaps are right,
+because there is no ground truth there to score against. A MAR imputer can be
+internally excellent and still systematically fill MNAR gaps too high. OOB error will
+not catch that; it cannot.
+
 ### imp4p (comparison) {#sec-imp4p}
 
 `imp4p` is mechanism-aware. It estimates, per protein, the mix of values missing
 at random against values missing because the protein sits below the detection
-limit, then imputes each part with a method suited to it (Giai Gianetto et al.):
+limit, then imputes each part with a method suited to it [@giaigianetto2016]:
 
 ```{r}
 #| label: imp4p
@@ -220,9 +353,12 @@ c(na_remaining = sum(is.na(imp4p_mat))) # 0 remaining — complete matrix
 ### MsCoreUtils hybrid (comparison) {#sec-mscoreutils}
 
 The third method splits the proteins first. `imputeLCMD::model.Selector()`
-classifies each protein as missing-at-random or not (Lazar et al. 2016), then
+classifies each protein as missing-at-random or not [@lazar2016], then
 `MsCoreUtils::impute_matrix()` routes the MAR features through kNN and the MNAR
-features through a left-censored QRILC draw:
+features through a left-censored QRILC draw. This is the hybrid position from the
+section above made literal: rather than assuming one mechanism for the whole matrix,
+it decides per protein and sends each to the imputer that matches. The `randna` flag
+in the code below is that decision — `TRUE` marks a feature judged MAR.
 
 ```{r}
 #| label: mscoreutils
@@ -238,8 +374,25 @@ c(MAR_features = sum(randna), MNAR_features = sum(!randna), na_remaining = sum(i
 
 `perseus_impute()` reproduces the Perseus default: every missing value is drawn
 from a Gaussian shifted down into the low-intensity tail, the pattern expected when
-a value is missing because it fell below detection. It is the MNAR counterpart to
-missForest, which treats the gaps as missing at random (Tyanova et al. 2016).
+a value is missing because it fell below detection. It is the pure MNAR counterpart
+to missForest, which treats every gap as missing at random. The two bracket the
+plausible range, which is why both are kept.
+
+The `shift = 1.8` and `width = 0.3` are the MaxQuant/Perseus convention
+[@tyanova2016], and they are readable once unpacked. Both are expressed in units of
+the observed distribution for that sample. `shift = 1.8` places the centre of the
+draw 1.8 standard deviations **below** the observed mean; `width = 0.3` gives the
+draw 0.3× the observed standard deviation. Together they say: *low, and tightly
+clustered* — which is exactly what a population of below-detection values should look
+like. They are squeezed against the floor of the dynamic range, and they do not vary
+much, because there is not much room left underneath them to vary in.
+
+These are conventional defaults, not values tuned on this dataset. Nobody swept them
+and picked the best; they are what Perseus ships and what the field reports, and they
+are used here for comparability with the literature. They are also load-bearing: push
+the shift down and every imputed protein looks more depleted, pull it up and the
+downshift stops meaning anything. That sensitivity is a reason to treat this arm as a
+bracket on the MNAR extreme rather than as a point estimate to trust.
 
 ```{r}
 #| label: perseus
@@ -277,3 +430,70 @@ c(
 Normalization levels the samples without inventing any data, and imputation is
 applied only where a method cannot run on an incomplete matrix. Stage 03 fits the
 model on the non-imputed normalized matrix.
+
+## Key terms
+
+**DAList** — proteoDA's container [@thurman2023]. It carries the intensity matrix,
+the protein annotation, the sample metadata, and a `tags` slot that records what has
+been done to it, so an object states its own provenance.
+
+**cycloess (cyclic loess)** — the normalization used here [@bolstad2003]. It fits a
+smooth curve between each pair of samples and pulls them onto a common scale,
+correcting intensity-dependent bias rather than just shifting a median. It rescales
+observed values and fills nothing in.
+
+**MAR (missing at random)** — the gap is unrelated to the protein's true abundance:
+an identification failure, a lost peak. The gap carries no information about the value
+it hides, so predicting it from other proteins is legitimate.
+
+**MNAR (missing not at random)** — the protein is missing *because* it fell below the
+detection limit. The gap itself carries information: it means low. Predicting it from
+other proteins discards that and fills too high. DIA gaps are a mixture, skewed MNAR
+[@lazar2016].
+
+**imputation arm** — one of the four complete matrices produced by filling the gaps a
+particular way. They are kept side by side because they encode different, untestable
+assumptions about the MAR/MNAR mixture. missForest is canonical for the descriptive
+figures; none of them feeds the DE test.
+
+**eta-squared (η²)** — between-group sum of squares over total, per protein: the share
+of a protein's variance the six `Group_Time` cells explain. Upward-biased at small n,
+with a null expectation near 0.11 here, and more biased for gappier proteins.
+
+**omega-squared (ω²)** — the bias-corrected counterpart, which subtracts the variance
+the grouping absorbs by chance and so sits near zero under the null. Used in the F02
+supplement for exactly that reason.
+
+**OOB error (out-of-bag)** — random forest's built-in held-out error estimate, scored
+on the ~1/3 of observations each tree never saw during training. Reported by missForest
+as error normalized by the observed variance, so 1 means "no better than guessing the
+mean" and well below 1 means the other proteins genuinely predict the missing one.
+
+## Recap
+
+- Cyclic loess levels the samples and fills nothing in: the missing fraction is
+  identical before and after.
+- The eight-method comparison behind the cycloess choice lives in
+  `b_reports/norm_comparison.pdf` and is *not* reproduced on this page — the choice is
+  asserted here, and a reader who wants it demonstrated has to open the PDF.
+- MAR and MNAR are different problems. Our gaps are skewed MNAR, which is why the four
+  imputation arms disagree: missForest predicts gaps from neighbours, Perseus fills them
+  from a downshifted Gaussian, and imp4p and the MsCoreUtils hybrid try to tell which is
+  which.
+- The parameters (`maxiter = 10`, `ntree = 100`, `shift = 1.8`, `width = 0.3`) are
+  conventional defaults, not values tuned on this dataset.
+- An imputed value is a prediction carrying no measurement error. Testing on a filled
+  matrix shrinks standard errors and manufactures significance, so the DE test in stage
+  03 runs on the non-imputed matrix and limma fits each protein where it was actually
+  observed [@peng2024].
+- The eta-squared scan is a screening description, not a test. Its null expectation is
+  already ≈ 0.11, and gappier proteins are flattered more.
+
+```{r sessioninfo}
+sessionInfo()
+```
+
+## References
+
+::: {#refs}
+:::
