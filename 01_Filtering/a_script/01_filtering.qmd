@@ -11,6 +11,7 @@ format:
     theme: cosmo
     embed-resources: true
     df-print: paged
+bibliography: ../../shared/references.bib
 execute:
   eval: true
   echo: true
@@ -214,13 +215,50 @@ identical(colnames(dal$data), rownames(dal$metadata))
 round(100 * mean(is.na(dal$data)), 1)
 ```
 
+### Why a gap is not a zero: MAR and MNAR
+
+That conversion deserves more than one line, because this is the stage where the
+nature of the missingness matters most, and it is the assumption that every later
+imputation choice rests on.
+
+A value can be missing in two quite different ways [@lazar2016]. Under **MAR**
+(missing at random) the gap has nothing to do with the protein's true abundance:
+a peptide failed to be identified, a run hiccuped, the search engine did not
+assign a spectrum. Whether the value is missing is unrelated to what the value
+would have been, so the gap carries no information about the protein. Under
+**MNAR** (missing not at random) the gap exists *because of* the value. The
+protein was there, but too low to clear the instrument's detection limit, so it
+was not reported. Here the gap is itself a measurement: it says "low".
+
+In label-free DIA proteomics most gaps have an MNAR flavour, concentrated in the
+low-intensity proteins where abundance and detection limit collide
+[@webbrobertson2015]. Two consequences follow. First, `zero_to_missing()` is the
+right move rather than a technicality: a reported zero would tell limma that we
+measured this protein and it was nothing, which is a claim the instrument never
+made, and it would drag the protein's mean down with a fabricated data point.
+Missing is the honest encoding. Second, imputation downstream is not a neutral
+housekeeping step. Filling MNAR gaps with a MAR-style estimate — a group mean, a
+nearest-neighbour average — quietly invents a mid-range value for something whose
+missingness meant "low", and it is choosing an answer, not recovering one. Stage
+01 does not impute; it filters. It only makes sure the gaps are labelled honestly
+so the later stages can decide what to do about them with their eyes open.
+
 ## Drop barely-detected proteins {#sec-missingness}
 
 `filter_proteins_by_group()` is proteoDA's native missingness filter. With
 `min_reps = 5, min_groups = 1` it keeps a protein detected in at least 5 of the 8
-samples in at least one `Group_Time` cell. Requiring presence in only one cell is
-deliberate: a protein switched on in one responder group and off in the other
-carries real signal and is kept rather than filtered as sparse.
+samples in at least one `Group_Time` cell.
+
+`min_groups = 1` is the deliberate part, and it is the setting most likely to look
+like a mistake. The stricter alternative — require the protein to clear `min_reps`
+in *every* cell — sounds like better quality control, and it is precisely what we
+must not do. A protein that is switched on in one responder group and off in the
+other is exactly the biology this study is hunting. Under an all-cells rule it
+would be deleted for being absent from the cells where its absence is the finding.
+Demanding presence everywhere pre-selects for proteins that do not differ between
+groups, which is a filter aimed directly at the hypothesis. Requiring the protein
+to hold up in one cell keeps that signal while still removing proteins that are
+nowhere consistently detected and cannot support a model anywhere.
 
 ```{r}
 #| label: missingness
@@ -241,6 +279,38 @@ heuristics: high missingness (with a within-subject arm comparing a subject's
 three timepoints), off intensity level (Hampel 3×MAD), multivariate position in
 PCA space, and low correlation with the other samples. Requiring at least three of
 four to agree keeps any single noisy metric from dropping a good sample.
+
+### The two statistics, in plain terms
+
+**Mahalanobis distance** is how far a sample sits from the centre of the cloud,
+measured in a way that respects the shape of the cloud. Plain Euclidean distance
+treats the axes as independent and equally scaled, which is wrong when the axes
+are correlated: a sample can look unremarkable on PC1 and unremarkable on PC2 and
+still be somewhere no sample should be, because in this data PC1 and PC2 move
+together and this one moves against the grain. Mahalanobis divides through by the
+covariance, so distance is counted in units of how much the data actually vary in
+that direction. Under multivariate normality it follows a chi-square distribution
+with degrees of freedom equal to the number of dimensions, which is where the
+`qchisq(1 - mahal_p, df = 3)` cutoff comes from.
+
+Two honest caveats attach to it. The chi-square cutoff *assumes* PC1–PC3 are
+approximately multivariate normal, and nobody has checked that here. And the
+distance is computed on complete cases only — the PCA runs on proteins with no
+missing values at all (`rowSums(is.na(...)) == 0`). That subset is not a random
+sample of the proteome; it is the well-detected, abundant end of it. So the
+outlier geometry is measured in a space that has already been selected, and a
+sample whose problem lives entirely in the sparse proteins is a sample this test
+cannot see.
+
+**MAD and the Hampel rule.** The median absolute deviation is the median of the
+absolute distances from the median — a robust stand-in for the standard deviation.
+The reason to prefer it here is circular reasoning avoidance: an outlier inflates
+the standard deviation, so an SD-based cutoff is widened by the very point it is
+supposed to catch, and a bad enough sample hides itself. The median and the MAD
+barely move when one value goes wild, so the yardstick stays honest. The Hampel
+rule flags anything more than `mad_k` MADs from the median — here 3 — and it is
+applied twice, to per-sample median intensity and to per-sample median correlation
+with the other samples.
 
 ```{r}
 #| label: outliers
@@ -301,6 +371,88 @@ if (length(outlier_ids)) dal <- filter_samples(dal, !(Col_ID %in% outlier_ids))
 dim(dal$data)
 ```
 
+## Where the numbers came from {#sec-thresholds}
+
+Six constants decide what this stage keeps, and a reader is entitled to ask where
+each one came from. The short answer is that they are pragmatic thresholds chosen
+against this dataset, not values derived from theory. They are defensible, and
+they are not principled. Both things are true and both should be said.
+
+`ery_cut <- 5000` (erythrocyte nCPM). A protein is called an erythrocyte marker
+when its HPA single-cell RNA in red cells is at least 5,000 nCPM. The number is
+set where it does the job it exists to do: it catches the haemoglobins, which sit
+far above any plausible cutoff, without sweeping in proteins that merely happen to
+be transcribed in red cells at ordinary levels. It is a cut placed in a gap, not a
+cut derived from a null distribution.
+
+`myo_cut <- 50` (myonuclei nCPM). The floor for the muscle rescue. A protein
+flagged as blood-derived gets a second hearing if its skeletal-myonuclei RNA
+clears 50 nCPM, on the reasoning that muscle genuinely transcribes it and its
+presence in a muscle biopsy needs no blood to explain it. Fifty is a modest bar,
+chosen to be generous to muscle, because the cost of wrongly deleting a real
+muscle protein is higher here than the cost of keeping a doubtful one.
+
+`blood_max <- 1e9` (pg/L). The veto on the rescue. Without it, a protein that is
+both transcribed in muscle *and* genuinely abundant in plasma would be rescued on
+the strength of its muscle transcription alone, and its intensity in our matrix
+would still be mostly blood. Any protein whose measured blood concentration is at
+or above 10⁹ pg/L is refused the rescue no matter how muscle-expressed it is. This
+is the one threshold with a clear logical job: it stops the rescue rule from
+undoing the contaminant rule.
+
+`mahal_p <- 0.01`. The chi-square tail probability for the PCA flag. It is a
+conventional 1% rather than a calibrated error rate, and, as above, it rests on a
+normality assumption nobody has tested.
+
+`mad_k <- 3`. The Hampel constant. Three MADs is the standard convention, roughly
+comparable to 3 SD under normality, and it is used unchanged for both the
+intensity flag and the correlation flag.
+
+`outlier_k <- 3`. Three of the four checks must agree before a sample is removed.
+This is the setting that carries the weight, and it is the reason the arbitrariness
+of the other five is survivable. Every individual threshold above is a judgement
+call, and any one of them could be wrong at the margin. But a sample is only
+dropped when three independent heuristics — built on different statistics, looking
+at different failure modes — all point at it. A single mis-set cutoff cannot
+delete a good sample on its own; it would need two other methods to agree with it.
+The consensus rule is the safeguard, and it is what lets the individual numbers be
+pragmatic without being dangerous.
+
+## Known limitations {#sec-limitations}
+
+Three things this stage does not do. None of them is fixed here; they are disclosed
+so that a reader knows what is in the matrix.
+
+**There is no contaminant-FASTA or decoy removal.** Stage 01 has no cRAP list, no
+common-contaminant database, and no reverse-hit or decoy filter anywhere in it.
+The only contaminant logic is the blood rule, and the blood rule asks exactly three
+questions: is it secreted to blood, is it an immunoglobulin, is it high in
+erythrocytes. Keratins are none of those, so they sail through. KRT1, KRT2, KRT10
+and KRT8 are all present in the final 1,896-protein matrix, and KRT1, KRT2 and
+KRT10 are the three canonical skin and handling contaminants that sit at the top of
+every cRAP list ever written. Their abundance in a biopsy is a fact about who
+handled the tube, not about muscle. They are being modelled as biology.
+
+**HBG2 survives, and it should not.** Fetal haemoglobin gamma-2 has an HPA blood
+concentration of 7 g/L, which makes it a plasma protein by any reasonable reading.
+It survives because of how the erythrocyte test is built: the test keys on
+*adult*-erythrocyte single-cell RNA, and adult red cells do not transcribe the
+fetal chain, so HBG2's erythrocyte nCPM is 0 and the test never fires. HBB and
+HBA1, whose adult transcription is enormous, were caught correctly. The gap is
+that the rule reasons about transcription in a cell type rather than about the
+protein's own abundance in plasma, and HBG2 is exactly the protein that falls
+through it.
+
+**The HPA-presence filter is load-bearing and un-provenanced.** The line
+`keep <- acc %in% hpa_present` drops every protein with no matching accession in
+`HPA_annotations.tsv`. That is 127 proteins removed, not for anything they did, but
+for being absent from a reference file. And that file is a partial export with no
+recorded version, no query string, and no retrieval date — there is no
+`PROVENANCE.md` beside it. A filter that removes 127 real measurements on the
+authority of an undocumented file is a reproducibility hole: a future export of the
+HPA table would silently produce a different matrix, and nobody could say why. It
+should be provenance-stamped.
+
 ## Result and verification {#sec-recap}
 
 proteoDA records every operation in the `tags` slot. Stage 01 reduces the raw
@@ -326,3 +478,66 @@ name-aligned tables, so the native filters preserve alignment and any
 hand-subsetting moves `data` and `annotation` together. DIA zeros are missing
 values, not measured zeros. Stage 02 picks up `DAList_filtered.rds` and
 normalizes it.
+
+## Key terms
+
+**`DAList`** — proteoDA's container [@thurman2023]: three name-aligned tables,
+`data` (intensities), `annotation` (one row per protein), `metadata` (one row per
+sample). The alignment is enforced, so a filter can never separate a protein from
+its annotation.
+
+**MAR (missing at random)** — the gap is unrelated to the protein's true
+abundance; a random identification failure. The missingness carries no information
+about the value.
+
+**MNAR (missing not at random)** — the protein is missing *because* it fell below
+the detection limit. The gap is informative: it means "low". Most DIA gaps are
+MNAR-flavoured, which is why a zero must become `NA` and why imputation choice
+matters downstream [@lazar2016; @webbrobertson2015].
+
+**`min_groups = 1`** — a protein survives the missingness filter if it clears
+`min_reps` in any one `Group_Time` cell. Requiring every cell would delete
+proteins that are on in one responder group and off in the other, which is the
+biology under investigation.
+
+**Mahalanobis distance** — distance from the centroid measured in units of the
+data's own covariance. It catches a sample that is unexceptional on each PC
+separately but sits in an impossible place in the correlated space. Assumes
+approximate multivariate normality of PC1–PC3, and here it is computed on complete
+proteins only, which is itself a selected subset.
+
+**MAD and the Hampel rule** — the median absolute deviation is a robust stand-in
+for the standard deviation. Flagging at 3 × MAD catches outliers without letting
+the outlier inflate the yardstick that is supposed to catch it, which is what
+happens with an SD-based cutoff.
+
+**Consensus outlier (`outlier_k = 3`)** — a sample is removed only when at least
+three of the four independent checks agree. This is what keeps any single
+pragmatic threshold from dropping a good sample by itself.
+
+## Recap
+
+- Stage 01 turns the raw spreadsheet into a filtered `DAList`: deduplicate
+  accessions, remove blood contamination, drop sparsely-detected proteins, drop
+  consensus-outlier samples.
+- DIA zeros become `NA` because the gaps are mostly MNAR — "below detection", not
+  "measured zero" — and that assumption is what every later imputation decision
+  rests on.
+- The missingness filter deliberately requires presence in only one `Group_Time`
+  cell, because an all-cells rule would filter out the group-specific proteins the
+  study exists to find.
+- The six thresholds are pragmatic, tuned on this dataset, not derived from theory.
+  The 3-of-4 consensus rule is what makes that acceptable for sample removal.
+- Disclosed and unfixed: no cRAP or decoy removal, so KRT1/KRT2/KRT10 and KRT8
+  remain; HBG2 escapes the erythrocyte test because that test keys on adult-red-cell
+  RNA rather than plasma abundance; and the HPA-presence filter drops 127 proteins
+  on the authority of an export with no recorded provenance.
+
+```{r sessioninfo}
+sessionInfo()
+```
+
+## References
+
+::: {#refs}
+:::
