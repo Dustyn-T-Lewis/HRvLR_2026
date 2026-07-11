@@ -69,6 +69,93 @@ deduplicate_enrichment <- function(results, pathways, jaccard_cutoff = 0.5) {
 }
 
 
+# EnrichmentMap combined similarity (Merico 2010 PMID 21085593; Reimand 2019
+# PMID 30664679 Box 1): 0.5 * overlap + 0.5 * jaccard, two sets redundant at
+# >= cutoff (0.375 default). This is the display dedup for the F03 rings, kept
+# separate from the Jaccard-only cache dedup above, which is frozen because the
+# F04/F05 concordance read pivots the cached fgsea_all. Consolidate the two onto
+# one coefficient only in a coordinated F03/F04/F05 pass.
+em_similarity <- function(a, b) {
+  inter <- length(intersect(a, b))
+  if (inter == 0L) {
+    return(0)
+  }
+  0.5 * inter / min(length(a), length(b)) +
+    0.5 * inter / (length(a) + length(b) - inter)
+}
+
+dedup_em_flat <- function(results, pathways, cutoff = 0.375) {
+  if (nrow(results) == 0) {
+    return(results)
+  }
+  results <- results[order(results$padj), ]
+  kept_sets <- list()
+  keep <- logical(nrow(results))
+  for (i in seq_len(nrow(results))) {
+    genes <- pathways[[results$pathway[i]]]
+    if (is.null(genes)) {
+      keep[i] <- TRUE
+      next
+    }
+    redundant <- any(vapply(
+      kept_sets, function(k) em_similarity(genes, k) >= cutoff, logical(1)
+    ))
+    if (!redundant) {
+      keep[i] <- TRUE
+      kept_sets[[length(kept_sets) + 1]] <- genes
+    }
+  }
+  results[keep, ]
+}
+
+# Within-database collapse first, then a cross-database pass so the same biology
+# in different collections (REACTOME_TCA_CYCLE vs KEGG_CITRATE_CYCLE) reduces to
+# one arc.
+dedup_em <- function(results, pathways, cutoff = 0.375, cross_db = TRUE) {
+  if (nrow(results) == 0) {
+    return(results)
+  }
+  if (!"database" %in% names(results)) {
+    return(dedup_em_flat(results, pathways, cutoff))
+  }
+  within <- lapply(unique(results$database), function(db) {
+    dedup_em_flat(results[results$database == db, ], pathways, cutoff)
+  })
+  survivors <- do.call(rbind, within)
+  survivors <- survivors[order(survivors$padj), ]
+  if (cross_db && nrow(survivors) > 1) {
+    survivors <- dedup_em_flat(survivors, pathways, cutoff)
+  }
+  survivors
+}
+
+# Audit trail: flag each significant pathway as the retained representative or
+# redundant, and for redundant ones name the kept pathway it overlaps most and
+# the coefficient to it. Reuses dedup_em so the flags cannot drift from the ring.
+dedup_report <- function(results, pathways, cutoff = 0.375, cross_db = TRUE) {
+  results$dedup_status <- "kept"
+  results$merged_into <- NA_character_
+  results$overlap_jaccard <- NA_real_
+  if (nrow(results) == 0) {
+    return(results)
+  }
+  kept <- dedup_em(results, pathways, cutoff, cross_db)$pathway
+  redundant <- setdiff(results$pathway, kept)
+  results$dedup_status[results$pathway %in% redundant] <- "redundant"
+  for (p in redundant) {
+    if (is.null(pathways[[p]])) next
+    sims <- vapply(
+      kept, function(k) em_similarity(pathways[[p]], pathways[[k]]),
+      numeric(1)
+    )
+    best <- which.max(sims)
+    results$merged_into[results$pathway == p] <- kept[best]
+    results$overlap_jaccard[results$pathway == p] <- sims[best]
+  }
+  results[order(results$padj), , drop = FALSE]
+}
+
+
 build_pathway_collection <- function(species = "Homo sapiens",
                                      min_size = 10, max_size = 500,
                                      include_goslim = TRUE,
