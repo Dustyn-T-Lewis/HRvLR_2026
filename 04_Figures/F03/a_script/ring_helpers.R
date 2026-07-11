@@ -2,10 +2,9 @@
 # pathways, collapse them with the EnrichmentMap display dedup, take the top
 # RING_N by FDR, and shape the volcano and enrichment frames enrichVolcano draws.
 # The cache (fgsea_all) is never touched here; all reduction is display-side.
-pacman::p_load(dplyr, tibble, enrichVolcano, ggplot2, patchwork)
+pacman::p_load(dplyr, tibble, enrichVolcano, ggplot2, patchwork, shadowtext)
 
 RING_N <- 12
-TOP30_N <- 30
 
 ring_significant <- function(fg, ct) {
   fg |>
@@ -44,24 +43,6 @@ ring_volc <- function(dep, ct) {
     padj = dep[[paste0("pi_score_", ct)]]
   ) |>
     filter(!is.na(logFC), !is.na(P.Value))
-}
-
-# No-dedup top-N up and top-N down by FDR, for the supplement bars.
-top30_updown <- function(fg, ct, n = TOP30_N) {
-  base <- fg |> filter(contrast == ct, !is.na(padj), is.finite(NES))
-  up <- base |>
-    filter(NES > 0) |>
-    slice_min(padj, n = n, with_ties = FALSE)
-  dn <- base |>
-    filter(NES < 0) |>
-    slice_min(padj, n = n, with_ties = FALSE)
-  bind_rows(up, dn) |>
-    transmute(
-      contrast, database,
-      pathway = clean_pathway_name(pathway),
-      direction = if_else(NES > 0, "up", "down"),
-      NES, padj, size
-    )
 }
 
 # Flag the RING_N most-significant kept pathways as drawn; the report is already

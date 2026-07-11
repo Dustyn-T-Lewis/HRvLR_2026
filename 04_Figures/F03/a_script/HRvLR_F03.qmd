@@ -30,25 +30,28 @@ movements add up to.
 
 The study is 8 high responders (HR) against 8 low responders (LR), measured
 across baseline, trained, and acute-exercise states. The nine estimable
-contrasts fall into three families, and the composite gives each family its
-own NES palette so a reader never mistakes one kind of comparison for
-another:
+contrasts split across two composites, each ring keyed to a family palette
+so a reader never mistakes one kind of comparison for another.
+
+The first composite holds the within-group and interaction contrasts in
+three stacked columns — training, acute, interaction:
 
 - **Responses** (red up, blue down) — the four within-group changes: what
-  moves inside HR and inside LR over training (T2−T1) and over the acute
-  bout (T3−T2).
-- **Differential** (green up, purple down) — the untrained baseline
-  difference between responders, `Baseline_HRvLR`.
+  moves inside HR and inside LR over training (T2−T1, left column) and over
+  the acute bout (T3−T2, middle column).
 - **Interaction** (orange up, purple down) — where the two groups'
-  *responses* diverge, over training and over the acute bout.
+  *responses* diverge, over training and over the acute bout (right column).
 
-![F03 composite: responses (A–D), baseline differential (E), interactions (F–G).](../b_reports/F03_composite.png)
+![Responses and interactions: training, acute, interaction columns.](../b_reports/F03_composite.png)
 
-Two between-state contrasts, `Trained_HRvLR` and `Acute_HRvLR`, are not in
-the main composite. A difference measured at the trained or acute state is
-recoverable from the corresponding interaction contrast with the timepoint
-controlled, so those two rings move to the supplement rather than repeat the
-interaction story at a single state.
+The second composite holds the between-responder differences, HR against LR
+at each state:
+
+- **Differential** (green up, purple down) — `Baseline_HRvLR`,
+  `Trained_HRvLR`, `Acute_HRvLR`, read left to right as the untrained,
+  trained, and acute states.
+
+![Between-responder differences across baseline, trained, and acute states.](../b_reports/F03_HRvLR.png)
 
 ## The two colour scales are different things
 
@@ -79,11 +82,12 @@ The figure reads one file, the combined DEP table from stage 03:
 
 It writes into `b_reports/` and `c_data/`:
 
-- `b_reports/F03_composite.png` / `.pdf` — the seven-panel composite.
-- `b_reports/supp/between_state.png` / `.pdf` — the two demoted
-  between-responder states.
-- `b_reports/supp/top30.png` / `.pdf` — the no-dedup top-30 up / top-30 down
-  enrichment per main contrast.
+- `b_reports/F03_composite.png` / `.pdf` — the responses-and-interaction
+  composite (six rings).
+- `b_reports/F03_HRvLR.png` / `.pdf` — the between-responder composite
+  (three rings).
+- `b_reports/supp/top30_<contrast>.png` / `.pdf` — one no-dedup top-30 up /
+  top-30 down figure per contrast.
 - `c_data/F03_source_data.xlsx` — the fgsea cache plus the ring provenance.
 
 The workbook is both the source-data export and the cache for the downstream
@@ -131,10 +135,11 @@ fg <- lapply(CONTRASTS, function(ct) {
   bind_rows()
 ```
 
-The collection spans Hallmark, KEGG, Reactome, GO:BP, and GO Slim, gated to
-pathways of 15 to 500 genes. `fgseaMultilevel` runs with `eps = 0` and
-`nPermSimple = 10000`. Pooling GO Slim with the full GO:BP hierarchy
-double-counts related terms, so the cache is only the shared NES source; the
+The collection spans Hallmark, KEGG, Reactome, GO:BP, GO:CC, GO:MF, and GO
+Slim, gated to pathways of 15 to 500 genes. `fgseaMultilevel` runs with
+`eps = 0` and `nPermSimple = 10000`. Pooling GO Slim with the full GO
+branches double-counts related terms, so the cache is only the shared NES
+source; the
 ring's own redundancy control happens at display.
 
 ### Display dedup: the EnrichmentMap coefficient
@@ -210,17 +215,17 @@ descriptive rather than confirmatory (Phillips 2013; Robinson 2017; MoTrPAC
 
 ## Recap
 
-- One composite, seven panels, three families keyed by palette: responses
-  (red/blue), baseline differential (green/purple), interactions
-  (orange/purple).
+- Two composites: responses and interactions (six rings, red/blue and
+  orange/purple) and the between-responder HRvLR differences (three rings,
+  green/purple). Every ring in a composite is the same size.
 - Volcano points use the pipeline pi-gate `P.Value ^ |logFC| < 0.05`; ring
   arcs use fgsea FDR `< 0.05`, coloured by NES.
-- Ranks are the limma moderated-t; fgsea against five collections, sizes
-  15–500, seeded.
+- Ranks are the limma moderated-t; fgsea against Hallmark, KEGG, Reactome,
+  GO:BP, GO:CC, GO:MF, and GO Slim, sizes 15–500, seeded.
 - Rings show the top 12 by FDR after an EnrichmentMap `0.375` collapse; the
   cache dedup that feeds F04/F05 is separate and frozen.
-- `Trained_HRvLR` and `Acute_HRvLR` and the no-dedup top-30 tables live in
-  the supplement.
+- Each contrast also gets a no-dedup top-30 up / top-30 down figure in the
+  supplement, bars filled by database with names inline.
 
 ```{r}
 #| eval: true
