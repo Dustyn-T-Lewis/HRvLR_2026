@@ -67,4 +67,4 @@ addWorksheet(wb, "fgsea_significant")
 writeData(wb, "fgsea_significant", sig)
 saveWorkbook(wb, cache_xlsx, overwrite = TRUE)
 
-cat(sprintf("F03 setup: %d contrasts, fgsea cache %d rows\n", length(CONTRASTS), nrow(fg)))
+message(sprintf("F03 setup: %d contrasts, fgsea cache %d rows", length(CONTRASTS), nrow(fg)))

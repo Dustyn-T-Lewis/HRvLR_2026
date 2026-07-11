@@ -1,6 +1,6 @@
 ---
 title: "HRvLR F03 — Differential Response Volcanoes"
-subtitle: "Nine contrasts as volcano-in-ring plots with pathway enrichment"
+subtitle: "Seven contrasts as volcano-in-ring plots, palette-coded by comparison family"
 author: "A_HRvLR_2026"
 date: today
 format:
@@ -20,102 +20,99 @@ execute:
 
 ## What the figure shows
 
-Figure 3 draws each of the nine differential-expression contrasts as a
-volcano-in-ring plot. The centre is an ordinary volcano: protein log
-fold-change on the x-axis, `-log10` p-value on the y-axis, one point per
-protein. Around it sits a ring of arcs, one arc per enriched pathway,
-coloured by GSEA normalised enrichment score (NES). So a single panel
-answers two questions at once for one contrast: which proteins move, and
-which pathways those movements add up to.
+Figure 3 draws each differential-expression contrast as a volcano-in-ring
+plot. The centre is an ordinary volcano: protein log fold-change on the
+x-axis, `-log10` p-value on the y-axis, one point per protein. Around it
+sits a ring of arcs, one arc per enriched pathway, coloured by GSEA
+normalised enrichment score (NES). A single panel answers two questions at
+once for one contrast: which proteins move, and which pathways those
+movements add up to.
 
-The study is 8 high responders (HR) against 8 low responders (LR),
-measured across baseline, trained, and acute-exercise states. The
-differential and interaction contrasts are the responder story: they ask
-where the two groups' proteomes diverge, and where their exercise
-responses diverge. The within-group contrasts are the plainer question of
-what moves inside each group from one state to the next.
+The study is 8 high responders (HR) against 8 low responders (LR), measured
+across baseline, trained, and acute-exercise states. The nine estimable
+contrasts fall into three families, and the composite gives each family its
+own NES palette so a reader never mistakes one kind of comparison for
+another:
 
-![Between-responder states: baseline, trained, acute.](../b_reports/F03_differential.png)
+- **Responses** (red up, blue down) — the four within-group changes: what
+  moves inside HR and inside LR over training (T2−T1) and over the acute
+  bout (T3−T2).
+- **Differential** (green up, purple down) — the untrained baseline
+  difference between responders, `Baseline_HRvLR`.
+- **Interaction** (orange up, purple down) — where the two groups'
+  *responses* diverge, over training and over the acute bout.
 
-![Responder-by-timepoint interactions.](../b_reports/F03_interaction.png)
+![F03 composite: responses (A–D), baseline differential (E), interactions (F–G).](../b_reports/F03_composite.png)
 
-![Within-group responses.](../b_reports/F03_responses.png)
+Two between-state contrasts, `Trained_HRvLR` and `Acute_HRvLR`, are not in
+the main composite. A difference measured at the trained or acute state is
+recoverable from the corresponding interaction contrast with the timepoint
+controlled, so those two rings move to the supplement rather than repeat the
+interaction story at a single state.
+
+## The two colour scales are different things
+
+There are two significance signals in this figure and they follow different
+rules. Keeping them straight matters for reading the panels.
+
+**Volcano points** are coloured by the pipeline's gate, the same gate every
+other stage uses: `pi_score = P.Value ^ |logFC|`, significant when
+`pi_score < 0.05`. This is an in-house score, not the Xiao π-value (which is
+the *product* `|log2FC| × -log10 P`). It rewards proteins that are both
+confidently and substantially changed. `enrichVolcano` expects the point
+significance in a column named `padj`; the panel hands the pi-score into
+that slot, so inside the plotting object the significant column is labelled
+`padj` while the values are pi-scores. The label is the package's; the
+statistic is ours.
+
+**Ring arcs** use a genuine FDR. The fgsea results are filtered at
+`padj < 0.05` in the usual Benjamini-Hochberg sense before an arc is drawn,
+and the arc is coloured by NES.
 
 ## Reads and writes
 
 The figure reads one file, the combined DEP table from stage 03:
 
 - `03_DEP/a_non_imputed/c_data/03_combined_results.csv` — one row per
-  protein, with `logFC_`, `P.Value_`, `t_`, and `pi_score_` columns
-  suffixed by each of the nine contrast names.
+  protein, with `logFC_`, `P.Value_`, `t_`, and `pi_score_` columns suffixed
+  by each of the nine contrast names.
 
 It writes into `b_reports/` and `c_data/`:
 
-- `b_reports/F03_differential.png` / `.pdf` — the three between-responder
-  states (baseline, trained, acute).
-- `b_reports/F03_interaction.png` / `.pdf` — the two responder-by-timepoint
-  interactions.
-- `b_reports/F03_responses.png` / `.pdf` — the four within-group
-  responses.
-- `c_data/F03_source_data.xlsx` — the fgsea cache, with a `fgsea_all`
-  sheet (every pathway result) and a `fgsea_significant` sheet.
+- `b_reports/F03_composite.png` / `.pdf` — the seven-panel composite.
+- `b_reports/supp/between_state.png` / `.pdf` — the two demoted
+  between-responder states.
+- `b_reports/supp/top30.png` / `.pdf` — the no-dedup top-30 up / top-30 down
+  enrichment per main contrast.
+- `c_data/F03_source_data.xlsx` — the fgsea cache plus the ring provenance.
 
-The Excel workbook is both the source-data export and the cache for the
-downstream figures. F03 recomputes the fgsea enrichment fresh on every run,
-seeded for reproducibility, and overwrites the workbook. The fgsea run is the slow
-part of this figure, and the same enrichment feeds the F04 and F05 NES scatters,
-which read the workbook instead of rerunning GSEA. So the three figures stay
-consistent and the enrichment is paid for once per F03 run.
-
-## The two colour scales are different things
-
-There are two significance signals in this figure and they do not use the
-same rule. Keeping them straight matters for reading the panels.
-
-**Volcano points** are coloured by the pipeline's pi-score gate, the same
-gate every other stage uses. `pi_score = P.Value ^ |logFC|`, and a point
-counts as significant when `pi_score < 0.05` (equivalently `sig_pi != 0`).
-The pi-score rewards proteins that are both confidently and substantially
-changed, rather than a raw p-value or an FDR threshold that a large
-fold-change alone cannot rescue. Using the same gate here as in stage 03
-means a point that reads as significant in the volcano is the same protein
-that reads as significant everywhere else in the pipeline.
-
-There is a naming trap. `enrichVolcano` expects a column called `padj` for
-its point significance and treats anything below its threshold as a hit.
-The panel code hands the pi-score into that `padj` slot. So inside the
-plotting object the significant column is labelled `padj`, but the values
-are pi-scores, not FDR-adjusted p-values. The label is the package's; the
-statistic is ours.
-
-**Ring arcs** use a genuine FDR. The fgsea results are filtered at
-`padj < 0.05` in the usual adjusted-p sense before an arc is drawn, and
-the arc is coloured by NES, not by that padj.
+The workbook is both the source-data export and the cache for the downstream
+figures. F03 recomputes the fgsea enrichment fresh on every run, seeded for
+reproducibility, and the `fgsea_all` sheet is what the F04 and F05 NES
+scatters read instead of rerunning GSEA. The enrichment is paid for once per
+F03 run, and the three figures cannot drift apart.
 
 ### Setup: ranks and the fgsea cache
 
-The setup script builds moderated-t ranks per contrast and runs fgsea
-against the pathway collection fresh on every run, seeded for
-reproducibility, then writes the result to the source-data workbook.
+The setup script builds the ranks per contrast and runs fgsea against the
+pathway collection, then writes the result to the workbook. The rank is the
+**limma moderated-t statistic**, sorted high to low, one value per gene —
+the natural ranking metric for a limma fit and the standard input to a
+preranked GSEA (Subramanian 2005; Korotkevich 2021; Smyth 2004).
 
 ```{r}
 #| eval: false
 pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr, openxlsx)
 source(here("04_Figures", "functions", "style.R"))
 source(here("04_Figures", "functions", "pathway_utils.R"))
+source(here("03_DEP", "contrasts.R"))
 
-CONTRASTS <- c(
-  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
+CONTRASTS <- sub(" =.*$", "", HRVLR_CONTRASTS)
 
 dep <- read_csv(
   here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv"),
   show_col_types = FALSE
 )
-
-cache_xlsx <- file.path(DAT_DIR, "F03_source_data.xlsx")
 
 pw <- build_pathway_collection(
   min_size = 15, max_size = 500, include_goslim = TRUE, exclude_variants = TRUE
@@ -128,123 +125,105 @@ fg <- lapply(CONTRASTS, function(ct) {
   ranks <- sort(setNames(d$t, d$gene), decreasing = TRUE)
   res <- run_fgsea_deduplicated(ranks, pw)
   res$contrast <- ct
-  res$leadingEdge <- vapply(res$leadingEdge, function(x) paste(x, collapse = ";"), character(1))
+  res$leadingEdge <- vapply(res$leadingEdge, paste, character(1), collapse = ";")
   res
 }) |>
   bind_rows()
 ```
 
-The rank for each contrast is the moderated-t statistic from limma, sorted
-high to low, one value per gene. That is the vector fgsea walks. The
-collection spans Hallmark, KEGG, Reactome, GO:BP, and GO Slim, gated to
-pathways of 15 to 500 genes. `run_fgsea_deduplicated` collapses redundant
-pathways so the ring is not five near-copies of the same gene set.
+The collection spans Hallmark, KEGG, Reactome, GO:BP, and GO Slim, gated to
+pathways of 15 to 500 genes. `fgseaMultilevel` runs with `eps = 0` and
+`nPermSimple = 10000`. Pooling GO Slim with the full GO:BP hierarchy
+double-counts related terms, so the cache is only the shared NES source; the
+ring's own redundancy control happens at display.
 
-### Panel: the ring-volcano grid
+### Display dedup: the EnrichmentMap coefficient
 
-The panel script assembles two frames per contrast. `volc_dfs` carries the
-volcano coordinates and the pi-score in the `padj` slot; `enrich_dfs`
-carries the top pathways for the ring.
+The rings do not draw every significant pathway. Each contrast's significant
+set is collapsed with the EnrichmentMap combined similarity coefficient
+(Merico 2010; Reimand 2019): for two gene sets,
 
-```{r}
-#| eval: false
-pacman::p_load(here, dplyr, readr, tibble, enrichVolcano, ggplot2, patchwork)
+$$\text{similarity} = 0.5 \times \text{overlap} + 0.5 \times \text{Jaccard},$$
 
-volc_dfs <- lapply(CONTRASTS, function(ct) {
-  tibble(
-    gene = dep$gene,
-    logFC = dep[[paste0("logFC_", ct)]],
-    P.Value = dep[[paste0("P.Value_", ct)]],
-    padj = dep[[paste0("pi_score_", ct)]]
-  ) |>
-    filter(!is.na(logFC) & !is.na(P.Value))
-})
-names(volc_dfs) <- CONTRASTS
-
-enrich_dfs <- lapply(CONTRASTS, function(ct) {
-  base <- fg |> filter(contrast == ct, is.finite(NES))
-  e <- base |>
-    filter(!is.na(padj), padj < 0.05) |>
-    mutate(dir = if_else(NES > 0, "up", "dn")) |>
-    group_by(dir) |>
-    slice_min(padj, n = 7, with_ties = FALSE) |>
-    ungroup()
-  if (nrow(e) == 0) e <- slice_min(base, padj, n = 1)
-  tibble(
-    pathway = clean_pathway_name(e$pathway),
-    NES = e$NES, padj = e$padj, size = e$size,
-    leading_edge = e$leadingEdge, database = e$database
-  )
-})
-names(enrich_dfs) <- CONTRASTS
-```
-
-The `padj` in `volc_dfs` is the pi-score, per the note above. The `padj`
-in `enrich_dfs` is the fgsea FDR, used only to pick the arcs (top seven
-per direction) and set their thickness. When a contrast has no pathway
-below `padj < 0.05`, the ring falls back to its single best pathway so the
-panel still draws.
-
-`volcano_ring_grid` from `enrichVolcano` lays the panels out and shares one
-NES legend across the grid.
+with `overlap = |A ∩ B| / min(|A|, |B|)` and
+`Jaccard = |A ∩ B| / |A ∪ B|`. Two sets are redundant at
+`similarity ≥ 0.375`, the EnrichmentMap default. The collapse is greedy in
+FDR order, so the most significant member of a redundant cluster is the one
+kept, and it runs within each database first and then across databases, so
+`REACTOME_TCA_CYCLE` and `KEGG_CITRATE_CYCLE` reduce to one arc. From the
+survivors the ring shows the **top 12 by FDR**.
 
 ```{r}
 #| eval: false
-save_grid <- function(contrasts, stem, ncol, width, height) {
-  g <- suppressMessages(volcano_ring_grid(
-    volc_dfs, enrich_dfs,
-    contrasts = contrasts, ncol = ncol, genes_sep = ";"
-  ))
-  ggsave(file.path(RPT_DIR, paste0(stem, ".png")), g$plot,
-    width = width, height = height, units = "mm", dpi = 200, bg = "white"
-  )
-  ggsave(file.path(RPT_DIR, paste0(stem, ".pdf")), g$plot,
-    width = width, height = height, units = "mm", device = PDF_DEVICE, bg = "white"
+ring_enrich <- function(fg, ct, pw, ring_n = 12) {
+  sig <- as.data.frame(ring_significant(fg, ct))
+  report <- dedup_report(sig, pw)
+  kept <- report[report$dedup_status == "kept", , drop = FALSE]
+  kept <- kept[order(kept$padj), ][seq_len(min(ring_n, nrow(kept))), ]
+  tibble(
+    pathway = clean_pathway_name(kept$pathway),
+    NES = kept$NES, padj = kept$padj, size = kept$size,
+    leading_edge = kept$leadingEdge, database = kept$database
   )
 }
-
-save_grid(c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR"),
-  "F03_differential",
-  ncol = 3, width = 570, height = 230
-)
-save_grid(c("Training_Interaction", "Acute_Interaction"),
-  "F03_interaction",
-  ncol = 2, width = 380, height = 230
-)
-save_grid(c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR"),
-  "F03_responses",
-  ncol = 2, width = 380, height = 380
-)
 ```
 
-## The ring
+This is the same EnrichmentMap dedup the Mito pipeline uses. It is kept
+separate from the Jaccard collapse inside `run_fgsea_deduplicated`, which is
+frozen because the F04/F05 concordance read pivots the cached `fgsea_all`;
+`ring_pathways` in the workbook records, per contrast, which pathways were
+kept, which merged into which, and which twelve were drawn.
 
-Each arc is one enriched pathway from fgsea run on the moderated-t ranks.
-Arc colour is the NES: red for pathways enriched in the up direction, blue
-for the down direction. Arc thickness scales with `-log10 padj`, so a
-firmer enrichment draws a heavier arc. Up to seven arcs per direction keep
-the ring legible rather than crowding it with every marginal hit. Because
-one NES legend is shared across all panels in a grid, arc colours are
-comparable from one contrast to the next.
+### Panel: one family, one palette
 
-## Why the split is 3 + 2 + 4
+Each family is a `volcano_ring_grid` recoloured to its palette. The package
+owns the geometry, labels, and legend; the panel only prepares the two tidy
+frames and names the palette.
 
-The nine contrasts are three kinds of comparison, and mixing them on one
-sheet would invite reading them as if they answered the same question.
+```{r}
+#| eval: false
+render_family <- function(fg, dep, pw, contrasts, palette, ncol) {
+  prep <- lapply(contrasts, function(ct) ring_enrich(fg, ct, pw))
+  volc_dfs <- lapply(contrasts, function(ct) ring_volc(dep, ct))
+  volcano_ring_grid(
+    volc_dfs, lapply(prep, `[[`, "enrich"),
+    contrasts = contrasts, ncol = ncol, genes_sep = ";",
+    legend_position = "bottom",
+    theme = volcano_ring_theme(
+      up = palette$up, down = palette$down, nes_colors = palette$nes
+    )
+  )
+}
+```
 
-`F03_differential.png` holds the three between-responder states:
-`Baseline_HRvLR`, `Trained_HRvLR`, and `Acute_HRvLR`. Each asks where HR
-and LR differ at one state, from the untrained baseline through the trained
-and acute-exercise states.
+## The interactions are exploratory
 
-`F03_interaction.png` holds the two responder-by-timepoint interactions:
-`Training_Interaction` and `Acute_Interaction`. These ask where the two
-groups' *responses* diverge, over training and over the acute bout, which
-is a different question from a difference measured at a single state.
+The interaction contrasts carry the central claim — that HR and LR diverge
+in the magnitude and trajectory of their response, not only in baseline
+state. They also sit at the lowest-powered cells of an unbalanced 16-subject
+design (two subjects contribute a single timepoint). GSEA aggregates weak
+per-protein signal into pathway signal, which is why enrichment is defensible
+at this n, but the interaction arcs are read as hypothesis-generating.
+Responder-stratified muscle omics reports enrichment on such splits as
+descriptive rather than confirmatory (Phillips 2013; Robinson 2017; MoTrPAC
+2024).
 
-`F03_responses.png` holds the four within-group contrasts: `Training_HR`,
-`Training_LR`, `Acute_HR`, and `Acute_LR`. These ask what moves inside one
-group from one state to the next, without reference to the other group.
+## Recap
 
-A between-group difference, a difference in response, and a within-group
-change are not the same measurement, so they get separate composites.
+- One composite, seven panels, three families keyed by palette: responses
+  (red/blue), baseline differential (green/purple), interactions
+  (orange/purple).
+- Volcano points use the pipeline pi-gate `P.Value ^ |logFC| < 0.05`; ring
+  arcs use fgsea FDR `< 0.05`, coloured by NES.
+- Ranks are the limma moderated-t; fgsea against five collections, sizes
+  15–500, seeded.
+- Rings show the top 12 by FDR after an EnrichmentMap `0.375` collapse; the
+  cache dedup that feeds F04/F05 is separate and frozen.
+- `Trained_HRvLR` and `Acute_HRvLR` and the no-dedup top-30 tables live in
+  the supplement.
+
+```{r}
+#| eval: true
+#| echo: false
+sessionInfo()
+```
