@@ -8,7 +8,7 @@ pacman::p_load(here, dplyr, tidyr, tibble, ggplot2, RRPP)
 if (!exists("meta")) source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
 
 PB_W <- 120
-PB_H <- 95
+PB_H <- 110
 
 subject_of <- function(ids) sub("_T[123]$", "", ids)
 subj_group <- setNames(meta$Group, subject_of(meta$Col_ID))
@@ -51,8 +51,8 @@ pB <- ggplot(mag_df, aes(Group, magnitude, color = Group, fill = Group)) +
     vjust = 1.4, size = FIG_GEOM_TEXT, fontface = "bold", color = "grey25"
   ) +
   facet_wrap(~phase) +
-  scale_color_manual(values = GROUP_COLORS) +
-  scale_fill_manual(values = GROUP_COLORS) +
+  scale_color_manual(values = GROUP_COLORS, guide = "none") +
+  scale_fill_manual(values = GROUP_COLORS, guide = "none") +
   labs(x = NULL, y = "‖Δ‖ (log2 units)") +
   FIG_THEME +
   theme(legend.position = "none")

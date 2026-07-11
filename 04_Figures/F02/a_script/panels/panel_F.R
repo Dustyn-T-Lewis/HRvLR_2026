@@ -72,8 +72,8 @@ totals <- plot_df |>
   mutate(signed_tot = if_else(direction == "Down", -tot, tot)) |>
   filter(tot > 0)
 
-PH_W <- 150
-PH_H <- PANEL_H
+PH_W <- 120
+PH_H <- 110
 
 band_levels <- levels(plot_df$contrast)
 band_df <- tibble(
@@ -81,7 +81,7 @@ band_df <- tibble(
   band = CONTRAST_COLORS[band_levels]
 )
 
-pH <- ggplot(plot_df, aes(contrast, signed, fill = fill_key)) +
+pF <- ggplot(plot_df, aes(contrast, signed, fill = fill_key)) +
   geom_rect(
     data = band_df, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
     inherit.aes = FALSE, fill = scales::alpha(band_df$band, 0.14),
@@ -109,5 +109,5 @@ pH <- ggplot(plot_df, aes(contrast, signed, fill = fill_key)) +
     plot.margin = margin(6, 6, 4, 4)
   )
 
-save_png(pH, file.path(RPT_DIR, "panels", "panel_f_pathways"), PH_W, PH_H)
+save_png(pF, file.path(RPT_DIR, "panels", "panel_f_pathways"), PH_W, PH_H)
 cat("F02 Panel F done.\n")
