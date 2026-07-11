@@ -207,5 +207,17 @@ save_png <- function(plot, path_stem, width, height) {
 
 DB_COLORS <- c(
   Hallmark = "#AA336A", KEGG = "#E65100",
-  Reactome = "#1565C0", "GO:BP" = "#00796B"
+  Reactome = "#1565C0", "GO:BP" = "#00796B",
+  "GO Slim" = "#5D4037"
+)
+
+# F03 ring-volcano palettes, one per contrast family so a reader never conflates
+# a within-group trajectory with a between-responder difference or an interaction.
+# nes is the diverging arc ramp (down pole, midpoint, up pole); up/down recolour
+# the volcano points to the same poles. Responses read as the canonical red/blue;
+# baseline is green/purple; the interaction takes orange and its own purple.
+RING_PALETTES <- list(
+  responses = list(nes = c("#2166AC", "grey95", "#B2182B"), up = "#B2182B", down = "#2166AC"),
+  differential = list(nes = c("#6A51A3", "grey95", "#238B45"), up = "#238B45", down = "#6A51A3"),
+  interaction = list(nes = c("#762A83", "grey95", "#E65100"), up = "#E65100", down = "#762A83")
 )
