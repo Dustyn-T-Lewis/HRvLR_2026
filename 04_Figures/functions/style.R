@@ -208,6 +208,7 @@ save_png <- function(plot, path_stem, width, height) {
 DB_COLORS <- c(
   Hallmark = "#AA336A", KEGG = "#E65100",
   Reactome = "#1565C0", "GO:BP" = "#00796B",
+  "GO:CC" = "#0097A7", "GO:MF" = "#7CB342",
   "GO Slim" = "#5D4037"
 )
 

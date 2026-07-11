@@ -175,6 +175,14 @@ build_pathway_collection <- function(species = "Homo sapiens",
     species = species, collection = "C5",
     subcollection = "GO:BP"
   )
+  gocc <- msigdbr::msigdbr(
+    species = species, collection = "C5",
+    subcollection = "GO:CC"
+  )
+  gomf <- msigdbr::msigdbr(
+    species = species, collection = "C5",
+    subcollection = "GO:MF"
+  )
 
   disease_pat <- paste0(
     "DISEASE|CANCER|TUMOR|CARCINOMA|LEUKEMIA|LYMPHOMA|",
@@ -189,8 +197,11 @@ build_pathway_collection <- function(species = "Homo sapiens",
   }
 
   cols <- c("gs_name", "gene_symbol")
-  sets_list <- list(hallmark[, cols], kegg[, cols], reactome[, cols], gobp[, cols])
-  dbs <- c("H", "KEGG", "Reactome", "GO:BP")
+  sets_list <- list(
+    hallmark[, cols], kegg[, cols], reactome[, cols],
+    gobp[, cols], gocc[, cols], gomf[, cols]
+  )
+  dbs <- c("H", "KEGG", "Reactome", "GO:BP", "GO:CC", "GO:MF")
   all_sets <- do.call(rbind, sets_list)
 
   pw_list <- split(all_sets$gene_symbol, all_sets$gs_name)
@@ -393,6 +404,8 @@ classify_database <- function(pathway_names) {
     grepl("^KEGG_", pathway_names) ~ "KEGG",
     grepl("^GOSLIM_", pathway_names) ~ "GO Slim",
     grepl("^GOBP_", pathway_names) ~ "GO:BP",
+    grepl("^GOCC_", pathway_names) ~ "GO:CC",
+    grepl("^GOMF_", pathway_names) ~ "GO:MF",
     TRUE ~ "Other"
   )
 }
