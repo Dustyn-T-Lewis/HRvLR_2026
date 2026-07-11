@@ -11,6 +11,33 @@ This repository now treats `A_YvO_2026` as the validated reference pipeline and
 uses HRvLR-specific contrasts and metadata rather than copying YvO labels
 forward.
 
+## Start here
+
+`HRvLR_pipeline.qmd` is the ground-up walkthrough and the map into everything else.
+Each stage and figure also ships its own tutorial (`00_inputs.qmd`,
+`01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, `HRvLR_F01`–`F06.qmd`),
+written to be read on its own: what it does, how, why that method and not another, and
+how to read the output — including what a null looks like.
+
+## What the pipeline found
+
+The phenotype is real: HR and LR trained the same and grew apart (F01). **The proteome
+does not separate them.** Every global test in F02 is null (PERMANOVA p = 0.62; RRPP
+p ≥ 0.38; CAP fails to classify). HR and LR responses are only weakly concordant
+(ρ = 0.20 training, 0.15 acute) and every fry rotation test is null. No WGCNA module
+tracks the phenotype (best BH q = 0.24), and nothing predicts it out of sample.
+
+The one genuinely FDR-controlled signal is pathway-level: 691 significant pathway ×
+contrast tests, with HR's acute response enriching 217 pathways against LR's 33 (F03).
+
+**Read the protein-level counts with care.** Most of them come from the π gate
+(`p^|logFC| < 0.05`), which controls no error rate and admits proteins with raw p up to
+0.269. There are 489 π-calls against 12 proteins at BH < 0.05. Treat π counts as a
+ranking, not as discoveries.
+
+Open issues that are documented but not fixed:
+`docs/2026-07-11-documentation-pass-and-open-issues.md`.
+
 ## Design and Canonical Contrasts
 
 DEP fits the means model `~ 0 + group` (one mean per `Group_Time` cell) with

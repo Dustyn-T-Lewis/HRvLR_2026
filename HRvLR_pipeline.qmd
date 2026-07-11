@@ -60,6 +60,78 @@ Nine contrasts are built on this scheme:
 The interaction contrasts are the analytic core: they ask the responder question
 directly.
 
+# What the pipeline found {#sec-found}
+
+Read this before any figure. The headline is a **negative result**, and the figures
+are easy to over-read without it.
+
+**The phenotype is real.** HR and LR did the same training work and grew apart:
+HR gained muscle and fibre area, LR did not, while strength gains matched (F01).
+That is the premise the rest of the pipeline tries to explain.
+
+**No global proteome difference survives.** F02 asks six independent ways — state
+(PERMANOVA p = 0.62), response magnitude and direction (RRPP, all p ≥ 0.38),
+heterogeneity (PERMDISP), design-explained variance (ω² ≈ 0), and even a *supervised*
+axis built to separate the groups (CAP p ≈ 0.22, 40% leave-one-out error). All six
+are null.
+
+**The HR and LR responses are only weakly concordant, and no set-level test is
+significant.** F04 (training): Spearman ρ = 0.20. F05 (acute): ρ = 0.15. The fry
+rotation tests — the only properly blocked, error-rate-controlled set tests in the
+pipeline — are null in every direction (best p = 0.087).
+
+**Pathway enrichment is where the signal lives.** 691 of 14,088 pathway × contrast
+tests are BH-significant (F03), concentrated acutely, and HR's acute response enriches
+217 pathways against LR's 33. This is genuinely FDR-controlled and is the strongest
+HR/LR asymmetry in the study. Note `Baseline_HRvLR` also returns 65 pathways, so the
+groups are not identical at baseline.
+
+**Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
+(F06, best BH q = 0.24), and no classifier or regressor beats its permutation null
+after correction (05_test).
+
+**So: the proteome does not separate high from low responders at this sample size.**
+It is a null study with a strong phenotype and a pathway-level lead. Saying that
+plainly is more defensible than any of the individual panels.
+
+## One caveat that changes how you read almost every figure {#sec-pi-warning}
+
+Most "significant" protein counts in F02–F05 — the 55 divergent in training, the 86
+acute, the DEP-count bars — come from the **π gate**, `p^|logFC| < 0.05`
+[@xiao2014], **not from BH-FDR**.
+
+π controls no error rate. Because a large fold change drives the score down on its
+own, fold change alone can buy admission: 71 of 489 π-calls (14.5%) have a raw
+p ≥ 0.05, the largest being **p = 0.269**. Across the nine contrasts there are **489
+π-calls against 12 proteins at BH < 0.05** — a 40× inflation. The π set is not even a
+subset of the nominally significant set.
+
+Treat every π-derived count as a **ranked, hypothesis-generating list**, never as an
+FDR-controlled discovery. The fgsea ring arcs in F03 and the GO counts in F02 *are*
+BH-controlled and can be read as such.
+
+# How to read this project {#sec-map}
+
+Each stage and figure ships its own tutorial, written to be read on its own. Start at
+the top and follow the chain, or jump to the one you need.
+
+| Document | What it teaches |
+|---|---|
+| `00_input/a_script/00_inputs.qmd` | What DIA-MS is, what a protein group is, why a zero is not a zero |
+| `01_Filtering/a_script/01_filtering.qmd` | MAR vs MNAR, the contaminant gate, the outlier consensus, and where the cutoffs came from |
+| `02_Normalization/a_script/02_normalization.qmd` | cycloess, the four imputation arms, and why imputing before testing manufactures significance |
+| `03_DEP/a_non_imputed/a_script/03_dep.qmd` | The cell-means design, `duplicateCorrelation`, eBayes, BH, and the π-score |
+| `04_Figures/F01/HRvLR_F01.qmd` | The phenotype: matched work, divergent growth |
+| `04_Figures/F02/.../HRvLR_F02.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
+| `04_Figures/F03/.../HRvLR_F03.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
+| `04_Figures/F04/.../HRvLR_F04.qmd` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
+| `04_Figures/F05/.../HRvLR_F05.qmd` | Acute concordance, same engine |
+| `04_Figures/F06/.../HRvLR_F06.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
+| `05_test/README.md` | Association and out-of-sample prediction |
+
+Open issues that are documented but **not fixed** are collected in
+`docs/2026-07-11-documentation-pass-and-open-issues.md`.
+
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
 hand-offs + a consolidated `.xlsx`). Stages are self-cleaning: a re-run wipes its
@@ -192,9 +264,13 @@ dal <- fit_limma_model(dal)
 dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
 ```
 
-Significance uses the Pi-score [@xiao2014], `Pi = p^|logFC| < 0.05`, on top of a
-BH-FDR threshold of 0.10 [@benjamini1995] — appropriate for a small-n DIA study
-powered for large effects. The comparison arm
+The reported gate is the π-score [@xiao2014], `π = p^|logFC| < 0.05`, alongside a
+BH-FDR threshold of 0.10 [@benjamini1995].
+
+**These are not two levels of the same filter.** BH controls the false-discovery rate;
+π controls nothing, and π is *not* a stricter version of p < 0.05 — it is a different
+screen that admits proteins the p-value would reject (see @sec-pi-warning). Read the
+BH counts as discoveries and the π counts as a ranking. The comparison arm
 (`b_imputed/a_script/01_run_dep_imputed.R`) repeats the fit on the four imputed
 matrices and reports Spearman concordance of each arm's logFC against the primary;
 high concordance confirms imputation does not reshape the effects [@peng2024].
