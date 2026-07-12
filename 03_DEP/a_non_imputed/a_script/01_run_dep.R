@@ -120,8 +120,9 @@ dal <- extract_DA_results(dal,
   adj_method  = cfg$adj_method
 )
 
-# add the pi-score to the results
-# Pi = p^|logFC| (Xiao et al. 2014); lower = more significant
+# add the transformed P-value to the results. Xiao et al. 2014 Eq. 2:
+# Pi = p^|log2FC| = 10^(-pi_value); bounded in [0,1], lower = more significant.
+# Not the pi-value itself (Eq. 1), and not FDR-controlled.
 contrast_names <- names(dal$results)
 
 for (cname in contrast_names) {

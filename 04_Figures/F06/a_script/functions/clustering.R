@@ -14,7 +14,7 @@ ADAPTATION_TRAITS <- c(
   "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
 )
 
-# pi_set records the pi-gated proteins (Xiao pi-value < 0.05 in any contrast) from the
+# pi_set records the gated proteins (Xiao Eq.2 Pi = p^|log2FC| < 0.05 in any contrast) from the
 # canonical non-imputed limma fit, kept for provenance only; WGCNA runs on the full
 # missForest-imputed proteome (full_abund), not this subset.
 load_clustering_inputs <- function() {
