@@ -3,7 +3,7 @@
 # outcome; the volume control and the responder continuum need no model.
 pacman::p_load(
   here, dplyr, tidyr, readr, tibble, purrr, forcats,
-  patchwork, ggplot2, ggsignif, lmerTest, emmeans
+  patchwork, ggplot2, ggsignif, effectsize, lmerTest, emmeans
 )
 source(here("04_Figures", "functions", "style.R"))
 
@@ -57,27 +57,30 @@ fit_lmm <- function(meta, col) {
   )
 }
 
-# The divergence estimate: an emmeans interaction contrast on the z-scored
-# outcome, so it reads as the HR-minus-LR difference in T1->T2 change in SD units
-# (>0 = HR gains more) and fibre, muscle, and strength share one axis.
-lmm_change_advantage <- function(meta, col) {
-  fit <- lmerTest::lmer(
-    scale(value)[, 1] ~ Group * Timepoint + (1 | subject),
-    data = prepost_long(meta, col),
-    REML = TRUE
+# The divergence estimate: each subject's T2-T1 change, then the HR-minus-LR
+# standardized difference (Hedges g, >0 = HR gains more) with its 95% CI. At two
+# timepoints this equals the Group x Timepoint mixed-model interaction (Twisk et
+# al. 2018, doi:10.1016/j.conctc.2018.03.008); the hlm supplement shows the mixed
+# model agrees. Fibre, muscle, and strength share the SD axis.
+change_advantage <- function(meta, col) {
+  w <- prepost_long(meta, col) |>
+    pivot_wider(names_from = Timepoint, values_from = value) |>
+    filter(!is.na(T1), !is.na(T2)) |>
+    mutate(delta = T2 - T1)
+  g <- effectsize::hedges_g(delta ~ Group, data = w)
+  tibble(
+    estimate = g$Hedges_g, ci_lo = g$CI_low, ci_hi = g$CI_high,
+    p = t.test(delta ~ Group, data = w)$p.value
   )
-  emmeans::emmeans(fit, ~ Group * Timepoint) |>
-    emmeans::contrast(method = list(adv = c(-1, 1, 0, 0) - c(0, 0, -1, 1))) |>
-    summary(infer = TRUE) |>
-    as.data.frame() |>
-    transmute(estimate, ci_lo = lower.CL, ci_hi = upper.CL, p = p.value)
 }
 
-lmm_interaction_table <- function(meta) {
-  bind_rows(lapply(seq_len(nrow(MEASURES)), function(i) {
-    lmm_change_advantage(meta, MEASURES$col[i]) |>
+# Every outcome's divergence, Holm-adjusted across the six-outcome family.
+change_advantage_table <- function(meta) {
+  purrr::map_dfr(seq_len(nrow(MEASURES)), function(i) {
+    change_advantage(meta, MEASURES$col[i]) |>
       mutate(measure = MEASURES$label[i], domain = MEASURES$domain[i], .before = 1)
-  }))
+  }) |>
+    mutate(p_holm = p.adjust(p, method = "holm"))
 }
 
 # The six raw models, named by outcome, for the easystats report and diagnostics.
@@ -126,36 +129,33 @@ f01_subtitle <- theme(
   legend.position = "none"
 )
 
-# Panel A: accumulated volume load, the matched-work control. An effect size with
-# its interval and a TOST equivalence result, rather than reading a
-# non-significant t-test as proof the groups trained the same.
+# Panel A: accumulated volume load, the matched-work control. A non-significant
+# t-test with the HR-minus-LR difference and its 95% CI, read as "no detectable
+# difference" rather than proof the groups trained identically (equivalence at
+# n=8/group is inconclusive; see the qmd).
 build_volume <- function(meta, tag = "A") {
-  pacman::p_load(TOSTER)
   vl <- meta |>
     filter(Timepoint == "T3", !is.na(ACCUM_VL)) |>
     transmute(subject, Group, value = ACCUM_VL)
 
-  pooled_sd <- sqrt(mean(tapply(vl$value, vl$Group, var)))
-  tost <- TOSTER::t_TOST(
-    formula = value ~ Group,
-    data = vl,
-    eqb = 0.5 * pooled_sd # equivalence bound: half a pooled SD
-  )
-  g <- tost$effsize["Hedges's g(av)", c("estimate", "lower.ci", "upper.ci")]
-  tost_p <- max(tost$TOST[c("TOST Lower", "TOST Upper"), "p.value"])
-  nhst_p <- t.test(value ~ Group, data = vl)$p.value
+  tt <- t.test(value ~ Group, data = vl)
+  diff_hl <- unname(tt$estimate[1] - tt$estimate[2])
+  ci <- tt$conf.int
 
   p <- ggplot(vl, aes(Group, value, fill = Group)) +
     group_bar_layers(vl$Group) +
     geom_signif(
-      comparisons = list(c("HR", "LR")), annotations = fmt_p(nhst_p),
+      comparisons = list(c("HR", "LR")), annotations = fmt_p(tt$p.value),
       textsize = KEY_TEXT, tip_length = 0.02, y_position = bracket_pos(vl$value)
     ) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.18)), labels = scales::label_comma()) +
     coord_cartesian(clip = "off") +
     labs(
       title = "Training work performed",
-      subtitle = sprintf("No group difference (g = %.2f, TOST p = %.2f)", g[["estimate"]], tost_p),
+      subtitle = sprintf(
+        "No detectable difference (p = %.2f; HR-LR 95%% CI [%s, %s] kg)",
+        tt$p.value, scales::label_comma()(round(ci[1])), scales::label_comma()(round(ci[2]))
+      ),
       y = "Volume load (kg)", x = NULL, tag = tag
     ) +
     FIG_THEME +
@@ -164,34 +164,14 @@ build_volume <- function(meta, tag = "A") {
   audit <- vl |>
     group_by(Group) |>
     summarise(n = n(), mean = mean(value), sd = sd(value), sem = sd / sqrt(n), .groups = "drop") |>
-    mutate(hedges_g = g[["estimate"]], g_ci_lo = g[["lower.ci"]], g_ci_hi = g[["upper.ci"]], tost_p = tost_p)
+    mutate(diff_hr_lr = diff_hl, ci_lo = ci[1], ci_hi = ci[2], p = tt$p.value)
   list(plot = p, audit = audit)
 }
 
-# Panel B: the composite score that defines the groups. No test (circular);
-# shows the size of the split.
-build_composite <- function(meta, tag = "B") {
-  comp <- f01_composite_scores(meta)
-  p <- ggplot(comp, aes(Group, value, fill = Group)) +
-    group_bar_layers(comp$Group) +
-    scale_y_continuous(expand = expansion(mult = c(0.02, 0.12)), labels = function(x) paste0(x, "%")) +
-    labs(
-      title = "The responder split",
-      subtitle = "Mean z-scored %change, mCSA + fibre CSA; defines groups (circular)",
-      y = "Composite hypertrophy (%)", x = NULL, tag = tag
-    ) +
-    FIG_THEME +
-    f01_subtitle
-  audit <- comp |>
-    group_by(Group) |>
-    summarise(n = n(), mean = mean(value), sd = sd(value), sem = sd / sqrt(n), .groups = "drop")
-  list(plot = p, audit = audit)
-}
-
-# Panel C: every subject's composite score, ranked. Shows the dichotomy as the
-# tails of one continuum and that the cut falls in an empty gap wider than the
-# smallest-worthwhile-change band.
-build_continuum <- function(meta, tag = "C") {
+# Panel B: every subject's composite score, ranked. Carries both the split (the
+# HR/LR boundary) and its magnitude as one continuum, so the defining score needs
+# only one panel. Circular by construction (the score defines the groups).
+build_continuum <- function(meta, tag = "B") {
   comp <- f01_composite_scores(meta) |>
     arrange(value) |>
     mutate(subject = fct_inorder(subject))
@@ -209,8 +189,8 @@ build_continuum <- function(meta, tag = "C") {
     scale_color_manual(values = GROUP_COLORS, name = NULL) +
     scale_x_continuous(labels = function(x) paste0(x, "%")) +
     labs(
-      title = "Responders are a continuum", tag = tag,
-      subtitle = "Subjects ranked; grey = small-difference zone, empty at the split",
+      title = "The responder split, as a continuum", tag = tag,
+      subtitle = "Per-subject composite %change; dashed = HR/LR split, grey = small-difference zone",
       x = "Composite hypertrophy (%)", y = NULL
     ) +
     FIG_THEME +
@@ -225,29 +205,37 @@ build_continuum <- function(meta, tag = "C") {
   list(plot = p, audit = audit)
 }
 
-# Panel D: the mixed-model divergence forest. Standardized HR-minus-LR change
-# advantage per outcome, ordered by effect; muscle and fibre clear zero, strength
-# straddles it.
-build_forest <- function(meta, tag = "D") {
-  tbl <- lmm_interaction_table(meta)
-  domain_colors <- c(fibre = "#6BAED6", muscle = unname(GROUP_COLORS["HR"]), strength = "grey50")
+# Panel C: the divergence forest. Standardized HR-minus-LR change (Hedges g) per
+# outcome with 95% CI and the Holm-adjusted p; muscle and fibre clear zero,
+# strength straddles it.
+build_forest <- function(meta, tag = "C") {
+  tbl <- change_advantage_table(meta)
   top_down <- c(
     "fCSA Type I", "fCSA Type II", "fCSA Mixed", "mCSA",
     "1RM Extension", "1RM Leg Press"
   )
-  df <- tbl |> mutate(measure = factor(measure, levels = rev(top_down)))
+  df <- tbl |>
+    mutate(
+      measure = factor(measure, levels = rev(top_down)),
+      p_label = vapply(p_holm, fmt_p, character(1))
+    )
 
   p <- ggplot(df, aes(estimate, measure, color = domain)) +
     geom_vline(xintercept = 0, linetype = "dashed", color = "grey55", linewidth = 0.4) +
     geom_errorbar(aes(xmin = ci_lo, xmax = ci_hi), orientation = "y", width = 0.25, linewidth = 0.5) +
     geom_point(size = 2.6) +
+    geom_text(
+      aes(x = ci_hi, label = p_label),
+      hjust = -0.15, size = 2.3, color = "grey35", show.legend = FALSE
+    ) +
     scale_color_manual(
-      values = domain_colors, name = "Domain",
+      values = DOMAIN_COLORS, name = "Domain",
       labels = c(fibre = "Fibre", muscle = "Muscle", strength = "Strength")
     ) +
+    scale_x_continuous(expand = expansion(mult = c(0.05, 0.22))) +
     labs(
-      title = "Phenotype change by domain (mixed model)", tag = tag,
-      subtitle = "HR-LR change scaled to each measure's SD, so domains compare on one axis",
+      title = "Phenotype change by domain (change score)", tag = tag,
+      subtitle = "HR-LR change in each measure's SD units (Hedges g); Holm-adjusted p",
       x = "HR - LR change (SD of the measure)", y = NULL
     ) +
     FIG_THEME +
@@ -265,14 +253,16 @@ build_forest <- function(meta, tag = "D") {
 # where the groups part (LR fibre CSA falls below zero); the mixed-model
 # interaction p rides in each strip.
 build_secondary <- function(meta) {
+  adv <- change_advantage_table(meta)
   rows <- lapply(seq_len(nrow(MEASURES)), function(i) {
-    p_int <- lmm_change_advantage(meta, MEASURES$col[i])$p
+    lab <- MEASURES$label[i]
+    p_holm <- adv$p_holm[adv$measure == lab]
     prepost_long(meta, MEASURES$col[i]) |>
       pivot_wider(names_from = Timepoint, values_from = value) |>
       transmute(subject, Group,
         delta = T2 - T1,
-        measure = MEASURES$label[i], order = i,
-        facet = sprintf("%s  (int. %s)", MEASURES$label[i], fmt_p(p_int))
+        measure = lab, order = i,
+        facet = sprintf("%s  (p %s)", lab, fmt_p(p_holm))
       )
   })
   df <- bind_rows(rows) |> mutate(facet = fct_reorder(facet, order))
@@ -289,7 +279,7 @@ build_secondary <- function(meta) {
     scale_fill_manual(values = GROUP_COLORS, name = NULL) +
     labs(
       title = "Change score by group across all outcomes",
-      subtitle = "Δ = T2-T1; mixed-model interaction p per facet",
+      subtitle = "Δ = T2-T1; Holm-adjusted change-score p per facet",
       y = "Δ (Post - Pre)", x = NULL
     ) +
     FIG_THEME +

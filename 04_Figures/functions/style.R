@@ -39,6 +39,14 @@ CONTRAST_COLORS <- c(
   Acute_Interaction    = "#6A51A3" # differential acute response
 )
 
+# Phenotype domains for F01: muscle size, fibre size, strength. Reuses the
+# established hues so the palette keeps a single source.
+DOMAIN_COLORS <- c(
+  fibre = unname(CONTRAST_COLORS["Training_HR"]),
+  muscle = unname(GROUP_COLORS["HR"]),
+  strength = "grey50"
+)
+
 # Uniform render height (mm) for every F02 panel so they tile at one scale.
 PANEL_H <- 95
 
@@ -90,6 +98,8 @@ CTR_SHORT <- c(
   Acute_HR             = "Ac.(HR)",
   Acute_LR             = "Ac.(LR)",
   Baseline_HRvLR       = "Base.",
+  Trained_HRvLR        = "Trn.(HRvLR)",
+  Acute_HRvLR          = "Ac.(HRvLR)",
   Training_Interaction = "Tr.Int.",
   Acute_Interaction    = "Ac.Int."
 )
