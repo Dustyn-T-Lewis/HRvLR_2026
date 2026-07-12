@@ -12,8 +12,9 @@ render_concordance_figure <- function(cfg) {
   source(here("04_Figures", "functions", "pathway_utils.R"))
   source(here("04_Figures", "functions", "concordance.R"))
 
-  rpt <- here("04_Figures", cfg$fig_id, "b_reports")
-  dat <- here("04_Figures", cfg$fig_id, "c_data")
+  fig_dir <- if (is.null(cfg$fig_dir)) here("04_Figures", cfg$fig_id) else cfg$fig_dir
+  rpt <- file.path(fig_dir, "b_reports")
+  dat <- file.path(fig_dir, "c_data")
   panels <- file.path(rpt, "panels")
   supp <- file.path(rpt, "supp")
   for (d in c(panels, supp, dat)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
