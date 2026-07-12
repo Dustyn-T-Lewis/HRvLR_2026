@@ -1,8 +1,13 @@
-# 05_test — GSVA pathway scores + mixed models (experimental)
+# 05_test — GSVA pathway scores + mixed models (retired)
+
+**Retired 2026-07-12. Do not promote.** GSVA scores are cohort-relative and leak
+under cross-validation (see Caveats). The reported pathway scorer is singscore,
+in `05_test/phenotype_mapping/`; this arm is kept only as the validation that
+justified that choice. The GSVA-vs-singscore agreement lives one level up in
+`singscore_vs_gsva_validation/` and belongs in the supplement.
 
 Exploratory stage testing whether single-sample pathway activity, modelled with
 subject random effects, adds to the contrast-based concordance work in `04_`.
-**Not a manuscript figure yet** — a sandbox to judge the method.
 
 ## Pipeline
 
