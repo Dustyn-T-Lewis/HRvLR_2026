@@ -35,6 +35,9 @@ ring_enrich <- function(fg, ct, pw, ring_n = RING_N) {
   list(enrich = enrich, report = as_tibble(report))
 }
 
+# The `padj` slot is enrichVolcano's significance channel; we feed it the Xiao
+# Eq.2 transformed P-value Pi = p^|log2FC| (not an adjusted p, not FDR). Display
+# it as Pi, never as adjusted p.
 ring_volc <- function(dep, ct) {
   tibble(
     gene = dep$gene,
