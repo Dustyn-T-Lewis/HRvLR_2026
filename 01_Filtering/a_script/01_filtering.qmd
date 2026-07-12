@@ -110,9 +110,10 @@ Human Protein Atlas table.
 
 ```{r}
 #| label: classifier
-ery_cut <- 5000
-myo_cut <- 50
-blood_max <- 1e9
+source(here("01_Filtering", "a_script", "filter_config.R"))
+ery_cut <- filter_cfg$ery_cut
+myo_cut <- filter_cfg$myo_cut
+blood_max <- filter_cfg$blood_max
 
 bl <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) |>
   transmute(
@@ -263,9 +264,15 @@ nowhere consistently detected and cannot support a model anywhere.
 ```{r}
 #| label: missingness
 n0 <- nrow(dal$data)
-dal <- filter_proteins_by_group(dal, min_reps = 5, min_groups = 1, grouping_column = "Group_Time")
+dal <- filter_proteins_by_group(dal,
+  min_reps = filter_cfg$miss_min_reps,
+  min_groups = filter_cfg$miss_min_groups, grouping_column = "Group_Time"
+)
 flog <- bind_rows(flog, tibble(
-  step = "Missingness (>=5 of 8 in >=1 group)",
+  step = sprintf(
+    "Missingness (>=%d in >=%d cell)",
+    filter_cfg$miss_min_reps, filter_cfg$miss_min_groups
+  ),
   n_after = nrow(dal$data), n_removed = n0 - nrow(dal$data)
 ))
 flog <- flog |> mutate(pct_of_raw = round(n_after / n_raw * 100, 1))
@@ -314,9 +321,9 @@ with the other samples.
 
 ```{r}
 #| label: outliers
-mahal_p <- 0.01
-mad_k <- 3
-outlier_k <- 3
+mahal_p <- filter_cfg$mahal_p
+mad_k <- filter_cfg$mad_k
+outlier_k <- filter_cfg$outlier_k
 
 # missingness, with a within-subject spread across timepoints
 pct_missing <- colMeans(is.na(dal$data)) * 100
@@ -466,10 +473,13 @@ names(dal$tags)
 dim(dal$data)
 
 committed <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
-c(
-  same_dim = identical(dim(dal$data), dim(committed$data)),
-  same_proteins = identical(sort(rownames(dal$data)), sort(rownames(committed$data))),
-  same_samples = identical(sort(colnames(dal$data)), sort(colnames(committed$data)))
+stopifnot(
+  "dimensions drifted from committed DAList" =
+    identical(dim(dal$data), dim(committed$data)),
+  "protein set drifted from committed DAList" =
+    identical(sort(rownames(dal$data)), sort(rownames(committed$data))),
+  "sample set drifted from committed DAList" =
+    identical(sort(colnames(dal$data)), sort(colnames(committed$data)))
 )
 ```
 

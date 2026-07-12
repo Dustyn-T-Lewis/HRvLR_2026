@@ -22,16 +22,8 @@ clear_dir <- function(d) {
 clear_dir(data_dir)
 clear_dir(report_dir)
 
-cfg <- list(
-  miss_min_reps   = 5, # min detected samples per group (of 8)
-  miss_min_groups = 1, # min Group_Time levels passing the threshold
-  outlier_k       = 3, # methods that must agree for consensus (>=3/4)
-  mahal_p         = 0.01, # PCA Mahalanobis chi-sq cutoff
-  mad_k           = 3, # MAD multiplier for median intensity / correlation
-  ery_cut         = 5000, # erythrocyte nCPM at/above = hemoglobin-class red-cell protein
-  myo_cut         = 50, # myonuclei nCPM at/above = candidate for muscle rescue
-  blood_max       = 1e9 # rescue only if blood conc below this; above = true plasma protein
-)
+source(here("01_Filtering", "a_script", "filter_config.R"))
+cfg <- filter_cfg
 
 # Load matrix + metadata
 
