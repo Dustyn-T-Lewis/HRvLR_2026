@@ -87,7 +87,7 @@ HR/LR asymmetry in the study. Note `Baseline_HRvLR` also returns 65 pathways, so
 groups are not identical at baseline.
 
 **Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
-(F06, best BH q = 0.24), and no classifier or regressor beats its permutation null
+(F04, best BH q = 0.24), and no classifier or regressor beats its permutation null
 after correction (`04_Figures/05_test`).
 
 **So: the proteome does not separate high from low responders at this sample size.**
@@ -126,13 +126,13 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F03/.../HRvLR_F03.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Figures/extras/concordance_training/` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
 | `04_Figures/extras/concordance_acute/` | Acute concordance, same engine |
-| `04_Figures/F06/.../HRvLR_F06.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
+| `04_Figures/F04/.../HRvLR_F04.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
 | `04_Figures/05_test/README.md` | Association and out-of-sample prediction |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning, the
-contaminant survivors in `01_filtering.qmd`, the circular module test in F06, and the
-transductive eigengenes in F06 and `04_Figures/05_test`.
+contaminant survivors in `01_filtering.qmd`, the circular module test in F04, and the
+transductive eigengenes in F04 and `04_Figures/05_test`.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
@@ -146,7 +146,7 @@ own outputs first.
 03_DEP/
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
-04_Figures/       F01–F06 publication composites
+04_Figures/       F01–F04 publication composites
 ```
 
 # Stage 00 — Inputs {#sec-inputs}
@@ -155,7 +155,7 @@ own outputs first.
 |---|---|
 | `00_input/HRvLR_raw.xlsx` | DIA-MS protein matrix, 2,400 protein groups × (5 annotation cols + 48 samples) |
 | `00_input/HRvLR_meta.csv` | Sample sheet (`Col_ID`, `Subject_ID`, `Group`, `Timepoint`, `Group_Time`, plus phenotype columns) |
-| `00_input/HPA_annotations.tsv` | Human Protein Atlas reference: secretome location, blood concentration, single-cell nCPM, protein class |
+| `00_input/HPA_annotations_full.tsv` | Human Protein Atlas reference: secretome location, blood concentration, single-cell nCPM, protein class |
 
 The matrix is aligned to the sample sheet by `Col_ID`; a mismatch errors
 immediately.
@@ -175,7 +175,7 @@ Atlas:
 
 ```{r}
 #| label: blood-classifier
-bl <- readr::read_tsv(here::here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) |>
+bl <- readr::read_tsv(here::here("00_input", "HPA_annotations_full.tsv"), show_col_types = FALSE) |>
   dplyr::transmute(
     gene = Gene, protein_class = `Protein class`, secretome = `Secretome location`,
     blood_conc = suppressWarnings(as.numeric(`Blood concentration - Conc. blood MS [pg/L]`)),
@@ -286,7 +286,7 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F03 | enrichVolcano ring-volcanoes per contrast |
 | F04 | Training concordance: HR vs LR (quadrant ORA, NES scatter, fry, RRHO2, bootstrap) |
 | F05 | Acute concordance: HR vs LR |
-| F06 | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
+| F04 | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
 
 The HR-vs-LR response question is answered in F04/F05, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap.

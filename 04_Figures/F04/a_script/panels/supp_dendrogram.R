@@ -1,7 +1,7 @@
-# F06 supplement: WGCNA gene dendrogram with the dynamic-tree-cut and merged
+# F04 supplement: WGCNA gene dendrogram with the dynamic-tree-cut and merged
 # module colorbands beneath it. Reads the in-memory network from setup.
 pacman::p_load(here, ggplot2, png, grid)
-if (!exists("wgcna_net")) source(here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
+if (!exists("wgcna_net")) source(here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
 
 block_genes <- wgcna_net$blockGenes[[1]]
 merged_cols <- wgcna_colors[block_genes]
@@ -45,4 +45,4 @@ supp_dendro <- ggplot() +
 
 dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
 save_panel(supp_dendro, file.path(RPT_DIR, "supp", "supp_dendrogram"), 240, 120)
-message("F06 supplement (dendrogram) done.")
+message("F04 supplement (dendrogram) done.")

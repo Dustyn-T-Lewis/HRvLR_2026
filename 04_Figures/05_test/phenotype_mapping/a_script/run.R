@@ -21,7 +21,7 @@ dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 meta <- dal$metadata
 pheno <- readr::read_csv(
-  here("04_Figures", "F06", "c_data", "phenotype.csv"),
+  here("04_Figures", "F04", "c_data", "phenotype.csv"),
   show_col_types = FALSE
 )
 traits <- intersect(

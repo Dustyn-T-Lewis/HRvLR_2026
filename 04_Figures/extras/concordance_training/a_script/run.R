@@ -1,11 +1,11 @@
 #!/usr/bin/env Rscript
-# F04 Training concordance: HR vs LR over T1 to T2. Where the two groups adapt
+# Training concordance: HR vs LR over T1 to T2. Where the two groups adapt
 # together and where they diverge. Rendered by the shared concordance driver.
 pacman::p_load(here)
 source(here("04_Figures", "functions", "concordance_figure.R"))
 
 render_concordance_figure(list(
-  fig_id = "F04",
+  fig_id = "concordance_training",
   fig_dir = here("04_Figures", "extras", "concordance_training"),
   c_hi = "Training_HR", c_lo = "Training_LR", c_int = "Training_Interaction",
   lo_levels = c("LR_T1", "LR_T2"),

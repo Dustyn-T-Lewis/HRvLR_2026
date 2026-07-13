@@ -1,4 +1,4 @@
-# F06 Panel B: module-level NES scatters. Each WGCNA module is a gene set; fgsea
+# F04 Panel B: module-level NES scatters. Each WGCNA module is a gene set; fgsea
 # runs its members' moderated-t ranks per contrast. Top scatter reads training
 # concordance (do HR and LR move the same modules the same way); bottom reads
 # whether the acute response reinforces or reverses the chronic (training) one.
@@ -8,8 +8,8 @@ pacman::p_load(
 source(here("04_Figures", "functions", "style.R"))
 source(here("04_Figures", "functions", "pathway_utils.R"))
 
-if (!exists("RPT_DIR")) RPT_DIR <- here("04_Figures", "F06", "b_reports")
-if (!exists("DAT_DIR")) DAT_DIR <- here("04_Figures", "F06", "c_data")
+if (!exists("RPT_DIR")) RPT_DIR <- here("04_Figures", "F04", "b_reports")
+if (!exists("DAT_DIR")) DAT_DIR <- here("04_Figures", "F04", "c_data")
 PANEL_DIR <- file.path(RPT_DIR, "panels")
 dir.create(PANEL_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -270,4 +270,4 @@ p_legend <- cowplot::ggdraw(legend_grob)
 save_png(p_legend, file.path(PANEL_DIR, "panel_b_nes_legend"), 90, 16)
 
 write_csv(fgsea_wide, file.path(DAT_DIR, "panel_b_module_fgsea.csv"))
-message("F06 Panel B (NES scatters) done.")
+message("F04 Panel B (NES scatters) done.")

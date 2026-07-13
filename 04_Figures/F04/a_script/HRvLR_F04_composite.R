@@ -1,16 +1,16 @@
-# F06 composite: WGCNA module-trait atlas (A) beside the module-level NES
+# F04 composite: WGCNA module-trait atlas (A) beside the module-level NES
 # scatters (B), stitched with cowplot::ggdraw so Panel A overlaps and hides
 # Panel B's left margin. Then the source-data workbook.
 pacman::p_load(here, ggplot2, cowplot, png, grid, readr, openxlsx)
 source(here("04_Figures", "functions", "style.R"))
 
-RPT_DIR <- here("04_Figures", "F06", "b_reports")
-DAT_DIR <- here("04_Figures", "F06", "c_data")
+RPT_DIR <- here("04_Figures", "F04", "b_reports")
+DAT_DIR <- here("04_Figures", "F04", "c_data")
 PANEL_DIR <- file.path(RPT_DIR, "panels")
 
 read_panel <- function(name) {
   path <- file.path(PANEL_DIR, paste0(name, ".png"))
-  if (!file.exists(path)) stop("Missing panel: ", path, " (run HRvLR_F06_run.R first)")
+  if (!file.exists(path)) stop("Missing panel: ", path, " (run HRvLR_F04_run.R first)")
   rasterGrob(readPNG(path), interpolate = TRUE)
 }
 pA_grob <- read_panel("panel_a_wgcna_map")
@@ -80,10 +80,10 @@ composite <- ggdraw(xlim = c(crop_l, crop_r), ylim = c(crop_b, crop_t)) +
     hjust = 0, vjust = 1
   )
 
-ggsave(file.path(RPT_DIR, "F06_composite.png"), composite,
+ggsave(file.path(RPT_DIR, "F04_composite.png"), composite,
   width = save_w, height = save_h, units = "mm", dpi = 300, bg = "white"
 )
-ggsave(file.path(RPT_DIR, "F06_composite.pdf"), composite,
+ggsave(file.path(RPT_DIR, "F04_composite.pdf"), composite,
   width = save_w, height = save_h, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
@@ -115,5 +115,5 @@ for (s in present) {
     show_col_types = FALSE
   ))
 }
-saveWorkbook(wb, file.path(DAT_DIR, "F06_source_data.xlsx"), overwrite = TRUE)
-message("F06 composite + workbook saved to ", RPT_DIR)
+saveWorkbook(wb, file.path(DAT_DIR, "F04_source_data.xlsx"), overwrite = TRUE)
+message("F04 composite + workbook saved to ", RPT_DIR)

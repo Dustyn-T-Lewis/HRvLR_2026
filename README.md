@@ -15,7 +15,7 @@ forward.
 
 `HRvLR_pipeline.qmd` is the ground-up walkthrough and the map into everything else.
 Each stage and figure also ships its own tutorial (`00_inputs.qmd`,
-`01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, `HRvLR_F01`–`F06.qmd`),
+`01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, `HRvLR_F01`–`F04.qmd`),
 written to be read on its own: what it does, how, why that method and not another, and
 how to read the output — including what a null looks like.
 
@@ -37,8 +37,8 @@ ranking, not as discoveries.
 
 Known limitations are stated on the page where the reader meets them: the π gate in
 `HRvLR_pipeline.qmd`, the surviving keratin and HBG2 contaminants in
-`01_filtering.qmd`, the circular module test in F06, and the transductive eigengenes
-in F06 and `04_Figures/05_test`.
+`01_filtering.qmd`, the circular module test in F04, and the transductive eigengenes
+in F04 and `04_Figures/05_test`.
 
 ## Design and Canonical Contrasts
 
@@ -79,7 +79,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | Six figures: F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea cache; F04/F05 HR-vs-LR training/acute concordance, which read that cache; F06 WGCNA module-phenotype linkage |
+| `04` | `04_Figures/` | Six figures: F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea cache; F04/F05 HR-vs-LR training/acute concordance, which read that cache; F04 WGCNA module-phenotype linkage |
 
 ## Canonical Run Order
 
@@ -92,7 +92,7 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `04_Figures/F06` (see Figures);
+Clustering is computed self-contained inside `04_Figures/F04` (see Figures);
 WGCNA is the inferential engine for the module-phenotype linkage.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
@@ -122,16 +122,16 @@ it after the imputed DEP.
 - `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
 - `04_Figures/extras/concordance_training`: HR-vs-LR training-phase concordance
 - `04_Figures/extras/concordance_acute`: HR-vs-LR acute-phase concordance
-- `04_Figures/F06`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
+- `04_Figures/F04`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
 - `04_Figures/extras/imputation`: imputation-method comparison supplement (non-imputed reference vs the four arms)
 
 ```sh
 Rscript 04_Figures/F01/a_script/run.R
 Rscript 04_Figures/F02/a_script/HRvLR_F02_run.R
 Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
-Rscript 04_Figures/extras/concordance_training/a_script/HRvLR_F04_run.R
-Rscript 04_Figures/extras/concordance_acute/a_script/HRvLR_F05_run.R
-Rscript 04_Figures/F06/a_script/HRvLR_F06_run.R
+Rscript 04_Figures/extras/concordance_training/a_script/run.R
+Rscript 04_Figures/extras/concordance_acute/a_script/run.R
+Rscript 04_Figures/F04/a_script/HRvLR_F04_run.R
 Rscript 04_Figures/extras/imputation/a_script/HRvLR_S_imputation.R
 ```
 
@@ -147,7 +147,7 @@ Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_da
 | `04_Figures/functions/` | Cross-figure helpers: `style.R`, `pathway_utils.R`, `concordance.R` |
 | `04_Figures/shared/` | `pca.R` (sourced by stages 01 and 02) and `references.bib` (the single bibliography for every notebook) |
 | `04_Figures/tests/` | The `testthat` suite. Run with `testthat::test_dir(here("04_Figures", "tests", "testthat"))` |
-| `04_Figures/05_test/` | Association, prediction, and the WGCNA module engine that F06 reads |
+| `04_Figures/05_test/` | Association, prediction, and the WGCNA module engine that F04 reads |
 | `04_Figures/extras/` | The concordance figures (F04/F05) and the imputation supplement |
 
 ## Reproducibility Rules

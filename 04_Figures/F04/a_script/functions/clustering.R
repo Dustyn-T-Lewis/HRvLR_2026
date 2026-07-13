@@ -1,4 +1,4 @@
-# Clustering compute for F06 - the figure builds its WGCNA modules and the
+# Clustering compute for F04 - the figure builds its WGCNA modules and the
 # module-phenotype linkages self-contained. WGCNA runs unsupervised on the full
 # imputed proteome. Methods and seeds are preserved from the former standalone
 # clustering stage; only print-only diagnostics (WGCNA power / mergeCut sweeps)
@@ -103,7 +103,7 @@ build_phenotype_table <- function(meta_path) {
 }
 
 # Unsupervised WGCNA on the full imputed proteome (no DE pre-filtering, per the
-# WGCNA FAQ; mirrors YvO F06). Signed network; soft power = first with signed
+# WGCNA FAQ; mirrors YvO F04). Signed network; soft power = first with signed
 # scale-free R^2 > 0.87, else the sample-size-derived signed fallback (Horvath
 # FAQ table: <20->18, 20-30->16, 30-40->14, >40->12). The downstream linkages
 # (run_module_prediction, run_module_responder) reduce each subject to one row
