@@ -8,33 +8,27 @@ pacman::p_load(here, patchwork, openxlsx, dplyr)
 a_script <- here("04_Figures", "F03", "a_script")
 source(file.path(a_script, "HRvLR_F03_setup.R"))
 source(file.path(a_script, "ring_helpers.R"))
-source(file.path(a_script, "panels", "panel_responses.R"))
-source(file.path(a_script, "panels", "panel_interaction.R"))
+source(file.path(a_script, "panels", "panel_main.R"))
 source(file.path(a_script, "panels", "panel_hrvlr.R"))
 source(file.path(a_script, "panels", "supp", "panel_top30.R"))
 
 supp_dir <- file.path(RPT_DIR, "supp")
 dir.create(supp_dir, recursive = TRUE, showWarnings = FALSE)
 
-resp <- panel_responses(fg, dep, pw)
-inter <- panel_interaction(fg, dep, pw)
+main <- panel_main(fg, dep, pw)
 hrvlr <- panel_hrvlr(fg, dep, pw)
 
-composite <- (resp$grid$plot | inter$grid$plot) +
-  plot_layout(widths = c(2, 1)) +
-  plot_annotation(tag_levels = "A")
-ggsave(file.path(RPT_DIR, "F03_composite.png"), composite,
-  width = 450, height = 320, units = "mm", dpi = 200, bg = "white"
+ggsave(file.path(RPT_DIR, "F03_composite.png"), main$plot,
+  width = 540, height = 320, units = "mm", dpi = 200, bg = "white"
 )
-ggsave(file.path(RPT_DIR, "F03_composite.pdf"), composite,
-  width = 450, height = 320, units = "mm", device = PDF_DEVICE, bg = "white"
+ggsave(file.path(RPT_DIR, "F03_composite.pdf"), main$plot,
+  width = 540, height = 320, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
-hrvlr_composite <- hrvlr$grid$plot + plot_annotation(tag_levels = "A")
-ggsave(file.path(RPT_DIR, "F03_HRvLR.png"), hrvlr_composite,
+ggsave(file.path(RPT_DIR, "F03_HRvLR.png"), hrvlr$plot,
   width = 450, height = 185, units = "mm", dpi = 200, bg = "white"
 )
-ggsave(file.path(RPT_DIR, "F03_HRvLR.pdf"), hrvlr_composite,
+ggsave(file.path(RPT_DIR, "F03_HRvLR.pdf"), hrvlr$plot,
   width = 450, height = 185, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
@@ -45,7 +39,7 @@ for (ct in names(top30$plots)) {
   )
 }
 
-ring_pathways <- bind_rows(resp$reports, inter$reports, hrvlr$reports) |>
+ring_pathways <- bind_rows(main$reports, hrvlr$reports) |>
   select(contrast, database, pathway, NES, padj, size, dedup_status,
     merged_into, overlap_jaccard, drawn,
     leading_edge = leadingEdge
@@ -54,7 +48,7 @@ ring_pathways <- bind_rows(resp$reports, inter$reports, hrvlr$reports) |>
 overview <- data.frame(
   sheet = c("fgsea_all", "fgsea_significant", "ring_pathways", "top30_updown"),
   description = c(
-    "All fgsea enrichment across the 9 DEP contrasts; the cache F04/F05 read",
+    "All fgsea enrichment across the 9 DEP contrasts, raw and un-deduplicated; the cache F04/F05 read",
     "Significant subset (padj < 0.05), cleaned names, arranged by contrast and padj",
     "Ring-volcano pathways per contrast: EnrichmentMap dedup status, what merged, which arcs were drawn",
     "No-dedup top-30 up and top-30 down by FDR for every contrast"

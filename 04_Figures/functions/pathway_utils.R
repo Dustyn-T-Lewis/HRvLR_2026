@@ -1,11 +1,14 @@
-# Unified pathway enrichment utilities
-# MSigDB Hallmark (H), Canonical Pathways (C2:CP), GO:BP (C5:GO:BP); Jaccard dedup per Reimand et al. 2019
+# Unified pathway enrichment utilities. fgsea/ORA over MSigDB Hallmark, KEGG,
+# Reactome, GO (BP/CC/MF) and a GO Slim axis. fgsea ring redundancy is collapsed
+# with the EnrichmentMap combined coefficient (Merico 2010; Reimand 2019) at
+# display; the cached fgsea results stay raw so downstream figures share one NES.
 #
 # Exports:
-#   build_pathway_collection()      assemble GO:BP + Reactome + Hallmark + KEGG
-#   run_fgsea_deduplicated()        fgsea + collapsePathways for one contrast
-#   run_ora_deduplicated()          over-representation analysis with Jaccard dedup
-#   classify_database()             database label for plotting
+#   build_pathway_collection()  assemble the multi-database collection
+#   run_fgsea()                 preranked fgsea for one contrast, raw (no dedup)
+#   run_ora_deduplicated()      over-representation analysis (Jaccard dedup)
+#   dedup_em() / dedup_report() EnrichmentMap combined-coefficient collapse
+#   classify_database()         database label for plotting
 
 deduplicate_enrichment_flat <- function(results, pathways, jaccard_cutoff = 0.5) {
   if (nrow(results) == 0) {
@@ -71,10 +74,9 @@ deduplicate_enrichment <- function(results, pathways, jaccard_cutoff = 0.5) {
 
 # EnrichmentMap combined similarity (Merico 2010 PMID 21085593; Reimand 2019
 # PMID 30664679 Box 1): 0.5 * overlap + 0.5 * jaccard, two sets redundant at
-# >= cutoff (0.375 default). This is the display dedup for the F03 rings, kept
-# separate from the Jaccard-only cache dedup above, which is frozen because the
-# F04/F05 concordance read pivots the cached fgsea_all. Consolidate the two onto
-# one coefficient only in a coordinated F03/F04/F05 pass.
+# >= cutoff (0.375, the EnrichmentMap default). This is the single dedup for the
+# F03 rings and runs at display time; the cached fgsea results that F04/F05 pivot
+# stay raw and un-collapsed, so all three figures share one NES source.
 em_similarity <- function(a, b) {
   inter <- length(intersect(a, b))
   if (inter == 0L) {
@@ -302,9 +304,11 @@ build_goslim_gene_sets <- function(species = "Homo sapiens",
 }
 
 
-run_fgsea_deduplicated <- function(ranks, pathways, jaccard_cutoff = 0.5,
-                                   nperm = 10000, min_size = 15,
-                                   max_size = 500) {
+# Preranked fgsea for one contrast, classified by source database. Returns every
+# result with no redundancy collapse: the cache is the raw NES source, and the
+# single EnrichmentMap dedup (dedup_report, 0.375) happens at ring display.
+run_fgsea <- function(ranks, pathways, nperm = 10000, min_size = 15,
+                      max_size = 500) {
   requireNamespace("fgsea", quietly = TRUE)
 
   res <- fgsea::fgseaMultilevel(
@@ -316,30 +320,19 @@ run_fgsea_deduplicated <- function(ranks, pathways, jaccard_cutoff = 0.5,
     eps         = 0
   )
   res <- as.data.frame(res)
-
   res$database <- classify_database(res$pathway)
-
-  res <- tibble::as_tibble(res)
 
   keep_cols <- c(
     "pathway", "padj", "NES", "size", "leadingEdge",
     "database", "pval", "ES", "log2err"
   )
-  res <- res[, intersect(keep_cols, names(res))]
+  res <- tibble::as_tibble(res[, intersect(keep_cols, names(res))])
 
-  sig <- res[!is.na(res$padj) & res$padj < 0.05, ]
-  nonsig <- res[is.na(res$padj) | res$padj >= 0.05, ]
-
-  sig_dedup <- deduplicate_enrichment(sig, pathways, jaccard_cutoff)
-
-  n_removed <- nrow(sig) - nrow(sig_dedup)
-  pct <- if (nrow(sig) > 0) round(100 * n_removed / nrow(sig), 1) else 0
+  n_sig <- sum(!is.na(res$padj) & res$padj < 0.05)
   message(sprintf(
-    "fGSEA dedup: %d sig -> %d kept (removed %d, %.1f%%)",
-    nrow(sig), nrow(sig_dedup), n_removed, pct
+    "fgsea: %d sets, %d significant at padj < 0.05", nrow(res), n_sig
   ))
-
-  rbind(sig_dedup, nonsig)
+  res
 }
 
 
