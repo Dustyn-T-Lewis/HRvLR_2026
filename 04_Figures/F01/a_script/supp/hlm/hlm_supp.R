@@ -9,6 +9,10 @@ models <- lmm_models(meta)
 rpt_hlm <- file.path(F01_RPT, "supp", "hlm")
 dir.create(rpt_hlm, recursive = TRUE, showWarnings = FALSE)
 
+# check_model simulates from the fit for its posterior-predictive panel, so the
+# figure is a different draw on every run unless the RNG is pinned.
+set.seed(20260713)
+
 ggsave(
   file.path(rpt_hlm, "F01_hlm_check_mCSA.png"),
   plot(check_model(models[["mCSA"]], verbose = FALSE)),
