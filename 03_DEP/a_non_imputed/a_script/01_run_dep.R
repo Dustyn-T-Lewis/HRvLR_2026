@@ -110,10 +110,10 @@ within_cor <- dal$eBayes_fit$correlation %||%
   dal$tags$duplicate_correlation %||% NA_real_
 if (!is.na(within_cor)) cat(sprintf("Within-subject correlation: %.3f\n", within_cor))
 
-# FDR 0.10: appropriate for exploratory proteomics with small n
-# (Benjamini & Hochberg 1995 used 0.10 in examples; Choi et al. 2008,
-# BMC Bioinform 9:43, recommend FDR 0-15% for label-free proteomics).
-# Pi-score (Pi < 0.05) provides a secondary effect-size-weighted filter.
+# Selection is by Pi-score (Pi < 0.05); FDR < 0.10 and raw p < 0.05 are reported beside it.
+# BH at 0.10 is our threshold for exploratory n=16 proteomics, not a literature-mandated one.
+# BH is applied WITHIN each contrast (topTable is called per coef, and decideTests defaults to
+# method = "separate"), never across the nine.
 dal <- extract_DA_results(dal,
   pval_thresh = cfg$pval_thresh,
   lfc_thresh  = cfg$lfc_thresh,

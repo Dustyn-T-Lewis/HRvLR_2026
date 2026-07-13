@@ -2,7 +2,9 @@
 # HRvLR Stage 02: cycloess normalization of the filtered, non-imputed DAList.
 # limma handles per-protein NAs downstream, so the canonical Stage 03 input stays
 # non-imputed; the imputation/ arms add exploratory imputed DALists alongside.
-# cycloess uses limma's defaults (span = 0.7, adaptive.span = FALSE), matching YvO.
+# cycloess is limma::normalizeCyclicLoess(method = "fast"), 3 iterations. The span is not
+# 0.7: limma defaults adaptive.span = TRUE, which overrides the 0.7 formal with
+# chooseLowessSpan(nrow) = 0.5075 at 1920 proteins. It moves if the protein count moves.
 
 pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
 source(here("04_Figures", "shared", "pca.R"))
