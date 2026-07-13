@@ -155,6 +155,7 @@ clean_pathway_name <- function(name, max_chars = 45) {
     stringr::str_remove("^REACTOME_") |>
     stringr::str_remove("^KEGG_MEDICUS_") |>
     stringr::str_remove("^KEGG_") |>
+    stringr::str_remove("^GOSLIM_") |>
     stringr::str_remove("^WP_") |>
     stringr::str_replace_all("_", " ") |>
     stringr::str_to_title() |>
