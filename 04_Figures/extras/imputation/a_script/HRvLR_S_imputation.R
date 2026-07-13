@@ -1,7 +1,16 @@
 #!/usr/bin/env Rscript
 # Supplement S: imputation-method comparison on the key contrasts.
-# Non-imputed reported arm vs missForest / imp4p / MsCoreUtils / Perseus. Shows the
-# key effects hold across imputation choice. missForest stays canonical downstream.
+# Non-imputed reported arm vs missForest / imp4p / MsCoreUtils / Perseus.
+#
+# On BH the null holds under every imputer that does not impute inside the tested factor:
+# missForest (MAR), MsCoreUtils (hybrid) and Perseus (MNAR) each return zero BH<0.10 hits in
+# all five HR-vs-LR and interaction contrasts. imp4p returns 117, because impute.mle fits a
+# separate EM within each Group_Time cell and the contrasts then test among those same cells;
+# re-imputing within random cells of equal size collapses it back to zero (02_imp4p_circularity.R).
+#
+# Do NOT rank robustness on pi-counts. pi = p^|log2FC| exponentiates the fold change, which is
+# exactly what imputation distorts: Perseus has the MOST pi-hits of any arm and the SAME BH count
+# as the non-imputed fit. missForest stays canonical downstream.
 
 pacman::p_load(here, dplyr, tidyr, readr, purrr, ggplot2, patchwork, openxlsx)
 source(here("04_Figures", "functions", "style.R"))
