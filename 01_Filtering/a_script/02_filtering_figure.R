@@ -4,6 +4,10 @@
 
 pacman::p_load(here, readr, dplyr, tidyr, stringr, ggplot2, forcats, patchwork, scales)
 
+# geom_jitter draws from the RNG, so without a seed this figure was a different PNG every run
+# and could never be checked for drift. The seed fixes only where the jittered points land.
+set.seed(42)
+
 fx <- readRDS(here("01_Filtering", "c_data", "filtering_intermediates.rds"))
 report_dir <- here("01_Filtering", "b_reports")
 dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
