@@ -1,0 +1,5 @@
+imputed_within,BH_10_total,BH_10_null_contrasts,BH_10_baseline
+Group_Time (the tested factor),291,117,28
+random cells (seed 101),14,0,0
+random cells (seed 102),14,0,0
+random cells (seed 103),15,0,0
