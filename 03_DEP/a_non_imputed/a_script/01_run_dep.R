@@ -8,9 +8,17 @@
 # References:
 #   Ritchie et al. 2015, Nucleic Acids Res 43(7):e47 — limma
 #   Smyth, Michaud & Scott 2005, Bioinformatics 21(9):2067 — duplicateCorrelation
-#   Karpievitch et al. 2012, BMC Bioinform 13(S16):S5 — non-imputed limma
+#   Smyth 2004, Stat Appl Genet Mol Biol 3:1 — empirical Bayes moderation (the eBayes engine)
+#   Phipson et al. 2016, Ann Appl Stat 10(2):946 — robust empirical Bayes
 #   Xiao et al. 2014, Bioinformatics 30(6):801-807 — Pi-score
 #     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3
+#
+# On running limma without imputing: Karpievitch et al. 2012, BMC Bioinform 13(S16):S5 is the
+# source of the known COST of this choice, not a licence for it — it warns that complete-case
+# analysis yields downward-biased standard errors, i.e. it is anti-conservative. We accept that
+# and report it, because a method biased toward false positives returning zero BH hits in every
+# HR-vs-LR contrast makes the null stronger, not weaker. The imputed arms in 03_DEP/b_imputed
+# are the robustness check.
 
 pacman::p_load(dplyr, tibble, readr, purrr, proteoDA, here)
 source(here("03_DEP", "contrasts.R"))
