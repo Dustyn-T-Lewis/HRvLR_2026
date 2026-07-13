@@ -2,7 +2,7 @@
 # Unsupervised WGCNA on the FULL imputed proteome, then two module-level read-outs:
 #   - baseline (T1) prediction of each training-adaptation trait (LOO cross-validated)
 #   - responder (HR vs LR) signal per timepoint.
-# Provides: wgcna_mem, wgcna_eig, pred, resp, pheno_tbl, pi_set, RPT_DIR, DAT_DIR.
+# Provides: wgcna_mem, wgcna_eig, pred, resp, pheno_tbl, RPT_DIR, DAT_DIR.
 # Plus all style.R / pathway_utils.R exports.
 
 pacman::p_load(here, tidyverse, patchwork, grid)
@@ -17,8 +17,10 @@ dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 ci <- load_clustering_inputs()
-pi_set <- ci$pi_set
-pheno_tbl <- build_phenotype_table(here("00_input", "HRvLR_meta.csv"))
+pheno_tbl <- readr::read_csv(
+  here("00_input", "c_data", "phenotype.csv"),
+  show_col_types = FALSE
+)
 
 # Display labels for the phenotype traits (shared by panels C and S)
 trait_lab <- c(
@@ -52,7 +54,6 @@ suppressPackageStartupMessages({
 
 write.csv(wgcna_mem, file.path(DAT_DIR, "wgcna_membership.csv"), row.names = FALSE)
 write.csv(wgcna_eig, file.path(DAT_DIR, "wgcna_eigengene.csv"), row.names = FALSE)
-write.csv(pheno_tbl, file.path(DAT_DIR, "phenotype.csv"), row.names = FALSE)
 write.csv(pred, file.path(DAT_DIR, "module_prediction.csv"), row.names = FALSE)
 write.csv(resp, file.path(DAT_DIR, "module_responder.csv"), row.names = FALSE)
 write.csv(pheno_lmm, file.path(DAT_DIR, "module_phenotype_lmm.csv"), row.names = FALSE)

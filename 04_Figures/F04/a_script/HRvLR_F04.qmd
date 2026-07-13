@@ -99,7 +99,10 @@ source(here("04_Figures", "functions", "pathway_utils.R"))
 source(here("04_Figures", "F04", "a_script", "functions", "clustering.R"))
 
 ci <- load_clustering_inputs()
-pheno_tbl <- build_phenotype_table(here("00_input", "HRvLR_meta.csv"))
+pheno_tbl <- readr::read_csv(
+  here("00_input", "c_data", "phenotype.csv"),
+  show_col_types = FALSE
+)
 
 wg <- run_wgcna(ci$full_abund, ci$meta)
 wgcna_mem <- wg$membership

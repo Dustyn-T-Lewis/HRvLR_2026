@@ -49,7 +49,7 @@ mod_sizes <- mod_sizes |>
 
 trait_labels <- c(
   comp_hypertrophy = "Composite hypertrophy", d_fcsa_I = "Δ fCSA I",
-  d_fcsa_II = "Δ fCSA II", d_myovision_fcsa_I = "Δ MyoVision fCSA I",
+  d_fcsa_II = "Δ fCSA II",
   d_mcsa = "Δ mCSA", d_1rm_legpress = "Δ 1RM leg-press", d_1rm_ext = "Δ 1RM leg-ext"
 )
 pred_traits <- names(trait_labels)
