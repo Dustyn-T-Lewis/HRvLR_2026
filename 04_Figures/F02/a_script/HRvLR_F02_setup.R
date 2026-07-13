@@ -6,6 +6,7 @@
 pacman::p_load(here, tidyverse, patchwork, grid, vegan)
 
 source(here("04_Figures", "functions", "style.R"))
+source(here("03_DEP", "contrasts.R"))
 
 # Paths
 NORM_FILE <- here("02_Normalization", "c_data", "normalized.csv")
@@ -18,11 +19,15 @@ DAT_DIR <- here("04_Figures", "F02", "c_data")
 dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 
+# The between-responder-at-timepoint contrasts (Trained_HRvLR, Acute_HRvLR) are
+# intentionally dropped; F02 reads responder divergence from the interaction terms.
+# Names validated against the single source so the subset can't drift.
 MAIN_CONTRASTS <- c(
   "Baseline_HRvLR",
   "Training_HR", "Training_LR", "Training_Interaction",
   "Acute_HR", "Acute_LR", "Acute_Interaction"
 )
+stopifnot(all(MAIN_CONTRASTS %in% sub(" =.*$", "", HRVLR_CONTRASTS)))
 
 # Load data
 norm_df <- read_csv(NORM_FILE, show_col_types = FALSE)
