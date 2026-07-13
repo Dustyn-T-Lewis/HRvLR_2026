@@ -88,7 +88,7 @@ groups are not identical at baseline.
 
 **Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
 (F04, best BH q = 0.24), and no classifier or regressor beats its permutation null
-after correction (`04_Figures/05_test`).
+after correction (`04_Figures/extras`).
 
 **So: the proteome does not separate high from low responders at this sample size.**
 It is a null study with a strong phenotype and a pathway-level lead. Saying that
@@ -127,12 +127,12 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/extras/concordance_training/` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
 | `04_Figures/extras/concordance_acute/` | Acute concordance, same engine |
 | `04_Figures/F04/.../HRvLR_F04.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
-| `04_Figures/05_test/README.md` | Association and out-of-sample prediction |
+| `04_Figures/extras/README.md` | Association and out-of-sample prediction |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning, the
 contaminant survivors in `01_filtering.qmd`, the circular module test in F04, and the
-transductive eigengenes in F04 and `04_Figures/05_test`.
+transductive eigengenes in F04 and `04_Figures/extras`.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS

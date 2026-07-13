@@ -1,8 +1,8 @@
 pacman::p_load(here, testthat)
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "fit.R"))
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "coupling.R"))
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "prediction.R"))
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "honest_refit.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "fit.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "coupling.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "prediction.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "honest_refit.R"))
 
 test_that("jaccard and pc1 projection behave", {
   expect_equal(jaccard(c("a", "b", "c"), c("b", "c", "d")), 2 / 4)

@@ -38,7 +38,7 @@ ranking, not as discoveries.
 Known limitations are stated on the page where the reader meets them: the π gate in
 `HRvLR_pipeline.qmd`, the surviving keratin and HBG2 contaminants in
 `01_filtering.qmd`, the circular module test in F04, and the transductive eigengenes
-in F04 and `04_Figures/05_test`.
+in F04 and `04_Figures/extras`.
 
 ## Design and Canonical Contrasts
 
@@ -147,7 +147,8 @@ Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_da
 | `04_Figures/functions/` | Cross-figure helpers: `style.R`, `pathway_utils.R`, `concordance.R` |
 | `04_Figures/shared/` | `pca.R` (sourced by stages 01 and 02) and `references.bib` (the single bibliography for every notebook) |
 | `04_Figures/tests/` | The `testthat` suite. Run with `testthat::test_dir(here("04_Figures", "tests", "testthat"))` |
-| `04_Figures/05_test/` | Association, prediction, and the WGCNA module engine that F04 reads |
+| `04_Figures/modules/` | The WGCNA module engine F04 reads: fit, coupling, and the honest in-fold refit |
+| `04_Figures/extras/` | Association, prediction, the concordance figures, and the imputation supplement |
 | `04_Figures/extras/` | The concordance figures (F04/F05) and the imputation supplement |
 
 ## Reproducibility Rules

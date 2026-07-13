@@ -1,5 +1,5 @@
 pacman::p_load(here, testthat, dplyr)
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "coupling.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "coupling.R"))
 
 test_that("coupling recovers a planted correlation and BH-adjusts", {
   subj <- paste0("S", 1:12)

@@ -1,4 +1,4 @@
-source(here::here("04_Figures", "05_test", "phenotype_mapping", "a_script", "functions", "associate.R"))
+source(here::here("04_Figures", "extras", "association", "a_script", "functions", "associate.R"))
 
 make_meta <- function(subjects, timepoints = c("T1", "T2", "T3")) {
   meta <- expand.grid(
