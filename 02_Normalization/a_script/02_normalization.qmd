@@ -34,9 +34,10 @@ comparable. The stage is built on proteoDA [@thurman2023], which supplies the
 Cyclic loess normalization [@bolstad2003] removes the sample-to-sample intensity
 drift that comes from uneven loading, and a per-protein eta-squared scan records
 how much of each protein's variance the `Group_Time` cells explain. Stage 02
-also fills the missing values four different ways, but those imputed matrices
-are for downstream figures and clustering. The differential-expression test in
-stage 03 runs on the normalized matrix with its gaps intact.
+also fills the missing values four different ways. Those imputed matrices drive the
+downstream figures, the WGCNA modules, and the imputation-sensitivity comparison in
+`03_DEP/b_imputed/`. The *reported* differential-expression test in stage 03 runs on the
+normalized matrix with its gaps intact.
 
 This page runs that logic live and in memory, the same as
 `02_Normalization/a_script/01_run_normalization.R` and the four imputation arms
@@ -78,10 +79,15 @@ Samples load onto the instrument slightly differently, so a whole sample can sit
 higher or lower for reasons that have nothing to do with biology. That offset
 shows up in each sample's median log-intensity and would distort any cross-sample
 comparison. `normalize_data(norm_method = "cycloess")` is proteoDA's wrapper
-around limma's cyclic loess [@bolstad2003; @ritchie2015], which fits smooth curves
-between pairs of samples to pull them onto a common scale (limma defaults:
-`span = 0.7`, `adaptive.span = FALSE`). It log2-transforms internally, so the
-normalized matrix comes back on the log2 scale. Cyclic loess rests on two
+around limma's cyclic loess [@bolstad2003; @ritchie2015]. proteoDA passes
+`method = "fast"`, so each sample is regressed against the row-mean reference rather than
+against every other sample pairwise, and the cycle repeats three times. It log2-transforms
+internally, so the normalized matrix comes back on the log2 scale.
+
+The span is **0.5075, not 0.7**. proteoDA never passes `span`, and limma defaults
+`adaptive.span = TRUE`, which overrides the `span = 0.7` formal with
+`chooseLowessSpan(nrow(x))` — at 1,920 proteins that evaluates to 0.5075. The span is
+therefore a function of the protein count and moves if the filter moves. Cyclic loess rests on two
 assumptions: that most proteins do not change between samples, and that whatever
 bias exists varies smoothly with intensity rather than jumping around. Both are
 standard for label-free LC-MS and are the same assumptions that motivate
@@ -239,10 +245,22 @@ sit between them: both try to estimate which gaps are which, then route each kin
 method suited to it. Keeping all four side by side is how the pipeline avoids
 pretending it knows the mixture exactly.
 
-### Why none of this touches the DE test {#sec-no-impute-de}
+### Why none of this touches the *primary* DE test {#sec-no-impute-de}
 
-None of the four arms feeds the differential-expression test, and this is the most
-consequential decision in the stage.
+No imputed matrix feeds the **primary** differential-expression test, and this is the most
+consequential decision in the stage. The canonical stage-03 arm
+(`03_DEP/a_non_imputed/`) runs on the normalized matrix with its gaps intact.
+
+Be precise about the scope of that claim, because it is easy to overstate. The imputed
+matrices **do** feed a differential-expression test: the four-arm comparison in
+`03_DEP/b_imputed/` fits limma to every one of them. `DAList_imputed_missforest.rds` also
+feeds the WGCNA modules, F02, F04, the concordance figures and the module engine. What the
+imputed arms never do is produce the reported result.
+
+That comparison is not decoration. π-hit counts across the five arms run
+**267 / 159 / 307 / 511 / 827** — a 5.2-fold swing. Imputation choice is the single largest
+lever on the significant-protein count in this pipeline, which is precisely why the primary
+arm refuses to pull it.
 
 An imputed value is a prediction, not a measurement. It is a number the model made up,
 and — this is the part that bites — it arrives with none of the measurement error a
@@ -437,9 +455,12 @@ model on the non-imputed normalized matrix.
 the protein annotation, the sample metadata, and a `tags` slot that records what has
 been done to it, so an object states its own provenance.
 
-**cycloess (cyclic loess)** — the normalization used here [@bolstad2003]. It fits a
-smooth curve between each pair of samples and pulls them onto a common scale,
-correcting intensity-dependent bias rather than just shifting a median. It rescales
+**cycloess (cyclic loess)** — the normalization used here [@bolstad2003]. Under limma's
+`method = "fast"`, which is what proteoDA passes, it regresses each sample against the
+row-mean reference and pulls the samples onto a common scale, correcting
+intensity-dependent bias rather than just shifting a median. The span is not the `0.7`
+in limma's signature: `adaptive.span = TRUE` overrides it with `chooseLowessSpan(1920)`
+= 0.5075. It rescales
 observed values and fills nothing in.
 
 **MAR (missing at random)** — the gap is unrelated to the protein's true abundance:
@@ -454,7 +475,8 @@ other proteins discards that and fills too high. DIA gaps are a mixture, skewed 
 **imputation arm** — one of the four complete matrices produced by filling the gaps a
 particular way. They are kept side by side because they encode different, untestable
 assumptions about the MAR/MNAR mixture. missForest is canonical for the descriptive
-figures; none of them feeds the DE test.
+figures and the module work; none of them feeds the *primary* DE test, though all four
+feed the sensitivity comparison in `03_DEP/b_imputed/`.
 
 **eta-squared (η²)** — between-group sum of squares over total, per protein: the share
 of a protein's variance the six `Group_Time` cells explain. Upward-biased at small n,
