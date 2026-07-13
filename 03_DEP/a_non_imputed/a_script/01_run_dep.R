@@ -7,7 +7,7 @@
 #
 # References:
 #   Ritchie et al. 2015, Nucleic Acids Res 43(7):e47 — limma
-#   Smyth 2005, Stat Appl Genet Mol Biol 3(1):3 — duplicateCorrelation
+#   Smyth, Michaud & Scott 2005, Bioinformatics 21(9):2067 — duplicateCorrelation
 #   Karpievitch et al. 2012, BMC Bioinform 13(S16):S5 — non-imputed limma
 #   Xiao et al. 2014, Bioinformatics 30(6):801-807 — Pi-score
 #     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3

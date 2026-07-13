@@ -1,5 +1,5 @@
 ---
-title: "HRvLR F04 — Training Response Concordance"
+title: "HRvLR — Training Response Concordance"
 subtitle: "Shared vs responder-specific adaptation to training, HR vs LR"
 author: "A_HRvLR_2026"
 date: today
@@ -24,7 +24,7 @@ execute:
 Eight high responders (HR) and eight low responders (LR) trained over the same
 block. Both groups adapt from T1 to T2, so the question is not whether the
 proteome moves but where the two groups move the same way and where they part.
-F04 is the training arm of that comparison. It maps the HR training response
+This figure is the training arm of that comparison. It maps the HR training response
 against the LR training response and asks two things: which proteins and pathways
 shift in the same direction in both groups (shared adaptation), and which shift in
 a way that depends on responder status (responder-specific divergence).
@@ -35,12 +35,12 @@ flagged by the interaction test, not because its two point estimates happen to
 fall on opposite sides of a line. That anchors the divergence claim to a test
 rather than to visual separation on a scatter.
 
-F04 is the training figure (T1 → T2). Its acute sibling, F05, runs the same code
+This figure is the training figure (T1 → T2). Its acute sibling, runs the same code
 on the acute contrast pair. Both call one parameterised driver,
 `render_concordance_figure()`, and differ only in configuration. There is one
 pipeline, not two.
 
-## What F04 found
+## What this figure found
 
 Read this section before the panels, because the panels are easy to over-read.
 
@@ -69,7 +69,7 @@ worth stating plainly rather than letting five busy panels imply otherwise.
 
 ## Composite
 
-![F04 composite. A quadrant concordance map with per-quadrant ORA, B protein-to-pathway assignment of the selected proteins, C the fry rotation test, D pathway NES concordance, E threshold-free RRHO2.](../b_reports/F04_composite.png)
+![Composite. A quadrant concordance map with per-quadrant ORA, B protein-to-pathway assignment of the selected proteins, C the fry rotation test, D pathway NES concordance, E threshold-free RRHO2.](../b_reports/concordance_training_composite.png)
 
 ## Inputs and outputs
 
@@ -81,16 +81,16 @@ Reads:
   missForest-imputed matrix. fry needs a complete matrix, so it uses the imputed
   DAList rather than the non-imputed DEP table.
 - `04_Figures/F03/c_data/F03_source_data.xlsx` (sheet `fgsea_all`) — the fgsea
-  cache. NES is computed once in F03 and reused here, so the F04 NES scatter and
+  cache. NES is computed once in F03 and reused here, so this NES scatter and
   the F03 enrichment figure cannot drift apart and no permutation test reruns.
 
-Writes, under `04_Figures/F04/`: `b_reports/panels/` and `b_reports/supp/` (PNG +
+Writes, under `04_Figures/extras/concordance_training/`: `b_reports/panels/` and `b_reports/supp/` (PNG +
 PDF), one `c_data/*.csv` per panel, and the bundled
-`c_data/F04_source_data.xlsx`.
+`c_data/concordance_training_source_data.xlsx`.
 
 ```r
 render_concordance_figure(list(
-  fig_id = "F04",
+  fig_id = "concordance_training",
   c_hi = "Training_HR", c_lo = "Training_LR", c_int = "Training_Interaction",
   lo_levels = c("LR_T1", "LR_T2"),
   labels = list(
@@ -271,7 +271,7 @@ signed hotspots without any protein being called significant.
 concordant-down, 190 concordant-up); the discordant corners hold 1. The two
 concordant corners light up and the two discordant corners are dark.
 
-**How to read it.** This is the most *encouraging* panel in F04, and it needs the
+**How to read it.** This is the most *encouraging* panel here, and it needs the
 most care. RRHO2 tests rank overlap without an error rate at the figure level, and
 a hot concordant corner is exactly what you expect whenever two contrasts share
 *any* common component — including a shared training effect present in everybody,
@@ -364,7 +364,7 @@ bias as biology.
   here — is **null in both directions** (p = 0.56 up, p = 0.25 down).
 - The 55 "divergent" proteins come from the π gate, which controls no error rate.
   They are a ranked lead list, not discoveries.
-- F04 does not establish a responder-specific training program. Stating that is the
+- This figure does not establish a responder-specific training program. Stating that is the
   result.
 
 ```{r sessioninfo, eval=TRUE}

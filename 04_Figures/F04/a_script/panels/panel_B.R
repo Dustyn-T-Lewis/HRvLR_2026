@@ -1,8 +1,8 @@
-# F06 Panel B: pathway over-representation by WGCNA module.
+# F04 Panel B: pathway over-representation by WGCNA module.
 # Universe = full measured proteome (every protein in the network); bars filled by
 # module colour, names inside, free x per facet, source database on the border.
 pacman::p_load(here, dplyr, ggplot2, stringr, shadowtext, clusterProfiler, org.Hs.eg.db)
-if (!exists("wgcna_mem")) source(here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
+if (!exists("wgcna_mem")) source(here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
 
 wgcna_non_grey <- wgcna_mem |> filter(group_id != "grey")
 all_uniprot <- unique(wgcna_mem$protein_id)
@@ -91,4 +91,4 @@ p_b <- ggplot(top_df, aes(log10_padj, yk)) +
 
 dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
 save_panel(p_b, file.path(RPT_DIR, "supp", "module_ora_bars"), 250, 230)
-cat("F06 module ORA (supplement) done.\n")
+cat("F04 module ORA (supplement) done.\n")

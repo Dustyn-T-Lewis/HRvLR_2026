@@ -1,7 +1,7 @@
-# F06 supplement: WGCNA soft-threshold power sweep. Scale-free topology R^2 and
+# F04 supplement: WGCNA soft-threshold power sweep. Scale-free topology R^2 and
 # mean connectivity across candidate powers; the chosen beta is highlighted.
 pacman::p_load(here, dplyr, tibble, ggplot2, ggrepel, patchwork)
-if (!exists("wgcna_sft")) source(here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
+if (!exists("wgcna_sft")) source(here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
 
 fit <- wgcna_sft$fitIndices
 fit_df <- tibble(
@@ -65,4 +65,4 @@ supp_sft <- (p1 | p2) +
 
 dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
 save_panel(supp_sft, file.path(RPT_DIR, "supp", "supp_soft_threshold"), 240, 110)
-message("F06 supplement (soft-threshold) done.")
+message("F04 supplement (soft-threshold) done.")

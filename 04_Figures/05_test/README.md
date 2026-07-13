@@ -5,7 +5,7 @@ HR/LR split. Each unit is a self-contained `a_script/ b_reports/ c_data/` folder
 
 | Directory | Question | Engine |
 | --- | --- | --- |
-| `modules/` | Which co-expression modules exist, what do they couple to, and does a module still track the phenotype once the modules are refit inside the fold? | WGCNA fit, module–trait coupling, and an honest leave-one-subject-out refit. Feeds `04_Figures/F06`. |
+| `modules/` | Which co-expression modules exist, what do they couple to, and does a module still track the phenotype once the modules are refit inside the fold? | WGCNA fit, module–trait coupling, and an honest leave-one-subject-out refit. Feeds `04_Figures/F04`. |
 | `phenotype_mapping/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores, `feature ~ phenotype * timepoint + (1 \| subject)`. Association only; prediction is out of scope. |
 | `prediction_responder_class/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested leave-one-subject-out CV with a permutation null. |
 | `prediction_continuous_phenotype/` | Can those features predict the continuous phenotype out of sample? | Same engines, Gaussian; nested LOSO CV + permutation null. |
@@ -28,5 +28,5 @@ the refit that answers this properly.
 
 ## Where this sits
 
-`05_test` lives under `04_Figures/` because `F06` reads the module fit directly. Paths in
+`05_test` lives under `04_Figures/` because `F04` reads the module fit directly. Paths in
 these scripts resolve through `here("04_Figures", "05_test", ...)`.

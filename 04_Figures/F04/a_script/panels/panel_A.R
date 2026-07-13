@@ -1,9 +1,9 @@
-# F06 Panel A: WGCNA module atlas as one integrated heatmap. Rows = modules
+# F04 Panel A: WGCNA module atlas as one integrated heatmap. Rows = modules
 # (largest at top); far left = protein-count bars, then each module's colour block
 # with its top ORA term (from panel_B), then two bracketed trait sections:
 #   baseline (T1) eigengene -> adaptation (LOO-CV) and responder (HR - LR) per timepoint.
 pacman::p_load(here, dplyr, tidyr, ggplot2, ggnewscale, patchwork, stringr, scales, grid)
-if (!exists("wgcna_mem")) source(here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
+if (!exists("wgcna_mem")) source(here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
 
 # panel_B attaches AnnotationDbi/clusterProfiler, which mask dplyr verbs (select);
 # re-attach dplyr/tidyr last so the unqualified verbs below resolve correctly.
@@ -216,11 +216,11 @@ design <- c(
   area(2, 5, 11, 12),
   area(1, 5, 1, 12)
 )
-# Title, subtitle, and tag are supplied by the composite (HRvLR_F06_composite.R),
+# Title, subtitle, and tag are supplied by the composite (HRvLR_F04_composite.R),
 # so the panel renders header-free to sit cleanly under the composite's draw_labels.
 panel_a <- p_count + p_block + p_heat + p_brackets +
   plot_layout(design = design, guides = "collect") &
   theme(legend.position = "bottom")
 
 save_panel(panel_a, file.path(RPT_DIR, "panels", "panel_a_wgcna_map"), 400, 280)
-cat("F06 Panel A done.\n")
+cat("F04 Panel A done.\n")

@@ -1,5 +1,5 @@
 ---
-title: "HRvLR F06 — Co-expression Module Atlas"
+title: "HRvLR F04 — Co-expression Module Atlas"
 subtitle: "WGCNA modules, their biology, and module–phenotype association"
 author: "A_HRvLR_2026"
 date: today
@@ -21,7 +21,7 @@ execute:
 
 ## What this figure asks
 
-The earlier figures test proteins one at a time against a contrast we chose. F06
+The earlier figures test proteins one at a time against a contrast we chose. F04
 steps back and asks the data to group itself. WGCNA builds co-expression modules
 from the full proteome without being told anything about HR, LR, or timepoint.
 Proteins that move together across the 45 samples land in the same module, and
@@ -39,7 +39,7 @@ to fit the outcome. That ordering is the one real protection this figure has, an
 it is worth keeping in mind while reading Panel B, where a different kind of
 circularity does creep in (see @sec-circular).
 
-## What F06 found
+## What F04 found
 
 **The module atlas is essentially null, and that is the finding.** Of 84
 module × trait cells in the baseline→adaptation grid, three reach p < 0.05 with a
@@ -80,7 +80,7 @@ Reads:
 Writes to `c_data/`: `wgcna_membership.csv`, `wgcna_eigengene.csv`,
 `module_ora.csv`, `module_phenotype.csv`, `module_prediction.csv`,
 `module_responder.csv`, `module_phenotype_lmm.csv`, `panel_b_module_fgsea.csv`,
-`phenotype.csv`, and the bundled `F06_source_data.xlsx`. Panels land in
+`phenotype.csv`, and the bundled `F04_source_data.xlsx`. Panels land in
 `b_reports/panels/`, supplements in `b_reports/supp/`.
 
 The `module_prediction` filename is kept for continuity with the retired
@@ -96,7 +96,7 @@ pacman::p_load(here, tidyverse, patchwork, grid)
 
 source(here("04_Figures", "functions", "style.R"))
 source(here("04_Figures", "functions", "pathway_utils.R"))
-source(here("04_Figures", "F06", "a_script", "functions", "clustering.R"))
+source(here("04_Figures", "F04", "a_script", "functions", "clustering.R"))
 
 ci <- load_clustering_inputs()
 pheno_tbl <- build_phenotype_table(here("00_input", "HRvLR_meta.csv"))
@@ -192,7 +192,7 @@ for (mod_col in names(mes_real)) {
 
 ## Composite
 
-![F06 composite. A the WGCNA module–trait association atlas; B module-level NES scatters.](../b_reports/F06_composite.png)
+![F04 composite. A the WGCNA module–trait association atlas; B module-level NES scatters.](../b_reports/F04_composite.png)
 
 ## Panel A — module–trait atlas
 
@@ -265,7 +265,7 @@ whether the acute response reinforces or reverses the chronic one within HR.
 concordant-down, 2 discordant — HR and LR move most modules the same way, echoing
 F04. Acute-vs-training in HR: 9 of 12 modules are **reversed** (the acute bout pushes
 the module opposite to the way training moved it) and 3 reinforced. That reversal is
-the single most interesting pattern in F06 and it is biologically sensible: an acute
+the single most interesting pattern in F04 and it is biologically sensible: an acute
 bout transiently suppresses the oxidative and contractile programs that training
 chronically raises.
 

@@ -46,11 +46,11 @@ for the missingness filter.
 
 The stage reads three files from `00_input/`: the protein matrix
 `HRvLR_raw.xlsx`, the sample sheet `HRvLR_meta.csv`, and the contaminant evidence
-`HPA_annotations.tsv`. The runnable script writes `DAList_filtered.rds` (the
+`HPA_annotations_full.tsv`. The runnable script writes `DAList_filtered.rds` (the
 input to stage 02), `filtering_intermediates.rds` (reused by the stage-02 report
-and the figure layer), `filtering_report.xlsx`, `hpa_absent_dropped.csv` (the
-accessions with no HPA match), and a contaminant plot to `b_reports/`. This
-document recomputes the object but saves none of it.
+and the figure layer), `filtering_report.xlsx`, `protein_calls.csv` (one verdict per
+protein), `contamination_index.csv` (per-sample contaminant load), and the QC figure
+`filtering_qc.png`. This document recomputes the object but saves none of it.
 
 ## Load the matrix and sample sheet {#sec-load}
 
@@ -98,99 +98,70 @@ if (any(duplicated(annotation$uniprot_id))) {
 nrow(annotation)
 ```
 
-## Remove blood contaminants {#sec-contaminants}
+## Remove contaminants and blood proteins {#sec-contaminants}
 
-A muscle biopsy carries blood, and plasma proteins (albumin, hemoglobins,
-immunoglobulins) are abundant enough to bury the muscle signal. A protein is
-flagged for removal when it looks blood-derived (HPA "Secreted to blood", an
-immunoglobulin, or a strong erythrocyte marker) and does not clear the muscle
-rescue: a high skeletal-myonuclei signal keeps it, unless its measured blood
-concentration marks it as a genuine plasma protein. The rule is built from the
-Human Protein Atlas table.
+Two different things get removed here, and conflating them was the bug this stage
+used to have.
+
+**Handling contaminants** are proteins that were never in the muscle: skin keratins
+shed from gloves and dust, and the haemoglobin chains. No annotation rule can catch
+them, because nothing about a keratin marks it as blood. They are curated by hand in
+`filter_config.R`, matched **by accession only** — cRAP collides with real muscle
+proteins on gene symbol (`ALDOA` with rabbit `ALDOA_RABIT`; `GLUD1` with bovine
+P00366, one digit from human P00367) and on description (a `/trypsin|casein|albumin/`
+regex eats parvalbumin and the casein kinases). Only the cRAP dust/contact section is
+used: its UPS1 section is a spike-in standard we never spiked, and it contains
+myoglobin and creatine kinase M — ranks 1 and 2 of this proteome.
+
+**Blood proteins** are a different problem. A muscle biopsy genuinely carries blood,
+and plasma proteins are abundant enough to bury the muscle signal. A protein is
+removed when HPA marks it blood-derived (secreted-to-blood, immunoglobulin, or a
+strong erythrocyte marker) **and** it fails the muscle rescue: high skeletal-myonuclei
+expression keeps it, unless its measured plasma concentration marks it as a genuine
+plasma protein. The rescue matters because HPA tags *any* plasma-detectable protein as
+"Secreted to blood" — which is precisely why creatine kinase and myoglobin are clinical
+muscle-damage markers. Without it, GPI (a core glycolytic enzyme) is deleted.
+
+Absence from HPA means **unknown**, never *remove*. The earlier version of this stage
+dropped 127 measured proteins for failing to match a partial, muscle-biased export —
+including CKMT1A and ATP1A3, whose myonuclei transcript count is zero even though the
+instrument measured the protein. `00_input/HPA_annotations_full.tsv` is the complete
+20,162-gene table (provenance in `filter_config.R`), so nothing now falls through
+that gap.
+
+The verdict for every protein is decided once, in `01_run_filtering.R`, and written to
+`protein_calls.csv`. This document reads that table rather than re-deriving it, so the
+two cannot drift apart.
 
 ```{r}
-#| label: classifier
+#| label: calls
 source(here("01_Filtering", "a_script", "filter_config.R"))
-ery_cut <- filter_cfg$ery_cut
-myo_cut <- filter_cfg$myo_cut
-blood_max <- filter_cfg$blood_max
 
-bl <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE) |>
-  transmute(
-    gene          = Gene,
-    uniprot       = Uniprot,
-    protein_class = `Protein class`,
-    secretome     = `Secretome location`,
-    blood_conc    = suppressWarnings(as.numeric(`Blood concentration - Conc. blood MS [pg/L]`)),
-    ery           = suppressWarnings(as.numeric(`Single Cell Type RNA - Erythrocytes [nCPM]`)),
-    myo           = suppressWarnings(as.numeric(`Single Cell Type RNA - Myonuclei [nCPM]`))
-  ) |>
-  mutate(
-    secreted_blood = secretome == "Secreted to blood" & !is.na(secretome),
-    is_ig = str_detect(coalesce(protein_class, ""), "Immunoglobulin genes"),
-    is_erythrocyte = !is.na(ery) & ery >= ery_cut,
-    muscle_keep = !is.na(myo) & myo >= myo_cut & (is.na(blood_conc) | blood_conc < blood_max),
-    reason = case_when(
-      muscle_keep & (secreted_blood | is_ig | is_erythrocyte) ~ "keep: muscle-expressed (rescued)",
-      is_erythrocyte ~ "remove: erythrocyte (hemoglobin)",
-      is_ig ~ "remove: immunoglobulin",
-      secreted_blood ~ "remove: secreted-to-blood (plasma)",
-      TRUE ~ "keep: not blood-associated"
-    ),
-    verdict = if_else(str_starts(reason, "remove"), "remove", "keep")
-  )
-
-table(bl$verdict)
+calls <- read_csv(here("01_Filtering", "c_data", "protein_calls.csv"), show_col_types = FALSE)
+count(calls, verdict)
 ```
 
-The HPA table keys on UniProt accession, so the match is on accession, not gene
-symbol. Each accession is stripped of its isoform suffix and HPA's comma-separated
-multi-accession cells are split so every accession matches on its own. Removal is
-plain subsetting applied to `annotation` and `intensity` together, so the two stay
-aligned. The cascade keeps only proteins with an HPA accession match, logging the
-dropped ones to `hpa_absent_dropped.csv`, then drops the blood-flagged ones.
+Removal is a join on accession, applied to `annotation` and `intensity` together so
+the two stay aligned.
 
 ```{r}
 #| label: apply-contaminants
-strip_iso <- function(x) sub("-\\d+$", "", x)
-hpa_acc <- bl |>
-  filter(!is.na(uniprot), uniprot != "") |>
-  separate_longer_delim(uniprot, delim = ", ") |>
-  mutate(acc = strip_iso(uniprot))
-hpa_present <- unique(hpa_acc$acc)
-remove_acc <- unique(hpa_acc$acc[hpa_acc$verdict == "remove"])
-
-flog <- tibble(step = "Raw input", n_after = nrow(annotation), n_removed = NA_integer_)
-acc <- strip_iso(annotation$uniprot_id)
-keep <- acc %in% hpa_present
-dropped_ids <- annotation$uniprot_id[!keep]
-flog <- bind_rows(flog, tibble(step = "HPA presence", n_after = sum(keep), n_removed = sum(!keep)))
+keep <- annotation$uniprot_id %in% calls$uniprot_id[!str_starts(calls$verdict, "remove")]
 annotation <- annotation[keep, ]
 intensity <- intensity[keep, ]
-acc <- strip_iso(annotation$uniprot_id)
-keep <- !(acc %in% remove_acc)
-flog <- bind_rows(flog, tibble(step = "Blood contaminant removal", n_after = sum(keep), n_removed = sum(!keep)))
-annotation <- annotation[keep, ]
-intensity <- intensity[keep, ]
-
-flog
+nrow(annotation)
 ```
 
-The removed and rescued proteins, each with the HPA evidence behind the call:
+The rescued proteins are the ones the rule would have thrown away: real muscle proteins
+that HPA also sees in plasma.
 
 ```{r}
 #| label: removed-rescued
-bl |>
-  filter(verdict == "remove") |>
-  arrange(reason, desc(blood_conc)) |>
-  select(gene, reason, blood_conc, ery, myo) |>
-  head(8)
-
-bl |>
-  filter(str_detect(reason, "rescued")) |>
+calls |>
+  filter(str_detect(verdict, "rescued")) |>
+  select(gene, myo, blood_conc, secretome) |>
   arrange(desc(myo)) |>
-  select(gene, reason, blood_conc, myo) |>
-  head(6)
+  head(8)
 ```
 
 ## Build the DAList {#sec-build}
@@ -243,41 +214,6 @@ nearest-neighbour average — quietly invents a mid-range value for something wh
 missingness meant "low", and it is choosing an answer, not recovering one. Stage
 01 does not impute; it filters. It only makes sure the gaps are labelled honestly
 so the later stages can decide what to do about them with their eyes open.
-
-## Drop barely-detected proteins {#sec-missingness}
-
-`filter_proteins_by_group()` is proteoDA's native missingness filter. With
-`min_reps = 5, min_groups = 1` it keeps a protein detected in at least 5 of the 8
-samples in at least one `Group_Time` cell.
-
-`min_groups = 1` is the deliberate part, and it is the setting most likely to look
-like a mistake. The stricter alternative — require the protein to clear `min_reps`
-in *every* cell — sounds like better quality control, and it is precisely what we
-must not do. A protein that is switched on in one responder group and off in the
-other is exactly the biology this study is hunting. Under an all-cells rule it
-would be deleted for being absent from the cells where its absence is the finding.
-Demanding presence everywhere pre-selects for proteins that do not differ between
-groups, which is a filter aimed directly at the hypothesis. Requiring the protein
-to hold up in one cell keeps that signal while still removing proteins that are
-nowhere consistently detected and cannot support a model anywhere.
-
-```{r}
-#| label: missingness
-n0 <- nrow(dal$data)
-dal <- filter_proteins_by_group(dal,
-  min_reps = filter_cfg$miss_min_reps,
-  min_groups = filter_cfg$miss_min_groups, grouping_column = "Group_Time"
-)
-flog <- bind_rows(flog, tibble(
-  step = sprintf(
-    "Missingness (>=%d in >=%d cell)",
-    filter_cfg$miss_min_reps, filter_cfg$miss_min_groups
-  ),
-  n_after = nrow(dal$data), n_removed = n0 - nrow(dal$data)
-))
-flog <- flog |> mutate(pct_of_raw = round(n_after / n_raw * 100, 1))
-flog
-```
 
 ## Remove outlier samples {#sec-outliers}
 
@@ -378,6 +314,44 @@ if (length(outlier_ids)) dal <- filter_samples(dal, !(Col_ID %in% outlier_ids))
 dim(dal$data)
 ```
 
+## Drop barely-detected proteins {#sec-missingness}
+
+The missingness filter runs **after** outlier removal, and the order is load-bearing.
+Run it first and it counts detections contributed by samples that are about to be
+discarded, so a protein can be retained on the strength of evidence that is no longer
+in the matrix. Two proteins, CRYM and TSNAX, were surviving on exactly that.
+
+`filter_proteins_by_group()` is proteoDA's native missingness filter. With
+`min_reps = 5, min_groups = 1` it keeps a protein detected in at least 5 samples of at
+least one `Group_Time` cell.
+
+`min_groups = 1` is the deliberate part, and it is the setting most likely to look
+like a mistake. The stricter alternative — require the protein to clear `min_reps`
+in *every* cell — sounds like better quality control, and it is precisely what we
+must not do. A protein that is switched on in one responder group and off in the
+other is exactly the biology this study is hunting. Under an all-cells rule it
+would be deleted for being absent from the cells where its absence is the finding.
+Demanding presence everywhere pre-selects for proteins that do not differ between
+groups, which is a filter aimed directly at the hypothesis. Requiring the protein
+to hold up in one cell keeps that signal while still removing proteins that are
+nowhere consistently detected and cannot support a model anywhere.
+
+```{r}
+#| label: missingness
+dal <- filter_proteins_by_group(dal,
+  min_reps = filter_cfg$miss_min_reps,
+  min_groups = filter_cfg$miss_min_groups, grouping_column = "Group_Time"
+)
+dim(dal$data)
+```
+
+The full cascade, as the run script recorded it:
+
+```{r}
+#| label: cascade
+readRDS(here("01_Filtering", "c_data", "filtering_intermediates.rds"))$filter_log
+```
+
 ## Where the numbers came from {#sec-thresholds}
 
 Six constants decide what this stage keeps, and a reader is entitled to ask where
@@ -430,35 +404,31 @@ pragmatic without being dangerous.
 Three things this stage does not do. None of them is fixed here; they are disclosed
 so that a reader knows what is in the matrix.
 
-**There is no contaminant-FASTA or decoy removal.** Stage 01 has no cRAP list, no
-common-contaminant database, and no reverse-hit or decoy filter anywhere in it.
-The only contaminant logic is the blood rule, and the blood rule asks exactly three
-questions: is it secreted to blood, is it an immunoglobulin, is it high in
-erythrocytes. Keratins are none of those, so they sail through. KRT1, KRT2, KRT10
-and KRT8 are all present in the final 1,896-protein matrix, and KRT1, KRT2 and
-KRT10 are the three canonical skin and handling contaminants that sit at the top of
-every cRAP list ever written. Their abundance in a biopsy is a fact about who
-handled the tube, not about muscle. They are being modelled as biology.
+**Reagent contaminants cannot be detected at all.** The delivered matrix contains only
+valid human UniProt accessions, and zero `CON__`, `REV__` or decoy entries. Porcine
+trypsin, BSA, Lys-C and the caseins are all absent — but a human-only search space
+*cannot report* them, so their absence is not evidence they were not there. Worse, an
+unsearched contaminant peptide does not vanish; the engine assigns it to the
+best-scoring human homolog, turning contamination into a false human identification.
+No post-hoc row filter can undo that. Fixing it would require re-searching with a
+contaminant FASTA appended. This is a stated limitation, not a solved problem.
 
-**HBG2 survives, and it should not.** Fetal haemoglobin gamma-2 has an HPA blood
-concentration of 7 g/L, which makes it a plasma protein by any reasonable reading.
-It survives because of how the erythrocyte test is built: the test keys on
-*adult*-erythrocyte single-cell RNA, and adult red cells do not transcribe the
-fetal chain, so HBG2's erythrocyte nCPM is 0 and the test never fires. HBB and
-HBA1, whose adult transcription is enormous, were caught correctly. The gap is
-that the rule reasons about transcription in a cell type rather than about the
-protein's own abundance in plasma, and HBG2 is exactly the protein that falls
-through it.
+**HBG2 was a protein-inference artifact, not fetal haemoglobin.** It is now on the
+curated drop list, and the reasoning is worth keeping: HbF is α₂γ₂, and after HBA1 and
+HBB were removed, HBG2 was the *only* globin left standing. A gamma chain with no alpha
+chain is not a haemoglobin. HBG2 shares tryptic peptides with HBB and HBD, and HBG1 and
+HBG2 differ at a single residue, so shared signal was being razor-assigned onto the last
+entry standing. The same failure mode probably explains **MYH6** (cardiac α-myosin, in a
+vastus lateralis biopsy) and the **ACACA/ACACB** inversion; both need a peptide-level
+check before either is read as biology.
 
-**The HPA-presence filter is load-bearing and un-provenanced.** The line
-`keep <- acc %in% hpa_present` drops every protein with no matching accession in
-`HPA_annotations.tsv`. That is 127 proteins removed, not for anything they did, but
-for being absent from a reference file. And that file is a partial export with no
-recorded version, no query string, and no retrieval date — there is no
-`PROVENANCE.md` beside it. A filter that removes 127 real measurements on the
-authority of an undocumented file is a reproducibility hole: a future export of the
-HPA table would silently produce a different matrix, and nobody could say why. It
-should be provenance-stamped.
+**The `myo_cut` threshold was chosen by inspection.** Lowering it from 50 to 20 recovers
+GPI, ANXA2 and PPIA, and readmits no contaminant. That choice was made after looking at
+where proteins fell — so it is a form of selection, and it should be declared. It is
+selection on *HPA annotation only*: no contrast, no phenotype and no group label was
+consulted, so it cannot leak into the HR/LR result. The justification is a genuine gap
+in the data rather than a tuned outcome — real muscle proteins sit at myonuclei 21–43,
+and every genuine plasma protein sits below 1.
 
 ## Result and verification {#sec-recap}
 

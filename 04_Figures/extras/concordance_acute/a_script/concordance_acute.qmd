@@ -1,5 +1,5 @@
 ---
-title: "HRvLR F05 — Acute Response Concordance"
+title: "HRvLR — Acute Response Concordance"
 subtitle: "Shared vs responder-specific acute-bout response, HR vs LR"
 author: "A_HRvLR_2026"
 date: today
@@ -21,8 +21,8 @@ execute:
 
 ## The question
 
-F05 is the acute arm of the concordance comparison. Where F04 asked how HR and LR
-proteomes move over a training block (T1 → T2), F05 asks how they move in the hour
+This figure is the acute arm of the concordance comparison. Where the training figure asked how HR and LR
+proteomes move over a training block (T1 → T2), This figure asks how they move in the hour
 after a single bout (T2 → T3). Same question, different timescale: which proteins
 and pathways respond the same way in both groups, and which respond in a way that
 depends on responder status.
@@ -30,25 +30,25 @@ depends on responder status.
 The acute contrast is the one where a difference is most plausible *a priori*. A
 training-block change is slow and cumulative; the acute response is the muscle's
 immediate signalling reaction to a stimulus, and that is where a "high responder"
-might reasonably differ. F05 tests that.
+might reasonably differ. This figure tests that.
 
-Divergence is read off the modelled interaction contrast, not off the eye. F05 and
-F04 call the same driver, `render_concordance_figure()`, and differ only in
+Divergence is read off the modelled interaction contrast, not off the eye. This figure and
+the training figure call the same driver, `render_concordance_figure()`, and differ only in
 configuration (the contrast triple, the factor levels, the labels). There is one
 pipeline, not two — so a method change lands in both figures at once and they
 cannot silently drift apart.
 
-## What F05 found
+## What this figure found
 
 **The acute responses of HR and LR are, if anything, *less* concordant than their
 training responses.** The protein-level Spearman correlation between the HR and LR
-acute logFC vectors is **ρ = 0.15** (bootstrap 95% CI 0.11–0.20), below F04's 0.20.
+acute logFC vectors is **ρ = 0.15** (bootstrap 95% CI 0.11–0.20), below the training figure's 0.20.
 1,035 of 1,873 proteins (**55%**) sit in a concordant quadrant — five points above a
 coin flip.
 
 **Again, no set-level test survives correction.** fry along the LR acute ranking:
 HR-up (n = 54) p = 0.27 (FDR 0.27); HR-down (n = 30) p = 0.087 (FDR 0.17). The
-HR-down direction is the closest thing to a signal anywhere in F04 or F05, and it is
+HR-down direction is the closest thing to a signal anywhere in the training figure or This figure, and it is
 still not significant. (The mixed-direction p for the up set is 0.026, but its FDR is
 0.052 — it does not clear either.)
 
@@ -57,17 +57,17 @@ divergent, all by the π gate, which controls no error rate (see @sec-pi).
 
 **The pathway-level picture is the most interesting in the pipeline.** At the pathway
 grain the correlation rises to **ρ = 0.31 with 63% concordant** — the highest agreement
-anywhere in F04/F05 — and 10 of 57 pathways are flagged divergent, against 2 in F04.
+anywhere in the training figure/This figure — and 10 of 57 pathways are flagged divergent, against 2 in the training figure.
 The acute response is where HR and LR most resemble each other *in aggregate* and
 where the most individual pathways are flagged as differing. That tension is real and
 worth stating rather than resolving by picking whichever number reads better.
 
-The honest headline is unchanged from F04: **at n = 8 per group this figure does not
+The honest headline is unchanged from the training figure: **at n = 8 per group this figure does not
 establish a responder-specific acute program.** It generates leads.
 
 ## Composite
 
-![F05 composite. A quadrant concordance map with per-quadrant ORA, B protein-to-pathway assignment, C the fry rotation test, D pathway NES concordance, E threshold-free RRHO2.](../b_reports/F05_composite.png)
+![Composite. A quadrant concordance map with per-quadrant ORA, B protein-to-pathway assignment, C the fry rotation test, D pathway NES concordance, E threshold-free RRHO2.](../b_reports/concordance_acute_composite.png)
 
 ## Inputs and outputs
 
@@ -81,12 +81,12 @@ Reads:
 - `04_Figures/F03/c_data/F03_source_data.xlsx` (sheet `fgsea_all`) — the fgsea cache,
   computed once in F03 and reused so no permutation test reruns.
 
-Writes, under `04_Figures/F05/`: panel and supplementary PNG + PDF, one `c_data/*.csv`
-per panel, and the bundled `c_data/F05_source_data.xlsx`.
+Writes, under `04_Figures/extras/concordance_acute/`: panel and supplementary PNG + PDF, one `c_data/*.csv`
+per panel, and the bundled `c_data/concordance_acute_source_data.xlsx`.
 
 ```r
 render_concordance_figure(list(
-  fig_id = "F05",
+  fig_id = "concordance_acute",
   c_hi = "Acute_HR", c_lo = "Acute_LR", c_int = "Acute_Interaction",
   lo_levels = c("LR_T2", "LR_T3"),
   labels = list(
@@ -107,7 +107,7 @@ is the correlation across *proteins*. Panel D's ρ = 0.31 is the correlation acr
 protein-level noise and correlate more tightly. Neither is more correct; they answer
 the question at different grain.
 
-The gap is wider here than in F04 (0.15 → 0.31, versus 0.20 → 0.28), which is what you
+The gap is wider here than in the training figure (0.15 → 0.31, versus 0.20 → 0.28), which is what you
 would expect if the acute signal is coherent at the level of pathways but noisy at the
 level of individual proteins. Quoting only the 0.31 would be cherry-picking the
 flattering resolution.
@@ -125,7 +125,7 @@ class: divergent (interaction-flagged), significant in both, HR-only, LR-only, N
 Up 398 — 1,035 concordant of 1,873 (55%), ρ = 0.15. Of the 181 selected proteins: 86
 divergent, 46 HR-only, 39 LR-only, 10 significant in both arms.
 
-**How to read it.** The cloud is rounder than F04's. Note the asymmetry: the two
+**How to read it.** The cloud is rounder than the training figure's. Note the asymmetry: the two
 *discordant* quadrants together (838) nearly match the two concordant ones (1,035).
 That is close to what you would see if the two groups' acute responses were largely
 independent of each other.
@@ -154,7 +154,7 @@ from quadrant counts to biology.
 **How to read it.** Transport (22), Translation & Ribosome (17), Protein Homeostasis
 (17) and Transcription & Chromatin (16) lead — a coherent acute-signalling picture, since
 a bout perturbs transport, transcription and the translational apparatus. Compare with
-F04, where the selected proteins scattered thinly across categories. The acute response
+the training figure, where the selected proteins scattered thinly across categories. The acute response
 is the more biologically organised of the two, which is exactly why the pathway-level ρ
 is higher.
 
@@ -216,7 +216,7 @@ size-normalised, a NES of +2 means the same thing for a 20-protein set as for a
 
 **Result.** ρ = 0.31 across 57 pathways, **63% concordant** (Concordant Up 27, Concordant
 Down 9, discordant 21). **10 of 57** pathways are flagged divergent by the cached
-interaction GSEA — five times F04's count.
+interaction GSEA — five times the training figure's count.
 
 **How to read it.** This is the strongest concordance number in the pipeline, and it still
 explains under 10% of the cross-pathway variance. The interesting structure is in the
@@ -237,11 +237,11 @@ and LR lists overlap, so agreement shows as signed hotspots without any protein 
 called significant. It checks that the quadrant story does not hinge on a cutoff.
 
 **Result.** Of 1,873 shared genes the concordant hotspot holds **305** (259 concordant-up,
-46 concordant-down); the discordant corners hold 3. This is far smaller than F04's 694,
+46 concordant-down); the discordant corners hold 3. This is far smaller than the training figure's 694,
 and the map is visibly cooler (peak −log₁₀ p ≈ 12 against ≈ 15).
 
 **How to read it.** The concordant-up corner carries nearly all of it, matching Panel D's
-27 concordant-up pathways. As in F04, a hot concordant corner is expected whenever two
+27 concordant-up pathways. As in the training figure, a hot concordant corner is expected whenever two
 contrasts share *any* common component — including an acute bout effect present in
 everybody, which is not a responder result. It corroborates the direction of the weak ρ;
 it does not rescue it.
@@ -326,7 +326,7 @@ See @sec-pi.
   10 of 57 pathways are flagged divergent. The acute response is the most organised, and
   the most promising lead the data offer.
 - The 86 "divergent" proteins come from the π gate, which controls no error rate.
-- F05 does not establish a responder-specific acute program. Stating that is the result.
+- This figure does not establish a responder-specific acute program. Stating that is the result.
 
 ```{r sessioninfo, eval=TRUE}
 sessionInfo()

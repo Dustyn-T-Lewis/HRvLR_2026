@@ -1,4 +1,4 @@
-# HRvLR_F06_setup.R - Shared setup for Figure 6 (WGCNA module atlas).
+# HRvLR_F04_setup.R - Shared setup for Figure 6 (WGCNA module atlas).
 # Unsupervised WGCNA on the FULL imputed proteome, then two module-level read-outs:
 #   - baseline (T1) prediction of each training-adaptation trait (LOO cross-validated)
 #   - responder (HR vs LR) signal per timepoint.
@@ -9,10 +9,10 @@ pacman::p_load(here, tidyverse, patchwork, grid)
 
 source(here("04_Figures", "functions", "style.R"))
 source(here("04_Figures", "functions", "pathway_utils.R"))
-source(here("04_Figures", "F06", "a_script", "functions", "clustering.R"))
+source(here("04_Figures", "F04", "a_script", "functions", "clustering.R"))
 
-RPT_DIR <- here("04_Figures", "F06", "b_reports")
-DAT_DIR <- here("04_Figures", "F06", "c_data")
+RPT_DIR <- here("04_Figures", "F04", "b_reports")
+DAT_DIR <- here("04_Figures", "F04", "c_data")
 dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
 

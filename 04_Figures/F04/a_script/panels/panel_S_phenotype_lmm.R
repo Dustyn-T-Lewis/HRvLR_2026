@@ -1,10 +1,10 @@
-# F06 supplement: module trajectory moderation by phenotype. The LMM companion
+# F04 supplement: module trajectory moderation by phenotype. The LMM companion
 # to Panel C. Where Panel C correlates the T1->T3 eigengene delta with each trait,
 # this fits ME ~ trait * timepoint + (1 | subject) and reads the trait:timepoint
 # interaction, the test of whether a module's whole time-course bends with the
 # size of the response. Shown as the null it is: nothing survives FDR.
 if (!exists("pheno_lmm")) {
-  source(here::here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
+  source(here::here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
 }
 
 lmm_grid <- pheno_lmm |>

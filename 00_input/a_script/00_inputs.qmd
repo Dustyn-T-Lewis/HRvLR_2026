@@ -126,14 +126,14 @@ defined by the `COMP.HYPERTROPHY` composite, not assigned by proteome — Figure
 states this openly so the composite is read as the grouping variable rather than
 as an outcome the proteome predicts.
 
-# The contaminant reference: `HPA_annotations.tsv`
+# The contaminant reference: `HPA_annotations_full.tsv`
 
 Human Protein Atlas evidence [@uhlen2015], keyed by UniProt, that stage 01 uses
 to remove blood-plasma leakage from a muscle-biopsy proteome.
 
 ```{r}
 #| label: hpa
-hpa <- read_tsv(here("00_input", "HPA_annotations.tsv"), show_col_types = FALSE)
+hpa <- read_tsv(here("00_input", "HPA_annotations_full.tsv"), show_col_types = FALSE)
 names(hpa)
 ```
 
@@ -155,7 +155,7 @@ possible future use.
 |:--|:--|:--|
 | `HRvLR_raw.xlsx` | `01_run_filtering.R` | protein intensities + annotation |
 | `HRvLR_meta.csv` | `01_run_filtering.R` | sample sheet, design, phenotype |
-| `HPA_annotations.tsv` | `01_run_filtering.R` | blood-contaminant evidence |
+| `HPA_annotations_full.tsv` | `01_run_filtering.R` | blood-contaminant evidence |
 | `Phenotype.xlsx` | Figure 1 | responder grouping, phenotype source |
 
 Stage 01 turns the matrix and sample sheet into a filtered `DAList`, the object

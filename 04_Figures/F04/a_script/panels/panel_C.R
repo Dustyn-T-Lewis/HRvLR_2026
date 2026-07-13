@@ -1,8 +1,8 @@
-# F06 Panel C: how each module's response relates to the phenotype. Module
+# F04 Panel C: how each module's response relates to the phenotype. Module
 # eigengene change (T1 -> T3) per subject vs each response trait; the data-driven
 # read of "which co-expression programs track the size of the response".
 if (!exists("wgcna_eig")) {
-  source(here::here("04_Figures", "F06", "a_script", "HRvLR_F06_setup.R"))
+  source(here::here("04_Figures", "F04", "a_script", "HRvLR_F04_setup.R"))
 }
 
 TRAITS <- c("comp_hypertrophy", "d_mcsa", "d_fcsa_I", "d_fcsa_II", "d_1rm_legpress", "d_1rm_ext")
