@@ -16,7 +16,7 @@ dir.create(file.path(RPT_DIR, "supp"), recursive = TRUE, showWarnings = FALSE)
 for (p in c("A", "B", "C", "D", "E", "F")) {
   source(here("04_Figures", "F02", "a_script", "panels", sprintf("panel_%s.R", p)))
 }
-for (s in c("direction", "C", "M", "CAP", "G", "I", "J")) {
+for (s in c("direction", "C")) {
   source(here("04_Figures", "F02", "a_script", "supp", sprintf("panel_%s.R", s)))
 }
 
@@ -36,4 +36,6 @@ for (i in seq_along(audit_files)) {
 }
 saveWorkbook(wb, file.path(DAT_DIR, "F02_source_data.xlsx"), overwrite = TRUE)
 
-cat("F02 panels + workbook rendered to", RPT_DIR, "\n")
+source(here("04_Figures", "F02", "a_script", "HRvLR_F02_composite.R"))
+
+cat("F02 panels, composite, and workbook rendered to", RPT_DIR, "\n")
