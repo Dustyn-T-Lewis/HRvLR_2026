@@ -5,7 +5,7 @@
 # cycloess uses limma's defaults (span = 0.7, adaptive.span = FALSE), matching YvO.
 
 pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
-source(here("shared", "pca.R"))
+source(here("04_Figures", "shared", "pca.R"))
 
 data_dir <- here("02_Normalization", "c_data")
 report_dir <- here("02_Normalization", "b_reports")

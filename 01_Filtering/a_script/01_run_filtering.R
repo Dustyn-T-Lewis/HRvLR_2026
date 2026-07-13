@@ -11,7 +11,7 @@ pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, stringr, openxlsx,
   ggplot2, forcats, patchwork
 )
-source(here("shared", "pca.R"))
+source(here("04_Figures", "shared", "pca.R"))
 
 data_dir <- here("01_Filtering", "c_data")
 report_dir <- here("01_Filtering", "b_reports")

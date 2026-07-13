@@ -3,7 +3,7 @@ title: "HRvLR 03 — Differential Expression"
 subtitle: "Design, contrasts, model fit, and the Pi-score, on the non-imputed matrix"
 author: "A_HRvLR_2026"
 date: today
-bibliography: ../../../shared/references.bib
+bibliography: ../../../04_Figures/shared/references.bib
 format:
   html:
     toc: true
