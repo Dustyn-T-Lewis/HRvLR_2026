@@ -35,8 +35,10 @@ contrast tests, with HR's acute response enriching 217 pathways against LR's 33 
 0.269. There are 489 π-calls against 12 proteins at BH < 0.05. Treat π counts as a
 ranking, not as discoveries.
 
-Open issues that are documented but not fixed:
-`docs/2026-07-11-documentation-pass-and-open-issues.md`.
+Known limitations are stated on the page where the reader meets them: the π gate in
+`HRvLR_pipeline.qmd`, the surviving keratin and HBG2 contaminants in
+`01_filtering.qmd`, the circular module test in F06, and the transductive eigengenes
+in F06 and `05_test`.
 
 ## Design and Canonical Contrasts
 
