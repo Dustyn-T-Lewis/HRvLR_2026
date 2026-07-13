@@ -1,7 +1,8 @@
 # HRvLR_F03_setup.R - Figure 3 (enrichVolcano ring-volcanoes).
 # Computes the fgsea enrichment for all 9 DEP contrasts (moderated-t ranks vs
 # Hallmark, KEGG, Reactome, GO:BP, GO:CC, GO:MF, and GO Slim) fresh every run, seeded for
-# reproducibility. It feeds the volcanoes and the F04/F05 NES scatters.
+# reproducibility. The cache is raw (no redundancy collapse); the EnrichmentMap
+# dedup runs at ring display. It feeds the volcanoes and the F04/F05 NES scatters.
 # Provides: dep (combined DEP results), fg (fgsea cache), CONTRASTS, RPT_DIR,
 # DAT_DIR + style.R / pathway_utils.R exports. The workbook
 # F03_source_data.xlsx is overwritten fresh every run.
@@ -34,7 +35,7 @@ fg <- lapply(CONTRASTS, function(ct) {
     filter(!is.na(gene), !is.na(t)) |>
     distinct(gene, .keep_all = TRUE)
   ranks <- sort(setNames(d$t, d$gene), decreasing = TRUE)
-  res <- run_fgsea_deduplicated(ranks, pw)
+  res <- run_fgsea(ranks, pw)
   res$contrast <- ct
   res$leadingEdge <- vapply(res$leadingEdge, function(x) paste(x, collapse = ";"), character(1))
   res

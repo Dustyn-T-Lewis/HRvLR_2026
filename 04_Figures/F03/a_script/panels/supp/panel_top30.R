@@ -2,11 +2,6 @@
 # by NES sitting back to back and aligned strongest-at-top, no dedup, so the rings'
 # parsimony is auditable against the full ranked enrichment. Bars are filled by
 # database with the name inside in white bold and the FDR at each tip.
-TOP30_CONTRASTS <- c(
-  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR",
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
 TOP30_N <- 30L
 
 top_pathways <- function(g, direction) {
@@ -66,11 +61,11 @@ top30_figure <- function(gsea, ct) {
     theme(legend.position = "bottom")
 }
 
-panel_top30 <- function(fg) {
-  gsea <- fg |> filter(contrast %in% TOP30_CONTRASTS, is.finite(NES), !is.na(padj))
-  plots <- lapply(TOP30_CONTRASTS, function(ct) top30_figure(gsea, ct))
-  names(plots) <- TOP30_CONTRASTS
-  table <- bind_rows(lapply(TOP30_CONTRASTS, function(ct) {
+panel_top30 <- function(fg, contrasts = CONTRASTS) {
+  gsea <- fg |> filter(contrast %in% contrasts, is.finite(NES), !is.na(padj))
+  plots <- lapply(contrasts, function(ct) top30_figure(gsea, ct))
+  names(plots) <- contrasts
+  table <- bind_rows(lapply(contrasts, function(ct) {
     g <- filter(gsea, contrast == ct)
     bind_rows(up = top_pathways(g, "up"), down = top_pathways(g, "down"), .id = "direction") |>
       transmute(
