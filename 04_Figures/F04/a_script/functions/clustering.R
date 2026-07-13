@@ -7,33 +7,23 @@
 # not collide in one process (e.g. WGCNA masking stats::cor).
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble)
-source(here("03_DEP", "contrasts.R"))
 
+# The trait table is built once at stage 00 (00_input/a_script/01_build_phenotype.R) and read
+# here. MyoVision is not among them: its source column is a fibre COUNT, not an area.
 ADAPTATION_TRAITS <- c(
-  "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_myovision_fcsa_I",
+  "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II",
   "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
 )
 
-# pi_set records the gated proteins (Xiao Eq.2 Pi = p^|log2FC| < 0.05 in any contrast) from the
-# canonical non-imputed limma fit, kept for provenance only; WGCNA runs on the full
-# missForest-imputed proteome (full_abund), not this subset.
+# WGCNA runs unsupervised on the full imputed proteome, never on a DE-gated subset - filtering
+# by differential expression before WGCNA collapses the network and invalidates the scale-free
+# fit used to pick the soft power (Langfelder & Horvath, WGCNA FAQ).
 load_clustering_inputs <- function() {
-  primary <- readRDS(here("03_DEP", "a_non_imputed", "c_data", "01_limma_DAList.rds"))
   imputed <- readRDS(here(
     "02_Normalization", "imputation", "c_data",
     "DAList_imputed_missforest.rds"
   ))
   stopifnot(identical(imputed$metadata$Col_ID, colnames(imputed$data)))
-
-  pi_mat <- vapply(
-    primary$results, `[[`, numeric(nrow(primary$data)), "pi_score"
-  )
-  rownames(pi_mat) <- rownames(primary$data)
-  pi_keep <- apply(pi_mat, 1, function(x) any(x < PI_THRESH, na.rm = TRUE))
-  pi_set <- rownames(pi_mat)[pi_keep]
-  pi_set <- intersect(pi_set, rownames(imputed$data))
-
-  full_abund <- imputed$data
 
   md <- imputed$metadata
   meta <- data.frame(
@@ -46,60 +36,11 @@ load_clustering_inputs <- function() {
   )
 
   stopifnot(
-    ncol(full_abund) == 45, !anyNA(full_abund),
-    identical(meta$sample_id, colnames(full_abund))
+    ncol(imputed$data) == 45, !anyNA(imputed$data),
+    identical(meta$sample_id, colnames(imputed$data))
   )
 
-  list(full_abund = full_abund, meta = meta, pi_set = pi_set)
-}
-
-# Per-subject phenotype table: T2 composite hypertrophy + the six T1->T2 deltas.
-build_phenotype_table <- function(meta_path) {
-  meta <- readr::read_csv(meta_path, show_col_types = FALSE)
-
-  trait_cols <- c(
-    "fCSA_Type_I_Pre", "fCSA_Type_II_Pre", "MyoVision_fCSA_Type_I__Pre",
-    "mCSA_Pre", "X1RM_Leg_Pre", "X1RM._Ext_Pre"
-  )
-  delta_names <- c(
-    "d_fcsa_I", "d_fcsa_II", "d_myovision_fcsa_I",
-    "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
-  )
-
-  arm <- meta |>
-    distinct(Subject_ID, Group) |>
-    rename(subject = Subject_ID, group_arm = Group)
-
-  comp <- meta |>
-    filter(Timepoint == "T2") |>
-    transmute(
-      subject = Subject_ID,
-      comp_hypertrophy = readr::parse_number(COMP.HYPERTROPHY)
-    )
-
-  t1 <- meta |>
-    filter(Timepoint == "T1") |>
-    select(subject = Subject_ID, all_of(trait_cols))
-  t2 <- meta |>
-    filter(Timepoint == "T2") |>
-    select(subject = Subject_ID, all_of(trait_cols))
-
-  deltas <- t2 |>
-    left_join(t1, by = "subject", suffix = c("_t2", "_t1")) |>
-    mutate(
-      d_fcsa_I = fCSA_Type_I_Pre_t2 - fCSA_Type_I_Pre_t1,
-      d_fcsa_II = fCSA_Type_II_Pre_t2 - fCSA_Type_II_Pre_t1,
-      d_myovision_fcsa_I = MyoVision_fCSA_Type_I__Pre_t2 -
-        MyoVision_fCSA_Type_I__Pre_t1,
-      d_mcsa = mCSA_Pre_t2 - mCSA_Pre_t1,
-      d_1rm_legpress = X1RM_Leg_Pre_t2 - X1RM_Leg_Pre_t1,
-      d_1rm_ext = `X1RM._Ext_Pre_t2` - `X1RM._Ext_Pre_t1`
-    ) |>
-    select(subject, all_of(delta_names))
-
-  arm |>
-    left_join(comp, by = "subject") |>
-    left_join(deltas, by = "subject")
+  list(full_abund = imputed$data, meta = meta)
 }
 
 # Unsupervised WGCNA on the full imputed proteome (no DE pre-filtering, per the
