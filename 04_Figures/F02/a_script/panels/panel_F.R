@@ -1,15 +1,13 @@
-# F02 Panel H: GO GSEA per contrast, deduplicated, split up / down (BP / CC / MF)
+# F02 Panel F: GO GSEA per contrast, deduplicated, split up / down (BP / CC / MF)
 # GSEA on the per-contrast moderated-t ranks against the three GO ontologies. Raw
 # significant-term counts are inflated by GO redundancy, so each ontology's
 # significant sets (BH < 0.05) are collapsed to non-redundant representatives
-# (fgsea::collapsePathways) before counting. Horizontal diverging layout mirrors
-# Panel F: up-regulated right, down-regulated left, per-contrast background bands.
+# (fgsea::collapsePathways) before counting. Horizontal diverging layout: up-regulated
+# right, down-regulated left, per-contrast background bands.
 
 pacman::p_load(here, dplyr, tidyr, tibble, ggplot2, fgsea, msigdbr)
 
 if (!exists("meta")) source(here("04_Figures", "F02", "a_script", "HRvLR_F02_setup.R"))
-
-ONT_COLORS <- c(BP = "#66C2A5", CC = "#FC8D62", MF = "#8DA0CB")
 
 lighten <- function(col, amount = 0.45) {
   v <- grDevices::col2rgb(col) / 255
