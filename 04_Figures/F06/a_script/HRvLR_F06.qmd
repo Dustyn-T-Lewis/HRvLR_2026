@@ -3,7 +3,7 @@ title: "HRvLR F06 — Co-expression Module Atlas"
 subtitle: "WGCNA modules, their biology, and module–phenotype association"
 author: "A_HRvLR_2026"
 date: today
-bibliography: ../../../shared/references.bib
+bibliography: ../../shared/references.bib
 format:
   html:
     toc: true

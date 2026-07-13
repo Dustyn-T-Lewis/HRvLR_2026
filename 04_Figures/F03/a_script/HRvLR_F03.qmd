@@ -3,7 +3,7 @@ title: "HRvLR F03 — Differential Response Volcanoes"
 subtitle: "Nine contrasts as volcano-in-ring plots, palette-coded by comparison family"
 author: "A_HRvLR_2026"
 date: today
-bibliography: ../../../shared/references.bib
+bibliography: ../../shared/references.bib
 format:
   html:
     toc: true

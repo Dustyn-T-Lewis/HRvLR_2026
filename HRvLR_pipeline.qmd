@@ -3,7 +3,7 @@ title: "High vs Low Responders (HRvLR) Skeletal-Muscle Proteomics"
 subtitle: "A ground-up walkthrough of the proteoDA-native pipeline: filtering → normalization → differential expression → figures"
 author: "A_HRvLR_2026"
 date: today
-bibliography: shared/references.bib
+bibliography: 04_Figures/shared/references.bib
 format:
   html:
     toc: true
@@ -88,7 +88,7 @@ groups are not identical at baseline.
 
 **Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
 (F06, best BH q = 0.24), and no classifier or regressor beats its permutation null
-after correction (05_test).
+after correction (`04_Figures/05_test`).
 
 **So: the proteome does not separate high from low responders at this sample size.**
 It is a null study with a strong phenotype and a pathway-level lead. Saying that
@@ -124,15 +124,15 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F01/HRvLR_F01.qmd` | The phenotype: matched work, divergent growth |
 | `04_Figures/F02/.../HRvLR_F02.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `04_Figures/F03/.../HRvLR_F03.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
-| `04_Figures/F04/.../HRvLR_F04.qmd` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
-| `04_Figures/F05/.../HRvLR_F05.qmd` | Acute concordance, same engine |
+| `04_Figures/extras/concordance_training/` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
+| `04_Figures/extras/concordance_acute/` | Acute concordance, same engine |
 | `04_Figures/F06/.../HRvLR_F06.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
-| `05_test/README.md` | Association and out-of-sample prediction |
+| `04_Figures/05_test/README.md` | Association and out-of-sample prediction |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning, the
 contaminant survivors in `01_filtering.qmd`, the circular module test in F06, and the
-transductive eigengenes in F06 and `05_test`.
+transductive eigengenes in F06 and `04_Figures/05_test`.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS

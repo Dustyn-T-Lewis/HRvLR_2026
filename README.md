@@ -38,7 +38,7 @@ ranking, not as discoveries.
 Known limitations are stated on the page where the reader meets them: the π gate in
 `HRvLR_pipeline.qmd`, the surviving keratin and HBG2 contaminants in
 `01_filtering.qmd`, the circular module test in F06, and the transductive eigengenes
-in F06 and `05_test`.
+in F06 and `04_Figures/05_test`.
 
 ## Design and Canonical Contrasts
 
@@ -114,33 +114,41 @@ Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imp
 Six active figures plus one supplement, rendered into `b_reports`; rerun only
 after stages `01` to `03` complete cleanly. F03 recomputes the fgsea enrichment
 fresh each run and writes it for F04/F05 to read, so run F03 before F04/F05. The
-`S_imputation` supplement reads the `03_DEP/b_imputed` concordance outputs, so run
+`extras/imputation` supplement reads the `03_DEP/b_imputed` concordance outputs, so run
 it after the imputed DEP.
 
 - `04_Figures/F01`: phenotype atlas
 - `04_Figures/F02`: global proteome overview and QC
 - `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
-- `04_Figures/F04`: HR-vs-LR training-phase concordance
-- `04_Figures/F05`: HR-vs-LR acute-phase concordance
+- `04_Figures/extras/concordance_training`: HR-vs-LR training-phase concordance
+- `04_Figures/extras/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F06`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
-- `04_Figures/S_imputation`: imputation-method comparison supplement (non-imputed reference vs the four arms)
+- `04_Figures/extras/imputation`: imputation-method comparison supplement (non-imputed reference vs the four arms)
 
 ```sh
-Rscript 04_Figures/F01/a_script/HRvLR_F01_run.R
+Rscript 04_Figures/F01/a_script/run.R
 Rscript 04_Figures/F02/a_script/HRvLR_F02_run.R
 Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
-Rscript 04_Figures/F04/a_script/HRvLR_F04_run.R
-Rscript 04_Figures/F05/a_script/HRvLR_F05_run.R
+Rscript 04_Figures/extras/concordance_training/a_script/HRvLR_F04_run.R
+Rscript 04_Figures/extras/concordance_acute/a_script/HRvLR_F05_run.R
 Rscript 04_Figures/F06/a_script/HRvLR_F06_run.R
-Rscript 04_Figures/S_imputation/a_script/HRvLR_S_imputation.R
+Rscript 04_Figures/extras/imputation/a_script/HRvLR_S_imputation.R
 ```
 
 ## Repository Conventions
 
-- `a_script/`: scripts and optional narrative notebooks
-- `b_reports/`: generated PDFs and figure renders
-- `c_data/`: stage outputs used by downstream steps
-- `functions/`: reusable helpers that scripts source — cross-figure helpers in `04_Figures/functions/` and figure-specific helpers in each figure's `a_script/functions/` (e.g. F06's clustering loader)
+Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_data/`
+(outputs the next step reads).
+
+`04_Figures/` also holds the project's shared machinery:
+
+| Path | Contents |
+| --- | --- |
+| `04_Figures/functions/` | Cross-figure helpers: `style.R`, `pathway_utils.R`, `concordance.R` |
+| `04_Figures/shared/` | `pca.R` (sourced by stages 01 and 02) and `references.bib` (the single bibliography for every notebook) |
+| `04_Figures/tests/` | The `testthat` suite. Run with `testthat::test_dir(here("04_Figures", "tests", "testthat"))` |
+| `04_Figures/05_test/` | Association, prediction, and the WGCNA module engine that F06 reads |
+| `04_Figures/extras/` | The concordance figures (F04/F05) and the imputation supplement |
 
 ## Reproducibility Rules
 
