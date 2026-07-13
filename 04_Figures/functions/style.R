@@ -47,6 +47,16 @@ DOMAIN_COLORS <- c(
   strength = "grey50"
 )
 
+# GO ontology hues for enrichment panels (BP / CC / MF).
+ONT_COLORS <- c(BP = "#66C2A5", CC = "#FC8D62", MF = "#8DA0CB")
+
+# Group x timepoint shades for the 6-cell ordination: HR blues, LR reds, each
+# ramping light (T1) to dark (T3) within its hue.
+GROUP_TIME_COLORS <- c(
+  HR_T1 = "#9ECAE1", HR_T2 = "#4292C6", HR_T3 = "#08519C",
+  LR_T1 = "#FCAE91", LR_T2 = "#EF3B2C", LR_T3 = "#99000D"
+)
+
 # Uniform render height (mm) for every F02 panel so they tile at one scale.
 PANEL_H <- 95
 

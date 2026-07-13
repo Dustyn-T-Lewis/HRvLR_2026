@@ -1,4 +1,4 @@
-# F02 Panel D: effect-size distribution (per-contrast logFC density ridges)
+# F02 effect-size distribution panel, renders as composite tag E (per-contrast logFC density ridges)
 # One horizontal ridge per contrast, contrasts on the y-axis in the same order as the
 # DEP and pathway panels so the rows align across the bottom row. logFC left/right,
 # median |logFC| annotated. Title drawn on the composite.

@@ -1,4 +1,4 @@
-# F02 Panel F: DEPs per contrast (diverging down/up, p and Pi counts)
+# F02 DEPs-per-contrast panel, renders as composite tag D (diverging down/up, p and Pi counts)
 # Down (left) / up (right) % of proteome; per direction two bars overlaid from zero:
 # nominal p < 0.05 (light) and Pi < 0.05 (dark). Per-contrast background bands carry the
 # contrast code; Pi counts sit at the bar tips.

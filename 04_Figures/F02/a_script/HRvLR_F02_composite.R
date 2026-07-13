@@ -20,11 +20,11 @@ titled <- function(p, ttl, sub) {
     )
 }
 
-grid <- titled(pA, "Global Proteome State", "PCA — groups overlap (p = 0.62)") +
-  titled(pB, "Response Magnitude ‖Δ‖", "RRPP — HR and LR move equally far") +
-  titled(pC, "Responder Divergence", "HR vs LR logFC; interaction-significant labelled") +
-  titled(pE, "DEPs per Contrast", "% of proteome; dotted = chance") +
-  titled(pD, "Effect-Size Distribution", "logFC density per contrast") +
+grid <- titled(pA, "Global Proteome State", "PCA — no detectable group separation (PERMANOVA p = 0.62)") +
+  titled(pB, "Response Magnitude ‖Δ‖", "RRPP — no detectable magnitude difference") +
+  titled(pC, "Protein-level divergence leads", "pi-gated candidates; none survive FDR (exploratory)") +
+  titled(pE, "DEPs per Contrast", "% of proteome (light = nominal p, dark = pi); dotted = chance") +
+  titled(pD, "Effect-Size Distribution", "logFC density per contrast; number = median |log2FC|") +
   titled(pF, "Pathway Enrichment (GO)", "non-redundant sets, BH < 0.05") +
   plot_layout(ncol = 3, widths = c(1.3, 1, 1.35), guides = "collect") +
   plot_annotation(

@@ -35,49 +35,57 @@ subj_mat <- subj_mat / as.integer(table(pca_df$Subject_ID)[rownames(subj_mat)])
 subj_group <- pca_df$Group[match(rownames(subj_mat), pca_df$Subject_ID)]
 perm_group <- adonis2(vegdist(subj_mat, method = "euclidean") ~ subj_group, permutations = 999)
 
-perm_row <- function(res, term) {
-  sprintf("%-6s R²=%.3f  F=%.2f  %s", term, res$R2[1], res$F[1], fmt_p(res$`Pr(>F)`[1]))
-}
-perm_label <- paste(
-  "PERMANOVA (999 perm.)",
-  perm_row(perm_group, "Group"),
-  perm_row(perm_time, "Time"),
-  sep = "\n"
+sig_mark <- function(p) if (p < 0.05) "*" else "ns"
+perm_label <- sprintf(
+  "PERMANOVA: Group %s (p=%.2f) . Time %s (p=%.2f)",
+  sig_mark(perm_group$`Pr(>F)`[1]), perm_group$`Pr(>F)`[1],
+  sig_mark(perm_time$`Pr(>F)`[1]), perm_time$`Pr(>F)`[1]
 )
 
-# In-panel symbol key placed in a blank right strip so it never overlaps points.
+pca_df <- pca_df |>
+  mutate(gt = factor(Group_Time, levels = names(GROUP_TIME_COLORS)))
+
+# Horizontal key above the plot: group by colour, timepoint by symbol.
 xr <- range(pca_df$PC1, na.rm = TRUE)
 yr <- range(pca_df$PC2, na.rm = TRUE)
-kx <- xr[2] + 0.07 * diff(xr)
-lx <- kx + 0.05 * diff(xr)
-yk <- yr[2] - diff(yr) * c(0.00, 0.11, 0.21, 0.37, 0.48, 0.58, 0.68)
-key_grp <- tibble(x = kx, lx = lx, y = yk[c(2, 3)], lab = c("HR", "LR"))
-key_tp <- tibble(x = kx, lx = lx, y = yk[c(5, 6, 7)], lab = c("T1", "T2", "T3"))
-key_hdr <- tibble(x = kx - 0.015 * diff(xr), y = yk[c(1, 4)], lab = c("Group", "Time"))
+ky <- yr[2] + diff(yr) * 0.14
+key_grp <- tibble(
+  x = xr[1] + diff(xr) * c(0.05, 0.19), lab = c("HR", "LR"),
+  col = c(GROUP_COLORS[["HR"]], GROUP_COLORS[["LR"]])
+)
+key_tp <- tibble(
+  x = xr[1] + diff(xr) * c(0.44, 0.58, 0.72), lab = c("T1", "T2", "T3"),
+  shp = c(16, 17, 15)
+)
 
 pA <- ggplot(pca_df, aes(PC1, PC2)) +
-  stat_ellipse(aes(fill = Group), geom = "polygon", alpha = 0.10, level = 0.80, color = NA) +
-  stat_ellipse(aes(color = Group, group = Group), level = 0.80, linewidth = 0.4, linetype = "dashed") +
-  geom_point(aes(color = Group, shape = Timepoint), size = 2, alpha = 0.85) +
-  geom_point(data = key_grp, aes(x, y, color = lab), shape = 16, size = 2, inherit.aes = FALSE) +
-  geom_point(data = key_tp, aes(x, y, shape = lab), color = "grey35", size = 2, inherit.aes = FALSE) +
-  geom_text(
-    data = rbind(key_grp[c("lx", "y", "lab")], key_tp[c("lx", "y", "lab")]),
-    aes(lx, y, label = lab), hjust = 0, size = FIG_GEOM_TEXT - 0.5, inherit.aes = FALSE
-  ) +
-  geom_text(data = key_hdr, aes(x, y, label = lab), hjust = 0, fontface = "bold", size = FIG_GEOM_TEXT - 0.3, inherit.aes = FALSE) +
-  annotate("label",
-    x = -Inf, y = Inf, label = perm_label, hjust = -0.015, vjust = 1.02,
-    size = FIG_GEOM_TEXT - 1, color = "black", family = "mono", lineheight = 1.05,
-    fill = scales::alpha("white", 0.85), label.size = 0, label.padding = unit(1, "pt")
-  ) +
+  geom_point(aes(color = Group, shape = Timepoint), size = 2, alpha = 0.9) +
   scale_color_manual(values = GROUP_COLORS, guide = "none") +
-  scale_fill_manual(values = GROUP_COLORS, guide = "none") +
   scale_shape_manual(values = c(T1 = 16, T2 = 17, T3 = 15), guide = "none") +
-  coord_cartesian(xlim = c(xr[1], lx + 0.12 * diff(xr)), clip = "off") +
+  ggnewscale::new_scale_color() +
+  stat_ellipse(aes(color = gt, group = gt), level = 0.80, linewidth = 0.45) +
+  scale_color_manual(values = GROUP_TIME_COLORS, guide = "none") +
+  geom_point(data = key_grp, aes(x, ky), color = key_grp$col, size = 2.6, inherit.aes = FALSE) +
+  geom_text(
+    data = key_grp, aes(x + diff(xr) * 0.025, ky, label = lab), hjust = 0,
+    fontface = "bold", size = FIG_GEOM_TEXT - 0.4, inherit.aes = FALSE
+  ) +
+  geom_point(data = key_tp, aes(x, ky), shape = key_tp$shp, color = "grey30", size = 2.3, inherit.aes = FALSE) +
+  geom_text(
+    data = key_tp, aes(x + diff(xr) * 0.025, ky, label = lab), hjust = 0,
+    size = FIG_GEOM_TEXT - 0.4, inherit.aes = FALSE
+  ) +
+  annotate("label",
+    x = -Inf, y = -Inf, label = perm_label, hjust = -0.02, vjust = -0.05,
+    size = FIG_GEOM_TEXT - 0.7, color = "grey15", fill = scales::alpha("white", 0.85),
+    label.size = 0, label.padding = unit(1.5, "pt")
+  ) +
+  coord_cartesian(
+    ylim = c(yr[1] - diff(yr) * 0.05, yr[2] + diff(yr) * 0.05), clip = "off"
+  ) +
   labs(x = sprintf("PC1 (%.1f%%)", var_pct[1]), y = sprintf("PC2 (%.1f%%)", var_pct[2])) +
   FIG_THEME +
-  theme(legend.position = "none")
+  theme(legend.position = "none", plot.margin = margin(t = 16, r = 5, b = 4, l = 4))
 
 save_png(pA, file.path(RPT_DIR, "panels", "panel_a_pca"), PA_W, PA_H)
 write.csv(pca_df |> select(sample, PC1, PC2, Group, Timepoint),

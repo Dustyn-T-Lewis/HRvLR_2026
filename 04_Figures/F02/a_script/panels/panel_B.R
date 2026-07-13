@@ -34,7 +34,7 @@ mag_fit <- function(phase) {
   tab <- anova(lm.rrpp(mag ~ grp, data = rrpp.data.frame(mag = mag, grp = grp), iter = 999))$table
   list(
     mag = tibble(subject = rownames(dm), phase = phase, Group = grp, magnitude = mag),
-    stat = tibble(phase = phase, label = sprintf("Z = %.2f, %s", tab$Z[1], fmt_p(tab$`Pr(>F)`[1])))
+    stat = tibble(phase = phase, label = sprintf("RRPP %s", fmt_p(tab$`Pr(>F)`[1])))
   )
 }
 
