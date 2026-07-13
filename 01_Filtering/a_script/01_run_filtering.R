@@ -137,13 +137,19 @@ dal <- filter_proteins_by_group(dal,
 )
 
 removed <- count(filter(protein_calls, str_starts(verdict, "remove")), verdict, name = "n_removed")
+
+# n_removed counts proteins, and dropping a sample removes none, so the outlier step
+# scores a legitimate zero there and reads as though nothing happened. Carry the sample
+# count alongside it: 48 collected, 45 analysed.
+n_protein_steps <- 1L + nrow(removed)
 filter_log <- tibble(
   step = c("Raw input", removed$verdict, "Outlier samples", "Missingness"),
   n_removed = c(NA_integer_, removed$n_removed, 0L, n_pre_miss - nrow(dal$data))
 ) |>
   mutate(
     n_after = n_raw - cumsum(coalesce(n_removed, 0L)),
-    pct_of_raw = round(n_after / n_raw * 100, 1)
+    pct_of_raw = round(n_after / n_raw * 100, 1),
+    n_samples = c(rep(nrow(metadata), n_protein_steps), rep(ncol(dal$data), 2L))
   )
 print(as.data.frame(filter_log))
 
