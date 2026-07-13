@@ -129,8 +129,10 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F06/.../HRvLR_F06.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
 | `05_test/README.md` | Association and out-of-sample prediction |
 
-Open issues that are documented but **not fixed** are collected in
-`docs/2026-07-11-documentation-pass-and-open-issues.md`.
+Known limitations are stated in each stage and figure page where the reader meets
+them, rather than in a separate document: the π gate in @sec-pi-warning, the
+contaminant survivors in `01_filtering.qmd`, the circular module test in F06, and the
+transductive eigengenes in F06 and `05_test`.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
