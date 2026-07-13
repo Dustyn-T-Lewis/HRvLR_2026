@@ -1,5 +1,5 @@
 pacman::p_load(here, testthat)
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "prediction.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "prediction.R"))
 
 test_that("module_auc is 1 for separable data and perm p is small", {
   y <- c(rep(0, 8), rep(1, 8))

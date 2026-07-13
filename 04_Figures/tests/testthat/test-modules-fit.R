@@ -1,5 +1,5 @@
 pacman::p_load(here, testthat, WGCNA)
-source(here("04_Figures", "05_test", "modules", "a_script", "functions", "fit.R"))
+source(here("04_Figures", "modules", "a_script", "functions", "fit.R"))
 
 test_that("fit_modules is deterministic and drops grey", {
   set.seed(1)
