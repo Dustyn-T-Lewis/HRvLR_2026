@@ -5,14 +5,12 @@ pacman::p_load(here, patchwork, ggplot2, dplyr, tidyr, tibble, openxlsx)
 F01_PANELS <- list()
 F01_AUDIT <- list()
 source(here("04_Figures", "F01_phenotype", "a_script", "setup.R"))
+source(here("04_Figures", "shared", "utils.R"))
 
+clear_dir(F01_RPT)
 dir.create(file.path(F01_RPT, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(F01_RPT, "supp"), recursive = TRUE, showWarnings = FALSE)
 dir.create(F01_DAT, recursive = TRUE, showWarnings = FALSE)
-unlink(setdiff(
-  list.files(F01_RPT, full.names = TRUE, recursive = TRUE),
-  file.path(F01_RPT, ".gitkeep")
-))
 
 panel_dir <- here("04_Figures", "F01_phenotype", "a_script", "panels")
 for (f in c("panel_a_volume", "panel_b_continuum", "panel_c_forest")) {
