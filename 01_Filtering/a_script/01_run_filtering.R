@@ -13,15 +13,12 @@ pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, tibble, stringr, purrr, openxlsx
 )
 source(here("04_Figures", "shared", "pca.R"))
+source(here("04_Figures", "shared", "utils.R"))
 source(here("01_Filtering", "a_script", "filter_config.R"))
 cfg <- filter_cfg
 
 data_dir <- here("01_Filtering", "c_data")
 report_dir <- here("01_Filtering", "b_reports")
-clear_dir <- function(d) {
-  dir.create(d, recursive = TRUE, showWarnings = FALSE)
-  unlink(setdiff(list.files(d, full.names = TRUE), file.path(d, ".gitkeep")), recursive = TRUE)
-}
 walk(c(data_dir, report_dir), clear_dir)
 
 strip_iso <- function(x) sub("-[0-9]+$", "", x)

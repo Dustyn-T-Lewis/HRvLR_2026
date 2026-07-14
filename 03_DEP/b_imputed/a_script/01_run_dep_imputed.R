@@ -14,12 +14,9 @@
 
 pacman::p_load(proteoDA, here, readr, dplyr, tidyr, tibble, purrr)
 source(here("03_DEP", "contrasts.R"))
+source(here("04_Figures", "shared", "utils.R"))
 
 CANONICAL <- "missforest"
-clear_dir <- function(d) {
-  dir.create(d, recursive = TRUE, showWarnings = FALSE)
-  unlink(setdiff(list.files(d, full.names = TRUE), file.path(d, ".gitkeep")), recursive = TRUE)
-}
 clear_dir(here("03_DEP", "b_imputed", "c_data"))
 clear_dir(here("03_DEP", "b_imputed", "b_reports"))
 
