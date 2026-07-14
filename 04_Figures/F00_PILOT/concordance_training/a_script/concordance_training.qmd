@@ -84,7 +84,7 @@ Reads:
   cache. NES is computed once in F03 and reused here, so this NES scatter and
   the F03 enrichment figure cannot drift apart and no permutation test reruns.
 
-Writes, under `04_Figures/extras/concordance_training/`: `b_reports/panels/` and `b_reports/supp/` (PNG +
+Writes, under `04_Figures/F00_PILOT/concordance_training/`: `b_reports/panels/` and `b_reports/supp/` (PNG +
 PDF), one `c_data/*.csv` per panel, and the bundled
 `c_data/concordance_training_source_data.xlsx`.
 
