@@ -37,6 +37,13 @@ F04_AUDIT[["module_membership"]] <- tibble::enframe(
 )
 F04_AUDIT[["module_eigengene"]] <- me_long
 
+# Eigengene matrix in long form for the F06 prediction feature layer: bare module id
+# (moduleEigengenes prefixes "ME"), the sample, and the score. F06 reads group_id/sample_id/ME.
+readr::write_csv(
+  me_long |> transmute(group_id = sub("^ME", "", module), sample_id, ME),
+  file.path(DAT_DIR, "wgcna_eigengene.csv")
+)
+
 metadata <- tibble::tribble(
   ~field, ~value,
   "figure", "F04 co-expression modules (HRvLR)",
