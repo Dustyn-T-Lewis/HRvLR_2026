@@ -1,6 +1,6 @@
 ---
-title: "HRvLR F04 — Co-expression Module Atlas"
-subtitle: "WGCNA modules, their biology, and module–phenotype association"
+title: "HRvLR F04 — Co-expression Modules"
+subtitle: "Coherent biology, no responder signal — and why the earlier positive was an artifact"
 author: "A_HRvLR_2026"
 date: today
 bibliography: ../../shared/references.bib
@@ -13,426 +13,232 @@ format:
     embed-resources: true
     df-print: paged
 execute:
-  eval: false
+  eval: true
   echo: true
   warning: false
   message: false
 ---
 
-## What this figure asks
-
-The earlier figures test proteins one at a time against a contrast we chose. F04
-steps back and asks the data to group itself. WGCNA builds co-expression modules
-from the full proteome without being told anything about HR, LR, or timepoint.
-Proteins that move together across the 45 samples land in the same module, and
-each module is summarised by its first principal component, the **eigengene**.
-
-That gives three questions, answered in order:
-
-- Which co-expression modules exist in this cohort, and how large are they?
-- What biology does each module carry?
-- Does a module track the phenotype — the baseline state, or the size of the
-  training adaptation?
-
-The modules come first and the phenotype links come after, so no module is defined
-to fit the outcome. That ordering is the one real protection this figure has, and
-it is worth keeping in mind while reading Panel B, where a different kind of
-circularity does creep in (see @sec-circular).
-
-## What F04 found
-
-**The module atlas is essentially null, and that is the finding.** Of 84
-module × trait cells in the baseline→adaptation grid, three reach p < 0.05 with a
-positive leave-one-out Q²: green × ΔmCSA (r = 0.71, Q² = 0.32), blue × Δ1RM
-leg-ext (r = 0.55, Q² = 0.10), turquoise × Δ1RM leg-ext (r = −0.56, Q² = 0.05).
-
-**None of them survives multiple-testing correction.** The best BH-adjusted p in
-the whole grid is **0.24**. Testing 12 modules against 7 traits and reporting the
-best cell without paying for the search would be exactly the error this figure is
-built to avoid.
-
-**The responder grid is flatter still**: min BH-adjusted p = **0.82**. Module
-eigengenes do not separate HR from LR at any timepoint.
-
-**The trajectory LMM is also null**: no module × trait interaction clears FDR
-(best 0.12), and 22 of 84 fits are singular.
-
-**Panel B is the exception, and it should not be trusted as a p-value.** Its fgsea
-q-values run down to 1.9 × 10⁻⁴⁴. That number is an artefact of asking a
-gene-set test to score gene sets that were *defined* as the co-expressed blocks of
-the same matrix. Read the NES directions; ignore the significance. @sec-circular
-explains why in full.
-
-So: the proteome organises into 12 coherent, biologically interpretable modules,
-and **none of them is a validated marker of the hypertrophy phenotype**.
-
-## Inputs and outputs
-
-Reads:
-
-- `02_Normalization/imputation/c_data/DAList_imputed_missforest.rds` — the
-  missForest-imputed abundance matrix. WGCNA needs a complete matrix, so it runs on
-  the imputed proteome, not the non-imputed one the DEP uses.
-- `03_DEP/a_non_imputed/c_data/03_combined_results.csv` — the moderated-t columns
-  that Panel B ranks on, and the π flags recording the gated protein set.
-- `00_input/HRvLR_meta.csv` — subject metadata and phenotype traits.
-
-Writes to `c_data/`: `wgcna_membership.csv`, `wgcna_eigengene.csv`,
-`module_ora.csv`, `module_phenotype.csv`, `module_prediction.csv`,
-`module_responder.csv`, `module_phenotype_lmm.csv`, `panel_b_module_fgsea.csv`,
-`phenotype.csv`, and the bundled `F04_source_data.xlsx`. Panels land in
-`b_reports/panels/`, supplements in `b_reports/supp/`.
-
-The `module_prediction` filename is kept for continuity with the retired
-standalone clustering stage. **The figure is framed as association, not
-prediction**, and where the object name and the figure disagree, the figure is the
-honest statement.
-
-## Setup
-
 ```{r}
-#| label: setup
-pacman::p_load(here, tidyverse, patchwork, grid)
+#| label: load
+#| echo: false
+pacman::p_load(here, openxlsx, dplyr, knitr)
+wb <- here("04_Figures", "F04_modules", "c_data", "F04_modules_source_data.xlsx")
+atlas <- read.xlsx(wb, "module_atlas")
+fry <- read.xlsx(wb, "module_fry")
+pred <- read.xlsx(wb, "module_prediction")
+lmm <- read.xlsx(wb, "module_phenotype_lmm")
+ora <- read.xlsx(wb, "module_ora")
 
-source(here("04_Figures", "functions", "style.R"))
-source(here("04_Figures", "functions", "pathway_utils.R"))
-source(here("04_Figures", "F04", "a_script", "functions", "clustering.R"))
-
-ci <- load_clustering_inputs()
-pheno_tbl <- readr::read_csv(
-  here("00_input", "c_data", "phenotype.csv"),
-  show_col_types = FALSE
+responder <- c(
+  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
+  "Training_Interaction", "Acute_Interaction"
 )
-
-wg <- run_wgcna(ci$full_abund, ci$meta)
-wgcna_mem <- wg$membership
-wgcna_eig <- wg$eigengene
-
-pred <- run_module_prediction(wgcna_eig, pheno_tbl)
-resp <- run_module_responder(wgcna_eig)
-pheno_lmm <- run_module_phenotype_lmm(wgcna_eig, pheno_tbl)
+fry_r <- fry[fry$contrast %in% responder, ]
+n_grey <- 1920 - sum(atlas$n_proteins)
 ```
 
-WGCNA and AnnotationDbi mask tidyverse verbs (WGCNA takes over `cor`, AnnotationDbi
-shadows `select`). The setup re-attaches `tidyr` and `dplyr` last so the panels'
-unqualified verbs resolve to the tidyverse versions.
+## What F04 asks
 
-## Network construction
+Proteins do not act alone. If high and low responders differ, the difference might not sit
+in any single protein but in a **co-expressed programme** — a set of proteins that move
+together. F04 builds those programmes without looking at responder status, then asks two
+questions of them:
 
-### What a co-expression network is
+1. Does any module **move** with responder status?
+2. Does any module's **baseline** state predict how much a subject adapts?
 
-Take the 45-sample abundance matrix and correlate every protein against every other
-protein. Proteins that rise and fall together across subjects and timepoints get a
-high correlation. WGCNA turns that correlation matrix into a network, then cuts the
-network into **modules** — clusters of proteins that are far more correlated with
-each other than with anything outside. A module is a hypothesis that a set of
-proteins is under shared regulation.
+The answer to both is no. This page explains how the modules were built, why an earlier
+version of this analysis appeared to say yes, and why that answer was wrong.
 
-Three choices carry the weight.
+## The trap, and how F04 avoids it
 
-**Signed network.** A signed adjacency keeps the direction of co-expression: two
-proteins are neighbours only when they move up and down *together*, not when one
-mirrors the other. Anti-correlated proteins belong to different biology, so folding
-them into one module would blur the read-out.
+WGCNA correlates proteins **across samples, treating them as independent**. Our 45 samples
+are 16 subjects × 3 timepoints. They are not independent, and subject identity carries a
+large share of the variance — the WGCNA FAQ names exactly this as the *"strong driver that
+makes a subset of the samples globally different from the rest"* that invalidates the
+scale-free assumption and inflates protein–protein correlation.
 
-**Soft power by scale-free fit.** Real co-expression networks are approximately
-scale-free: a few hub proteins with many connections, most proteins with few. WGCNA
-raises the correlation to a power β, which pushes weak correlations toward zero and
-leaves strong ones nearly intact, until the resulting network matches that topology.
-The code sweeps β = 1…20 and takes the first power whose signed scale-free fit R²
-clears 0.87. When no power reaches the cutoff — small cohorts often fall short — it
-falls back to the Horvath sample-size table rather than forcing a poor fit
-[@langfelder2008].
+Build the network on raw abundance and the modules substantially encode **which subject a
+sample came from**, not co-regulation. That is not hypothetical:
+
+| perturbation | adjusted Rand index vs the raw-built network |
+|---|---|
+| change `pamRespectsDendro` | 0.876 |
+| swap the entire WGCNA engine | 0.876 |
+| drop imputation (complete cases only) | 0.506 |
+| **remove subject identity** (centre within subject) | **0.288** |
+
+**Every WGCNA parameter is noise. The design is what moves the modules.** Per-module subject
+ICC reached 0.51 in the raw-built network.
+
+**That artifact is the whole explanation for the earlier result.** A previous version of this
+analysis reported a baseline-prediction q² of **0.713**. If a module is largely a subject
+fingerprint, predicting across subjects in-sample looks excellent and leave-one-subject-out
+destroys it — because LOSO removes precisely the thing the module was tracking. It did: the
+same cell fell to **−0.165** under an honest refit.
+
+**F04's fix: define the modules on within-subject-centred abundance, score them on raw
+abundance.** Centring removes subject identity as a driver, so the modules capture how
+proteins move *together within a subject* — the training and acute response, which is the
+question. Eigengenes are then computed on **raw** abundance, so the between-subject
+HR-versus-LR contrast is still there to be tested. It simply no longer *defines* the modules.
+
+It works. In the centred network the subject ICC has a median of
+`r sprintf("%.3f", median(atlas$icc))` and a maximum of `r sprintf("%.3f", max(atlas$icc))`,
+down from 0.51.
+
+## What the modules are
 
 ```{r}
-#| label: soft-power
-powers <- 1:20
-sft <- WGCNA::pickSoftThreshold(expr, powerVector = powers, networkType = "signed", verbose = 0)
-fit <- sft$fitIndices
-r2 <- -sign(fit$slope) * fit$SFT.R.sq
-n_samp <- nrow(expr)
-fallback_power <- if (n_samp < 20) 18L else if (n_samp <= 30) 16L else if (n_samp <= 40) 14L else 12L
-candidates <- which(r2 > 0.87)
-chosen_power <- if (length(candidates)) powers[candidates[1]] else fallback_power
+#| label: atlas
+#| echo: false
+atlas |>
+  arrange(desc(n_proteins)) |>
+  transmute(Module = module, Proteins = n_proteins, `Subject ICC` = round(icc, 3)) |>
+  kable()
 ```
 
-The fallback is the honest choice at 45 samples. Forcing a high-R² power here would
-fit the topology to noise, and the Horvath table is the field's default for exactly
-this regime. The sweep itself is shown in the supplement below, so the reader can see
-whether the cutoff was met or the fallback fired.
+`r nrow(atlas)` modules; `r n_grey` proteins left unassigned (grey).
+`r n_distinct(ora$module[!is.na(ora$term)])` of the `r nrow(atlas)` carry a significant
+GO:BP term. **The modules are real, coherent biology.** That is the one positive finding on
+this page, and it is descriptive.
 
-**Determinism.** `blockwiseModules()` runs single-threaded with a fixed
-`randomSeed = 12345`, so the same input always yields the same modules. The grey
-module (proteins assigned to no module) is dropped from every downstream read-out.
+## Do the modules move? (`limma::fry`)
 
 ```{r}
-#| label: modules
-net <- WGCNA::blockwiseModules(
-  expr,
-  networkType = "signed", power = chosen_power,
-  minModuleSize = 30, mergeCutHeight = 0.25, deepSplit = 2,
-  randomSeed = 12345, verbose = 0
-)
-mes_all <- WGCNA::moduleEigengenes(expr, colors = net$colors)$eigengenes
+#| label: fry-table
+#| echo: false
+fry |>
+  group_by(contrast) |>
+  summarise(
+    `Min FDR` = round(min(fdr), 3),
+    `Significant modules` = sum(fdr < 0.05), .groups = "drop"
+  ) |>
+  arrange(`Min FDR`) |>
+  kable()
 ```
 
-**Eigengene sign fix.** An eigengene is a principal component, and a PC's sign is
-arbitrary — which would make "high eigengene" mean opposite things in two modules.
-Each eigengene is flipped so a positive value always means *higher mean abundance*
-for that module's proteins. Every correlation in Panel A then reads the same
-direction, and a red tile always means "more of this module".
+Across `r nrow(fry)` module × contrast tests, **`r sum(fry$fdr < 0.05)` is significant**: the
+purple module in `Acute_LR` (FDR = `r sprintf("%.4f", min(fry$fdr))`). That is a
+**within-group** response — the acute bout moves the proteome inside the LR arm. It is the
+positive control, and it agrees with F03.
+
+**Across the five contrasts that actually test responder status, nothing.
+`r sum(fry_r$fdr < 0.05)` of `r nrow(fry_r)` cells are significant, and the minimum FDR is
+`r sprintf("%.2f", min(fry_r$fdr))`.**
+
+### Why `fry` and not `fgsea`
+
+The panel this replaces ran **fgsea with the WGCNA modules as the gene sets**, ranked by
+moderated *t* **from the same matrix that defined those modules**. The sets were built to be
+co-expressed, so of course their members rank together: the test was circular. It returned
+**padj = 7 × 10⁻³³** in a study whose minimum *q* anywhere else is 0.36. That number was the
+tell.
+
+`limma::fry` [@wu2010] is the correct instrument. It is a **rotation-based, self-contained**
+set test: it asks whether the proteins in a predefined set move together **in a specified
+contrast**, against the same linear model that produced the DEP results, carrying the subject
+block and the `duplicateCorrelation` through. It was already used correctly elsewhere in this
+repo.
+
+## Does a baseline module predict adaptation?
 
 ```{r}
-#| label: sign-fix
-for (mod_col in names(mes_real)) {
-  in_module <- net$colors == sub("^ME", "", mod_col)
-  mod_mean <- rowMeans(expr[, in_module, drop = FALSE])
-  if (stats::cor(mes_real[[mod_col]], mod_mean) < 0) {
-    mes_real[[mod_col]] <- -mes_real[[mod_col]]
-  }
-}
+#| label: pred
+#| echo: false
+pred |>
+  arrange(desc(q2)) |>
+  head(5) |>
+  transmute(
+    Module = sub("^ME", "", module), Trait = trait,
+    r = round(r, 2), `q2` = round(q2, 3), `BH q` = round(fdr, 2)
+  ) |>
+  kable(caption = "The five best cells of 72, ranked by q².")
 ```
 
-## Composite
+No. The best cell in the entire `r nrow(pred)`-cell grid has
+**q² = `r sprintf("%.3f", max(pred$q2, na.rm = TRUE))`** — and that is the **argmax of
+`r nrow(pred)` cells**, so it is nearly free. Only `r sum(pred$q2 > 0, na.rm = TRUE)` of
+`r nrow(pred)` cells have a positive q² at all, and nothing survives FDR (minimum BH *q* =
+`r sprintf("%.2f", min(pred$fdr, na.rm = TRUE))`).
 
-![F04 composite. A the WGCNA module–trait association atlas; B module-level NES scatters.](../b_reports/F04_composite.png)
+Read the two columns together. **`r sum(pred$p < 0.05, na.rm = TRUE)` cells have a nominally
+significant in-sample correlation**, and almost none of them predicts a held-out subject.
+That gap — in-sample correlation without out-of-sample prediction — is what overfitting looks
+like, and it is why q² is on the face of the panel rather than *r*.
 
-## Panel A — module–trait atlas
+The mixed-model supplement keeps the repeated-measures structure this panel collapses to T1,
+asking whether a module's whole time-course bends with the size of the response
+(`ME ~ trait * timepoint + (1 | subject)`). Minimum BH *q* =
+`r sprintf("%.2f", min(lmm$fdr_trait_time, na.rm = TRUE))`. Nothing survives there either.
 
-![Panel A. One row per module: size, biology label, baseline (T1) → adaptation correlations, and the responder (HR − LR) signal per timepoint.](../b_reports/panels/panel_a_wgcna_map.png)
+## Methods note
 
-**What.** One row per module, four aligned blocks. Protein count; the module's
-leading ORA term as a biology label; the middle grid correlating each module's
-**baseline (T1)** eigengene against each **training adaptation** (the T1→T2 trait
-deltas); and the right grid correlating each eigengene against HR-versus-LR group at
-each timepoint. Tiles are filled by correlation on a shared diverging scale, a bold
-outline marks p < 0.05, and a white dot marks a positive leave-one-out Q².
+Every DOI was resolved against Crossref.
 
-**The 12 modules.** Turquoise (281 proteins, 26S proteasome), Blue (263), Brown (213,
-cilium assembly), Yellow (132, ATP synthesis / electron transport), Green (123,
-azurophil granule lumen), Red (120, contractile muscle fibre), Black (110, OXPHOS),
-Pink (106, eukaryotic translation initiation), Magenta (76), Purple (74,
-mitochondrial protein degradation), Greenyellow (67, heme metabolism), Tan (44, ECM
-structural constituent). These are coherent, recognisable muscle biology — the
-network is finding real structure.
+| Panel | Claim | Statistic | Fit to this design |
+|---|---|---|---|
+| **A** atlas | The modules exist, and subject identity no longer drives them | Module sizes; ICC of each eigengene by subject | The ICC column is the diagnostic that exposed the earlier artifact, so it sits on the face of the figure, not in a supplement. Raw R² would mislead here: 15 subject df on 45 samples gives an expected R² of 0.34 under pure noise, so the **adjusted** R² and the ICC are the honest numbers. |
+| **B** pathways | The modules are coherent biology | GO:BP over-representation, universe = **the measured proteome** | The universe matters. A protein that was never quantified could not have been assigned to a module, so scoring against the whole genome would inflate every term. |
+| **C** fry | No module moves with responder status | `limma::fry` [@wu2010], modules as the index, on the 03_DEP design with the subject block and `duplicateCorrelation` | Correct, and not circular: the contrast comes from the experimental design, not from the matrix that built the sets. A **self-contained** rotation test, not a competitive one. |
+| **D** phenotype | No baseline module predicts adaptation | In-sample *r* and **leave-one-subject-out q²**, BH across the grid | LOSO is the right resampling unit: the dependency is *within subject*, so holding out a sample rather than a subject would leak. q² ≤ 0 means the model predicts a held-out subject worse than the trait's own mean does. |
+| **D** supp | Nor does the module's trajectory bend with it | `ME ~ trait * timepoint + (1 \| subject)`, BH within trait | Keeps the repeated-measures structure. **`r sum(lmm$singular, na.rm = TRUE)` of `r nrow(lmm)` fits are singular** and are flagged, not dropped: a time-invariant trait can drive the random-intercept variance to zero, inflating the trait main effect — so the interaction is the term to trust. |
 
-**What Q² means.** Fit the subject-to-trait line on all subjects but one, predict the
-held-out subject, repeat. Q² = 1 − SS(residual)/SS(total) *on the held-out
-predictions*. Unlike R², **Q² goes negative** when the model predicts worse than
-simply guessing the mean. A positive Q² is the minimum bar for "this association
-survives dropping a subject".
+### The WGCNA parameters, and their sources
 
-```{r}
-#| label: loo-q2
-loo <- function(d) {
-  if (nrow(d) < 6) {
-    return(NA_real_)
-  }
-  p <- vapply(seq_len(nrow(d)), function(i) predict(lm(y ~ x, d[-i, ]), d[i, ]), numeric(1))
-  1 - sum((d$y - p)^2) / sum((d$y - mean(d$y))^2)
-}
-```
+Signed network; `bicor` with `maxPOutliers = 0.05`; `deepSplit = 2`; `minModuleSize = 30`;
+`mergeCutHeight = 0.15`; `pamStage = TRUE`; `pamRespectsDendro = TRUE`. WGCNA:
+Langfelder & Horvath [@langfelder2008].
 
-**Result.** Three cells clear p < 0.05 *and* Q² > 0: **green × ΔmCSA** (r = 0.71,
-Q² = 0.32), **blue × Δ1RM leg-ext** (r = 0.55, Q² = 0.10), and **turquoise × Δ1RM
-leg-ext** (r = −0.56, Q² = 0.05). Those are the three dotted, outlined tiles. Every
-other cell of 84 has a negative Q² — the model does worse than the mean.
+- **Signed and `bicor`** are the *only two* deviations from default the WGCNA FAQ explicitly
+  recommends. `maxPOutliers = 0.05` is its "strongly recommend" — the package default of 1
+  disables the outlier guard entirely, which is a silent and common error.
+- **The soft power is what `pickSoftThreshold` itself returns** at its documented default
+  (`RsquaredCut = 0.85`). The FAQ's sample-size table (signed, n > 40 → 12) is a **fallback
+  for when the scale-free fit never clears the threshold.** Ours clears it, so the table does
+  not apply. The supplement plots the sweep and reports the achieved R² and mean connectivity
+  — neither of which the proteomics literature routinely reports.
+- **`pamRespectsDendro = TRUE` is the package default.** No published source recommends
+  setting it `FALSE`; that convention traces to an unexplained line in the official tutorial
+  *script*. Every WGCNA-on-proteomics paper surveyed uses `TRUE`.
+- `minModuleSize = 30` is the official tutorial's value. Module count is insensitive to
+  `mergeCutHeight` across 0.07–0.25 on this data, so that parameter is not load-bearing.
 
-**How to read it — and the correction that matters.** Three positive Q² cells out of
-84 is *approximately what chance produces*. The BH-adjusted p never gets below
-**0.24**, so not one of them survives the multiplicity cost of scanning a 12 × 7
-grid. The responder grid is flatter still (min BH p = 0.82).
+### Where this sits outside the validated regime
 
-Read Panel A as a **null result with three leads**, not as three findings. A
-within-cohort LOO that comes back mostly negative is far more trustworthy than an
-in-sample correlation that looks impressive because it was never held out.
+Stated plainly, because it is the real limitation and nothing else covers it:
 
-**And the LOO is transductive.** This is the subtle one. The eigengenes being
-cross-validated were produced by running WGCNA on **all 45 samples at once**,
-including the subject held out on each LOO fold. The held-out subject's data helped
-define the very modules whose eigengene is then used to predict them. The
-*regression* is honestly held out; the *features* are not. A fully out-of-sample
-estimate would refit WGCNA inside each fold. The Q² values above are therefore
-optimistic, and the truly-null read-out is if anything understated.
-
-## Panel B — module-level NES scatters {#sec-circular}
-
-![Panel B. fgsea NES per module across contrasts. Top: HR vs LR training. Bottom: acute vs training in HR.](../b_reports/panels/panel_b_nes_scatters.png)
-
-**What it does.** Each WGCNA module is handed to fgsea *as a gene set*, and scored
-against the moderated-t ranking of each contrast. The top scatter reads training
-concordance (do HR and LR move the same modules the same way). The bottom reads
-whether the acute response reinforces or reverses the chronic one within HR.
-
-**Result, read as directions only.** Training: 6 modules concordant-up, 4
-concordant-down, 2 discordant — HR and LR move most modules the same way, echoing
-F04. Acute-vs-training in HR: 9 of 12 modules are **reversed** (the acute bout pushes
-the module opposite to the way training moved it) and 3 reinforced. That reversal is
-the single most interesting pattern in F04 and it is biologically sensible: an acute
-bout transiently suppresses the oxidative and contractile programs that training
-chronically raises.
-
-### The significance on this panel is not real
-
-`panel_b_module_fgsea.csv` reports q-values down to **1.9 × 10⁻⁴⁴** (brown × Acute_HR
-2.4 × 10⁻³⁹, blue × Training_HR 7.2 × 10⁻³³) across a BH family of **twelve** sets.
-Nowhere else in this entire pipeline does any q drop below 0.24. That discrepancy is
-the tell.
-
-fgsea's competitive null assumes the genes *within* a set are exchangeable and
-effectively independent, so the variance of a set's mean rank is roughly the
-gene-level variance divided by the set size. **A WGCNA module is, by construction, the
-maximal block of co-expressed proteins in this exact matrix** — the strongest possible
-within-set correlation a gene set can have. Its members' ranks move together, so the
-true variance of the set statistic is far larger than the independent-gene formula
-assumes. Dividing by a variance that is much too small yields a p-value that is much
-too extreme.
-
-These are not biological p-values. They are the co-expression structure being
-re-detected by a test that assumed it away. A reviewer who knows `camera` will read
-them as evidence the pipeline does not understand its own tests.
-
-**What to do with the panel.** The **NES directions are probably genuine** — the
-reversal pattern above is a real feature of the data and does not depend on the
-broken null. The *significance* is manufactured. The correct tool is `limma::fry`
-with the subject block and the `duplicateCorrelation` consensus, which is already used
-correctly elsewhere in this repo (`04_Figures/functions/concordance.R`) and which
-would give a valid set-level p-value here [@wu2010]. Until Panel B is rebuilt on fry,
-quote no q-value from it.
-
-## Supplements
-
-### Soft-threshold sweep
-
-![Supplementary. Scale-free topology fit R² and mean connectivity across candidate soft powers.](../b_reports/supp/supp_soft_threshold.png)
-
-The β sweep behind the network. Read it to see whether any power actually cleared the
-0.87 scale-free fit cutoff or whether the Horvath fallback fired — the sentence in
-"Network construction" above is only checkable against this figure.
-
-### Module dendrogram
-
-![Supplementary. Protein clustering dendrogram with module colour assignment beneath.](../b_reports/supp/supp_dendrogram.png)
-
-The hierarchical clustering the modules were cut from. Well-separated colour blocks
-under distinct branches mean the cut is clean; long stretches of grey mean many
-proteins joined no module.
-
-### Module biology (ORA)
-
-![Supplementary. Per-module over-representation, deduplicated by Jaccard overlap.](../b_reports/supp/module_ora_bars.png)
-
-For each non-grey module, `run_ora_deduplicated()` runs a hypergeometric test of the
-module's proteins against the pathway collection and deduplicates near-identical hits
-so one theme does not fill the panel five times. These terms supply the biology labels
-in Panel A.
-
-The **universe is the measured proteome**, not the genome. A mass-spec run sees a
-biased slice — abundant, soluble, tryptic-friendly proteins. Test a module against the
-genome and any pathway that is merely *detectable* by mass spec looks enriched, because
-the genome holds thousands of proteins the assay never had a chance to see. Restricting
-the universe to what was actually measured removes that detection bias.
-
-```{r}
-#| label: ora-universe
-all_uniprot <- unique(wgcna_mem$protein_id)
-sym_map <- clusterProfiler::bitr(
-  all_uniprot,
-  fromType = "UNIPROT", toType = "SYMBOL", OrgDb = org.Hs.eg.db
-)
-universe_syms <- unique(sym_map$SYMBOL)
-```
-
-Note this ORA is a *descriptive labelling* step, not a hypothesis test about the
-phenotype. It asks what a module is made of, and it is not circular in the way Panel B
-is: the module was defined by co-expression, and the pathway annotation is external.
-
-### Module response vs phenotype
-
-![Supplementary. Eigengene T1→T3 change correlated against each phenotype trait.](../b_reports/supp/panel_c_module_phenotype.png)
-
-Panel A's middle grid looks at the *baseline state*. This supplement looks at the
-*change*: per subject, the eigengene shift from T1 to T3, correlated against each trait
-with Spearman (which assumes no straight-line relationship on 16 subjects). The r is
-printed only when p < 0.05 and a star added only when BH-FDR clears 0.05.
-
-### Trajectory moderation (LMM)
-
-![Supplementary. Module × trait interaction from the mixed model across all three timepoints.](../b_reports/supp/panel_s_phenotype_lmm.png)
-
-The correlation above collapses each module to one T1→T3 delta. The LMM keeps all three
-timepoints:
-
-```{r}
-#| label: pheno-lmm
-run_module_phenotype_lmm(wgcna_eig, pheno_tbl)
-# ME ~ trait * timepoint + (1 | subject), per module x trait
-```
-
-The `trait:timepoint` interaction is the direct test of trajectory moderation — whether
-a module's whole time-course bends with the size of the response, which a collapsed
-delta cannot ask. The subject random intercept carries the repeated-measures design.
-
-**Result: another null.** No module × trait interaction clears FDR (best 0.12). The
-`trait` main effect is recorded in `module_phenotype_lmm.csv` but deliberately **not**
-plotted: a time-invariant trait can drive the random-intercept variance to zero — the
-`singular` flag, which fires on **22 of 84 fits** — and that inflates the main effect.
-The panel plots the interaction only, framed as the null it is.
-
-## No cherry-picking
-
-Every module-by-trait cell is shown, filled or blank. Nothing is dropped for being
-non-significant. The p-values are BH-adjusted across the grid, so the outline in Panel A
-and the star in the supplement already pay the cost of scanning every module against
-every trait. The reader sees the full field and can judge how many cells cleared the bar
-against how many were tested — which, here, is none.
-
-## Key terms
-
-**Module** — a cluster of proteins more correlated with each other than with the rest of
-the proteome. A hypothesis of shared regulation, built without reference to HR/LR or
-timepoint.
-
-**Eigengene** — the module's first principal component: one number per sample summarising
-the whole module. Sign-fixed so positive always means "more of this module".
-
-**Soft power (β)** — the exponent applied to the correlation matrix so the network becomes
-approximately scale-free. Chosen by scale-free fit R² > 0.87, else the Horvath
-sample-size fallback.
-
-**Signed network** — neighbours must move in the *same* direction. Anti-correlated proteins
-land in different modules.
-
-**Q² (leave-one-out)** — cross-validated R². Goes **negative** when the model predicts worse
-than the mean. Positive is the minimum bar. Here it is **transductive**: the modules were
-built on all 45 samples including the held-out subject, so the features saw the test fold
-even though the regression did not.
-
-**Transductive** — the held-out sample influenced the feature definition, so the estimate is
-optimistic and is not out-of-sample in the strict sense.
-
-**Competitive gene-set test** — asks whether a set's genes rank higher than genes *outside*
-the set. fgsea is one. It assumes within-set independence, which is precisely what a WGCNA
-module violates. See @sec-circular.
+- **There is no published guidance for WGCNA on repeated-measures designs.** None. The
+  within-subject centring here is a defensible response to a documented failure mode, not a
+  validated method.
+- **1,920 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
+  concedes small feature counts are unlikely to be scale-free, so a mediocre fit is expected
+  rather than a bug.
+- **12.2 % of the matrix was imputed** by missForest, which predicts proteins *from other
+  proteins* — manufacturing co-expression for a method that is entirely about correlation.
+  Dropping imputation changes the module assignment substantially (ARI 0.506). Centring does
+  not fix this. It is a separate exposure, and it is why the modules are presented as
+  descriptive rather than as a discovery.
 
 ## Recap
 
-- The proteome resolves into **12 coherent modules** with recognisable muscle biology
-  (proteasome, OXPHOS, contractile fibre, ECM, translation).
-- **No module is a validated phenotype marker.** Three of 84 baseline→adaptation cells have
-  a positive LOO Q², none survives BH (best q = 0.24); the responder grid's best q is 0.82;
-  the trajectory LMM is null (best q = 0.12).
-- The LOO Q² is **transductive** — WGCNA saw all 45 samples — so those three leads are
-  optimistic, not out-of-sample.
-- **Panel B's q-values (down to 1.9 × 10⁻⁴⁴) are an artefact** of scoring WGCNA modules with
-  a test that assumes within-set independence. Read its NES directions (9 of 12 modules
-  reverse between acute and training); quote none of its p-values.
-
-```{r sessioninfo, eval=TRUE}
-sessionInfo()
-```
+- The modules are real and biologically coherent. That is the positive finding, and it is
+  descriptive.
+- **No module moves with responder status**: 0 of `r nrow(fry_r)` cells, minimum FDR
+  `r sprintf("%.2f", min(fry_r$fdr))`.
+- **No baseline module predicts adaptation**: best q² =
+  `r sprintf("%.3f", max(pred$q2, na.rm = TRUE))`, the argmax of `r nrow(pred)` cells.
+- The earlier q² of 0.713 was an artifact of modules that encoded subject identity. Define
+  them properly and the signal was never there.
+- The one significant module × contrast cell is a **within-group acute response** — the
+  positive control, not a responder difference.
 
 ## References
 
 ::: {#refs}
 :::
+
+```{r sessioninfo}
+sessionInfo()
+```

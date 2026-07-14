@@ -1,65 +1,71 @@
-# HRvLR_F04_setup.R - Shared setup for Figure 6 (WGCNA module atlas).
-# Unsupervised WGCNA on the FULL imputed proteome, then two module-level read-outs:
-#   - baseline (T1) prediction of each training-adaptation trait (LOO cross-validated)
-#   - responder (HR vs LR) signal per timepoint.
-# Provides: wgcna_mem, wgcna_eig, pred, resp, pheno_tbl, RPT_DIR, DAT_DIR.
-# Plus all style.R / pathway_utils.R exports.
+# F04 setup: read the imputed matrix, the stage-00 phenotype table, and the limma fit from
+# 03_DEP, then build the modules. Panels and run.R source this first. Writes nothing.
+pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr)
 
-pacman::p_load(here, tidyverse, patchwork, grid)
+source(here("04_Figures", "F04_modules", "a_script", "style.R"))
+source(here("04_Figures", "F04_modules", "a_script", "pathway_utils.R"))
+source(here("04_Figures", "F04_modules", "a_script", "wgcna.R"))
+source(here("04_Figures", "F04_modules", "a_script", "enrichment.R"))
+source(here("03_DEP", "contrasts.R"))
 
-source(here("04_Figures", "functions", "style.R"))
-source(here("04_Figures", "functions", "pathway_utils.R"))
-source(here("04_Figures", "F04", "a_script", "functions", "clustering.R"))
+RPT_DIR <- here("04_Figures", "F04_modules", "b_reports")
+DAT_DIR <- here("04_Figures", "F04_modules", "c_data")
 
-RPT_DIR <- here("04_Figures", "F04", "b_reports")
-DAT_DIR <- here("04_Figures", "F04", "c_data")
-dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
-dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
+if (!exists("F04_PANELS")) F04_PANELS <- list()
+if (!exists("F04_AUDIT")) F04_AUDIT <- list()
 
-ci <- load_clustering_inputs()
-pheno_tbl <- readr::read_csv(
-  here("00_input", "c_data", "phenotype.csv"),
-  show_col_types = FALSE
+imputed <- readRDS(here(
+  "02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"
+))
+stopifnot(identical(imputed$metadata$Col_ID, colnames(imputed$data)))
+
+abund <- as.matrix(imputed$data)
+rownames(abund) <- imputed$annotation$gene
+
+meta <- imputed$metadata |>
+  transmute(
+    sample_id = Col_ID, subject = Subject_ID,
+    group = factor(Group, levels = c("HR", "LR")),
+    timepoint = factor(Timepoint, levels = c("T1", "T2", "T3"))
+  )
+
+pheno <- read_csv(here("00_input", "c_data", "phenotype.csv"), show_col_types = FALSE)
+ADAPTATION_TRAITS <- setdiff(names(pheno), c("subject", "group_arm"))
+
+TRAIT_LABELS <- c(
+  comp_hypertrophy = "Composite hypertrophy",
+  d_fcsa_I = "Δ fCSA I", d_fcsa_II = "Δ fCSA II", d_mcsa = "Δ mCSA",
+  d_1rm_legpress = "Δ 1RM leg-press", d_1rm_ext = "Δ 1RM leg-ext"
 )
+stopifnot(setequal(names(TRAIT_LABELS), ADAPTATION_TRAITS))
 
-# Display labels for the phenotype traits (shared by panels C and S)
-trait_lab <- c(
-  comp_hypertrophy = "Comp. hypertrophy", d_mcsa = "d mCSA", d_fcsa_I = "d fCSA I",
-  d_fcsa_II = "d fCSA II", d_1rm_legpress = "d 1RM leg", d_1rm_ext = "d 1RM ext"
+# The DEP fit, read not refitted: 03_DEP already estimated the design, the contrasts, and
+# the within-subject correlation. fry reuses all three rather than re-deriving them.
+dep_fit <- readRDS(here("03_DEP", "a_non_imputed", "c_data", "01_limma_DAList.rds"))
+DESIGN <- dep_fit$design$design_matrix
+CONTRAST_MATRIX <- dep_fit$design$contrast_matrix
+CORRELATION <- dep_fit$eBayes_fit$correlation
+
+# The block is the random factor 03_DEP actually fitted (subject), named on its own metadata.
+BLOCK <- dep_fit$metadata[[dep_fit$design$random_factor]]
+
+# fry takes the design rows positionally, so the abundance columns must be in the design's
+# order. They happen to agree today; assert it rather than trust it, because a silent
+# mismatch would pair every sample with another sample's design row.
+DEP_SAMPLES <- rownames(DESIGN)
+stopifnot(
+  setequal(DEP_SAMPLES, colnames(abund)),
+  length(BLOCK) == nrow(DESIGN)
 )
+abund_dep <- abund[, DEP_SAMPLES, drop = FALSE]
+stopifnot(identical(colnames(abund_dep), DEP_SAMPLES))
 
-wg <- run_wgcna(ci$full_abund, ci$meta)
-wgcna_mem <- wg$membership
-wgcna_eig <- wg$eigengene
-# Network internals kept in memory for the WGCNA-QC supplements (soft-threshold
-# sweep, gene dendrogram); not persisted, so c_data stays limited to the tables.
-wgcna_sft <- wg$sft
-wgcna_net <- wg$net
-wgcna_power <- wg$chosen_power
-wgcna_colors <- wg$module_colors
-
-pred <- run_module_prediction(wgcna_eig, pheno_tbl)
-resp <- run_module_responder(wgcna_eig)
-pheno_lmm <- run_module_phenotype_lmm(wgcna_eig, pheno_tbl)
-
-# WGCNA/AnnotationDbi mask tidyverse verbs; re-attach dplyr/tidyr last so the
-# panels' unqualified verbs resolve correctly.
-suppressPackageStartupMessages({
-  for (p in c("tidyr", "dplyr")) {
-    pk <- paste0("package:", p)
-    if (pk %in% search()) suppressWarnings(detach(pk, character.only = TRUE))
-    library(p, character.only = TRUE)
-  }
-})
-
-write.csv(wgcna_mem, file.path(DAT_DIR, "wgcna_membership.csv"), row.names = FALSE)
-write.csv(wgcna_eig, file.path(DAT_DIR, "wgcna_eigengene.csv"), row.names = FALSE)
-write.csv(pred, file.path(DAT_DIR, "module_prediction.csv"), row.names = FALSE)
-write.csv(resp, file.path(DAT_DIR, "module_responder.csv"), row.names = FALSE)
-write.csv(pheno_lmm, file.path(DAT_DIR, "module_phenotype_lmm.csv"), row.names = FALSE)
+wg <- fit_modules(abund, meta$subject)
+mods <- wg$colors
+me_long <- eigengene_long(wg$eigengenes, meta)
 
 cat(sprintf(
-  "Loaded: %d WGCNA modules (full proteome); prediction grid %d, responder grid %d\n",
-  length(unique(wgcna_mem$group_id[wgcna_mem$group_id != "grey"])),
-  nrow(pred), nrow(resp)
+  "F04 modules: power %d (signed R2 = %.3f, mean k = %.1f) | %d modules, %d grey of %d\n",
+  wg$power, wg$r2, wg$mean_k,
+  length(setdiff(unique(mods), "grey")), sum(mods == "grey"), length(mods)
 ))
