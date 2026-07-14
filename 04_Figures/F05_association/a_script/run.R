@@ -5,13 +5,13 @@
 # association tables and the singscore matrix to c_data, and lead figures to
 # b_reports.
 
-pacman::p_load(here, dplyr, readr, tibble, purrr, ggplot2)
+pacman::p_load(here, dplyr, readr, tibble, purrr, ggplot2, openxlsx)
 
-unit <- here("04_Figures", "extras", "association")
-source(here("04_Figures", "functions", "style.R"))
-source(here("04_Figures", "functions", "pathway_utils.R"))
-source(file.path(unit, "a_script", "functions", "associate.R"))
-source(file.path(unit, "a_script", "functions", "plots.R"))
+unit <- here("04_Figures", "F05_association")
+source(file.path(unit, "a_script", "style.R"))
+source(file.path(unit, "a_script", "pathway_utils.R"))
+source(file.path(unit, "a_script", "associate.R"))
+source(file.path(unit, "a_script", "plots.R"))
 
 data_dir <- file.path(unit, "c_data")
 report_dir <- file.path(unit, "b_reports")
@@ -21,7 +21,7 @@ dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 meta <- dal$metadata
 pheno <- readr::read_csv(
-  here("04_Figures", "F04", "c_data", "phenotype.csv"),
+  here("00_input", "c_data", "phenotype.csv"),
   show_col_types = FALSE
 )
 traits <- intersect(
@@ -46,7 +46,6 @@ protein_assoc <- purrr::map_dfr(
   phases, \(ph) associate_traits(dal$data, meta, pheno, traits, ph)
 ) |>
   dplyr::mutate(gene = gene_of[feature], .after = feature)
-readr::write_csv(protein_assoc, file.path(data_dir, "protein_association.csv"))
 
 # Pathway scoring: collapse to one row per gene (highest mean), keep proteins
 # detected in every sample so the rank-based score is well defined.
@@ -69,15 +68,13 @@ message(sprintf(
 gene_sets <- build_pathway_collection()
 scores <- score_pathways(mat, gene_sets)
 message(sprintf("scored %d pathways", nrow(scores)))
-scores |>
+pathway_scores <- scores |>
   as.data.frame() |>
-  tibble::rownames_to_column("pathway") |>
-  readr::write_csv(file.path(data_dir, "pathway_scores.csv"))
+  tibble::rownames_to_column("pathway")
 
 pathway_assoc <- purrr::map_dfr(
   phases, \(ph) associate_traits(scores, meta, pheno, traits, ph)
 )
-readr::write_csv(pathway_assoc, file.path(data_dir, "pathway_association.csv"))
 
 # Lead figures: protein volcano for mCSA, and a singscore rank-density for the
 # top mCSA-associated pathway.
@@ -101,4 +98,28 @@ ggsave(
   width = 6, height = 4
 )
 
-message("phenotype_mapping done -> ", data_dir)
+# One workbook, one sheet per table.
+sheets <- list(
+  protein_association = protein_assoc,
+  pathway_association = pathway_assoc,
+  pathway_scores = pathway_scores
+)
+overview <- data.frame(
+  sheet = names(sheets),
+  description = c(
+    "Per-protein association with each continuous trait, by phase; BH within trait x phase",
+    "Per-pathway (singscore) association with each trait, by phase",
+    "The singscore matrix: one row per pathway, one column per sample"
+  ),
+  stringsAsFactors = FALSE
+)
+wb <- createWorkbook()
+addWorksheet(wb, "overview")
+writeData(wb, "overview", overview)
+for (s_name in names(sheets)) {
+  addWorksheet(wb, s_name)
+  writeData(wb, s_name, sheets[[s_name]])
+}
+saveWorkbook(wb, file.path(data_dir, "association_source_data.xlsx"), overwrite = TRUE)
+
+message("association done -> ", data_dir)
