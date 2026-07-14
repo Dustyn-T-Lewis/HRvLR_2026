@@ -52,9 +52,10 @@ fixed in advance, the same peptide is targeted in every run, and quantification
 across the 45 samples is far more consistent than DDA would give. What DIA does
 not do is fill the matrix. There are still gaps, and the interpretation of a gap
 is specific: it almost always means the protein fell below detection in that run,
-not that the protein was absent from that person's muscle. That is the whole
-reason stage 01 converts a reported zero to `NA`. A zero would tell the model "we
-measured this and it was nothing," which is a claim the instrument never made.
+not that the protein was absent from that person's muscle. The export already
+encodes those gaps as `NA` rather than as zeros, which is the honest encoding: a
+zero would tell the model "we measured this and it was nothing," a claim the
+instrument never made.
 
 One more piece of vocabulary. A row in the matrix is a **protein group**, not
 necessarily a gene. Mass spectrometry sees peptides, and when several proteins
@@ -84,9 +85,10 @@ and pairs the intensity columns to the sample sheet by name. Keeping the sample
 columns named exactly as `Col_ID` in the metadata is what lets that pairing
 succeed without a manual key.
 
-Intensities arrive linear, with unquantified proteins recorded as zero. Stage 01
-converts those zeros to `NA` (`zero_to_missing`) because the missing-value filter
-and, later, limma treat absence as missing rather than as a measured zero.
+Intensities arrive linear, with unquantified proteins already recorded as `NA` —
+24.3% of cells, and the smallest positive intensity is 3,499. The matrix contains
+no zeros. Stage 01 still calls `zero_to_missing()`, which on this export converts
+nothing; it is a guard in case a future export writes zeros instead of blanks.
 
 # The sample sheet: `HRvLR_meta.csv`
 
@@ -184,10 +186,9 @@ depends on what happened to be eluting, so runs disagree with each other.
 observed peptides and therefore cannot be told apart. The row is the group, not
 guaranteed to be a single gene.
 
-**Missing, not zero** — an unquantified protein arrives as a zero and becomes
-`NA` in stage 01. The gap usually means "below detection in this run", not
-"absent from this muscle", and a zero would assert a measurement that was never
-made.
+**Missing, not zero** — an unquantified protein arrives as `NA`, not as a zero.
+The gap usually means "below detection in this run", not "absent from this
+muscle", and a zero would assert a measurement that was never made.
 
 **`Col_ID`** — the join key. It names an intensity column in the protein matrix
 and a row in the sample sheet, which is what pairs data to design without a
@@ -208,7 +209,7 @@ annotation or a sample from its design.
 - The design is 8 HR and 8 LR across three timepoints; two partial subjects turn
   48 slots into 45 quantified samples.
 - DIA gives consistent quantification but a gapped matrix, and the gaps mean
-  "below detection", which is why zeros become `NA`.
+  "below detection". The export already encodes them as `NA`; there are no zeros.
 - `Col_ID` pairs the matrix to the sample sheet, and `Group_Time` carries the six
   design cells used by both the missingness filter and the models.
 - HPA evidence is the raw material for the blood-contaminant rule; `Phenotype.xlsx`
