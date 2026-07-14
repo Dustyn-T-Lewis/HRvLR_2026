@@ -14,6 +14,6 @@ render_concordance_figure(list(
     x = "HR training logFC", y = "LR training logFC",
     x_short = "HR training", y_short = "LR training"
   ),
-  title = "Figure 4. Training response: shared adaptation and responder-specific divergence",
+  title = "Pilot. Training response: shared adaptation and responder-specific divergence",
   subtitle = "HR vs LR over T1 to T2. Diagonal = concordant; off-diagonal and orange = interaction-significant divergence."
 ))
