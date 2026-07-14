@@ -80,7 +80,9 @@ pC <- ggplot(diverg_df, aes(hr, lr)) +
   FIG_THEME
 
 save_png(pC, file.path(RPT_DIR, "panels", "panel_c_divergence"), PE_W, PE_H)
-F02_AUDIT[["panel_C_divergence"]] <- diverg_df |> filter(divergent) |> select(phase, gene, hr, lr, gap)
+F02_AUDIT[["panel_C_divergence"]] <- diverg_df |>
+  filter(divergent) |>
+  select(phase, gene, hr, lr, gap)
 cat("F02 Panel C done.\n")
 
 # --- Supplement (owned by this panel): responder heterogeneity.
@@ -114,7 +116,13 @@ disp_p <- bind_rows(lapply(disp, `[[`, "p")) |>
 
 pC_disp <- ggplot(disp_df, aes(Group, dist_centroid, color = Group, fill = Group)) +
   geom_boxplot(alpha = 0.18, outlier.shape = NA, width = 0.55, linewidth = 0.4) +
-  geom_jitter(width = 0.12, height = 0, size = 1.4, alpha = 0.8) +
+  # Seeded for the same reason as panel B: an unseeded jitter re-randomises at render
+  # time. This one happened to render stably only because an upstream set.seed pinned
+  # the RNG - luck, not correctness, and it would break on any reordering.
+  geom_point(
+    position = position_jitter(width = 0.12, height = 0, seed = 42),
+    size = 1.4, alpha = 0.8
+  ) +
   geom_text(
     data = disp_p, aes(x = 1.5, y = Inf, label = label), inherit.aes = FALSE,
     vjust = 1.4, size = FIG_GEOM_TEXT, fontface = "bold", color = "grey25"
