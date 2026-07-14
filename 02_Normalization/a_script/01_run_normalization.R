@@ -8,13 +8,10 @@
 
 pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
 source(here("04_Figures", "shared", "pca.R"))
+source(here("04_Figures", "shared", "utils.R"))
 
 data_dir <- here("02_Normalization", "c_data")
 report_dir <- here("02_Normalization", "b_reports")
-clear_dir <- function(d) {
-  dir.create(d, recursive = TRUE, showWarnings = FALSE)
-  unlink(setdiff(list.files(d, full.names = TRUE), file.path(d, ".gitkeep")), recursive = TRUE)
-}
 clear_dir(data_dir)
 clear_dir(report_dir)
 
