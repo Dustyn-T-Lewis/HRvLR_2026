@@ -14,6 +14,6 @@ render_concordance_figure(list(
     x = "HR acute logFC", y = "LR acute logFC",
     x_short = "HR acute", y_short = "LR acute"
   ),
-  title = "Figure 5. Acute response: shared signal and responder-specific divergence",
+  title = "Pilot. Acute response: shared signal and responder-specific divergence",
   subtitle = "HR vs LR over T2 to T3. Diagonal = concordant; off-diagonal and orange = interaction-significant divergence."
 ))
