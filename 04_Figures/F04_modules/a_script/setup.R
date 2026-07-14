@@ -2,8 +2,8 @@
 # 03_DEP, then build the modules. Panels and run.R source this first. Writes nothing.
 pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr)
 
-source(here("04_Figures", "F04_modules", "a_script", "style.R"))
-source(here("04_Figures", "F04_modules", "a_script", "pathway_utils.R"))
+source(here("04_Figures", "functions", "style.R"))
+source(here("04_Figures", "functions", "pathway_utils.R"))
 source(here("04_Figures", "F04_modules", "a_script", "wgcna.R"))
 source(here("04_Figures", "F04_modules", "a_script", "enrichment.R"))
 source(here("03_DEP", "contrasts.R"))

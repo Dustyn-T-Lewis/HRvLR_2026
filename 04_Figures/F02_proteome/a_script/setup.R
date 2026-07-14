@@ -6,7 +6,7 @@
 
 pacman::p_load(here, tidyverse, patchwork, grid, vegan)
 
-source(here("04_Figures", "F02_proteome", "a_script", "style.R"))
+source(here("04_Figures", "functions", "style.R"))
 source(here("03_DEP", "contrasts.R"))
 
 # Paths
