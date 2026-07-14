@@ -32,19 +32,28 @@ contrast tests, with HR's acute response enriching 217 pathways against LR's 33 
 
 **Read the protein-level counts with care.** Most of them come from the π gate
 (`p^|logFC| < 0.05`), which controls no error rate and admits proteins with raw p up to
-0.269. There are 489 π-calls against 12 proteins at BH < 0.05. Treat π counts as a
-ranking, not as discoveries.
+0.270. There are 506 π-calls against 15 proteins at BH < 0.05 (21 at BH < 0.10), and 70 of
+the π-calls have raw p ≥ 0.05. Treat π counts as a ranking, not as discoveries.
+
+The null is robust to imputation. On BH, missForest (MAR), MsCoreUtils (hybrid) and Perseus
+(MNAR) each return zero significant proteins in all five HR-vs-LR and interaction contrasts,
+matching the non-imputed arm. It is also robust to the blood filter: readmitting all 136
+blood-tagged proteins leaves every one of those contrasts at zero.
 
 Known limitations are stated on the page where the reader meets them: the π gate in
-`HRvLR_pipeline.qmd`, the surviving keratin and HBG2 contaminants in
-`01_filtering.qmd`, the circular module test in F04, and the transductive eigengenes
-in F04 and `04_Figures/extras`.
+`HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
+reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
+by the missingness filter that the model then cannot test; the circular module test in F04; and
+the transductive eigengenes in F04 and `04_Figures/extras`.
 
 ## Design and Canonical Contrasts
 
 DEP fits the means model `~ 0 + group` (one mean per `Group_Time` cell) with
 `duplicateCorrelation` blocking on `Subject_ID`, and computes all 9 contrasts
-below. Each is a linear combination of the six cell means, so all are estimable.
+below. Each is a linear combination of the six cell means, and is estimable only
+for proteins observed in every cell it touches. 34 proteins reach the model with
+at least one empty cell, so the true tested-N is 1,897–1,912 per contrast, never
+1,920 (`03_DEP/a_non_imputed/b_reports/untested_proteins.csv`).
 
 HR (within-responder):
 
@@ -107,15 +116,23 @@ Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R   # exploratory alt
 Rscript 02_Normalization/imputation/a_script/d_perseus.R       # exploratory alternative (MNAR)
 
 Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imputed DEP, all four arms
+Rscript 03_DEP/b_imputed/a_script/02_imp4p_circularity.R       # permutation control: why imp4p breaks the null
+Rscript 02_Normalization/imputation/a_script/imputation_qc.R   # imputation QC figure (reads the imputed DEP)
 ```
+
+On BH the null holds under every imputer that does not impute inside the tested factor.
+missForest, MsCoreUtils and Perseus each return **zero** BH-significant proteins in all five
+HR-vs-LR and interaction contrasts, matching the non-imputed arm. imp4p returns 117, because
+`impute.mle` fits a separate EM within each `Group_Time` cell and the contrasts then test among
+those same cells; re-imputing within random cells of equal size collapses it back to zero. Never
+rank robustness on π-counts — π exponentiates |log2FC|, the quantity imputation distorts, and
+Perseus tops the π table while being null on BH.
 
 ### Figures
 
 Six active figures plus one supplement, rendered into `b_reports`; rerun only
 after stages `01` to `03` complete cleanly. F03 recomputes the fgsea enrichment
-fresh each run and writes it for F04/F05 to read, so run F03 before F04/F05. The
-`extras/imputation` supplement reads the `03_DEP/b_imputed` concordance outputs, so run
-it after the imputed DEP.
+fresh each run and writes it for F04/F05 to read, so run F03 before F04/F05.
 
 - `04_Figures/F01`: phenotype atlas
 - `04_Figures/F02`: global proteome overview and QC
@@ -123,7 +140,6 @@ it after the imputed DEP.
 - `04_Figures/extras/concordance_training`: HR-vs-LR training-phase concordance
 - `04_Figures/extras/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F04`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
-- `04_Figures/extras/imputation`: imputation-method comparison supplement (non-imputed reference vs the four arms)
 
 ```sh
 Rscript 04_Figures/F01_phenotype/a_script/run.R
@@ -132,7 +148,6 @@ Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
 Rscript 04_Figures/extras/concordance_training/a_script/run.R
 Rscript 04_Figures/extras/concordance_acute/a_script/run.R
 Rscript 04_Figures/F04/a_script/HRvLR_F04_run.R
-Rscript 04_Figures/extras/imputation/a_script/HRvLR_S_imputation.R
 ```
 
 ## Repository Conventions
@@ -148,8 +163,7 @@ Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_da
 | `04_Figures/shared/` | `pca.R` (sourced by stages 01 and 02) and `references.bib` (the single bibliography for every notebook) |
 | `04_Figures/tests/` | The `testthat` suite. Run with `testthat::test_dir(here("04_Figures", "tests", "testthat"))` |
 | `04_Figures/modules/` | The WGCNA module engine F04 reads: fit, coupling, and the honest in-fold refit |
-| `04_Figures/extras/` | Association, prediction, the concordance figures, and the imputation supplement |
-| `04_Figures/extras/` | The concordance figures (F04/F05) and the imputation supplement |
+| `04_Figures/extras/` | Association, prediction, and the concordance figures |
 
 ## Reproducibility Rules
 
