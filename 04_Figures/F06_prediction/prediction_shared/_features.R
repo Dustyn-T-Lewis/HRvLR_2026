@@ -19,10 +19,10 @@ pred_paths <- function() {
       "02_Normalization", "imputation", "c_data",
       "DAList_imputed_missforest.rds"
     ),
-    pheno = here("04_Figures", "F04", "c_data", "phenotype.csv"),
-    eigen = here("04_Figures", "F04", "c_data", "wgcna_eigengene.csv"),
+    pheno = here("00_input", "c_data", "phenotype.csv"),
+    eigen = here("04_Figures", "F04_modules", "c_data", "wgcna_eigengene.csv"),
     cache = here(
-      "04_Figures", "extras", "prediction_shared", "c_data",
+      "04_Figures", "F06_prediction", "prediction_shared", "c_data",
       "singscore_scores.rds"
     )
   )
