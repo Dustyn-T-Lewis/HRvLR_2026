@@ -147,7 +147,7 @@ Rscript 04_Figures/F02_proteome/a_script/run.R
 Rscript 04_Figures/F03_volcanoes/a_script/run.R
 Rscript 04_Figures/extras/concordance_training/a_script/run.R
 Rscript 04_Figures/extras/concordance_acute/a_script/run.R
-Rscript 04_Figures/F04/a_script/HRvLR_F04_run.R
+Rscript 04_Figures/F04_modules/a_script/run.R
 ```
 
 ## Repository Conventions

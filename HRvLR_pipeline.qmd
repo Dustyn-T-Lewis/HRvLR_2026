@@ -159,7 +159,7 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F03_volcanoes/a_script/F03_volcanoes.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Figures/extras/concordance_training/` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
 | `04_Figures/extras/concordance_acute/` | Acute concordance, same engine |
-| `04_Figures/F04/.../HRvLR_F04.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
+| `04_Figures/F04_modules/a_script/F04_modules.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
 | `04_Figures/extras/README.md` | Association and out-of-sample prediction |
 
 Known limitations are stated in each stage and figure page where the reader meets
