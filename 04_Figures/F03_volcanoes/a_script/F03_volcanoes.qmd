@@ -1,6 +1,6 @@
 ---
 title: "HRvLR F03 — Differential Response Volcanoes"
-subtitle: "Nine contrasts as volcano-in-ring plots, palette-coded by comparison family"
+subtitle: "The five responder contrasts as volcano-in-ring plots; the four within-group responses as the positive control"
 author: "A_HRvLR_2026"
 date: today
 bibliography: ../../shared/references.bib
@@ -52,8 +52,7 @@ up to.** The plot is drawn by the `enrichVolcano` package; F03 supplies the two 
 frames and a family palette.
 
 The study is 8 high responders (HR) against 8 low responders (LR) across baseline,
-trained, and acute states. The nine estimable contrasts split across two composites,
-each ring keyed to a family palette so a reader never mistakes one kind of comparison
+trained, and acute states. each ring keyed to a family palette so a reader never mistakes one kind of comparison
 for another.
 
 ## What F03 found
@@ -88,26 +87,33 @@ carried in with them. The contrast that isolates the *response* difference is th
 interaction (`r sc[["Training_Interaction"]]` training, `r sc[["Acute_Interaction"]]`
 acute), read as exploratory for the reasons below.
 
-## The two composites
+## The main figure, and what it deliberately leaves out
 
-The first holds the within-group and interaction contrasts in three columns —
-training, acute, interaction — tagged down each column so a column reads as one kind
-of comparison:
+Nine contrasts are estimable. Only **five** of them test the question this study asks —
+*does a high responder's proteome differ from a low responder's?* Those five are the main
+figure. The other four describe what training does *inside* each arm, which is a different
+question, and they sit in the supplement.
 
-- **Responses** (red up, blue down) — the four within-group changes: what moves inside
-  HR and inside LR over training (T2 − T1, left column) and over the acute bout
-  (T3 − T2, middle column).
-- **Interaction** (orange up, purple down) — where the two groups' *responses* diverge,
-  over training and over the acute bout (right column).
-
-![F03. The five contrasts that test responder status: HR vs LR at baseline, trained and acute (A-C), and the two differential-response interactions (D-E).](../b_reports/F03_volcanoes.png)
-
-The second holds the between-responder differences, HR against LR at each state:
+The main figure holds the five responder contrasts:
 
 - **Differential** (green up, purple down) — `Baseline_HRvLR`, `Trained_HRvLR`,
-  `Acute_HRvLR`, read left to right as the untrained, trained, and acute states.
+  `Acute_HRvLR` (A–C), read as the untrained, trained, and acute states.
+- **Interaction** (orange up, purple down) — `Training_Interaction`, `Acute_Interaction`
+  (D–E), where the two groups' *responses* diverge.
 
-![Supplement: the four within-group responses (positive control). Training and the acute bout DO move the proteome inside each arm - which is what makes the null in the main figure meaningful rather than merely underpowered.](../b_reports/supp/within_group_responses.png)
+![F03. The five contrasts that test responder status: HR vs LR at baseline, trained and acute (A–C), and the two differential-response interactions (D–E).](../b_reports/F03_volcanoes.png)
+
+The supplement holds the four within-group responses — what moves inside HR and inside LR
+over training (T2 − T1) and over the acute bout (T3 − T2), in red-up / blue-down.
+
+**These are the positive control, and they are why the main figure is worth reading.** A
+null between responders means nothing if nothing moved at all; it would just mean the
+assay, or the study, was too weak to see anything. Because the within-group responses *are*
+strongly enriched, the absence of a between-responder difference is **informative** rather
+than merely underpowered. That is the whole argument, and it is why these four rings are
+kept and shown rather than dropped.
+
+![Supplement: the four within-group responses (positive control). Training and the acute bout do move the proteome inside each arm — which is what makes the null in the main figure meaningful rather than merely underpowered.](../b_reports/supp/within_group_responses.png)
 
 ## What NES means {#sec-nes}
 
