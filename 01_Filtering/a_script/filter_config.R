@@ -14,8 +14,24 @@
 # myo_cut is 20, not 50. HPA tags any plasma-detectable protein "Secreted to blood", which
 # is why CK and myoglobin are clinical damage markers; the rescue exists to undo that. At 50
 # it failed to fire for GPI (myonuclei 43.1), ANXA2 (40.2) and PPIA (21.1), all real muscle
-# proteins. There is a clean gap: every genuine plasma protein sits below myonuclei 1.
-# Chosen on HPA annotation alone - no contrast, phenotype or group label was consulted.
+# proteins. Chosen on HPA annotation alone - no contrast, phenotype or group label was
+# consulted, so the choice cannot leak into the HR/LR result.
+#
+# There is NO clean gap on myonuclei, and an earlier version of this comment claimed there was.
+# Removed-as-plasma proteins span myonuclei 0-236.8 and rescued ones span 20.6-362.3; they
+# overlap across the whole rescue range, and 8 removed proteins sit above myo_cut (BTD 236.8,
+# A2M 105.1, C1S 89.0, PZP 74.7, ITIH2 44.0, SERPINF1 28.3, GSN 26.0, ITIH4 21.4). blood_max
+# is what actually separates them: all 8 measure 2.3e9-4.2e11 pg/L in plasma, while genuinely
+# intracellular proteins measure 1e6-1e8. The measured concentration does the work; the
+# transcript floor only decides who gets a second hearing.
+#
+# The floor is therefore imperfect, and it is known to over-delete: C1QBP (mitochondrial,
+# blood 1.5e6), HMGB2 (nuclear, 8.3e5), PPIB, LGALS1 and CTSB (an exercise myokine) all clear
+# blood_max and fail only on myonuclei. 03_DEP/a_non_imputed/a_script/02_blood_filter_sensitivity.R
+# refits the nine contrasts with all 136 blood-tagged proteins readmitted: zero BH hits in every
+# HR-vs-LR and interaction contrast, so the null does not depend on this rule. The same run shows
+# why the rule is kept - readmitting them floods Acute_LR from 19 to 97 hits, 57 of them the
+# readmitted blood proteins, which is the 2x-bloodier T3 biopsy confound arriving on cue.
 
 filter_cfg <- list(
   hpa_file        = "HPA_annotations_full.tsv",
