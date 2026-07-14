@@ -185,15 +185,26 @@ dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
 
 `fit_limma_model()` runs `lmFit` with the blocking `rho`, reparametrizes into
 contrast space with `contrasts.fit`, and moderates the variances with
-`eBayes(robust = TRUE)`, which keeps a few high-variance proteins from inflating
-the prior [@ritchie2015]. `extract_DA_results()` then applies Benjamini-Hochberg
-within each contrast [@benjamini1995].
+`eBayes(robust = TRUE)`, which proteoDA hardcodes [@ritchie2015]. On this data the
+robust flag changes nothing: it looks for proteins whose variance is an outlier,
+finds none surviving its own FDR screen, and falls back to the ordinary estimate.
+`eBayes(robust = TRUE)` and `eBayes(robust = FALSE)` return identical p-values in
+all nine contrasts. Do not read "robust" as though it had rescued anything.
+`extract_DA_results()` then applies Benjamini-Hochberg within each contrast
+[@benjamini1995], never across the nine.
 
 The FDR threshold is 0.10 and there is no fold-change gate. At roughly eight
 subjects per cell, strict 0.05 control would drop genuinely altered proteins with
 modest support, and a hard logFC cutoff would discard small but real changes that
 label-free DIA can still resolve. The Pi-score adds the effect-size requirement
 instead.
+
+**One trap when reading the per-contrast CSVs.** proteoDA drives *both* of its
+significance columns off the single `pval_thresh` argument, so in
+`04_per_contrast_results/*.csv` the column `sig.PVal` means **raw p < 0.10**, not the
+p < 0.05 its name implies, and `sig.FDR` means q < 0.10. Our own `02_DA_summary.csv`
+names the threshold in every column (`sig.P.10`, `sig.FDR.05`, `sig.FDR.10`, `sig.Pi`)
+so the counts cannot be misread.
 
 ```{r}
 #| label: dep-fit

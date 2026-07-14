@@ -184,29 +184,30 @@ file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 
 # DA summary
 # proteoDA's summarize_contrast_DA lacks Pi-score columns, so we build our own.
+#
+# Every count column names the threshold it applies. proteoDA drives both of its own columns
+# off the single pval_thresh argument, so its `sig.PVal` means p < 0.10, not the p < 0.05 the
+# name implies, and its `sig.FDR` is an exact duplicate of the q < 0.10 column. Both were
+# read as 0.05 counts for months. The per-contrast CSVs still carry proteoDA's native names.
 
 da_count_row <- function(res, cname, type) {
   if (type == "nonsig") {
-    n_pval <- sum(res$P.Value >= cfg$pval_thresh, na.rm = TRUE)
-    n_fdr <- sum(res$adj.P.Val >= cfg$pval_thresh, na.rm = TRUE)
+    n_p10 <- sum(res$P.Value >= 0.10, na.rm = TRUE)
     n_pi <- sum(res$sig_pi == 0, na.rm = TRUE)
-    n_05 <- sum(res$adj.P.Val >= 0.05, na.rm = TRUE)
-    n_10 <- sum(res$adj.P.Val >= 0.10, na.rm = TRUE)
+    n_q05 <- sum(res$adj.P.Val >= 0.05, na.rm = TRUE)
+    n_q10 <- sum(res$adj.P.Val >= 0.10, na.rm = TRUE)
   } else {
     dir <- if (type == "up") res$logFC > 0 else res$logFC < 0
     pi_target <- if (type == "up") 1L else -1L
-    n_pval <- sum(res$P.Value < cfg$pval_thresh & dir, na.rm = TRUE)
-    n_fdr <- sum(res$adj.P.Val < cfg$pval_thresh & dir, na.rm = TRUE)
+    n_p10 <- sum(res$P.Value < 0.10 & dir, na.rm = TRUE)
     n_pi <- sum(res$sig_pi == pi_target, na.rm = TRUE)
-    n_05 <- sum(res$adj.P.Val < 0.05 & dir, na.rm = TRUE)
-    n_10 <- sum(res$adj.P.Val < 0.10 & dir, na.rm = TRUE)
+    n_q05 <- sum(res$adj.P.Val < 0.05 & dir, na.rm = TRUE)
+    n_q10 <- sum(res$adj.P.Val < 0.10 & dir, na.rm = TRUE)
   }
   tibble(
     contrast = cname, type = type,
-    sig.PVal = n_pval, sig.FDR = n_fdr,
-    pval_thresh = cfg$pval_thresh, lfc_thresh = cfg$lfc_thresh,
-    p_adj_method = cfg$adj_method,
-    sig.Pi = n_pi, sig.FDR.05 = n_05, sig.FDR.10 = n_10
+    sig.P.10 = n_p10, sig.FDR.05 = n_q05, sig.FDR.10 = n_q10, sig.Pi = n_pi,
+    lfc_thresh = cfg$lfc_thresh, p_adj_method = cfg$adj_method
   )
 }
 
