@@ -2,7 +2,7 @@
 # Training concordance: HR vs LR over T1 to T2. Where the two groups adapt
 # together and where they diverge. Rendered by the shared concordance driver.
 pacman::p_load(here)
-source(here("04_Figures", "F00_PILOT", "concordance_training", "a_script", "concordance_figure.R"))
+source(here("04_Figures", "functions", "concordance_figure.R"))
 
 render_concordance_figure(list(
   fig_id = "concordance_training",

@@ -1,4 +1,4 @@
-# Driver for the HR-vs-LR concordance figures (F04 training, F05 acute). One
+# Driver for the HR-vs-LR concordance figures (F00_PILOT training and acute). One
 # parameterised render keeps the two figures a single source of truth; only the
 # per-figure config (contrast pair, factor levels, labels, composite titles)
 # differs. Builds the 5-panel YvO engine composite: A quadrant ORA, B pattern

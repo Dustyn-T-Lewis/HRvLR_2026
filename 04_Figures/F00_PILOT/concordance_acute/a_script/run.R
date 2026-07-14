@@ -2,7 +2,7 @@
 # Acute concordance: HR vs LR over T2 to T3. Same builders as the training arm on the
 # acute contrast pair. Rendered by the shared concordance driver.
 pacman::p_load(here)
-source(here("04_Figures", "F00_PILOT", "concordance_acute", "a_script", "concordance_figure.R"))
+source(here("04_Figures", "functions", "concordance_figure.R"))
 
 render_concordance_figure(list(
   fig_id = "concordance_acute",
