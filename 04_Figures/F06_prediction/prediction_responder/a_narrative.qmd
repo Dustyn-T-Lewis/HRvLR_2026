@@ -59,7 +59,7 @@ phases <- c("baseline", "training", "acute")
 metrics <- map_dfr(phases, function(ph) {
   read_csv(
     here(
-      "04_Figures", "extras", "prediction_responder_class", ph, "c_data",
+      "04_Figures", "F06_prediction", "prediction_responder", ph, "c_data",
       "class_metrics.csv"
     ),
     show_col_types = FALSE
