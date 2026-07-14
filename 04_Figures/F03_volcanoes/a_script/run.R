@@ -12,10 +12,9 @@ F03_TABLES <- list()
 a_script <- here("04_Figures", "F03_volcanoes", "a_script")
 source(file.path(a_script, "setup.R"))
 source(file.path(a_script, "rings.R"))
+source(here("04_Figures", "shared", "utils.R"))
 
-unlink(setdiff(list.files(RPT_DIR, full.names = TRUE), file.path(RPT_DIR, ".gitkeep")),
-  recursive = TRUE
-)
+clear_dir(RPT_DIR)
 supp_dir <- file.path(RPT_DIR, "supp")
 dir.create(supp_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(DAT_DIR, recursive = TRUE, showWarnings = FALSE)
