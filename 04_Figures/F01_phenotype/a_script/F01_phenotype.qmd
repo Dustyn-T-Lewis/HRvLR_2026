@@ -32,7 +32,7 @@ split as a continuum of growth magnitude, and **C** shows where the response
 diverges by domain.
 
 ```{r setup}
-source(here::here("04_Figures", "F01", "a_script", "setup.R"))
+source(here::here("04_Figures", "F01_phenotype", "a_script", "setup.R"))
 adv <- change_advantage_table(meta)
 ```
 
@@ -59,7 +59,7 @@ effectsize::hedges_g(delta ~ Group, data = mcsa)
 A `Group × Timepoint` mixed model would answer the same question, but at two
 timepoints it reduces to exactly this change-score comparison (Twisk et al. 2018,
 doi:10.1016/j.conctc.2018.03.008), so it buys nothing here. The mixed model is kept
-as a robustness supplement (`supp/hlm/`), where it agrees to the third decimal.
+as a robustness supplement (the panel C mixed-model supplement), where it agrees to the third decimal.
 Because HR and LR are balanced at baseline on every outcome, adjusting for baseline
 (ANCOVA) is unnecessary and, for non-randomised groups, could hide a real
 difference (Senn 2006, doi:10.1002/sim.2682).
@@ -118,7 +118,7 @@ magnitude of the phenotype that defines the groups.
 
 ## Supplements
 
-The **phenotype** supplement (`supp/pheno/`) is the raw change score by group for
+The **phenotype** supplement (the panel C change-score supplement) is the raw change score by group for
 every outcome, faceted with the Holm-adjusted p per strip: manually traced fibre CSA
 rises in HR and falls in LR while strength gains match. The MyoVision fibre columns
 are excluded upstream — their values (200–560) sit 10–30× below plausible fibre CSA
@@ -126,14 +126,39 @@ and correlate negatively with manual tracing, the signature of a fibre-count met
 mislabelled as area (MyoVision reports CSA in thousands of µm²; Wen et al. 2018,
 doi:10.1152/japplphysiol.00762.2017).
 
-The **mixed-model** supplement (`supp/hlm/`) fits `value ~ Group * Timepoint +
+The **mixed-model** supplement (the panel C mixed-model supplement) fits `value ~ Group * Timepoint +
 (1 | subject)` per outcome and shows it reproduces the change-score result, with a
 `performance::check_model` assumption suite and the full coefficient, fit, contrast,
 and leave-one-subject tables in `F01_lmm_report.qmd`.
 
+## Methods note
+
+What each panel claims, the statistic behind it, and whether that statistic suits this
+design. Every DOI below was resolved against Crossref.
+
+| Panel | Claim | Statistic | Fit to this design |
+|---|---|---|---|
+| **A** volume | HR and LR performed the same training work | Welch two-sample *t*-test on accumulated volume load at T3, reported with the HR − LR difference and its 95% CI (n = 16, 8/8) | Appropriate as a *control*, not as proof of equivalence. A non-significant *t* is not evidence of sameness; a TOST equivalence test at n = 8/group would be inconclusive, so we report the interval and make no equivalence claim (Lakens 2017, [10.1177/1948550617697177](https://doi.org/10.1177/1948550617697177)). |
+| **B** continuum | The HR/LR split is a cut through a continuous growth distribution, not a natural kind | Descriptive: per-subject composite %change, ranked; the split and a 0.2 × SD small-difference band drawn on | **Circular by construction** — the composite score *defines* the groups. Shown, never tested. This is the honest way to present a median-split-style grouping. |
+| **C** forest | HR gain more muscle and fibre size than LR; strength does not diverge | Per-subject change score (T2 − T1), then HR − LR standardised difference (Hedges *g*) with 95% CI; two-sample *t* per outcome, **Holm-adjusted across the six-outcome family** | Sound. At exactly two timepoints the change-score comparison **equals** the Group × Timepoint mixed-model interaction (Twisk et al. 2018, [10.1016/j.conctc.2018.03.008](https://doi.org/10.1016/j.conctc.2018.03.008)); the panel C mixed-model supplement confirms the agreement. Change-score vs ANCOVA is a real choice — with randomised groups and no baseline imbalance both are unbiased (Senn 2006, [10.1002/sim.2682](https://doi.org/10.1002/sim.2682)); we use the change score because it is the estimand the figure names. **Muscle and fibre rows inherit panel B's circularity** (the composite score is built from them); **1RM is the one independent contrast.** |
+| **C** supp 1 | The raw change scores behind the forest | Group means ± SEM per outcome, Holm-adjusted *p* in each strip | Descriptive companion; same estimand as the forest. |
+| **C** supp 2 | The mixed model agrees with the change score | `value ~ Group * Timepoint + (1 \| subject)`, REML with Satterthwaite df (lme4, Bates et al. 2015, [10.18637/jss.v067.i01](https://doi.org/10.18637/jss.v067.i01); lmerTest, Kuznetsova et al. 2017, [10.18637/jss.v082.i13](https://doi.org/10.18637/jss.v082.i13)); assumptions via `performance::check_model` (Lüdecke et al. 2021, [10.21105/joss.03139](https://doi.org/10.21105/joss.03139)), reported per Meteyard & Davies 2020 ([10.1016/j.jml.2020.104092](https://doi.org/10.1016/j.jml.2020.104092)) | Correct for repeated measures. **Caveat:** a balanced 2×2 gives every observation identical leverage, so `check_model`'s influence view is uninformative here — the meaningful check is the leave-one-subject refit of the interaction coefficient against the 2/√n DFBETAS guide, which the report carries. The posterior-predictive panel simulates from the fit, so the RNG is pinned; without a seed the figure redraws every run. |
+
+**Sample size, stated exactly.** All 16 subjects (8 HR / 8 LR) contribute T1 and T2
+phenotype measurements, so every change-score test runs at n = 16 — **except 1RM
+Extension, at n = 15** (7 HR / 8 LR; one HR subject has no extension measurement). The
+partial-timepoint subjects that complicate the proteomics (S28 = T1-only, S29 = T2/T3-only)
+are a *biopsy* limitation and do **not** affect F01: the phenotype table is complete at
+T1 and T2 for all 16.
+
+**Excluded by decision.** The `MyoVision_fCSA_*` columns are omitted. At 200–560 they sit
+10–30× below plausible fibre CSA and correlate *negatively* with manual tracing — the
+signature of a fibre **count** mislabelled as an area (MyoVision reports CSA in thousands
+of µm²; Wen et al. 2018, [10.1152/japplphysiol.00762.2017](https://doi.org/10.1152/japplphysiol.00762.2017)).
+
 ## c_data — the source workbook
 
-`c_data/F01_source_data.xlsx` holds four sheets. `summary_by_measure` is one row per
+`c_data/F01_phenotype_source_data.xlsx` holds four sheets. `summary_by_measure` is one row per
 measure and group: the change-score mean, the Hedges g advantage with its CI, the
 raw and Holm-adjusted p, and the mixed-model ICC. `controls_and_axis` holds the
 volume and composite group means and the per-subject responder axis. `hlm_fit_summary`

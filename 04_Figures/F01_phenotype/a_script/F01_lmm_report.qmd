@@ -35,7 +35,7 @@ groups; both are null.
 
 ```{r setup}
 pacman::p_load(here, dplyr, parameters, performance, emmeans, purrr, knitr)
-source(here("04_Figures", "F01", "a_script", "functions", "build.R"))
+source(here("04_Figures", "F01_phenotype", "a_script", "setup.R"))
 
 meta <- f01_meta()
 fits <- lmm_models(meta) # one lmer per outcome, named by phenotype

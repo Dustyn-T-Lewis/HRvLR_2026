@@ -121,7 +121,7 @@ the top and follow the chain, or jump to the one you need.
 | `01_Filtering/a_script/01_filtering.qmd` | MAR vs MNAR, the contaminant gate, the outlier consensus, and where the cutoffs came from |
 | `02_Normalization/a_script/02_normalization.qmd` | cycloess, the four imputation arms, and why imputing before testing manufactures significance |
 | `03_DEP/a_non_imputed/a_script/03_dep.qmd` | The cell-means design, `duplicateCorrelation`, eBayes, BH, and the π-score |
-| `04_Figures/F01/HRvLR_F01.qmd` | The phenotype: matched work, divergent growth |
+| `04_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
 | `04_Figures/F02/.../HRvLR_F02.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `04_Figures/F03/.../HRvLR_F03.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Figures/extras/concordance_training/` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |

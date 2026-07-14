@@ -1,43 +1,30 @@
 # F01 build: render every panel, stitch the composite, write one workbook.
+# The only script in this unit that writes.
 pacman::p_load(here, patchwork, ggplot2, dplyr, tidyr, tibble, openxlsx)
 
 F01_PANELS <- list()
 F01_AUDIT <- list()
-source(here("04_Figures", "F01", "a_script", "setup.R"))
+source(here("04_Figures", "F01_phenotype", "a_script", "setup.R"))
 
+dir.create(file.path(F01_RPT, "panels"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(F01_RPT, "supp"), recursive = TRUE, showWarnings = FALSE)
+dir.create(F01_DAT, recursive = TRUE, showWarnings = FALSE)
 unlink(setdiff(
   list.files(F01_RPT, full.names = TRUE, recursive = TRUE),
   file.path(F01_RPT, ".gitkeep")
 ))
-dir.create(file.path(F01_RPT, "panels"), showWarnings = FALSE)
-dir.create(file.path(F01_RPT, "supp"), showWarnings = FALSE)
 
-panel_dir <- here("04_Figures", "F01", "a_script", "panels")
+panel_dir <- here("04_Figures", "F01_phenotype", "a_script", "panels")
 for (f in c("panel_a_volume", "panel_b_continuum", "panel_c_forest")) {
   source(file.path(panel_dir, paste0(f, ".R")))
 }
 
-supp_dir <- here("04_Figures", "F01", "a_script", "supp")
-source(file.path(supp_dir, "pheno", "pheno_supp.R"))
-source(file.path(supp_dir, "hlm", "hlm_supp.R"))
+source(here("04_Figures", "F01_phenotype", "a_script", "composite.R"))
 
-left_col <- (F01_PANELS$volume / F01_PANELS$continuum) +
-  plot_layout(heights = c(1, 1.9))
-composite <- (left_col | F01_PANELS$forest) +
-  plot_layout(widths = c(1, 1.1)) +
-  plot_annotation(
-    title = "F01 · Phenotype atlas: matched work, divergent growth",
-    subtitle = "Matched training work; groups classified by growth magnitude; divergence by domain.",
-    theme = theme(
-      plot.title = element_text(face = "bold", size = 14),
-      plot.subtitle = element_text(size = 10, color = "grey30")
-    )
-  )
-
-ggsave(file.path(F01_RPT, "F01_composite.png"), composite,
+ggsave(file.path(F01_RPT, "F01_phenotype.png"), composite,
   width = 300, height = 220, units = "mm", dpi = 300, bg = "white"
 )
-ggsave(file.path(F01_RPT, "F01_composite.pdf"), composite,
+ggsave(file.path(F01_RPT, "F01_phenotype.pdf"), composite,
   width = 300, height = 220, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
@@ -72,7 +59,7 @@ metadata <- tibble::tribble(
   "groups", "HR/LR defined by the composite hypertrophy score; split is descriptive",
   "divergence", "per-subject change (T2-T1); HR-minus-LR standardized difference (Hedges g, SD units) with 95% CI",
   "test", "two-sample t-test per outcome, Holm-adjusted across the six outcomes",
-  "robustness", "the Group x Timepoint mixed model agrees at two timepoints; see the hlm supplement",
+  "robustness", "the Group x Timepoint mixed model agrees at two timepoints; see the panel C supplement",
   "control", "accumulated volume load: t-test with HR-LR difference + 95% CI, no equivalence claim at n=8/group",
   "source", "00_input/HRvLR_meta.csv"
 )
@@ -87,6 +74,6 @@ addWorksheet(wb, "hlm_fit_summary")
 writeData(wb, "hlm_fit_summary", F01_AUDIT$lmm_fit_summary)
 addWorksheet(wb, "metadata")
 writeData(wb, "metadata", metadata)
-saveWorkbook(wb, file.path(F01_DAT, "F01_source_data.xlsx"), overwrite = TRUE)
+saveWorkbook(wb, file.path(F01_DAT, "F01_phenotype_source_data.xlsx"), overwrite = TRUE)
 
-cat("F01 rebuilt: composite, panels, supplement, workbook written\n")
+cat("F01 rebuilt: composite, panels, supplements, workbook written\n")
