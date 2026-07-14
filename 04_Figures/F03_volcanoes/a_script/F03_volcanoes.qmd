@@ -52,8 +52,10 @@ up to.** The plot is drawn by the `enrichVolcano` package; F03 supplies the two 
 frames and a family palette.
 
 The study is 8 high responders (HR) against 8 low responders (LR) across baseline,
-trained, and acute states. each ring keyed to a family palette so a reader never mistakes one kind of comparison
-for another.
+trained, and acute states. Nine contrasts are estimable: the five that test responder
+status carry the main figure, and the four within-group responses sit in the supplement as
+the positive control. Each ring is keyed to a family palette so a reader never mistakes one
+kind of comparison for another.
 
 ## What F03 found
 
@@ -328,13 +330,12 @@ below was resolved against Crossref.
 
 | Figure | Claim | Statistic | Fit to this design |
 |---|---|---|---|
-| **Main** (A–C) | HR and LR proteomes do not differ at baseline, trained, or acute | Ring arcs: fgsea preranked GSEA on moderated-*t* ranks (Korotkevich et al., [10.1101/060012](https://doi.org/10.1101/060012)) against Hallmark, KEGG, Reactome, GO:BP/CC/MF and GO Slim (MSigDB, Liberzon et al. 2015, [10.1016/j.cels.2015.12.004](https://doi.org/10.1016/j.cels.2015.12.004)), BH-adjusted **within contrast**. Volcano points: π-gated | Sound, with one caveat that must be read: **the arcs and the points are different statistics.** Arcs carry a genuine fgsea BH *q*. Points carry π, which is **not** an FDR. |
+| **Main** (A–C) | HR and LR proteomes do not differ at baseline, trained, or acute | Ring arcs: fgsea preranked GSEA on moderated-*t* ranks [@korotkevich2021] against Hallmark, KEGG, Reactome, GO:BP/CC/MF and GO Slim (MSigDB [@liberzon2015]), BH-adjusted **within contrast**. Volcano points: π-gated | Sound, with one caveat that must be read: **the arcs and the points are different statistics.** Arcs carry a genuine fgsea BH *q*. Points carry π, which is **not** an FDR. |
 | **Main** (D–E) | The *change* differs between HR and LR | The Group × Time interaction terms from the limma fit | These are the **lowest-powered cells in the study** (8 vs 8, a between-subject comparison of within-subject changes). They inherit the between-subject precision and are the weak stratum **by design** — a structural explanation for the null, not a disappointing one. Read as hypothesis-generating. |
 | **Supp** within-group | Training and the acute bout do move the proteome | Same fgsea machinery, applied within each arm | This is the **positive control**, and it is why the main figure's null is interpretable. If nothing moved anywhere, the HRvLR null would just mean "underpowered." Because the within-group responses *are* enriched, the absence of a between-responder difference is informative. |
 | **Supp** top-30 | The rings are parsimonious, not cherry-picked | The un-deduplicated top-30 up / top-30 down by NES, per contrast | An audit, not a result. The rings apply an EnrichmentMap redundancy collapse at **display** time (Merico et al. 2010, [10.1371/journal.pone.0013984](https://doi.org/10.1371/journal.pone.0013984)); this supplement shows the full ranked list the collapse was applied to, so the reduction is checkable. |
 
-**The π-score, stated correctly.** π = *p*^\|log2FC\| (Xiao et al. 2014,
-[10.1093/bioinformatics/btr671](https://doi.org/10.1093/bioinformatics/btr671)) is the
+**The π-score, stated correctly.** π = *p*^\|log2FC\| [@xiao2014] is the
 primary protein-selection statistic **by decision**. It is fold-change-weighted, and it is
 **not** a subset of *p* < 0.05: **14.5 % of π-calls have raw *p* ≥ 0.05.** It is a
 *ranking* statistic. It is **never** an FDR, and it must never be described as one. The
