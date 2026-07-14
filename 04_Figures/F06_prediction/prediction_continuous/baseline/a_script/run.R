@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
 # Continuous-phenotype prediction from baseline features.
-source(here::here("04_Figures", "extras", "prediction_shared", "_leaf.R"))
+source(here::here("04_Figures", "F06_prediction", "prediction_shared", "_leaf.R"))
 
 bundle <- pred_load()
 run_cont_leaf(
   bundle, "baseline",
-  here::here("04_Figures", "extras", "prediction_continuous_phenotype", "baseline")
+  here::here("04_Figures", "F06_prediction", "prediction_continuous", "baseline")
 )
