@@ -24,9 +24,11 @@ execute:
 
 > **How to read this document.** Every code block is the *actual* code from the
 > pipeline scripts, shown for provenance but **not re-executed** (`eval: false`).
-> Numbers are frozen from the committed run. To reproduce, run the stage scripts
-> in order. Paths are relative to the project root (`A_HRvLR_2026/`). Each stage
-> also ships a live, self-verifying tutorial (`01_filtering.qmd`,
+> The π counts in @sec-pi-warning are the exception: they are read live from the
+> committed DEP results, because when they were frozen by hand they drifted away
+> from the fit and understated the problem. To reproduce, run the stage scripts in
+> order. Paths are relative to the project root (`A_HRvLR_2026/`). Each stage also
+> ships a live, self-verifying tutorial (`01_filtering.qmd`,
 > `02_normalization.qmd`, `03_dep.qmd`).
 
 # Overview {#sec-overview}
@@ -100,11 +102,42 @@ Most "significant" protein counts in F02–F05 — the 55 divergent in training,
 acute, the DEP-count bars — come from the **π gate**, `p^|logFC| < 0.05`
 [@xiao2014], **not from BH-FDR**.
 
+```{r}
+#| label: pi-stats
+#| eval: true
+#| echo: false
+# Read from the committed DEP results rather than hardcoding. These counts were quoted as
+# 489 / 12 for months after the fit moved underneath them.
+pi <- local({
+  res <- readr::read_csv(
+    here::here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv"),
+    show_col_types = FALSE
+  )
+  cn <- sub("^pi_score_", "", grep("^pi_score_", names(res), value = TRUE))
+  calls <- purrr::map_dfr(cn, \(ct) tibble::tibble(
+    pi = res[[paste0("pi_score_", ct)]],
+    p = res[[paste0("P.Value_", ct)]],
+    q = res[[paste0("adj.P.Val_", ct)]]
+  ))
+  sel <- calls |> dplyr::filter(!is.na(pi), pi < 0.05)
+  list(
+    n_pi = nrow(sel),
+    n_pi_nonsig = sum(sel$p >= 0.05),
+    pct_nonsig = round(100 * mean(sel$p >= 0.05), 1),
+    worst_p = round(max(sel$p), 3),
+    n_bh05 = sum(calls$q < 0.05, na.rm = TRUE),
+    n_bh10 = sum(calls$q < 0.10, na.rm = TRUE)
+  )
+})
+```
+
 π controls no error rate. Because a large fold change drives the score down on its
-own, fold change alone can buy admission: 71 of 489 π-calls (14.5%) have a raw
-p ≥ 0.05, the largest being **p = 0.269**. Across the nine contrasts there are **489
-π-calls against 12 proteins at BH < 0.05** — a 40× inflation. The π set is not even a
-subset of the nominally significant set.
+own, fold change alone can buy admission: `r pi$n_pi_nonsig` of `r pi$n_pi` π-calls
+(`r pi$pct_nonsig`%) have a raw p ≥ 0.05, the largest being **p = `r pi$worst_p`**.
+Across the nine contrasts there are **`r pi$n_pi` π-calls against `r pi$n_bh05`
+proteins at BH < 0.05** (`r pi$n_bh10` at BH < 0.10) — a
+`r round(pi$n_pi / pi$n_bh05)`× inflation. The π set is not even a subset of the
+nominally significant set.
 
 Treat every π-derived count as a **ranked, hypothesis-generating list**, never as an
 FDR-controlled discovery. The fgsea ring arcs in F03 and the GO counts in F02 *are*
@@ -123,16 +156,18 @@ the top and follow the chain, or jump to the one you need.
 | `03_DEP/a_non_imputed/a_script/03_dep.qmd` | The cell-means design, `duplicateCorrelation`, eBayes, BH, and the π-score |
 | `04_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
 | `04_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
-| `04_Figures/F03/.../HRvLR_F03.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
+| `04_Figures/F03_volcanoes/a_script/F03_volcanoes.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Figures/extras/concordance_training/` | Training concordance: quadrant ORA, fry, RRHO2, bootstrap |
 | `04_Figures/extras/concordance_acute/` | Acute concordance, same engine |
 | `04_Figures/F04/.../HRvLR_F04.qmd` | WGCNA modules, eigengenes, LOO Q², and one circular test to distrust |
 | `04_Figures/extras/README.md` | Association and out-of-sample prediction |
 
 Known limitations are stated in each stage and figure page where the reader meets
-them, rather than in a separate document: the π gate in @sec-pi-warning, the
-contaminant survivors in `01_filtering.qmd`, the circular module test in F04, and the
-transductive eigengenes in F04 and `04_Figures/extras`.
+them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
+search space, which had no contaminant FASTA and no decoys, so reagent contaminants cannot be
+detected at all (`01_filtering.qmd`); the 34 proteins the missingness filter admits and the
+model then cannot test (`03_dep.qmd`); the circular module test in F04; and the transductive
+eigengenes in F04 and `04_Figures/extras`.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
