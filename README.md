@@ -126,7 +126,7 @@ it after the imputed DEP.
 - `04_Figures/extras/imputation`: imputation-method comparison supplement (non-imputed reference vs the four arms)
 
 ```sh
-Rscript 04_Figures/F01/a_script/run.R
+Rscript 04_Figures/F01_phenotype/a_script/run.R
 Rscript 04_Figures/F02/a_script/HRvLR_F02_run.R
 Rscript 04_Figures/F03/a_script/HRvLR_F03_run.R
 Rscript 04_Figures/extras/concordance_training/a_script/run.R
