@@ -38,6 +38,9 @@ centre_within_subject <- function(abund, subject) {
 # (signed, n > 40 -> 12) is a FALLBACK for when the fit never clears the threshold. Our fit
 # clears it, so the table does not apply.
 choose_power <- function(expr) {
+  # pickSoftThreshold resolves corFnc by NAME from the search path, so WGCNA must be
+  # attached, not merely namespaced.
+  pacman::p_load(WGCNA)
   sft <- WGCNA::pickSoftThreshold(
     expr,
     powerVector = 1:20, networkType = "signed",
