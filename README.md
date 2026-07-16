@@ -101,7 +101,7 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `04_Figures/F04` (see Figures);
+Clustering is computed self-contained inside `04_Figures/F04_modules` (see Figures);
 WGCNA is the inferential engine for the module-phenotype linkage.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
