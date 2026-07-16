@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Imputation arm A: imp4p (exploratory; never the primary DEP input).
+# Imputation arm imp4p (exploratory; never the primary DEP input).
 #
 # imp4p (Giai Gianetto et al.) is built for label-free proteomics with a mixture
 # of MCAR/MNAR missingness and estimates the mechanism itself, so we pass only

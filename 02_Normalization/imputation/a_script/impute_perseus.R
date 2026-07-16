@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Imputation arm D: Perseus MNAR left-censoring (proteoDA::perseus_impute).
+# Imputation arm Perseus MNAR left-censoring (proteoDA::perseus_impute).
 #
 # Per-sample downshifted-Gaussian draw (Tyanova 2016), the MNAR-aware contrast to
 # missForest's MAR. Exploratory only; never the reported DEP input. Comparison arm.

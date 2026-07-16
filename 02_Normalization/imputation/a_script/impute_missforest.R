@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
-# Imputation arm C: missForest (exploratory; never the primary DEP input).
+# Imputation arm missForest: the canonical imputed matrix (downstream QC, figures, and
+# WGCNA read this one). Still exploratory relative to the non-imputed primary DEP input.
 #
 # Random-forest imputation (Stekhoven & Buhlmann 2012), mechanism-agnostic: one
 # model for all missing values. Rows are sorted before the stochastic fit so the

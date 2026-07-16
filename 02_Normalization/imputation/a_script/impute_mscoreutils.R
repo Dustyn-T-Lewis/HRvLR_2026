@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Imputation arm B: MsCoreUtils hybrid (exploratory; never the primary DEP input).
+# Imputation arm MsCoreUtils hybrid (exploratory; never the primary DEP input).
 #
 # Mechanism-aware hybrid, each tool used as designed: imputeLCMD::model.Selector()
 # classifies each protein MAR (1) vs MNAR (0) (Lazar 2016), then
