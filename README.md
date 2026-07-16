@@ -159,11 +159,29 @@ Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_da
 
 | Path | Contents |
 | --- | --- |
-| `04_Figures/functions/` | Cross-figure helpers: `style.R`, `pathway_utils.R`, `concordance.R` |
-| `04_Figures/shared/` | `pca.R` (sourced by stages 01 and 02) and `references.bib` (the single bibliography for every notebook) |
-| `04_Figures/tests/` | The `testthat` suite. Run with `testthat::test_dir(here("04_Figures", "tests", "testthat"))` |
-| `04_Figures/modules/` | The WGCNA module engine F04 reads: fit, coupling, and the honest in-fold refit |
-| `04_Figures/extras/` | Association, prediction, and the concordance figures |
+| `04_Figures/functions/` | Every shared helper, scope stated in the name. `shared_*` spans figures and stages — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA), `shared_concordance.R` (F04 concordance builders). `f0N_*` belongs to one figure — `f00_concordance.R` (the F00_PILOT driver). |
+| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites. |
+| `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
+
+## Figures
+
+Each figure is a self-contained `a_script/ b_reports/ c_data/` unit with its own
+run script and narrative `.qmd`.
+
+| Directory | Question | Engine |
+| --- | --- | --- |
+| `F00_PILOT/` | Where do HR and LR adapt alike over training and the acute bout, and where do they part? How large is the response and how concordant? | Quadrant ORA, `limma::fry`, pathway NES concordance, RRHO2, bootstrap CI; median/p90 \|logFC\| and Spearman ρ. |
+| `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
+| `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
+| `F03_volcanoes/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
+| `F04_modules/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
+| `F05_association/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
+| `F06_prediction/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested LOSO CV against a permutation null. Both arms null after BH. |
+
+Prediction is scored against a permutation null, never zero; composite hypertrophy
+stays out of any model carrying the HR/LR term (the groups were defined from it);
+and fold-specific transforms stay train-only, with singscore's single-sample
+scoring the one leakage-free exception. At n = 16 the null is the finding.
 
 ## Reproducibility Rules
 
