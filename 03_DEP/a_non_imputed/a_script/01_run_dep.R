@@ -128,20 +128,12 @@ dal <- extract_DA_results(dal,
   adj_method  = cfg$adj_method
 )
 
-# add the transformed P-value to the results. Xiao et al. 2014 Eq. 2:
-# Pi = p^|log2FC| = 10^(-pi_value); bounded in [0,1], lower = more significant.
-# Not the pi-value itself (Eq. 1), and not FDR-controlled.
+# add the transformed P-value to the results; add_pi_score is defined beside the
+# threshold in 03_DEP/contrasts.R so both DEP arms gate identically.
 contrast_names <- names(dal$results)
 
 for (cname in contrast_names) {
-  res <- dal$results[[cname]]
-  res$pi_score <- res$P.Value^abs(res$logFC)
-  res$sig_pi <- case_when(
-    res$pi_score < cfg$pi_thresh & res$logFC > 0 ~ 1L,
-    res$pi_score < cfg$pi_thresh & res$logFC < 0 ~ -1L,
-    TRUE ~ 0L
-  )
-  dal$results[[cname]] <- res
+  dal$results[[cname]] <- add_pi_score(dal$results[[cname]], cfg$pi_thresh)
 }
 
 # proteoDA Excel formatting expects gene_symbol column

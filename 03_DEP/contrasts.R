@@ -21,3 +21,21 @@ HRVLR_CONTRASTS <- c(
 )
 
 PI_THRESH <- 0.05
+
+# Xiao et al. 2014 Eq. 2: Pi = p^|log2FC|, bounded in [0,1], lower = more significant.
+# This is not the pi-value of Eq. 1 and carries no FDR control.
+#
+# sig_pi folds the gate and the direction into one column: +1 up, -1 down, 0 otherwise.
+# The 34 proteins limma could not test arrive with P.Value NA, so their pi_score is NA and
+# both gated arms return NA; the final case_when branch is what lands them on 0L rather
+# than NA. Untested and tested-but-unselected are deliberately indistinguishable here --
+# 03_untested_proteins.R is what separates them.
+add_pi_score <- function(res, pi_thresh = PI_THRESH) {
+  res$pi_score <- res$P.Value^abs(res$logFC)
+  res$sig_pi <- dplyr::case_when(
+    res$pi_score < pi_thresh & res$logFC > 0 ~ 1L,
+    res$pi_score < pi_thresh & res$logFC < 0 ~ -1L,
+    TRUE ~ 0L
+  )
+  res
+}
