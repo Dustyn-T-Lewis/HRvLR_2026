@@ -244,15 +244,7 @@ alongside them, not in place of them.
 ```{r}
 #| label: pi-score
 #| eval: false
-res <- res |>
-  mutate(
-    pi_score = P.Value^abs(logFC),
-    sig_pi = case_when(
-      pi_score < PI_THRESH & logFC > 0 ~ 1L,
-      pi_score < PI_THRESH & logFC < 0 ~ -1L,
-      TRUE ~ 0L
-    )
-  )
+res <- add_pi_score(res)
 ```
 
 ```{r}
@@ -261,14 +253,7 @@ source(here("03_DEP", "contrasts.R"))
 f <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results", "Training_HR.csv")
 if (file.exists(f)) {
   read_csv(f, show_col_types = FALSE) |>
-    mutate(
-      pi_score = P.Value^abs(logFC),
-      sig_pi = case_when(
-        pi_score < PI_THRESH & logFC > 0 ~ 1L,
-        pi_score < PI_THRESH & logFC < 0 ~ -1L,
-        TRUE ~ 0L
-      )
-    ) |>
+    add_pi_score() |>
     arrange(pi_score) |>
     select(gene, logFC, P.Value, adj.P.Val, pi_score, sig_pi) |>
     head(5)
