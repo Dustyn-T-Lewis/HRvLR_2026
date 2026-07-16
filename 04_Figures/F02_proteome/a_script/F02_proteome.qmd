@@ -30,8 +30,11 @@ data actually support.
 
 ```{r setup}
 source(here::here("04_Figures", "F02_proteome", "a_script", "setup.R"))
-panel <- function(name) {
-  source(here::here("04_Figures", "F02_proteome", "a_script", "panels", paste0("panel_", name, ".R")))
+panel <- function(letter) {
+  dir <- here::here("04_Figures", "F02_proteome", "a_script", "panels")
+  f <- list.files(dir, pattern = paste0("^panel_", tolower(letter), "_.*\\.R$"), full.names = TRUE)
+  stopifnot(length(f) == 1)
+  source(f)
 }
 ```
 
