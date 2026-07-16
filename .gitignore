@@ -25,9 +25,7 @@ docs/
 # Quarto render artifacts (source .qmd is tracked, html/cache are regenerated)
 *_files/
 *_cache/
-**/a_script/*.html
-**/b_reports/**/*.html
-HRvLR_pipeline.html
+**/*.html
 
 # Figure and QC renders are regenerated from the scripts; the data intermediates
 # in c_data/ stay tracked so a clone builds figures without re-running upstream.
