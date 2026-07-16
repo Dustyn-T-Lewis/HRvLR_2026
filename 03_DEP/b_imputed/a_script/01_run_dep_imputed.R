@@ -53,14 +53,8 @@ runs <- imap(methods, function(rds, m) {
     select(any_of(c("uniprot_id", "gene", "protein", "description")))
   res <- imap(dal$results, function(r, cname) {
     as_tibble(r, rownames = "uniprot_id") |>
-      mutate(
-        pi_score = P.Value^abs(logFC),
-        sig_pi = case_when(
-          pi_score < PI_THRESH & logFC > 0 ~ 1L,
-          pi_score < PI_THRESH & logFC < 0 ~ -1L, TRUE ~ 0L
-        ),
-        contrast = cname
-      ) |>
+      add_pi_score() |>
+      mutate(contrast = cname) |>
       left_join(ann, by = "uniprot_id")
   })
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -82,9 +76,10 @@ NULL_CONTRASTS <- c(
 ni_dir <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results")
 ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), function(f) {
   read_csv(f, show_col_types = FALSE) |>
+    add_pi_score() |>
     transmute(uniprot_id,
       contrast = tools::file_path_sans_ext(basename(f)),
-      logFC_ni = logFC, adj_ni = adj.P.Val, pi_ni = P.Value^abs(logFC)
+      logFC_ni = logFC, adj_ni = adj.P.Val, pi_ni = pi_score
     )
 })
 
