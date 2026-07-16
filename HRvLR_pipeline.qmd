@@ -333,10 +333,10 @@ Run the stage scripts in order from the project root:
 ```bash
 Rscript 01_Filtering/a_script/01_run_filtering.R
 Rscript 02_Normalization/a_script/01_run_normalization.R
-Rscript 02_Normalization/imputation/a_script/a_imp4p.R
-Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R
-Rscript 02_Normalization/imputation/a_script/c_missforest.R
-Rscript 02_Normalization/imputation/a_script/d_perseus.R
+Rscript 02_Normalization/imputation/a_script/impute_missforest.R
+Rscript 02_Normalization/imputation/a_script/impute_imp4p.R
+Rscript 02_Normalization/imputation/a_script/impute_mscoreutils.R
+Rscript 02_Normalization/imputation/a_script/impute_perseus.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R
 ```
