@@ -303,8 +303,8 @@ imputed matrices (missForest, imp4p, MsCoreUtils, Perseus) and reports the Spear
 concordance of each arm's logFC against the primary, non-imputed fit. High
 concordance confirms the missing-value strategy does not reshape the effects
 [@peng2024]. The HR-vs-LR response comparison and the per-contrast volcanoes live
-in the figure layer (F03–F05); proteoDA also writes its own volcano and MA plots
-into `a_non_imputed/b_reports/` during the primary run.
+in the figure layer (F00_PILOT concordance and F03 volcanoes); proteoDA also writes
+its own volcano and MA plots into `a_non_imputed/b_reports/` during the primary run.
 
 ## Stage outputs {#sec-outputs}
 
@@ -319,6 +319,45 @@ into `a_non_imputed/b_reports/` during the primary run.
 
 Stage 04 reads `03_combined_results.csv` and the fitted DAList for pathway
 enrichment and figures.
+
+## Key terms
+
+**limma** — fits a per-protein linear model and moderates each protein's variance
+by borrowing strength across all proteins (empirical Bayes). The shrinkage is what
+makes seven-or-eight subjects per cell workable.
+
+**`duplicateCorrelation`** — estimates one consensus within-subject correlation and
+passes it to the fit as a block on `Subject_ID`, so the three timepoints of one
+person are treated as repeated measures rather than independent samples.
+
+**Cell-means design (`~ 0 + group`)** — one coefficient per `Group_Time` cell
+(`HR_T1` … `LR_T3`), so every contrast is an explicit linear combination of cell
+means rather than a difference from an intercept.
+
+**eBayes** — the empirical-Bayes moderation step that shrinks per-protein variances
+toward a pooled prior and yields the moderated *t* statistics and p-values.
+
+**BH-FDR (`adj.P.Val`)** — Benjamini-Hochberg adjustment of the raw p-values; the
+reported multiple-testing control. Every HR-vs-LR and interaction contrast returns
+zero BH hits.
+
+**Pi-score (`pi_score`, `sig_pi`)** — `p^|logFC|`, an effect-size-weighted filter
+gated at `PI_THRESH` (0.05, from `contrasts.R`). Computed on the raw p-value, so it
+is deliberately not FDR-controlled; read alongside the BH counts, never instead of
+them.
+
+## Recap
+
+- The primary DEP fits limma on the cycloess-normalized, non-imputed matrix; limma
+  handles per-protein NAs, and fitting without imputing avoids overstating precision.
+- The design is cell-means (`~ 0 + group`) with `duplicateCorrelation` blocking on
+  subject for the repeated measures; the nine contrasts come from `contrasts.R`.
+- Significance is reported two ways: BH-FDR (the control — zero HR-vs-LR hits) and
+  the Pi-score (an effect-size-weighted, non-FDR filter read alongside it).
+- The imputed arms in `b_imputed/` repeat the same fit as a robustness check and
+  report logFC concordance against the primary.
+- The primary output is `03_combined_results.csv` (nine contrasts, wide); stage 04
+  reads it and the fitted DAList for enrichment and figures.
 
 ## Session info {#sec-session}
 
