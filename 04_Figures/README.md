@@ -1,19 +1,20 @@
-# extras — supporting analyses
+# 04_Figures — figure stages
 
-Units that support the main figures without being one. Each is a self-contained
-`a_script/ b_reports/ c_data/` folder.
+Each figure is a self-contained `a_script/ b_reports/ c_data/` unit with its own
+`01_run_<figure>.R` and narrative `.qmd`. Shared engines live in `functions/`
+(style, palette, pathway and concordance helpers) and `shared/` (`pca.R`,
+`clear_dir`, references); F04 owns the WGCNA module engine that F06 reads.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
-| `association/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores, `feature ~ phenotype * timepoint + (1 \| subject)`. Association only; prediction is out of scope. |
-| `prediction_responder_class/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested leave-one-subject-out CV against a permutation null. |
-| `prediction_continuous_phenotype/` | Can those features predict the continuous phenotype out of sample? | Same engines, Gaussian; nested LOSO CV + permutation null. |
-| `prediction_shared/` | — | The CV harness both prediction units import: feature builders, the nested-LOSO loop, the permutation null, and the panel code. |
-| `concordance_training/` | Where do HR and LR adapt alike over training, and where do they part? | Quadrant ORA, `limma::fry`, pathway NES concordance, RRHO2, bootstrap CI. |
-| `concordance_acute/` | The same question for the acute bout. | Same driver, different contrast pair. |
-| `imputation/` | Do the four imputation arms reshape the effects? | Non-imputed reference against `imp4p`, MsCoreUtils, `missForest`, and the Perseus MNAR draw. |
-
-The WGCNA module engine these units read lives at `04_Figures/modules/`. F04 reads it too.
+| `F00_PILOT/concordance_training/`, `concordance_acute/` | Where do HR and LR adapt alike over training and the acute bout, and where do they part? | Quadrant ORA, `limma::fry`, pathway NES concordance, RRHO2, bootstrap CI. |
+| `F00_PILOT/summary/` | How large is the proteome response and how concordant are the two groups, before/after training and acute? | Median/p90 \|logFC\| per group × condition and Spearman ρ with Fisher-z CI. |
+| `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
+| `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
+| `F03_volcanoes/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
+| `F04_modules/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
+| `F05_association/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores, `feature ~ phenotype * timepoint + (1 \| subject)`. Association only. |
+| `F06_prediction/prediction_responder/`, `prediction_continuous/` | Can baseline, training-response, or acute features predict HR vs LR — or the continuous phenotype — out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested LOSO CV against a permutation null. `prediction_shared/` holds the harness both arms import. |
 
 ## The rules that hold throughout
 
@@ -25,10 +26,13 @@ normal outcome at this sample size.
 **Composite hypertrophy stays out of any model that also carries the HR/LR term**, since
 the groups were defined from it. Carrying both would be conditioning on the outcome.
 
-**Features must be built inside the fold.** A module eigengene fit on all 45 samples has
-already seen the held-out subject, so a leave-one-out score computed on it is transductive
-and optimistic rather than out-of-sample. `modules/a_script/functions/honest_refit.R` is
-the refit that answers this properly.
+**Fold-specific transforms stay train-only.** The harness (`prediction_shared/_harness.R`)
+z-scores and tunes every model inside the training subjects alone. singscore pathway scores
+are single-sample and rank-based, so scoring the full matrix once is leakage-free; that is
+why the suite uses singscore rather than a cohort-relative method. The one exception is the
+F04 module eigengenes, which are fit on all 45 samples: a leave-one-out score computed on them
+is transductive and optimistic rather than strictly out-of-sample. That is the documented
+limitation behind the earlier positive module result, not a claim the eigengenes are honest.
 
 ## Nothing here survives multiple testing
 
