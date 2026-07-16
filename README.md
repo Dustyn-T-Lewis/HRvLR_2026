@@ -173,7 +173,7 @@ Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_da
 
 | Path | Contents |
 | --- | --- |
-| `04_Figures/functions/` | Every shared helper, scope stated in the name. `shared_*` spans figures and stages — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA), `shared_concordance.R` (F04 concordance builders). `f0N_*` belongs to one figure — `f00_concordance.R` (the F00_PILOT driver). |
+| `04_Figures/functions/` | Every shared helper, scope stated in the name. `shared_*` spans figures and stages — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA). `f0N_*` belongs to one figure — `f00_concordance.R` (the F00_PILOT driver) and `f00_concordance_panels.R` (its panel builders). |
 | `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
