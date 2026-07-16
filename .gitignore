@@ -4,6 +4,13 @@
 **/.Rhistory
 **/.Rapp.history
 .Rproj.user/
+
+# Credentials
+.Renviron
+.httr-oauth
+*.pem
+*.key
+
 .here
 Archive/
 archive/
