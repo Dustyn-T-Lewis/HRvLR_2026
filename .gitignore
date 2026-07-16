@@ -31,3 +31,9 @@ docs/
 # in c_data/ stay tracked so a clone builds figures without re-running upstream.
 **/b_reports/**/*.png
 **/b_reports/**/*.pdf
+
+# The per-arm imputed DEP tables are terminal: 01_run_dep_imputed.R writes them and
+# nothing reads them back. The QC figure reads the sensitivity and concordance
+# summaries beside them, and the figures read DAList_imputed_missforest.rds, so both
+# of those stay tracked. 17 MB of results that no clone needs.
+03_DEP/b_imputed/c_data/*/combined_results_pi.csv
