@@ -5,7 +5,7 @@ pacman::p_load(here, openxlsx)
 
 F02_AUDIT <- list()
 source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
-source(here("04_Figures", "shared", "utils.R"))
+source(here("04_Figures", "functions", "shared_utils.R"))
 
 clear_dir(RPT_DIR)
 dir.create(file.path(RPT_DIR, "panels"), recursive = TRUE, showWarnings = FALSE)

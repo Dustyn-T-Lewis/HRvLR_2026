@@ -12,7 +12,7 @@ F03_TABLES <- list()
 a_script <- here("04_Figures", "F03_volcanoes", "a_script")
 source(file.path(a_script, "setup.R"))
 source(file.path(a_script, "rings.R"))
-source(here("04_Figures", "shared", "utils.R"))
+source(here("04_Figures", "functions", "shared_utils.R"))
 
 clear_dir(RPT_DIR)
 supp_dir <- file.path(RPT_DIR, "supp")

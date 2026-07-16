@@ -11,7 +11,7 @@
 # happens train-only inside the harness.
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble, limma, singscore)
-source(here("04_Figures", "functions", "pathway_utils.R"))
+source(here("04_Figures", "functions", "shared_pathway_utils.R"))
 
 pred_paths <- function() {
   list(
