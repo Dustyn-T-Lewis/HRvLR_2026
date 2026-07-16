@@ -44,7 +44,7 @@ Known limitations are stated on the page where the reader meets them: the π gat
 `HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
 reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
 by the missingness filter that the model then cannot test; the circular module test in F04; and
-the transductive eigengenes in F04 and `04_Figures/extras`.
+the transductive eigengenes in F04 and `04_Figures/F00_PILOT`.
 
 ## Design and Canonical Contrasts
 
@@ -88,7 +88,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | Six figures: F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea cache; F04/F05 HR-vs-LR training/acute concordance, which read that cache; F04 WGCNA module-phenotype linkage |
+| `04` | `04_Figures/` | Seven figures: F00_PILOT HR-vs-LR training/acute concordance, which reads F03's source data; F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea source data; F04 WGCNA module-phenotype linkage; F05 continuous training-response association; F06 out-of-sample prediction |
 
 ## Canonical Run Order
 
@@ -110,10 +110,10 @@ and writes a method-tagged `DAList_imputed_<method>.rds`; the `missForest` arm i
 the one downstream figures and the imputed-DEP concordance check read by default:
 
 ```sh
-Rscript 02_Normalization/imputation/a_script/c_missforest.R    # default downstream arm
-Rscript 02_Normalization/imputation/a_script/a_imp4p.R         # exploratory alternative
-Rscript 02_Normalization/imputation/a_script/b_mscoreutils.R   # exploratory alternative
-Rscript 02_Normalization/imputation/a_script/d_perseus.R       # exploratory alternative (MNAR)
+Rscript 02_Normalization/imputation/a_script/impute_missforest.R   # default downstream arm
+Rscript 02_Normalization/imputation/a_script/impute_imp4p.R        # exploratory alternative
+Rscript 02_Normalization/imputation/a_script/impute_mscoreutils.R  # exploratory alternative
+Rscript 02_Normalization/imputation/a_script/impute_perseus.R      # exploratory alternative (MNAR)
 
 Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R         # exploratory imputed DEP, all four arms
 Rscript 03_DEP/b_imputed/a_script/02_imp4p_circularity.R       # permutation control: why imp4p breaks the null
@@ -130,24 +130,38 @@ Perseus tops the π table while being null on BH.
 
 ### Figures
 
-Six active figures plus one supplement, rendered into `b_reports`; rerun only
-after stages `01` to `03` complete cleanly. F03 recomputes the fgsea enrichment
-fresh each run and writes it for F04/F05 to read, so run F03 before F04/F05.
+Seven figures, rendered into `b_reports`; rerun only after stages `01` to `03`
+complete cleanly. F03 writes `F03_volcanoes_source_data.xlsx`, which the two
+F00_PILOT concordance leaves read, so run F03 before F00_PILOT.
 
-- `04_Figures/F01`: phenotype atlas
-- `04_Figures/F02`: global proteome overview and QC
-- `04_Figures/F03`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
-- `04_Figures/extras/concordance_training`: HR-vs-LR training-phase concordance
-- `04_Figures/extras/concordance_acute`: HR-vs-LR acute-phase concordance
-- `04_Figures/F04`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
+- `04_Figures/F01_phenotype`: phenotype atlas
+- `04_Figures/F02_proteome`: global proteome overview and QC
+- `04_Figures/F03_volcanoes`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
+- `04_Figures/F00_PILOT/concordance_training`: HR-vs-LR training-phase concordance
+- `04_Figures/F00_PILOT/concordance_acute`: HR-vs-LR acute-phase concordance
+- `04_Figures/F00_PILOT/summary`: magnitude and concordance in one frame
+- `04_Figures/F04_modules`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
+- `04_Figures/F05_association`: continuous training-response association
+- `04_Figures/F06_prediction`: out-of-sample HR/LR and continuous prediction, six leaves
 
 ```sh
-Rscript 04_Figures/F01_phenotype/a_script/run.R
-Rscript 04_Figures/F02_proteome/a_script/run.R
-Rscript 04_Figures/F03_volcanoes/a_script/run.R
-Rscript 04_Figures/extras/concordance_training/a_script/run.R
-Rscript 04_Figures/extras/concordance_acute/a_script/run.R
-Rscript 04_Figures/F04_modules/a_script/run.R
+Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
+Rscript 04_Figures/F02_proteome/a_script/01_run_proteome.R
+Rscript 04_Figures/F03_volcanoes/a_script/01_run_volcanoes.R
+
+Rscript 04_Figures/F00_PILOT/concordance_training/a_script/01_run_concordance_training.R
+Rscript 04_Figures/F00_PILOT/concordance_acute/a_script/01_run_concordance_acute.R
+Rscript 04_Figures/F00_PILOT/summary/a_script/01_run_summary.R
+
+Rscript 04_Figures/F04_modules/a_script/01_run_modules.R
+Rscript 04_Figures/F05_association/a_script/01_run_association.R
+
+Rscript 04_Figures/F06_prediction/prediction_responder/baseline/a_script/01_run_baseline.R
+Rscript 04_Figures/F06_prediction/prediction_responder/training/a_script/01_run_training.R
+Rscript 04_Figures/F06_prediction/prediction_responder/acute/a_script/01_run_acute.R
+Rscript 04_Figures/F06_prediction/prediction_continuous/baseline/a_script/01_run_baseline.R
+Rscript 04_Figures/F06_prediction/prediction_continuous/training/a_script/01_run_training.R
+Rscript 04_Figures/F06_prediction/prediction_continuous/acute/a_script/01_run_acute.R
 ```
 
 ## Repository Conventions
