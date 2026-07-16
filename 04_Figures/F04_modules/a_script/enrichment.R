@@ -41,7 +41,7 @@ module_ora <- function(colors, top_n = 5) {
 # moderated t from the SAME matrix that defined those modules. That is circular - the sets
 # were built to be co-expressed, so of course they rank together - and it returned
 # padj = 7e-33 in a study whose minimum q elsewhere is 0.36. fry is the correct test and is
-# already used correctly in this repo (04_Figures/functions/concordance.R).
+# already used correctly in this repo (04_Figures/functions/f00_concordance_panels.R).
 module_fry <- function(colors, abund, design, contrast_matrix, block, correlation,
                        contrasts = colnames(contrast_matrix)) {
   shared <- intersect(names(colors), rownames(abund))
