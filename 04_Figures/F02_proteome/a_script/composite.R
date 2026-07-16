@@ -2,7 +2,7 @@
 # on a common grid. Titles and subtitles are per-panel; tags come from patchwork; all
 # legends collect to the figure bottom so no panel loses height to its own legend.
 # Row 1: A state, B trajectory, C divergence; Row 2: D effect size, E DEPs, F pathways.
-# Assembly only - the panels (pA..pF) are already in scope from run.R. No statistics.
+# Assembly only - the panels (pA..pF) are already in scope from 01_run_proteome.R. No statistics.
 pacman::p_load(ggplot2, patchwork, grid)
 
 titled <- function(p, ttl, sub) {

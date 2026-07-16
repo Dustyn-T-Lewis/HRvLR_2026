@@ -1,5 +1,5 @@
 # F02 setup: the normalized, imputed, and DEP artifacts from upstream c_data, plus
-# the metadata and the contrast names. Panels and run.R source this first. Writes nothing.
+# the metadata and the contrast names. Panels and 01_run_proteome.R source this first. Writes nothing.
 # Provides: norm_df, imp_df, dep_df, meta, samp_names (norm), imp_samps (imp),
 #           ann_cols, imp_mat, MAIN_CONTRASTS, RPT_DIR, DAT_DIR
 # Plus all style.R exports (palettes, themes, helpers)
