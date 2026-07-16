@@ -204,3 +204,6 @@ scoring the one leakage-free exception. At n = 16 the null is the finding.
 - primary DEP uses the non-imputed normalized matrix
 - repeated-measures blocking uses authoritative `Subject_ID` metadata
 - acute contrasts always mean `T3 - T2`
+- `session_info.txt` records the version and source of every package the pipeline
+  loads; regenerate it with `Rscript session_info.R`. Package versions are not
+  pinned, so check it before attributing a changed result to the code
