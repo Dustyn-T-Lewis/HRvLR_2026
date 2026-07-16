@@ -6,7 +6,7 @@
 # never seen until it is predicted. The permutation null shuffles the outcome
 # across subjects and re-runs the entire nested LOSO.
 
-pacman::p_load(glmnet, mixOmics, pROC, parallel)
+pacman::p_load(glmnet, mixOmics, pROC, parallel, withr)
 
 GLMNET_ALPHAS <- c(0.1, 0.5, 1.0)
 SPLS_NCOMP <- 1L
