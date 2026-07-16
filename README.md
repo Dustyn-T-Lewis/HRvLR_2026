@@ -204,6 +204,25 @@ scoring the one leakage-free exception. At n = 16 the null is the finding.
 - primary DEP uses the non-imputed normalized matrix
 - repeated-measures blocking uses authoritative `Subject_ID` metadata
 - acute contrasts always mean `T3 - T2`
-- `session_info.txt` records the version and source of every package the pipeline
-  loads; regenerate it with `Rscript session_info.R`. Package versions are not
-  pinned, so check it before attributing a changed result to the code
+- packages are pinned in `renv.lock` and load from `renv/library`, not the system
+  library; `.Rprofile` activates this on its own. `renv::restore()` rebuilds the
+  library from the lockfile, `renv::status()` reports drift
+
+## Working on enrichVolcano Without Disturbing This Pipeline
+
+F03 depends on `enrichVolcano`, which is developed separately in
+`D_Tools/enrichVolcano`. renv keeps the two apart: this project reads only
+`renv/library`, and the system library is not on its search path. Installing a
+work-in-progress build of the package the usual way puts it in the *system*
+library, where this pipeline cannot see it, so iterate freely — the figures keep
+rendering against the pinned commit.
+
+The pin is deliberate, so adopting a new build is deliberate too:
+
+```r
+renv::install("Dustyn-T-Lewis/enrichVolcano@<sha>")
+renv::snapshot()
+```
+
+Re-run F03 afterwards and diff the renders. Push the commit first: a sha that
+exists only on one machine pins nothing.
