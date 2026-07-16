@@ -1,6 +1,6 @@
 # F01 setup: style, the phenotype stats, the metadata, and the output paths.
-# Panel scripts and run.R source this first; it is idempotent. Writes nothing -
-# run.R creates the output directories.
+# Panel scripts and 01_run_phenotype.R source this first; it is idempotent. Writes nothing -
+# 01_run_phenotype.R creates the output directories.
 pacman::p_load(here, dplyr, tidyr, tibble, purrr)
 
 source(here::here("04_Figures", "functions", "style.R"))

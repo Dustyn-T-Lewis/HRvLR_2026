@@ -109,7 +109,7 @@ correction. Cells that clear the nominal null but not BH are hypotheses, not
 findings, and are labelled as such.
 
 **The BH family in the table is a 36-cell leaf, but the search was 108
-cells.** Each phase is a separate `run.R`, and `p.adjust()` is applied within
+cells.** Each phase is a separate `01_run_<phase>.R`, and `p.adjust()` is applied within
 one phase leaf. The `BH_q` column above therefore pays for 36 comparisons.
 The reader, however, has just been shown all three phases — a 108-cell search.
 Pooled across all 108 continuous cells the best q is **0.806**, not 0.358.

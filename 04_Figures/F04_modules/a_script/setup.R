@@ -1,5 +1,5 @@
 # F04 setup: read the imputed matrix, the stage-00 phenotype table, and the limma fit from
-# 03_DEP, then build the modules. Panels and run.R source this first. Writes nothing.
+# 03_DEP, then build the modules. Panels and 01_run_modules.R source this first. Writes nothing.
 pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr)
 
 source(here("04_Figures", "functions", "style.R"))
