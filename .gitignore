@@ -22,6 +22,7 @@ docs/
 **/b_reports/**/*.html
 HRvLR_pipeline.html
 
-# 05_test is an exploratory branch; its figures are regenerated, not deliverables
-05_test/b_reports/*.pdf
-05_test/b_reports/*.png
+# Figure and QC renders are regenerated from the scripts; the data intermediates
+# in c_data/ stay tracked so a clone builds figures without re-running upstream.
+**/b_reports/**/*.png
+**/b_reports/**/*.pdf
