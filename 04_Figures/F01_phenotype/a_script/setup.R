@@ -3,7 +3,7 @@
 # 01_run_phenotype.R creates the output directories.
 pacman::p_load(here, dplyr, tidyr, tibble, purrr)
 
-source(here::here("04_Figures", "functions", "style.R"))
+source(here::here("04_Figures", "functions", "shared_style.R"))
 source(here::here("04_Figures", "F01_phenotype", "a_script", "phenotype.R"))
 
 F01_RPT <- here::here("04_Figures", "F01_phenotype", "b_reports")

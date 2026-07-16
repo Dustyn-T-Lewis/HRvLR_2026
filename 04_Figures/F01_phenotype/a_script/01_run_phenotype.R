@@ -5,7 +5,7 @@ pacman::p_load(here, patchwork, ggplot2, dplyr, tidyr, tibble, openxlsx)
 F01_PANELS <- list()
 F01_AUDIT <- list()
 source(here("04_Figures", "F01_phenotype", "a_script", "setup.R"))
-source(here("04_Figures", "shared", "utils.R"))
+source(here("04_Figures", "functions", "shared_utils.R"))
 
 clear_dir(F01_RPT)
 dir.create(file.path(F01_RPT, "panels"), recursive = TRUE, showWarnings = FALSE)

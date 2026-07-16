@@ -15,7 +15,7 @@
 # as the non-imputed fit. missForest stays canonical downstream.
 
 pacman::p_load(here, dplyr, tidyr, readr, purrr, ggplot2, patchwork, openxlsx)
-source(here("04_Figures", "functions", "style.R"))
+source(here("04_Figures", "functions", "shared_style.R"))
 
 RPT_DIR <- here("02_Normalization", "imputation", "b_reports")
 DAT_DIR <- here("02_Normalization", "imputation", "c_data")

@@ -5,8 +5,8 @@
 # Provides: dep, fg, pw, CONTRASTS, RPT_DIR, DAT_DIR. Writes nothing.
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr, openxlsx)
-source(here("04_Figures", "functions", "style.R"))
-source(here("04_Figures", "functions", "pathway_utils.R"))
+source(here("04_Figures", "functions", "shared_style.R"))
+source(here("04_Figures", "functions", "shared_pathway_utils.R"))
 source(here("03_DEP", "contrasts.R"))
 
 RPT_DIR <- here("04_Figures", "F03_volcanoes", "b_reports")

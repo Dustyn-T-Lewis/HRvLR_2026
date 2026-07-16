@@ -8,8 +8,8 @@
 pacman::p_load(here, dplyr, readr, tibble, purrr, ggplot2, openxlsx)
 
 unit <- here("04_Figures", "F05_association")
-source(here("04_Figures", "functions", "style.R"))
-source(here("04_Figures", "functions", "pathway_utils.R"))
+source(here("04_Figures", "functions", "shared_style.R"))
+source(here("04_Figures", "functions", "shared_pathway_utils.R"))
 source(file.path(unit, "a_script", "associate.R"))
 source(file.path(unit, "a_script", "plots.R"))
 

@@ -8,7 +8,7 @@ F04_AUDIT <- list()
 
 a_script <- here("04_Figures", "F04_modules", "a_script")
 source(file.path(a_script, "setup.R"))
-source(here("04_Figures", "shared", "utils.R"))
+source(here("04_Figures", "functions", "shared_utils.R"))
 
 clear_dir(RPT_DIR)
 dir.create(file.path(RPT_DIR, "panels"), recursive = TRUE, showWarnings = FALSE)
