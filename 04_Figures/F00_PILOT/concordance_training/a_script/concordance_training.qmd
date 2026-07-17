@@ -13,11 +13,55 @@ format:
     embed-resources: true
     df-print: paged
 execute:
-  eval: false
-  echo: true
+  eval: true
+  echo: false
   warning: false
   message: false
 ---
+
+```{r setup, include=FALSE}
+pacman::p_load(here, openxlsx, dplyr)
+wb <- here(
+  "04_Figures", "F00_PILOT", "concordance_training", "c_data",
+  "concordance_training_source_data.xlsx"
+)
+qa <- read.xlsx(wb, "panel_a_quadrants")
+pb <- read.xlsx(wb, "panel_b_pattern")
+pd <- read.xlsx(wb, "panel_d_nes")
+rr <- read.xlsx(wb, "panel_e_rrho2_hotspot")
+fr <- read.xlsx(wb, "panel_c_fry_results")
+bo <- read.xlsx(wb, "supp_bootstrap")
+
+comma <- function(x) format(x, big.mark = ",")
+quad <- table(factor(qa$quadrant))
+n_prot <- nrow(qa)
+n_conc <- sum(qa$quadrant %in% c("Concordant Up", "Concordant Down"))
+pct_conc <- round(100 * n_conc / n_prot)
+scl <- table(factor(qa$sig_class))
+rho_prot <- round(bo$observed, 2)
+
+fr_up <- fr[fr$Direction == "Up", ]
+fr_dn <- fr[fr$Direction == "Down", ]
+
+nes_rho <- round(cor(pd$NES_Training_HR, pd$NES_Training_LR, method = "spearman"), 2)
+n_path <- nrow(pd)
+nes_cu <- sum(pd$NES_Training_HR > 0 & pd$NES_Training_LR > 0)
+nes_cd <- sum(pd$NES_Training_HR < 0 & pd$NES_Training_LR < 0)
+nes_disc <- n_path - nes_cu - nes_cd
+pct_path_conc <- round(100 * (nes_cu + nes_cd) / n_path)
+n_path_div <- sum(pd$divergent, na.rm = TRUE)
+
+n_sel <- nrow(pb)
+n_cat <- length(unique(pb$pathway))
+cat_tab <- sort(table(pb$pathway), decreasing = TRUE)
+cat_top_n <- cat_tab[[1]]
+mito_n <- sum(grepl("Mito", pb$pathway))
+mito_up <- sum(grepl("Mito", pb$pathway) & pb$quadrant == "Concordant Up")
+
+rr_tot <- nrow(rr)
+rr_dd <- sum(rr$quadrant == "DD")
+rr_uu <- sum(rr$quadrant == "UU")
+```
 
 ## The question
 
@@ -46,17 +90,17 @@ Read this section before the panels, because the panels are easy to over-read.
 
 **HR and LR adapt to training in broadly the same direction, and the agreement is
 weak.** The protein-level Spearman correlation between the HR and LR training
-logFC vectors is **ρ = 0.20** (bootstrap 95% CI 0.15–0.25). A correlation of 0.20
-is a faint shared tendency, not a common program: it leaves the great majority of
-the cross-protein variance unshared. 1,098 of 1,874 proteins (**59%**) sit in a
+logFC vectors is **ρ = `r rho_prot`** (bootstrap 95% CI `r round(bo$ci_lo, 2)`–`r round(bo$ci_hi, 2)`). A correlation this
+low is a faint shared tendency, not a common program: it leaves the great majority of
+the cross-protein variance unshared. `r comma(n_conc)` of `r comma(n_prot)` proteins (**`r pct_conc`%**) sit in a
 concordant quadrant, against the 50% a coin would give.
 
 **No set-level test survives correction.** The fry rotation test — the one
 properly-blocked, error-rate-controlled test on this page — is null in both
-directions: HR-up proteins along the LR ranking give p = 0.56 (FDR 0.56), HR-down
-give p = 0.25 (FDR 0.49). Nothing here reaches significance.
+directions: HR-up proteins along the LR ranking give p = `r round(fr_up$PValue, 2)` (FDR `r round(fr_up$FDR, 2)`), HR-down
+give p = `r round(fr_dn$PValue, 2)` (FDR `r round(fr_dn$FDR, 2)`). Nothing here reaches significance.
 
-**The divergent proteins are a soft call, not an FDR-controlled one.** The 55
+**The divergent proteins are a soft call, not an FDR-controlled one.** The `r scl[["Divergent"]]`
 proteins in the divergent class are selected by the π gate, which controls no
 error rate (see @sec-pi). Under BH-FDR the interaction contrast returns
 essentially nothing. Treat the divergent set as a ranked, hypothesis-generating
@@ -103,7 +147,7 @@ render_concordance_figure(list(
 ## The two correlations, and why they differ {#sec-rho}
 
 The composite prints ρ twice and they are **not the same number**. Panel A's
-ρ = 0.20 is the correlation across *proteins*. Panel D's ρ = 0.28 is the
+ρ = `r rho_prot` is the correlation across *proteins*. Panel D's ρ = `r nes_rho` is the
 correlation across *pathways*. Pathway scores average over many proteins, so they
 cancel noise and correlate a little more tightly. Neither is more correct; they
 answer the question at different grain. Quoting the higher one as "the"
@@ -119,14 +163,14 @@ groups; the two off-diagonal quadrants hold proteins that move opposite ways.
 Points are coloured by class: divergent (interaction-flagged), significant in
 both, HR-only, LR-only, or NS. The dashed line is perfect agreement.
 
-**Result.** Concordant Up 560, Concordant Down 538, HR Down / LR Up 415, HR Up /
-LR Down 361. That is 1,098 concordant of 1,874 (59%), with ρ = 0.20. Of the
-selected proteins, 55 are divergent, 23 HR-only, 15 LR-only, and just **2 are
+**Result.** Concordant Up `r quad[["Concordant Up"]]`, Concordant Down `r quad[["Concordant Down"]]`, HR Down / LR Up `r quad[["HR Down / LR Up"]]`, HR Up /
+LR Down `r quad[["HR Up / LR Down"]]`. That is `r comma(n_conc)` concordant of `r comma(n_prot)` (`r pct_conc`%), with ρ = `r rho_prot`. Of the
+selected proteins, `r scl[["Divergent"]]` are divergent, `r scl[["Sig HR only"]]` HR-only, `r scl[["Sig LR only"]]` LR-only, and just **`r scl[["Sig Both"]]` are
 significant in both arms**.
 
 **How to read it.** The cloud is round, not cigar-shaped. A strong shared training
-program would pull it onto the diagonal; it does not. The 59%-concordant split is
-only nine points above chance.
+program would pull it onto the diagonal; it does not. The `r pct_conc`%-concordant split is
+only `r pct_conc - 50` points above chance.
 
 **Why the universe is the measured proteome.** Over-representation runs per
 quadrant against `universe <- quad_tbl$gene`, the proteins actually tested here,
@@ -162,9 +206,9 @@ run_quadrant_ora <- function(quad_tbl, pw, n_show = 5) {
 
 ## Panel B — protein-to-pathway
 
-![Panel B. The 95 selected proteins, their HR and LR logFC, and the GO-Slim category each is assigned to.](../b_reports/panels/panel_b_pattern_heatmap.png)
+![Panel B. The `r n_sel` selected proteins, their HR and LR logFC, and the GO-Slim category each is assigned to.](../b_reports/panels/panel_b_pattern_heatmap.png)
 
-**What.** Panel B takes the 95 proteins selected in *either* arm or by the
+**What.** Panel B takes the `r n_sel` proteins selected in *either* arm or by the
 interaction, shows their HR and LR logFC side by side as a heatmap, and links each
 to a consolidated GO-Slim category. The bars count proteins per category, split by
 which arm selected them.
@@ -172,11 +216,10 @@ which arm selected them.
 **Why it exists.** Panel A tells you how many proteins fall where; it does not tell
 you *what they are*. Panel B is the bridge from the quadrant counts to biology,
 and it is the panel that shows the selected proteins are not one coherent program
-but a scatter across 15 categories — the largest, Transcription & Chromatin, holds
-11 of 95.
+but a scatter across `r n_cat` categories, none holding more than `r cat_top_n` of `r n_sel`.
 
 **How to read it.** Look for a category dominated by one colour. Mitochondria &
-Energy is the one that stands out: all 6 of its proteins are concordant-up. Most
+Energy is the one that stands out: all `r mito_n` of its proteins are concordant-up. Most
 other categories mix HR-only, LR-only and concordant proteins, which is what a
 weak shared response looks like at the protein level.
 
@@ -188,9 +231,9 @@ weak shared response looks like at the protein level.
 the proteins that changed in HR sit high (or low) in the *LR* ranking? It takes the
 HR up and down sets and tests their position along the LR moderated-t statistic.
 
-**Result — this is the null that matters.** HR-up set (n = 19) along the LR
-ranking: **p = 0.56**, FDR 0.56. HR-down set (n = 35): **p = 0.25**, FDR 0.49. The
-within-subject `duplicateCorrelation` consensus is 0.174. Neither direction is
+**Result — this is the null that matters.** HR-up set (n = `r fr_up$n`) along the LR
+ranking: **p = `r round(fr_up$PValue, 2)`**, FDR `r round(fr_up$FDR, 2)`. HR-down set (n = `r fr_dn$n`): **p = `r round(fr_dn$PValue, 2)`**, FDR `r round(fr_dn$FDR, 2)`. The
+rotation carries the within-subject `duplicateCorrelation` consensus. Neither direction is
 significant. fry is the only properly-blocked, error-rate-controlled set test on
 this page, and it says the HR training signature is not detectably displaced in
 the LR ranking.
@@ -244,12 +287,12 @@ scale of every ring in F03 and both axes here.
 against its NES for the LR training contrast (Hallmark + GO Slim) and reports the
 Spearman correlation of the two NES vectors.
 
-**Result.** ρ = 0.28 across 57 pathways, 51% of them in a concordant quadrant
-(Concordant Up 13, Concordant Down 16, discordant 28). Only **2 of 57** pathways
+**Result.** ρ = `r nes_rho` across `r n_path` pathways, `r pct_path_conc`% of them in a concordant quadrant
+(Concordant Up `r nes_cu`, Concordant Down `r nes_cd`, discordant `r nes_disc`). Only **`r n_path_div` of `r n_path`** pathways
 are flagged divergent by the cached interaction GSEA.
 
-**How to read it.** Pathway-level agreement (0.28) is slightly better than
-protein-level agreement (0.20), which is what averaging over set members buys you.
+**How to read it.** Pathway-level agreement (`r nes_rho`) is slightly better than
+protein-level agreement (`r rho_prot`), which is what averaging over set members buys you.
 It is still weak. Note the panel is *not* a prediction: a high ρ would mean the two
 groups adapt alike, not that responder status can be read off the training
 proteome.
@@ -267,8 +310,8 @@ significance cut, it slides across both moderated-t rankings and maps where the 
 and LR lists overlap, so concordant-up and concordant-down agreement shows as
 signed hotspots without any protein being called significant.
 
-**Result.** Of 1,874 shared genes, the concordant hotspot holds **694** (504
-concordant-down, 190 concordant-up); the discordant corners hold 1. The two
+**Result.** Of `r comma(n_prot)` shared genes, the concordant hotspot holds **`r comma(rr_dd + rr_uu)`** (`r rr_dd`
+concordant-down, `r rr_uu` concordant-up); the discordant corners hold `r rr_tot - rr_dd - rr_uu`. The two
 concordant corners light up and the two discordant corners are dark.
 
 **How to read it.** This is the most *encouraging* panel here, and it needs the
@@ -283,8 +326,8 @@ not rescue it.
 ![Supplementary bootstrap. Resampling distribution of the HR-vs-LR logFC Spearman correlation with the observed value and 95% CI.](../b_reports/supp/supp_bootstrap.png)
 
 The bootstrap puts an interval on Panel A's ρ. It draws **proteins** with
-replacement 1,000 times and recomputes ρ, then takes the 2.5th and 97.5th
-percentiles: ρ = 0.198, CI 0.151–0.249.
+replacement `r comma(bo$reps)` times and recomputes ρ, then takes the 2.5th and 97.5th
+percentiles: ρ = `r round(bo$observed, 3)`, CI `r round(bo$ci_lo, 3)`–`r round(bo$ci_hi, 3)`.
 
 The resampled unit is the protein, and that is the whole caveat. This is a
 confidence interval on cross-protein concordance — how stable the agreement is to
@@ -309,7 +352,7 @@ not be reported as enriched biology.
 
 ## The π gate is not an FDR gate {#sec-pi}
 
-Every "significant" protein on this page — the 95 in Panels A and B, the 55
+Every "significant" protein on this page — the `r n_sel` in Panels A and B, the `r scl[["Divergent"]]`
 divergent, the fry input sets — is selected by `sig_pi`, the π-score flag
 [@xiao2014], not by BH-FDR.
 
@@ -320,7 +363,7 @@ being p = 0.269. π controls no error rate — not FDR, not FWER — and the π-
 set is *not* a subset of the p < 0.05 set. Xiao's paper prescribes a
 dataset-specific empirical-null critical value rather than a flat 0.05.
 
-Under BH-FDR the training interaction returns essentially nothing. So read the 55
+Under BH-FDR the training interaction returns essentially nothing. So read the `r scl[["Divergent"]]`
 divergent proteins as an **effect-size-weighted, hypothesis-generating ranking**,
 and never as an FDR-controlled discovery list. An error-rate-controlled alternative
 that also respects a biological effect-size floor is `limma::treat()`
@@ -335,8 +378,8 @@ p-value.
 ## Key terms
 
 **Concordance (ρ)** — the Spearman correlation between the HR and LR logFC
-vectors. Measured across proteins (Panel A, 0.20) or across pathway NES (Panel D,
-0.28). It is a within-cohort association, not a prediction.
+vectors. Measured across proteins (Panel A, `r rho_prot`) or across pathway NES (Panel D,
+`r nes_rho`). It is a within-cohort association, not a prediction.
 
 **NES** — normalised enrichment score. A pathway's enrichment score divided by the
 mean score of random sets of the same size, so scores are comparable across sets of
@@ -358,11 +401,11 @@ bias as biology.
 
 ## Recap
 
-- HR and LR training responses are **weakly** concordant: ρ = 0.20 across proteins
-  (CI 0.15–0.25), 0.28 across pathways, 59% of proteins in a concordant quadrant.
+- HR and LR training responses are **weakly** concordant: ρ = `r rho_prot` across proteins
+  (CI `r round(bo$ci_lo, 2)`–`r round(bo$ci_hi, 2)`), `r nes_rho` across pathways, `r pct_conc`% of proteins in a concordant quadrant.
 - The fry rotation test — the only properly blocked, error-rate-controlled test
-  here — is **null in both directions** (p = 0.56 up, p = 0.25 down).
-- The 55 "divergent" proteins come from the π gate, which controls no error rate.
+  here — is **null in both directions** (p = `r round(fr_up$PValue, 2)` up, p = `r round(fr_dn$PValue, 2)` down).
+- The `r scl[["Divergent"]]` "divergent" proteins come from the π gate, which controls no error rate.
   They are a ranked lead list, not discoveries.
 - This figure does not establish a responder-specific training program. Stating that is the
   result.
