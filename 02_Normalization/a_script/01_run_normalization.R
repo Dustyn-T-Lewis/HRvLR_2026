@@ -7,8 +7,8 @@
 # chooseLowessSpan(nrow) = 0.5075 at 1920 proteins. It moves if the protein count moves.
 
 pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
-source(here("04_Figures", "functions", "shared_pca.R"))
-source(here("04_Figures", "functions", "shared_utils.R"))
+source(here("functions", "shared_pca.R"))
+source(here("functions", "shared_utils.R"))
 
 data_dir <- here("02_Normalization", "c_data")
 report_dir <- here("02_Normalization", "b_reports")

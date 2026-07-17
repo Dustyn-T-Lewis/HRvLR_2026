@@ -12,8 +12,8 @@
 pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, tibble, stringr, purrr, openxlsx
 )
-source(here("04_Figures", "functions", "shared_pca.R"))
-source(here("04_Figures", "functions", "shared_utils.R"))
+source(here("functions", "shared_pca.R"))
+source(here("functions", "shared_utils.R"))
 source(here("01_Filtering", "a_script", "filter_config.R"))
 cfg <- filter_cfg
 

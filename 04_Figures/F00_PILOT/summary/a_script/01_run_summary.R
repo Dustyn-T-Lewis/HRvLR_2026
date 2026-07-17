@@ -5,7 +5,7 @@
 # puts magnitude and concordance in the same frame before either figure is finalised.
 pacman::p_load(here, dplyr, tidyr, readr, ggplot2, patchwork)
 
-source(here("04_Figures", "functions", "shared_style.R"))
+source(here("functions", "shared_style.R"))
 
 unit <- here("04_Figures", "F00_PILOT", "summary")
 rpt <- file.path(unit, "b_reports")

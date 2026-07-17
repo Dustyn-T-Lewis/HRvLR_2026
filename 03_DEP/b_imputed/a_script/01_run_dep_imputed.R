@@ -14,7 +14,7 @@
 
 pacman::p_load(proteoDA, here, readr, dplyr, tidyr, tibble, purrr)
 source(here("03_DEP", "contrasts.R"))
-source(here("04_Figures", "functions", "shared_utils.R"))
+source(here("functions", "shared_utils.R"))
 
 CANONICAL <- "missforest"
 clear_dir(here("03_DEP", "b_imputed", "c_data"))

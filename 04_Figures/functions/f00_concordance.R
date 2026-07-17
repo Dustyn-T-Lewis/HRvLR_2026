@@ -8,8 +8,8 @@
 pacman::p_load(here, dplyr, readr, tibble, patchwork, cowplot, ggplot2, openxlsx)
 
 render_concordance_figure <- function(cfg) {
-  source(here("04_Figures", "functions", "shared_style.R"))
-  source(here("04_Figures", "functions", "shared_pathway_utils.R"))
+  source(here("functions", "shared_style.R"))
+  source(here("functions", "shared_pathway_utils.R"))
   source(here("04_Figures", "functions", "f00_concordance_panels.R"))
 
   fig_dir <- if (is.null(cfg$fig_dir)) here("04_Figures", cfg$fig_id) else cfg$fig_dir
