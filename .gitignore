@@ -32,8 +32,11 @@ docs/
 **/b_reports/**/*.png
 **/b_reports/**/*.pdf
 
-# The per-arm imputed DEP tables are terminal: 01_run_dep_imputed.R writes them and
-# nothing reads them back. The QC figure reads the sensitivity and concordance
-# summaries beside them, and the figures read DAList_imputed_missforest.rds, so both
-# of those stay tracked. 17 MB of results that no clone needs.
-03_DEP/b_imputed/c_data/*/combined_results_pi.csv
+# 01_run_dep_imputed.R writes a combined_results_pi.csv for each arm. Only the
+# missforest one is read again -- test-pi-score.R uses it as its equivalence
+# fixture -- so it stays tracked. The other three are write-only and would just be
+# 13 MB no clone reads. The QC figure reads the sensitivity and concordance
+# summaries beside them, and the figures read DAList_imputed_missforest.rds.
+03_DEP/b_imputed/c_data/imp4p/combined_results_pi.csv
+03_DEP/b_imputed/c_data/mscoreutils/combined_results_pi.csv
+03_DEP/b_imputed/c_data/perseus/combined_results_pi.csv
