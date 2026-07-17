@@ -79,7 +79,7 @@ ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), functi
     add_pi_score() |>
     transmute(uniprot_id,
       contrast = tools::file_path_sans_ext(basename(f)),
-      logFC_ni = logFC, adj_ni = adj.P.Val, pi_ni = pi_score
+      logFC_ni = logFC, adj_ni = adj.P.Val, sig_ni = sig_pi
     )
 })
 
@@ -90,14 +90,14 @@ arm_counts <- function(d, m) {
       method = m,
       n_BH_10 = sum(adj.P.Val < 0.10, na.rm = TRUE),
       n_BH_05 = sum(adj.P.Val < 0.05, na.rm = TRUE),
-      n_pi = sum(pi_score < PI_THRESH, na.rm = TRUE),
+      n_pi = sum(sig_pi != 0, na.rm = TRUE),
       .groups = "drop"
     )
 }
 
 sens <- bind_rows(
   arm_counts(
-    ni |> transmute(contrast, adj.P.Val = adj_ni, pi_score = pi_ni),
+    ni |> transmute(contrast, adj.P.Val = adj_ni, sig_pi = sig_ni),
     "non_imputed"
   ),
   imap_dfr(runs, \(res, m) arm_counts(bind_rows(res), m))
