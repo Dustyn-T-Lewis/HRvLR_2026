@@ -169,11 +169,12 @@ Rscript 04_Figures/F06_prediction/prediction_continuous/acute/a_script/01_run_ac
 Every stage and figure unit is `a_script/` (code), `b_reports/` (renders), `c_data/`
 (outputs the next step reads).
 
-`04_Figures/` also holds the project's shared machinery:
+Shared helpers live by scope:
 
 | Path | Contents |
 | --- | --- |
-| `04_Figures/functions/` | Every shared helper, scope stated in the name. `shared_*` spans figures and stages — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA). `f0N_*` belongs to one figure — `f00_concordance.R` (the F00_PILOT driver) and `f00_concordance_panels.R` (its panel builders). |
+| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA). |
+| `04_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F00_PILOT driver) and `f00_concordance_panels.R` (its panel builders). |
 | `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
