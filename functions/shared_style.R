@@ -137,6 +137,19 @@ fisher_z_ci <- function(r, n, k = 0, level = 0.95) {
   c(lo = tanh(z - crit * se), hi = tanh(z + crit * se))
 }
 
+# Bonett & Wright 2000, Psychometrika 65(1), doi:10.1007/bf02294183: the improved
+# standard error for a Spearman correlation. Use this, not fisher_z_ci, whenever r
+# is a Spearman rho.
+fisher_z_ci_spearman <- function(r, n, level = 0.95) {
+  if (n < 4 || is.na(r)) {
+    return(c(lo = NA_real_, hi = NA_real_))
+  }
+  z <- atanh(r)
+  se <- sqrt((1 + r^2 / 2) / (n - 3))
+  crit <- qnorm(1 - (1 - level) / 2)
+  c(lo = tanh(z - crit * se), hi = tanh(z + crit * se))
+}
+
 sig_stars <- function(padj) {
   dplyr::case_when(
     padj < 0.001 ~ "***",

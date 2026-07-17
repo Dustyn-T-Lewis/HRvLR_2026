@@ -215,17 +215,6 @@ make_sigmoid_ribbon <- function(x0, x1, y0_top, y0_bot, y1_top, y1_bot,
   )
 }
 
-# Fisher-z CI with the Bonett-Wright Spearman variance
-fisher_z_ci_spearman <- function(r, n, level = 0.95) {
-  if (n < 4 || is.na(r)) {
-    return(c(lo = NA_real_, hi = NA_real_))
-  }
-  z <- atanh(r)
-  se <- sqrt((1 + r^2 / 2) / (n - 3))
-  crit <- qnorm(1 - (1 - level) / 2)
-  c(lo = tanh(z - crit * se), hi = tanh(z + crit * se))
-}
-
 # Panel A: quadrant ORA scatter
 
 # Per-protein HR-vs-LR logFC with pi-based significance class. Interaction-sig
