@@ -14,8 +14,9 @@ forward.
 ## Start here
 
 `HRvLR_pipeline.qmd` is the ground-up walkthrough and the map into everything else.
-Each stage and figure also ships its own tutorial (`00_inputs.qmd`,
-`01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, `HRvLR_F01`–`F04.qmd`),
+Most stages and figures also ship their own tutorial (`00_inputs.qmd`,
+`01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, and the figure narratives
+`F01_phenotype.qmd`, `F02_proteome.qmd`, `F03_volcanoes.qmd`, `F04_modules.qmd`),
 written to be read on its own: what it does, how, why that method and not another, and
 how to read the output — including what a null looks like.
 
@@ -180,8 +181,10 @@ Shared helpers live by scope:
 
 ## Figures
 
-Each figure is a self-contained `a_script/ b_reports/ c_data/` unit with its own
-run script and narrative `.qmd`.
+Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
+ship a narrative `.qmd`; F05 and F00_PILOT/summary do not, and F06 carries its triad
+and its two `a_narrative.qmd` files inside the six prediction leaves rather than at
+the top level.
 
 | Directory | Question | Engine |
 | --- | --- | --- |

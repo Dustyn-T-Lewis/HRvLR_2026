@@ -123,9 +123,9 @@ to the same strength.
 `performance::check_model` runs the full assumption suite in one figure —
 posterior-predictive check, linearity, homogeneity of variance, influential
 points, collinearity, and residual and random-effect normality — each panel
-labelled with what a good fit looks like. The six models share structure, so
-`hlm_supp.R` writes the mCSA exemplar below; per-model fit metrics for all six are
-in the table above.
+labelled with what a good fit looks like. The six models share structure, so the
+chunk below renders the mCSA exemplar; per-model fit metrics for all six are in the
+table above.
 
 ```{r diagnostics, fig.width=8, fig.height=11, fig.cap="Figure 1. check_model assumptions for the mCSA model."}
 check_model(fits[["mCSA"]], verbose = FALSE)
