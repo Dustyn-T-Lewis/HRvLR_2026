@@ -46,7 +46,7 @@ concordance <- per_protein |>
     .groups = "drop"
   ) |>
   mutate(
-    ci = lapply(seq_len(n()), function(i) fisher_z_ci(rho[i], n[i])),
+    ci = lapply(seq_len(n()), function(i) fisher_z_ci_spearman(rho[i], n[i])),
     rho_lo = vapply(ci, function(z) z[["lo"]], numeric(1)),
     rho_hi = vapply(ci, function(z) z[["hi"]], numeric(1))
   ) |>
