@@ -17,7 +17,7 @@ assoc_volcano <- function(res, trait_label = unique(res$trait), bh_cut = 0.05,
     geom_point(aes(colour = sig), alpha = 0.7, show.legend = FALSE) +
     ggrepel::geom_text_repel(
       data = lab, aes(label = feature), size = 2.6,
-      max.overlaps = 20
+      max.overlaps = 20, seed = 42
     ) +
     scale_colour_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey75")) +
     labs(
