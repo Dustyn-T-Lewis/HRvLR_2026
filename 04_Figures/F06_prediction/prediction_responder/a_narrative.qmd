@@ -18,7 +18,7 @@ Can the muscle proteome tell a high responder (HR) from a low responder
 - **acute** — the T2 to T3 change, the response to a single bout.
 
 Within each phase we compare three feature spaces — singscore pathway
-scores (primary), individual proteins, and the F04 module eigengenes —
+scores (primary), individual proteins, and the F04_association_WGCNA module eigengenes —
 and two models, an elastic net (`glmnet`) and sparse PLS-DA (`mixOmics`).
 
 Sixteen subjects is a small cohort, so a single accuracy number is close
@@ -112,7 +112,7 @@ for a look at the harness.
 
 ## The eigengene feature space is transductive
 
-The F04 module eigengenes used here were built by running WGCNA **once, on all
+The F04_association_WGCNA module eigengenes used here were built by running WGCNA **once, on all
 45 samples**, before any fold was drawn. On every leave-one-subject-out fold
 the held-out subject had therefore already helped define the modules whose
 eigengene is used to classify them. The regression is held out; the features
