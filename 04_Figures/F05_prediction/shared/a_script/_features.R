@@ -77,7 +77,6 @@ pred_load <- function() {
   expr <- pred_gene_expression(da)
   feature_sets <- list(
     singscore  = pred_singscore(expr, paths$cache),
-    proteins   = as.matrix(da$data),
     eigengenes = pred_eigengene_matrix(paths$eigen, colnames(da$data))
   )
 

@@ -4,27 +4,25 @@
 
 pacman::p_load(ggplot2, dplyr, tidyr, patchwork, scales)
 
-SPACE_COLORS <- c(
-  singscore = "#238B45", proteins = unname(GROUP_COLORS["HR"]),
-  eigengenes = "#9E9AC8"
-)
-SPACE_LABELS <- c(
-  singscore = "singscore", proteins = "proteins", eigengenes = "module ME"
-)
+SPACE_COLORS <- c(singscore = "#238B45", eigengenes = "#9E9AC8")
+SPACE_LABELS <- c(singscore = "singscore", eigengenes = "module ME")
+PHASE_LEVELS <- c("baseline", "training", "acute")
+PHASE_LABELS <- c(baseline = "baseline", training = "training", acute = "acute")
 MODEL_LABELS <- c(glmnet = "elastic net", spls = "sPLS")
 MODEL_COLORS <- c(
   glmnet = unname(GROUP_COLORS["LR"]), spls = unname(GROUP_COLORS["HR"])
 )
 
-# Class arm: ROC small-multiples over feature space (top) above AUC bars with
-# DeLong intervals, the chance reference at 0.5, permutation p and BH stars.
-build_class_panel <- function(summ, roc_df, phase) {
+# Class arm, one feature space: ROC small-multiples over phase (top) above
+# AUC bars with DeLong intervals, the chance reference at 0.5, permutation p
+# and BH stars.
+build_class_panel <- function(summ, roc_df, space) {
   summ <- summ |>
     mutate(
-      space = factor(space, levels = names(SPACE_COLORS)),
+      phase = factor(phase, levels = PHASE_LEVELS),
       lab = sprintf("%.2f\np=%.3f%s", estimate, perm_p, sig_stars(q_bh))
     )
-  roc_df <- roc_df |> mutate(space = factor(space, levels = names(SPACE_COLORS)))
+  roc_df <- roc_df |> mutate(phase = factor(phase, levels = PHASE_LEVELS))
 
   p_roc <- ggplot(roc_df, aes(fpr, tpr, colour = model)) +
     geom_abline(
@@ -32,7 +30,7 @@ build_class_panel <- function(summ, roc_df, phase) {
       colour = "grey70", linewidth = 0.3
     ) +
     geom_line(linewidth = 0.9) +
-    facet_wrap(~space, nrow = 1, labeller = as_labeller(SPACE_LABELS)) +
+    facet_wrap(~phase, nrow = 1, labeller = as_labeller(PHASE_LABELS)) +
     scale_colour_manual(
       values = MODEL_COLORS,
       labels = MODEL_LABELS, name = NULL
@@ -44,7 +42,7 @@ build_class_panel <- function(summ, roc_df, phase) {
     FIG_THEME +
     theme(legend.position = "top", panel.spacing = unit(6, "pt"))
 
-  p_bar <- ggplot(summ, aes(space, estimate, fill = model)) +
+  p_bar <- ggplot(summ, aes(phase, estimate, fill = model)) +
     geom_hline(yintercept = 0.5, linetype = "dashed", colour = "grey50") +
     geom_col(
       position = position_dodge(0.7), width = 0.62,
@@ -61,7 +59,7 @@ build_class_panel <- function(summ, roc_df, phase) {
       values = MODEL_COLORS,
       labels = MODEL_LABELS, name = NULL
     ) +
-    scale_x_discrete(labels = SPACE_LABELS) +
+    scale_x_discrete(labels = PHASE_LABELS) +
     scale_y_continuous(limits = c(0, 1.15), breaks = seq(0, 1, 0.25)) +
     labs(x = NULL, y = "LOSO AUC") +
     FIG_THEME +
@@ -70,7 +68,9 @@ build_class_panel <- function(summ, roc_df, phase) {
   (p_roc / p_bar) +
     plot_layout(heights = c(1, 1.1)) +
     plot_annotation(
-      title = sprintf("Responder-class prediction — %s features", phase),
+      title = sprintf(
+        "Responder-class prediction — %s features", SPACE_LABELS[[space]]
+      ),
       subtitle = sprintf("Nested leave-one-subject-out AUC vs a %d-permutation null. Dashed line = chance; * BH q<.05.", N_PERM),
       theme = theme(
         plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
@@ -82,17 +82,18 @@ build_class_panel <- function(summ, roc_df, phase) {
     )
 }
 
-# Continuous arm: Q^2 bars over feature space faceted by outcome (top) above the
-# singscore predicted-vs-observed scatters (bottom). Null reference at Q^2 = 0.
-build_cont_panel <- function(summ, preds, phase) {
+# Continuous arm, one feature space: Q^2 bars over phase faceted by outcome
+# (top) above the elastic-net predicted-vs-observed scatters, faceted by
+# phase x outcome (bottom). Null reference at Q^2 = 0.
+build_cont_panel <- function(summ, preds, space) {
   summ <- summ |>
     mutate(
-      space = factor(space, levels = names(SPACE_COLORS)),
+      phase = factor(phase, levels = PHASE_LEVELS),
       q2_disp = pmin(pmax(q2, -0.6), 0.85),
       lab = sprintf("%.2f%s", q2, sig_stars(q_bh))
     )
 
-  p_bar <- ggplot(summ, aes(space, q2_disp, fill = model)) +
+  p_bar <- ggplot(summ, aes(phase, q2_disp, fill = model)) +
     geom_hline(yintercept = 0, colour = "grey50", linewidth = 0.4) +
     geom_col(
       position = position_dodge(0.7), width = 0.62,
@@ -108,7 +109,7 @@ build_cont_panel <- function(summ, preds, phase) {
       labels = MODEL_LABELS, name = NULL
     ) +
     scale_x_discrete(
-      labels = SPACE_LABELS,
+      labels = PHASE_LABELS,
       guide = guide_axis(n.dodge = 2)
     ) +
     scale_y_continuous(limits = c(-0.62, 0.92)) +
@@ -120,23 +121,28 @@ build_cont_panel <- function(summ, preds, phase) {
     )
 
   scatter_df <- preds |>
-    filter(space == "singscore", model == "glmnet")
+    filter(model == "glmnet") |>
+    mutate(phase = factor(phase, levels = PHASE_LEVELS))
   p_sc <- ggplot(scatter_df, aes(y, pred)) +
     geom_abline(
       slope = 1, intercept = 0, linetype = "dashed",
       colour = "grey70", linewidth = 0.3
     ) +
-    geom_point(colour = SPACE_COLORS[["singscore"]], size = 1.4, alpha = 0.8) +
-    facet_wrap(~outcome, nrow = 1, scales = "free") +
+    geom_point(colour = SPACE_COLORS[[space]], size = 1.4, alpha = 0.8) +
+    facet_grid(phase ~ outcome,
+      scales = "free", labeller = labeller(phase = PHASE_LABELS)
+    ) +
     labs(x = "observed", y = "LOSO predicted") +
     FIG_THEME +
-    theme(panel.spacing = unit(5, "pt"))
+    theme(panel.spacing = unit(5, "pt"), strip.text.y = element_text(size = 7))
 
   (p_bar / p_sc) +
-    plot_layout(heights = c(1.1, 1)) +
+    plot_layout(heights = c(0.8, 1.3)) +
     plot_annotation(
-      title = sprintf("Continuous-phenotype prediction — %s features", phase),
-      subtitle = sprintf("Nested LOSO Q^2 vs a %d-permutation null; scatters are singscore + elastic net. Null reference at Q^2 = 0.", N_PERM),
+      title = sprintf(
+        "Continuous-phenotype prediction — %s features", SPACE_LABELS[[space]]
+      ),
+      subtitle = sprintf("Nested LOSO Q^2 vs a %d-permutation null; scatters are elastic net. Null reference at Q^2 = 0.", N_PERM),
       theme = theme(
         plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
         plot.subtitle = element_text(

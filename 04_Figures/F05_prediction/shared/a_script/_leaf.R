@@ -1,17 +1,18 @@
-# Leaf drivers for the prediction suite. Each phase leaf sources this and calls
-# run_class_leaf() or run_cont_leaf() with its phase and output directory, so
-# the feature-space x model x outcome sweep, permutation nulls, BH correction,
-# metric CSVs and panels all live in one place.
+# Leaf drivers for the prediction suite. Each feature-family leaf sources this
+# and calls run_class_arm() or run_cont_arm() with its feature space and
+# output directory, so the phase x model (x outcome) sweep, permutation
+# nulls, BH correction, source workbook and panel all live in one place.
 
-pacman::p_load(here, dplyr, readr, ggplot2)
+pacman::p_load(here, dplyr, readr, ggplot2, openxlsx)
 
 source(here("functions", "shared_style.R"))
 source(here("04_Figures", "F05_prediction", "shared", "a_script", "_features.R"))
 source(here("functions", "shared_prediction.R"))
 source(here("04_Figures", "F05_prediction", "shared", "a_script", "_panels.R"))
 
-PRED_SPACES <- c("singscore", "proteins", "eigengenes")
+PRED_SPACES <- c("singscore", "eigengenes")
 PRED_MODELS <- c("glmnet", "spls")
+PRED_PHASES <- c("baseline", "training", "acute")
 CONT_OUTCOMES <- c(
   "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_mcsa",
   "d_1rm_legpress", "d_1rm_ext"
@@ -25,43 +26,56 @@ leaf_dirs <- function(out_dir) {
   list(dat = dat, rpt = rpt)
 }
 
-run_class_leaf <- function(bundle, phase, out_dir, nperm = N_PERM) {
+write_leaf_workbook <- function(path, sheets) {
+  wb <- createWorkbook()
+  for (nm in names(sheets)) {
+    addWorksheet(wb, nm)
+    writeData(wb, nm, sheets[[nm]])
+  }
+  saveWorkbook(wb, path, overwrite = TRUE)
+}
+
+# Responder-class (HR vs LR) prediction for one feature space, sweeping
+# phase x model. One metrics table with a phase column, BH applied once.
+run_class_arm <- function(bundle, out_dir, space, nperm = N_PERM,
+                          phases = PRED_PHASES) {
   dirs <- leaf_dirs(out_dir)
   y_all <- pred_outcome(bundle, "group")
 
   cells <- expand.grid(
-    space = PRED_SPACES, model = PRED_MODELS,
+    phase = phases, model = PRED_MODELS,
     stringsAsFactors = FALSE
   )
   summ <- list()
   roc <- list()
   preds <- list()
   for (i in seq_len(nrow(cells))) {
-    sp <- cells$space[i]
+    ph <- cells$phase[i]
     mo <- cells$model[i]
     al <- align_xy(
-      pred_phase_matrix(bundle$feature_sets[[sp]], bundle$meta, phase),
+      pred_phase_matrix(bundle$feature_sets[[space]], bundle$meta, ph),
       y_all
     )
     message(sprintf(
       "[class %s] %s x %s  (n=%d, p=%d)",
-      phase, sp, mo, length(al$y), ncol(al$x)
+      space, ph, mo, length(al$y), ncol(al$x)
     ))
     res <- run_class_cell(al$x, al$y, mo, nperm = nperm)
-    summ[[i]] <- cbind(phase = phase, space = sp, res$summary)
-    roc[[i]] <- cbind(phase = phase, space = sp, res$roc)
-    preds[[i]] <- cbind(phase = phase, space = sp, res$preds)
+    summ[[i]] <- cbind(space = space, phase = ph, res$summary)
+    roc[[i]] <- cbind(space = space, phase = ph, res$roc)
+    preds[[i]] <- cbind(space = space, phase = ph, res$preds)
   }
 
   summ <- bind_rows(summ) |> mutate(q_bh = p.adjust(perm_p, "BH"))
   roc <- bind_rows(roc)
   preds <- bind_rows(preds)
 
-  write_csv(summ, file.path(dirs$dat, "class_metrics.csv"))
-  write_csv(roc, file.path(dirs$dat, "class_roc.csv"))
-  write_csv(preds, file.path(dirs$dat, "class_predictions.csv"))
+  write_leaf_workbook(
+    file.path(dirs$dat, "class_source_data.xlsx"),
+    list(metrics = summ, roc = roc, predictions = preds)
+  )
 
-  panel <- build_class_panel(summ, roc, phase)
+  panel <- build_class_panel(summ, roc, space)
   ggsave(file.path(dirs$rpt, "class_prediction.png"), panel,
     width = 190, height = 150, units = "mm", dpi = 300
   )
@@ -69,55 +83,61 @@ run_class_leaf <- function(bundle, phase, out_dir, nperm = N_PERM) {
     width = 190, height = 150, units = "mm", device = PDF_DEVICE
   )
 
-  message("\n=== Responder-class prediction (", phase, ") ===")
-  print(summ |> dplyr::select(space, model, n, estimate, ci_lo, ci_hi, perm_p, q_bh))
+  message("\n=== Responder-class prediction (", space, ") ===")
+  print(summ |> dplyr::select(phase, model, n, estimate, ci_lo, ci_hi, perm_p, q_bh))
   invisible(summ)
 }
 
-run_cont_leaf <- function(bundle, phase, out_dir, nperm = N_PERM) {
+# Continuous-phenotype prediction for one feature space, sweeping
+# outcome x phase x model. One metrics table with a phase column, BH
+# applied once.
+run_cont_arm <- function(bundle, out_dir, space, nperm = N_PERM,
+                         phases = PRED_PHASES) {
   dirs <- leaf_dirs(out_dir)
 
   cells <- expand.grid(
-    outcome = CONT_OUTCOMES, space = PRED_SPACES,
+    outcome = CONT_OUTCOMES, phase = phases,
     model = PRED_MODELS, stringsAsFactors = FALSE
   )
   summ <- list()
   preds <- list()
   for (i in seq_len(nrow(cells))) {
     oc <- cells$outcome[i]
-    sp <- cells$space[i]
+    ph <- cells$phase[i]
     mo <- cells$model[i]
     y_all <- pred_outcome(bundle, oc)
     al <- align_xy(
-      pred_phase_matrix(bundle$feature_sets[[sp]], bundle$meta, phase),
+      pred_phase_matrix(bundle$feature_sets[[space]], bundle$meta, ph),
       y_all
     )
     message(sprintf(
       "[cont %s] %s x %s x %s  (n=%d, p=%d)",
-      phase, oc, sp, mo, length(al$y), ncol(al$x)
+      space, oc, ph, mo, length(al$y), ncol(al$x)
     ))
     res <- run_cont_cell(al$x, al$y, mo, oc, nperm = nperm)
-    summ[[i]] <- cbind(phase = phase, space = sp, res$summary)
-    preds[[i]] <- cbind(phase = phase, space = sp, res$preds)
+    summ[[i]] <- cbind(space = space, phase = ph, res$summary)
+    preds[[i]] <- cbind(space = space, phase = ph, res$preds)
   }
 
   summ <- bind_rows(summ) |> mutate(q_bh = p.adjust(perm_p_q2, "BH"))
   preds <- bind_rows(preds)
 
-  write_csv(summ, file.path(dirs$dat, "cont_metrics.csv"))
-  write_csv(preds, file.path(dirs$dat, "cont_predictions.csv"))
+  write_leaf_workbook(
+    file.path(dirs$dat, "cont_source_data.xlsx"),
+    list(metrics = summ, predictions = preds)
+  )
 
-  panel <- build_cont_panel(summ, preds, phase)
+  panel <- build_cont_panel(summ, preds, space)
   ggsave(file.path(dirs$rpt, "cont_prediction.png"), panel,
-    width = 260, height = 150, units = "mm", dpi = 300
+    width = 260, height = 230, units = "mm", dpi = 300
   )
   ggsave(file.path(dirs$rpt, "cont_prediction.pdf"), panel,
-    width = 260, height = 150, units = "mm", device = PDF_DEVICE
+    width = 260, height = 230, units = "mm", device = PDF_DEVICE
   )
 
-  message("\n=== Continuous-phenotype prediction (", phase, ") ===")
+  message("\n=== Continuous-phenotype prediction (", space, ") ===")
   print(summ |> dplyr::select(
-    outcome, space, model, n, q2, rmse, spearman,
+    outcome, phase, model, n, q2, rmse, spearman,
     perm_p_q2, q_bh
   ))
   invisible(summ)
