@@ -288,7 +288,7 @@ imputed matrices (missForest, imp4p, MsCoreUtils, Perseus) and reports the Spear
 concordance of each arm's logFC against the primary, non-imputed fit. High
 concordance confirms the missing-value strategy does not reshape the effects
 [@peng2024]. The HR-vs-LR response comparison and the per-contrast volcanoes live
-in the figure layer (F00_PILOT concordance and F03 volcanoes); proteoDA also writes
+in the figure layer (F03_pathway/supp concordance and F03 volcanoes); proteoDA also writes
 its own volcano and MA plots into `a_non_imputed/b_reports/` during the primary run.
 
 ## Stage outputs {#sec-outputs}

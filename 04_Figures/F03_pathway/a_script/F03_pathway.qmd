@@ -266,7 +266,7 @@ $$\text{similarity} = 0.5 \times \text{overlap} + 0.5 \times \text{Jaccard}$$
 
 with `overlap = |A ∩ B| / min(|A|, |B|)` and `Jaccard = |A ∩ B| / |A ∪ B|`. Two sets are
 redundant at `similarity ≥ 0.375`, the EnrichmentMap default. This is now the single dedup
-in the pipeline: the cache is raw, so the rings and the F00_PILOT concordance read one
+in the pipeline: the cache is raw, so the rings and the F03_pathway/supp concordance read one
 un-collapsed NES source and the only collapse is this display step.
 
 The collapse is **greedy in FDR order**, so the most significant member of a redundant

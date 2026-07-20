@@ -6,7 +6,7 @@ source(here("04_Figures", "functions", "f00_concordance.R"))
 
 render_concordance_figure(list(
   fig_id = "concordance_acute",
-  fig_dir = here("04_Figures", "F00_PILOT", "concordance_acute"),
+  fig_dir = here("04_Figures", "F03_pathway", "supp", "concordance_acute"),
   c_hi = "Acute_HR", c_lo = "Acute_LR", c_int = "Acute_Interaction",
   lo_levels = c("LR_T2", "LR_T3"),
   labels = list(

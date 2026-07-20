@@ -78,7 +78,7 @@ axis built to separate the groups (CAP p ≈ 0.22, 40% leave-one-out error). All
 are null.
 
 **The HR and LR responses are only weakly concordant, and no set-level test is
-significant.** F00_PILOT training: Spearman ρ = 0.20. F00_PILOT acute: ρ = 0.15. The fry
+significant.** F03_pathway/supp training: Spearman ρ = 0.20. F03_pathway/supp acute: ρ = 0.15. The fry
 rotation tests — the only properly blocked, error-rate-controlled set tests in the
 pipeline — are null in every direction (best p = 0.087).
 
@@ -98,7 +98,7 @@ plainly is more defensible than any of the individual panels.
 
 ## One caveat that changes how you read almost every figure {#sec-pi-warning}
 
-Most "significant" protein counts in F00_PILOT and F02 — the 55 divergent in training,
+Most "significant" protein counts in F03_pathway/supp and F02 — the 55 divergent in training,
 the 86 acute, the DEP-count bars — come from the **π gate**, `p^|logFC| < 0.05`
 [@xiao2014], **not from BH-FDR**.
 
@@ -154,7 +154,7 @@ the top and follow the chain, or jump to the one you need.
 | `01_Filtering/a_script/01_filtering.qmd` | MAR vs MNAR, the contaminant gate, the outlier consensus, and where the cutoffs came from |
 | `02_Normalization/a_script/02_normalization.qmd` | cycloess, the four imputation arms, and why imputing before testing manufactures significance |
 | `03_DEP/a_non_imputed/a_script/03_dep.qmd` | The cell-means design, `duplicateCorrelation`, eBayes, BH, and the π-score |
-| `04_Figures/F00_PILOT/` | Pilot read-outs: HR-vs-LR concordance (training and acute) and the magnitude/concordance summary, before anything is finalised |
+| `04_Figures/F03_pathway/supp/` | Pilot read-outs: HR-vs-LR concordance (training and acute) and the magnitude/concordance summary, before anything is finalised |
 | `04_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
 | `04_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `04_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
@@ -181,7 +181,7 @@ own outputs first.
 03_DEP/
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
-04_Figures/       F00_PILOT pilot read-outs; F01–F06 publication composites
+04_Figures/       F03_pathway/supp pilot read-outs; F01–F06 publication composites
 ```
 
 # Stage 00 — Inputs {#sec-inputs}
@@ -316,7 +316,7 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 
 | Figure | Content |
 |---|---|
-| F00_PILOT | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
+| F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
 | F01 | Phenotype atlas: HR vs LR growth and strength despite matched training |
 | F02 | Proteome overview and QC: PCA, DEP counts, effect sizes, set overlaps, eta-squared |
 | F03 | enrichVolcano ring-volcanoes per contrast |
@@ -324,7 +324,7 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F05 | Protein and pathway association with the continuous training responses |
 | F06 | Out-of-sample prediction of responder class and continuous phenotype |
 
-The HR-vs-LR response question is first sighted in F00_PILOT, where the two groups'
+The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
 up module-wise in F04 and by direct association and prediction in F05–F06.
 
