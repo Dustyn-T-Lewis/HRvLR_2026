@@ -25,7 +25,7 @@ render_concordance_figure <- function(cfg) {
   )
   da <- readRDS(here("02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"))
   cache <- as_tibble(openxlsx::read.xlsx(
-    here("04_Figures", "F03_volcanoes", "c_data", "F03_volcanoes_source_data.xlsx"),
+    here("04_Figures", "F03_pathway", "c_data", "F03_pathway_source_data.xlsx"),
     sheet = "fgsea_all"
   ))
   pw <- build_pathway_collection(

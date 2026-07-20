@@ -23,7 +23,7 @@ execute:
 #| label: load
 #| echo: false
 pacman::p_load(here, openxlsx, dplyr, readr, knitr)
-fg <- read.xlsx(here("04_Figures", "F03_volcanoes", "c_data", "F03_volcanoes_source_data.xlsx"), sheet = "fgsea_all")
+fg <- read.xlsx(here("04_Figures", "F03_pathway", "c_data", "F03_pathway_source_data.xlsx"), sheet = "fgsea_all")
 dep <- as.data.frame(read_csv(
   here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv"),
   show_col_types = FALSE
@@ -103,7 +103,7 @@ The main figure holds the five responder contrasts:
 - **Interaction** (orange up, purple down) — `Training_Interaction`, `Acute_Interaction`
   (D–E), where the two groups' *responses* diverge.
 
-![F03. The five contrasts that test responder status: HR vs LR at baseline, trained and acute (A–C), and the two differential-response interactions (D–E).](../b_reports/F03_volcanoes.png)
+![F03. The five contrasts that test responder status: HR vs LR at baseline, trained and acute (A–C), and the two differential-response interactions (D–E).](../b_reports/F03_pathway.png)
 
 The supplement holds the four within-group responses — what moves inside HR and inside LR
 over training (T2 − T1) and over the acute bout (T3 − T2), in red-up / blue-down.
@@ -208,11 +208,11 @@ F03 reads one file:
 
 It writes:
 
-- `b_reports/F03_volcanoes.{png,pdf}` — the five responder contrasts (three HRvLR + two interactions).
+- `b_reports/F03_pathway.{png,pdf}` — the five responder contrasts (three HRvLR + two interactions).
 - `b_reports/supp/within_group_responses.{png,pdf}` — the four within-group responses (positive control).
 - `b_reports/supp/top30_<contrast>.{png,pdf}` — a no-dedup top-30 up / top-30 down figure
   per contrast.
-- `c_data/F03_volcanoes_source_data.xlsx` — the fgsea cache plus the ring provenance.
+- `c_data/F03_pathway_source_data.xlsx` — the fgsea cache plus the ring provenance.
 
 **The workbook is both the source-data export and the cache for the downstream figures.**
 F03 recomputes fgsea fresh on every run, seeded, and the raw `fgsea_all` sheet is what the

@@ -124,7 +124,7 @@ Reads:
 - `02_Normalization/imputation/c_data/DAList_imputed_missforest.rds` — the
   missForest-imputed matrix. fry needs a complete matrix, so it uses the imputed
   DAList rather than the non-imputed DEP table.
-- `04_Figures/F03_volcanoes/c_data/F03_volcanoes_source_data.xlsx` (sheet `fgsea_all`) — the fgsea
+- `04_Figures/F03_pathway/c_data/F03_pathway_source_data.xlsx` (sheet `fgsea_all`) — the fgsea
   cache. NES is computed once in F03 and reused here, so this NES scatter and
   the F03 enrichment figure cannot drift apart and no permutation test reruns.
 
@@ -371,7 +371,7 @@ that also respects a biological effect-size floor is `limma::treat()`
 correct and much stronger statement.
 
 One further wrinkle worth knowing: the π score is written into a column literally
-named `padj` in `04_Figures/F03_volcanoes/a_script/rings.R`, a few lines from a
+named `padj` in `04_Figures/F03_pathway/a_script/rings.R`, a few lines from a
 genuine fgsea BH q-value. The name is wrong. The number is not an adjusted
 p-value.
 

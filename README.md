@@ -16,7 +16,7 @@ forward.
 `HRvLR_pipeline.qmd` is the ground-up walkthrough and the map into everything else.
 Most stages and figures also ship their own tutorial (`00_inputs.qmd`,
 `01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, and the figure narratives
-`F01_phenotype.qmd`, `F02_proteome.qmd`, `F03_volcanoes.qmd`, `F04_modules.qmd`),
+`F01_phenotype.qmd`, `F02_proteome.qmd`, `F03_pathway.qmd`, `F04_modules.qmd`),
 written to be read on its own: what it does, how, why that method and not another, and
 how to read the output — including what a null looks like.
 
@@ -132,12 +132,12 @@ Perseus tops the π table while being null on BH.
 ### Figures
 
 Seven figures, rendered into `b_reports`; rerun only after stages `01` to `03`
-complete cleanly. F03 writes `F03_volcanoes_source_data.xlsx`, which the two
+complete cleanly. F03 writes `F03_pathway_source_data.xlsx`, which the two
 F00_PILOT concordance leaves read, so run F03 before F00_PILOT.
 
 - `04_Figures/F01_phenotype`: phenotype atlas
 - `04_Figures/F02_proteome`: global proteome overview and QC
-- `04_Figures/F03_volcanoes`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
+- `04_Figures/F03_pathway`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
 - `04_Figures/F00_PILOT/concordance_training`: HR-vs-LR training-phase concordance
 - `04_Figures/F00_PILOT/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F00_PILOT/summary`: magnitude and concordance in one frame
@@ -148,7 +148,7 @@ F00_PILOT concordance leaves read, so run F03 before F00_PILOT.
 ```sh
 Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
 Rscript 04_Figures/F02_proteome/a_script/01_run_proteome.R
-Rscript 04_Figures/F03_volcanoes/a_script/01_run_volcanoes.R
+Rscript 04_Figures/F03_pathway/a_script/01_run_volcanoes.R
 
 Rscript 04_Figures/F00_PILOT/concordance_training/a_script/01_run_concordance_training.R
 Rscript 04_Figures/F00_PILOT/concordance_acute/a_script/01_run_concordance_acute.R
@@ -191,7 +191,7 @@ the top level.
 | `F00_PILOT/` | Where do HR and LR adapt alike over training and the acute bout, and where do they part? How large is the response and how concordant? | Quadrant ORA, `limma::fry`, pathway NES concordance, RRHO2, bootstrap CI; median/p90 \|logFC\| and Spearman ρ. |
 | `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
-| `F03_volcanoes/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
+| `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `F04_modules/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
 | `F05_association/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
 | `F06_prediction/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested LOSO CV against a permutation null. Both arms null after BH. |

@@ -9,8 +9,8 @@ source(here("functions", "shared_style.R"))
 source(here("functions", "shared_pathway_utils.R"))
 source(here("03_DEP", "contrasts.R"))
 
-RPT_DIR <- here("04_Figures", "F03_volcanoes", "b_reports")
-DAT_DIR <- here("04_Figures", "F03_volcanoes", "c_data")
+RPT_DIR <- here("04_Figures", "F03_pathway", "b_reports")
+DAT_DIR <- here("04_Figures", "F03_pathway", "c_data")
 
 CONTRASTS <- sub(" =.*$", "", HRVLR_CONTRASTS)
 

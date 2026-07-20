@@ -121,7 +121,7 @@ Reads:
   `Acute_Interaction`.
 - `02_Normalization/imputation/c_data/DAList_imputed_missforest.rds` — the
   missForest-imputed matrix. fry needs a complete matrix.
-- `04_Figures/F03_volcanoes/c_data/F03_volcanoes_source_data.xlsx` (sheet `fgsea_all`) — the fgsea cache,
+- `04_Figures/F03_pathway/c_data/F03_pathway_source_data.xlsx` (sheet `fgsea_all`) — the fgsea cache,
   computed once in F03 and reused so no permutation test reruns.
 
 Writes, under `04_Figures/F00_PILOT/concordance_acute/`: panel and supplementary PNG + PDF, one `c_data/*.csv`
@@ -333,7 +333,7 @@ effect-size floor is `limma::treat()` [@mccarthy2009]; here it would very likely
 zero, which is the correct and much stronger statement.
 
 The π score is also written into a column literally named `padj` in
-`04_Figures/F03_volcanoes/a_script/rings.R`, a few lines from a genuine fgsea BH q-value. The
+`04_Figures/F03_pathway/a_script/rings.R`, a few lines from a genuine fgsea BH q-value. The
 name is wrong. The number is not an adjusted p-value.
 
 ## Key terms
