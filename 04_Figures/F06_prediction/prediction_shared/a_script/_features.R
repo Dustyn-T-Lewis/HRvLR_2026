@@ -1,6 +1,6 @@
 # Shared inputs and feature/outcome builders for the prediction suite.
 # Loads the imputed proteome, collapses to genes, scores singscore pathways
-# once on the full cohort, reshapes the F04_association_WGCNA module eigengenes, and exposes
+# once on the full cohort, reshapes the F04_association/WGCNA module eigengenes, and exposes
 # per-phase subject-level feature matrices plus the phenotype outcomes.
 #
 # singscore is single-sample and rank-based: each sample's pathway score
@@ -21,7 +21,7 @@ pred_paths <- function() {
       "DAList_imputed_missforest.rds"
     ),
     pheno = here("00_input", "c_data", "phenotype.csv"),
-    eigen = here("04_Figures", "F04_association_WGCNA", "c_data", "wgcna_eigengene.csv"),
+    eigen = here("04_Figures", "F04_association", "WGCNA", "c_data", "wgcna_eigengene.csv"),
     cache = here(
       "04_Figures", "F06_prediction", "prediction_shared", "c_data",
       "singscore_scores.rds"

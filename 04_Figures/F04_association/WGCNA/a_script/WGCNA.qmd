@@ -23,7 +23,7 @@ execute:
 #| label: load
 #| echo: false
 pacman::p_load(here, openxlsx, dplyr, knitr)
-wb <- here("04_Figures", "F04_association_WGCNA", "c_data", "F04_association_WGCNA_source_data.xlsx")
+wb <- here("04_Figures", "F04_association", "WGCNA", "c_data", "WGCNA_source_data.xlsx")
 atlas <- read.xlsx(wb, "module_atlas")
 fry <- read.xlsx(wb, "module_fry")
 pred <- read.xlsx(wb, "module_prediction")
