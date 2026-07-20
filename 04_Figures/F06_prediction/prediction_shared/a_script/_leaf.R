@@ -7,7 +7,7 @@ pacman::p_load(here, dplyr, readr, ggplot2)
 
 source(here("functions", "shared_style.R"))
 source(here("04_Figures", "F06_prediction", "prediction_shared", "a_script", "_features.R"))
-source(here("04_Figures", "F06_prediction", "prediction_shared", "a_script", "_harness.R"))
+source(here("functions", "shared_prediction.R"))
 source(here("04_Figures", "F06_prediction", "prediction_shared", "a_script", "_panels.R"))
 
 PRED_SPACES <- c("singscore", "proteins", "eigengenes")
