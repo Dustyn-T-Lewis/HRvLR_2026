@@ -7,3 +7,8 @@
 # no error, no warning. ragg is load-bearing for the figures even though no script
 # calls it. textshaping comes with it.
 library(ragg)
+
+# lintr and styler are the pre-commit lint/style gate. No analysis script names them,
+# so renv cannot scan them; declaring them here pins the versions the checks run against.
+library(lintr)
+library(styler)
