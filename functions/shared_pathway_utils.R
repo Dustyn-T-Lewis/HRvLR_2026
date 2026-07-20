@@ -75,8 +75,9 @@ deduplicate_enrichment <- function(results, pathways, jaccard_cutoff = 0.5) {
 # EnrichmentMap combined similarity (Merico 2010 PMID 21085593; Reimand 2019
 # PMID 30664679 Box 1): 0.5 * overlap + 0.5 * jaccard, two sets redundant at
 # >= cutoff (0.375, the EnrichmentMap default). This is the single dedup for the
-# F03 rings and runs at display time; the cached fgsea results that F04_association/WGCNA and F04_association_HLM pivot
-# stay raw and un-collapsed, so all three figures share one NES source.
+# F03 rings and runs at display time; the cached fgsea results that the
+# concordance_training and concordance_acute supplements pivot stay raw and
+# un-collapsed, so those figures share one NES source with F03.
 em_similarity <- function(a, b) {
   inter <- length(intersect(a, b))
   if (inter == 0L) {

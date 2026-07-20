@@ -160,7 +160,8 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `04_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Figures/F04_association/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
-| `04_Figures/F04_association_HLM/` | Which proteins and pathways associate with the continuous training responses (mixed models on proteins and singscore pathway scores) |
+| `04_Figures/F04_association/HLM/` | Which proteins and pathways track the training-response trajectory across all three timepoints (mixed models on proteins and singscore pathway scores) |
+| `04_Figures/F04_association/limma/` | Which proteins and pathways associate with the training response at baseline, training, and acute snapshots (limma regression on proteins and singscore pathway scores) |
 | `04_Figures/F06_prediction/` | Out-of-sample prediction of responder class and continuous phenotype (nested LOSO CV against a permutation null) |
 
 Known limitations are stated in each stage and figure page where the reader meets
@@ -322,13 +323,14 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F03_pathway | enrichVolcano ring-volcanoes per contrast |
 | F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
 | F04_association/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
-| F04_association_HLM | Protein and pathway association with the continuous training responses |
+| F04_association/HLM | Protein and pathway association with the training-response trajectory (mixed model, all three timepoints) |
+| F04_association/limma | Protein and pathway association with the training response at baseline/training/acute snapshots (limma regression) |
 | F06_prediction | Out-of-sample prediction of responder class and continuous phenotype |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
 up module-wise in F04_association/WGCNA and by direct association and prediction
-in F04_association_HLM and F06_prediction.
+in F04_association/HLM, F04_association/limma, and F06_prediction.
 
 # Reproducing {#sec-repro}
 
