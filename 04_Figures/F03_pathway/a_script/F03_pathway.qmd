@@ -216,8 +216,9 @@ It writes:
 
 **The workbook is both the source-data export and the cache for the downstream figures.**
 F03 recomputes fgsea fresh on every run, seeded, and the raw `fgsea_all` sheet is what the
-F04 and F05 NES scatters read instead of rerunning GSEA. The enrichment is paid for once
-per F03 run, and the three figures cannot drift apart. **Run F03 before F04/F05.**
+F04_association_WGCNA and F04_association_HLM NES scatters read instead of rerunning GSEA. The
+enrichment is paid for once per F03_pathway run, and the three figures cannot drift apart. **Run
+F03_pathway before F04_association_WGCNA and F04_association_HLM.**
 
 ### Setup: ranks and the fgsea cache
 
