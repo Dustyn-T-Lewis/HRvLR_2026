@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# F00_PILOT summary: how much the proteome moves (magnitude) against how much HR and
+# F03_pathway/supp summary: how much the proteome moves (magnitude) against how much HR and
 # LR move together (concordance), for training and the acute bout side by side. The
 # five-panel composites carry the per-condition detail; this is the one read-out that
 # puts magnitude and concordance in the same frame before either figure is finalised.
@@ -7,7 +7,7 @@ pacman::p_load(here, dplyr, tidyr, readr, ggplot2, patchwork)
 
 source(here("functions", "shared_style.R"))
 
-unit <- here("04_Figures", "F00_PILOT", "summary")
+unit <- here("04_Figures", "F03_pathway", "supp", "summary")
 rpt <- file.path(unit, "b_reports")
 dat <- file.path(unit, "c_data")
 

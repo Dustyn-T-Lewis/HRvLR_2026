@@ -22,7 +22,7 @@ execute:
 ```{r setup, include=FALSE}
 pacman::p_load(here, openxlsx, dplyr)
 wb <- here(
-  "04_Figures", "F00_PILOT", "concordance_training", "c_data",
+  "04_Figures", "F03_pathway", "supp", "concordance_training", "c_data",
   "concordance_training_source_data.xlsx"
 )
 qa <- read.xlsx(wb, "panel_a_quadrants")
@@ -128,7 +128,7 @@ Reads:
   cache. NES is computed once in F03 and reused here, so this NES scatter and
   the F03 enrichment figure cannot drift apart and no permutation test reruns.
 
-Writes, under `04_Figures/F00_PILOT/concordance_training/`: `b_reports/panels/` and `b_reports/supp/` (PNG +
+Writes, under `04_Figures/F03_pathway/supp/concordance_training/`: `b_reports/panels/` and `b_reports/supp/` (PNG +
 PDF), one `c_data/*.csv` per panel, and the bundled
 `c_data/concordance_training_source_data.xlsx`.
 

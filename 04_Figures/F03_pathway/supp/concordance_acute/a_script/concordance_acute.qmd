@@ -22,7 +22,7 @@ execute:
 ```{r setup, include=FALSE}
 pacman::p_load(here, openxlsx, dplyr)
 wb <- here(
-  "04_Figures", "F00_PILOT", "concordance_acute", "c_data",
+  "04_Figures", "F03_pathway", "supp", "concordance_acute", "c_data",
   "concordance_acute_source_data.xlsx"
 )
 qa <- read.xlsx(wb, "panel_a_quadrants")
@@ -124,7 +124,7 @@ Reads:
 - `04_Figures/F03_pathway/c_data/F03_pathway_source_data.xlsx` (sheet `fgsea_all`) — the fgsea cache,
   computed once in F03 and reused so no permutation test reruns.
 
-Writes, under `04_Figures/F00_PILOT/concordance_acute/`: panel and supplementary PNG + PDF, one `c_data/*.csv`
+Writes, under `04_Figures/F03_pathway/supp/concordance_acute/`: panel and supplementary PNG + PDF, one `c_data/*.csv`
 per panel, and the bundled `c_data/concordance_acute_source_data.xlsx`.
 
 ```r

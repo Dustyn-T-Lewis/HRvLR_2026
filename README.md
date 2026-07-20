@@ -45,7 +45,7 @@ Known limitations are stated on the page where the reader meets them: the π gat
 `HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
 reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
 by the missingness filter that the model then cannot test; the circular module test in F04; and
-the transductive eigengenes in F04 and `04_Figures/F00_PILOT`.
+the transductive eigengenes in F04 and `04_Figures/F03_pathway/supp`.
 
 ## Design and Canonical Contrasts
 
@@ -89,7 +89,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | Seven figures: F00_PILOT HR-vs-LR training/acute concordance, which reads F03's source data; F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea source data; F04 WGCNA module-phenotype linkage; F05 continuous training-response association; F06 out-of-sample prediction |
+| `04` | `04_Figures/` | Seven figures: F03_pathway/supp HR-vs-LR training/acute concordance, which reads F03's source data; F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea source data; F04 WGCNA module-phenotype linkage; F05 continuous training-response association; F06 out-of-sample prediction |
 
 ## Canonical Run Order
 
@@ -133,14 +133,14 @@ Perseus tops the π table while being null on BH.
 
 Seven figures, rendered into `b_reports`; rerun only after stages `01` to `03`
 complete cleanly. F03 writes `F03_pathway_source_data.xlsx`, which the two
-F00_PILOT concordance leaves read, so run F03 before F00_PILOT.
+F03_pathway/supp concordance leaves read, so run F03 before F03_pathway/supp.
 
 - `04_Figures/F01_phenotype`: phenotype atlas
 - `04_Figures/F02_proteome`: global proteome overview and QC
 - `04_Figures/F03_pathway`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
-- `04_Figures/F00_PILOT/concordance_training`: HR-vs-LR training-phase concordance
-- `04_Figures/F00_PILOT/concordance_acute`: HR-vs-LR acute-phase concordance
-- `04_Figures/F00_PILOT/summary`: magnitude and concordance in one frame
+- `04_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
+- `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
+- `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
 - `04_Figures/F04_modules`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
 - `04_Figures/F05_association`: continuous training-response association
 - `04_Figures/F06_prediction`: out-of-sample HR/LR and continuous prediction, six leaves
@@ -150,9 +150,9 @@ Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
 Rscript 04_Figures/F02_proteome/a_script/01_run_proteome.R
 Rscript 04_Figures/F03_pathway/a_script/01_run_volcanoes.R
 
-Rscript 04_Figures/F00_PILOT/concordance_training/a_script/01_run_concordance_training.R
-Rscript 04_Figures/F00_PILOT/concordance_acute/a_script/01_run_concordance_acute.R
-Rscript 04_Figures/F00_PILOT/summary/a_script/01_run_summary.R
+Rscript 04_Figures/F03_pathway/supp/concordance_training/a_script/01_run_concordance_training.R
+Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordance_acute.R
+Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
 Rscript 04_Figures/F04_modules/a_script/01_run_modules.R
 Rscript 04_Figures/F05_association/a_script/01_run_association.R
@@ -175,20 +175,20 @@ Shared helpers live by scope:
 | Path | Contents |
 | --- | --- |
 | `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA). |
-| `04_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F00_PILOT driver) and `f00_concordance_panels.R` (its panel builders). |
+| `04_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F03_pathway/supp driver) and `f00_concordance_panels.R` (its panel builders). |
 | `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
 ## Figures
 
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F05 and F00_PILOT/summary do not, and F06 carries its triad
+ship a narrative `.qmd`; F05 and F03_pathway/supp/summary do not, and F06 carries its triad
 and its two `a_narrative.qmd` files inside the six prediction leaves rather than at
 the top level.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
-| `F00_PILOT/` | Where do HR and LR adapt alike over training and the acute bout, and where do they part? How large is the response and how concordant? | Quadrant ORA, `limma::fry`, pathway NES concordance, RRHO2, bootstrap CI; median/p90 \|logFC\| and Spearman ρ. |
+| `F03_pathway/supp/` | Where do HR and LR adapt alike over training and the acute bout, and where do they part? How large is the response and how concordant? | Quadrant ORA, `limma::fry`, pathway NES concordance, RRHO2, bootstrap CI; median/p90 \|logFC\| and Spearman ρ. |
 | `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
