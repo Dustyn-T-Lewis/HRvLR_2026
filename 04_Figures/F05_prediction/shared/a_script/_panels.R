@@ -129,7 +129,7 @@ build_cont_panel <- function(summ, preds, space) {
       colour = "grey70", linewidth = 0.3
     ) +
     geom_point(colour = SPACE_COLORS[[space]], size = 1.4, alpha = 0.8) +
-    facet_grid(phase ~ outcome,
+    facet_wrap(vars(phase, outcome),
       scales = "free", labeller = labeller(phase = PHASE_LABELS)
     ) +
     labs(x = "observed", y = "LOSO predicted") +
