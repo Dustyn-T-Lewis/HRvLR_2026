@@ -146,7 +146,10 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
 - `04_Figures/F04_association/WGCNA`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
 - `04_Figures/F04_association/HLM`: proteins + pathways, trajectory mixed model across all three timepoints
 - `04_Figures/F04_association/limma`: proteins + pathways, snapshot regression per phase
-- `04_Figures/F05_prediction`: out-of-sample HR/LR and continuous prediction, six leaves
+- `04_Figures/F05_prediction`: out-of-sample HR/LR and continuous prediction, two
+  feature families (`WGCNA` module eigengenes, `singscore` pathway scores) each
+  split into `responder`/`continuous` leaves, plus a `shared/` LOSO harness. The
+  globally-imputed `proteins` feature space was dropped as leaky.
 
 ```sh
 Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
@@ -186,9 +189,9 @@ Shared helpers live by scope:
 ## Figures
 
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F03_pathway/supp/summary does not, and F05_prediction carries
-its triad and its two `a_narrative.qmd` files inside the six prediction leaves rather
-than at the top level.
+ship a narrative `.qmd`; F03_pathway/supp/summary does not, and F05_prediction's two
+narrative files (`WGCNA/WGCNA.qmd`, `singscore/singscore.qmd`) sit one level above
+their `responder/`/`continuous/` leaves rather than one per leaf.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
@@ -199,7 +202,7 @@ than at the top level.
 | `F04_association/WGCNA/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
 | `F04_association/HLM/` | Which proteins and pathways track the training-response trajectory (ΔmCSA, strength, ΔfCSA) across all three timepoints? | Mixed models (`lmerTest`, random intercept per subject) on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
 | `F04_association/limma/` | Which proteins and pathways associate with the training response at baseline, training, and acute snapshots? | `limma` empirical-Bayes regression per phase on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
-| `F05_prediction/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested LOSO CV against a permutation null. Both arms null after BH. |
+| `F05_prediction/` | Can WGCNA module eigengenes or singscore pathway scores predict responder class or training gains out of sample, at baseline, training, or acute phase? | Elastic net (`glmnet`) + sparse PLS (`mixOmics`), nested LOSO CV against a permutation null. Null in every leaf after BH. |
 
 Prediction is scored against a permutation null, never zero; composite hypertrophy
 stays out of any model carrying the HR/LR term (the groups were defined from it);
