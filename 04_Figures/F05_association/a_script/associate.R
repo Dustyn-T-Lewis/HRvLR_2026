@@ -59,8 +59,6 @@ associate_traits <- function(mat, meta, pheno, traits, phase,
 # Single-sample, rank-based pathway scores (pathways x samples). `gene_sets` is
 # a named list of gene-symbol vectors; `mat` must be indexed by those symbols.
 score_pathways <- function(mat, gene_sets, min_size = 5) {
-  sizes <- vapply(gene_sets, \(g) sum(g %in% rownames(mat)), integer(1))
-  gene_sets <- gene_sets[sizes >= min_size]
-  ranked <- singscore::rankGenes(mat)
-  singscore::multiScore(ranked, upSetColc = gene_sets)$Scores
+  source(here::here("functions", "shared_singscore.R"))
+  score_singscore(mat, gene_sets, min_size = min_size)
 }
