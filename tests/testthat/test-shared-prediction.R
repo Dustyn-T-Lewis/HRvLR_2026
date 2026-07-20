@@ -5,8 +5,8 @@ test_that("shared_prediction harness is deterministic and leakage-free", {
   x <- matrix(rnorm(20 * 6), nrow = 20, dimnames = list(paste0("s", 1:20), NULL))
   y <- as.numeric(x[, 1] > 0)
 
-  preds1 <- nested_loso(x, y, "glmnet", "binomial")
-  preds2 <- nested_loso(x, y, "glmnet", "binomial")
+  preds1 <- suppressWarnings(nested_loso(x, y, "glmnet", "binomial"))
+  preds2 <- suppressWarnings(nested_loso(x, y, "glmnet", "binomial"))
   expect_identical(preds1, preds2)
   expect_length(preds1, 20)
 
