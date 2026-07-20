@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # Writes the canonical per-subject trait table. Its only input is the sample sheet, so it
-# belongs at stage 00, upstream of every consumer (F01, the F04 association figures, F06). Before this
+# belongs at stage 00, upstream of every consumer (F01, the F04 association figures, F05). Before this
 # existed, 00_input/c_data/phenotype.csv was an orphan: `modules` read it and nothing built it.
 
 pacman::p_load(here, readr)

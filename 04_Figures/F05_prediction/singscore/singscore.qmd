@@ -83,7 +83,10 @@ and its BH q = `r sprintf("%.2f", best_cont$q_bh)`. `r n_class_hits` of
 `r n_class_cells` responder-class cells and `r n_cont_hits` of
 `r n_cont_cells` continuous cells pass BH < 0.05.
 
-**Nothing beats its permutation null.** The proteome, summarised as
+**Nothing survives correction for multiple testing.** One continuous cell
+clears the nominal permutation null but not its BH q, and every other cell is
+null on both; BH is charged within this leaf, so pooling the two feature
+families would only raise the q values further. The proteome, summarised as
 per-sample pathway activity, does not predict responder class or training
 gains out of sample, and this family carries no leakage to explain the
 result away. This agrees with the association null reported elsewhere in

@@ -10,7 +10,6 @@ source(here("04_Figures", "F05_prediction", "shared", "a_script", "_features.R")
 source(here("functions", "shared_prediction.R"))
 source(here("04_Figures", "F05_prediction", "shared", "a_script", "_panels.R"))
 
-PRED_SPACES <- c("singscore", "eigengenes")
 PRED_MODELS <- c("glmnet", "spls")
 PRED_PHASES <- c("baseline", "training", "acute")
 CONT_OUTCOMES <- c(
