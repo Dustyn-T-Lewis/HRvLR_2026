@@ -4,7 +4,6 @@
 # score is well defined, then score against the shared pathway collection.
 pacman::p_load(here, dplyr, readr, tibble, purrr, ggplot2, openxlsx)
 
-set.seed(42)
 
 source(here("functions", "shared_style.R"))
 source(here("functions", "shared_pathway_utils.R"))
@@ -30,23 +29,7 @@ traits <- intersect(
   names(pheno)
 )
 
-gene_of <- setNames(dal$annotation$gene, rownames(dal$data))
-gene_mat <- as.data.frame(dal$data) |>
-  mutate(gene = gene_of[rownames(dal$data)]) |>
-  filter(!is.na(gene)) |>
-  mutate(.m = rowMeans(across(where(is.numeric)), na.rm = TRUE)) |>
-  group_by(gene) |>
-  slice_max(.m, n = 1, with_ties = FALSE) |>
-  ungroup()
-mat <- as.matrix(gene_mat[, meta$Col_ID])
-rownames(mat) <- gene_mat$gene
-mat <- mat[rowSums(is.na(mat)) == 0, , drop = FALSE]
-message(sprintf(
-  "singscore matrix: %d complete genes x %d samples", nrow(mat), ncol(mat)
-))
-
-gene_sets <- build_pathway_collection()
-scores <- score_singscore(mat, gene_sets, min_size = 5)
+scores <- pathway_score_matrix(dal, meta)
 message(sprintf("scored %d pathways", nrow(scores)))
 
 pathway_scores <- scores |>

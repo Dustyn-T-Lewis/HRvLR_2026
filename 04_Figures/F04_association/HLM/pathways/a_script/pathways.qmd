@@ -38,8 +38,8 @@ Two things about this model need to be said plainly.
 per-pathway mixed model overfits for a meaningful fraction of pathways: the
 residual variance collapses toward zero and manufactures an impossibly
 large, meaningless F-statistic. The analysis guards against this — any
-degenerate fit (a boundary random effect, or a residual variance below 5%
-of the pathway's own spread) is dropped to `NA` rather than reported. The
+degenerate fit (a boundary random effect, or a residual SD below 5%
+of the pathway's own SD) is dropped to `NA` rather than reported. The
 counts below show how many pathways were guarded out.
 
 **Anti-conservative even among the kept fits.** The model uses a random

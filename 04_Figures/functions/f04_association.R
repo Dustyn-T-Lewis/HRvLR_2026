@@ -1,8 +1,29 @@
 # Two association engines over the same features: a per-subject-summary limma
-# regression (snapshot) and a three-timepoint mixed model (trajectory). Feature
-# assembly for proteins and singscore pathways lives here so the four leaves
-# stay thin. Association is descriptive; there is no train/test split.
+# regression (snapshot) and a three-timepoint mixed model (trajectory). Pathway
+# feature assembly (gene collapse + singscore) lives here too, so the two pathway
+# leaves share one input. Association is descriptive; there is no train/test split.
 pacman::p_load(dplyr, tibble, purrr, limma, lmerTest, lme4, parallel)
+
+# Collapse the proteome to one row per gene (highest mean), keep genes measured
+# in every sample so the rank score is defined, and score the shared pathway
+# collection with singscore. Shared by both pathway leaves so their input matrix
+# cannot drift.
+pathway_score_matrix <- function(dal, meta, min_size = 5) {
+  source(here::here("functions", "shared_pathway_utils.R"))
+  source(here::here("functions", "shared_singscore.R"))
+  gene_of <- setNames(dal$annotation$gene, rownames(dal$data))
+  gene_mat <- as.data.frame(dal$data) |>
+    dplyr::mutate(gene = gene_of[rownames(dal$data)]) |>
+    dplyr::filter(!is.na(gene)) |>
+    dplyr::mutate(.m = rowMeans(dplyr::across(dplyr::where(is.numeric)), na.rm = TRUE)) |>
+    dplyr::group_by(gene) |>
+    dplyr::slice_max(.m, n = 1, with_ties = FALSE) |>
+    dplyr::ungroup()
+  mat <- as.matrix(gene_mat[, meta$Col_ID])
+  rownames(mat) <- gene_mat$gene
+  mat <- mat[rowSums(is.na(mat)) == 0, , drop = FALSE]
+  score_singscore(mat, build_pathway_collection(), min_size = min_size)
+}
 
 phase_subject_matrix <- function(mat, meta, phase,
                                  subject_col = "Subject_ID",

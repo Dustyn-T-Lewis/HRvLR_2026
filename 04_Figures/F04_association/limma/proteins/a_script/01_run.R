@@ -3,7 +3,6 @@
 # acute change), moderated with limma. Descriptive, n = 16, exploratory.
 pacman::p_load(here, dplyr, readr, purrr, ggplot2, openxlsx)
 
-set.seed(42)
 
 source(here("functions", "shared_style.R"))
 source(here("04_Figures", "functions", "f04_association.R"))
