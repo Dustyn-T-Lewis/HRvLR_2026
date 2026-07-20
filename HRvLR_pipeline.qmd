@@ -78,7 +78,8 @@ axis built to separate the groups (CAP p ≈ 0.22, 40% leave-one-out error). All
 are null.
 
 **The HR and LR responses are only weakly concordant, and no set-level test is
-significant.** F03_pathway/supp training: Spearman ρ = 0.20. F03_pathway/supp acute: ρ = 0.15. The fry
+significant.** The pilot concordance is weak in both phases: Spearman ρ = 0.20
+in training, ρ = 0.15 in the acute bout. The fry
 rotation tests — the only properly blocked, error-rate-controlled set tests in the
 pipeline — are null in every direction (best p = 0.087).
 
@@ -316,17 +317,18 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 
 | Figure | Content |
 |---|---|
-| F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
 | F01 | Phenotype atlas: HR vs LR growth and strength despite matched training |
 | F02 | Proteome overview and QC: PCA, DEP counts, effect sizes, set overlaps, eta-squared |
-| F03 | enrichVolcano ring-volcanoes per contrast |
-| F04 | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
-| F05 | Protein and pathway association with the continuous training responses |
-| F06 | Out-of-sample prediction of responder class and continuous phenotype |
+| F03_pathway | enrichVolcano ring-volcanoes per contrast |
+| F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
+| F04_association_WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
+| F04_association_HLM | Protein and pathway association with the continuous training responses |
+| F06_prediction | Out-of-sample prediction of responder class and continuous phenotype |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
-up module-wise in F04 and by direct association and prediction in F05–F06.
+up module-wise in F04_association_WGCNA and by direct association and prediction
+in F04_association_HLM and F06_prediction.
 
 # Reproducing {#sec-repro}
 
