@@ -97,7 +97,7 @@ pb <- ggplot(concordance, aes(phase, rho)) +
 
 fig <- pa + pb +
   plot_annotation(
-    title = "F00 pilot: proteome response is modest and the responders move largely apart",
+    title = "Pilot: proteome response is modest and the responders move largely apart",
     subtitle = "Training (T1\u2192T2) and acute (T2\u2192T3), HR vs LR, non-imputed limma results",
     theme = theme(
       plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
