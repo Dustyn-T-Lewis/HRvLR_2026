@@ -22,9 +22,11 @@ test_that("associate_limma matches a direct per-subject limma fit", {
   y <- pheno$d_mcsa[match(colnames(fmat), pheno$subject)]
   ref <- limma::eBayes(limma::lmFit(fmat, model.matrix(~y)))
   ref_tt <- limma::topTable(ref, coef = 2, number = Inf, sort.by = "none")
-  expect_equal(got$beta[match(rownames(ref_tt), got$feature)], ref_tt$logFC,
-    tolerance = 1e-8
-  )
+  idx <- match(rownames(ref_tt), got$feature)
+  expect_equal(got$beta[idx], ref_tt$logFC, tolerance = 1e-8)
+  expect_equal(got$t[idx], ref_tt$t, tolerance = 1e-8)
+  expect_equal(got$p[idx], ref_tt$P.Value, tolerance = 1e-8)
+  expect_equal(got$bh[idx], ref_tt$adj.P.Val, tolerance = 1e-8)
   expect_true(all(c("feature", "trait", "phase", "beta", "t", "p", "bh") %in% names(got)))
 })
 

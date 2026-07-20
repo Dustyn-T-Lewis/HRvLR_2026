@@ -51,6 +51,9 @@ associate_limma <- function(mat, meta, pheno, traits,
 }
 
 # One feature's interaction F-test, or NA when the feature is too sparse to fit.
+# Random intercept only: a (timepoint | subject) random slope is the ideal for a
+# trajectory test but is unidentifiable at 16 subjects x 3 timepoints, so the
+# interaction F runs mildly anti-conservative. The HLM narratives state this.
 .hlm_one <- function(v, resp, tp, subj) {
   d <- data.frame(score = v, response = resp, timepoint = tp, subject = subj)
   d <- d[!is.na(d$score) & !is.na(d$response), , drop = FALSE]
