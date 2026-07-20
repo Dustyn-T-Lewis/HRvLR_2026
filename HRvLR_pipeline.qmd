@@ -91,7 +91,7 @@ groups are not identical at baseline.
 
 **Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
 (F04_association/WGCNA, best BH q = 0.24), and no classifier or regressor beats its permutation null
-after correction (F06 prediction).
+after correction (F05_prediction).
 
 **So: the proteome does not separate high from low responders at this sample size.**
 It is a null study with a strong phenotype and a pathway-level lead. Saying that
@@ -162,7 +162,7 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F04_association/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
 | `04_Figures/F04_association/HLM/` | Which proteins and pathways track the training-response trajectory across all three timepoints (mixed models on proteins and singscore pathway scores) |
 | `04_Figures/F04_association/limma/` | Which proteins and pathways associate with the training response at baseline, training, and acute snapshots (limma regression on proteins and singscore pathway scores) |
-| `04_Figures/F05_prediction/` | Out-of-sample prediction of responder class and continuous phenotype (nested LOSO CV against a permutation null) |
+| `04_Figures/F05_prediction/` | Out-of-sample prediction of responder class and continuous phenotype from WGCNA module eigengenes and singscore pathway scores (nested LOSO CV against a permutation null; the globally-imputed proteins feature space was dropped as leaky) |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
@@ -183,7 +183,7 @@ own outputs first.
 03_DEP/
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
-04_Figures/       F03_pathway/supp pilot read-outs; F01–F06 publication composites
+04_Figures/       F03_pathway/supp pilot read-outs; F01–F05 publication composites
 ```
 
 # Stage 00 — Inputs {#sec-inputs}
@@ -325,7 +325,7 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F04_association/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
 | F04_association/HLM | Protein and pathway association with the training-response trajectory (mixed model, all three timepoints) |
 | F04_association/limma | Protein and pathway association with the training response at baseline/training/acute snapshots (limma regression) |
-| F05_prediction | Out-of-sample prediction of responder class and continuous phenotype |
+| F05_prediction | Out-of-sample prediction of responder class and continuous phenotype from WGCNA module eigengenes and singscore pathway scores; the proteins feature space was dropped as leaky |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
