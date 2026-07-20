@@ -90,7 +90,7 @@ HR/LR asymmetry in the study. Note `Baseline_HRvLR` also returns 65 pathways, so
 groups are not identical at baseline.
 
 **Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
-(F04, best BH q = 0.24), and no classifier or regressor beats its permutation null
+(F04_association_WGCNA, best BH q = 0.24), and no classifier or regressor beats its permutation null
 after correction (F06 prediction).
 
 **So: the proteome does not separate high from low responders at this sample size.**
@@ -167,8 +167,8 @@ Known limitations are stated in each stage and figure page where the reader meet
 them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
 search space, which had no contaminant FASTA and no decoys, so reagent contaminants cannot be
 detected at all (`01_filtering.qmd`); the 34 proteins the missingness filter admits and the
-model then cannot test (`03_dep.qmd`); the circular module test in F04; and the transductive
-eigengenes in F04 and F06 prediction.
+model then cannot test (`03_dep.qmd`); the circular module test in F04_association_WGCNA; and the
+transductive eigengenes in F04_association_WGCNA and F06_prediction.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
