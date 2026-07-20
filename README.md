@@ -163,12 +163,10 @@ Rscript 04_Figures/F04_association/HLM/pathways/a_script/01_run.R
 Rscript 04_Figures/F04_association/limma/proteins/a_script/01_run.R
 Rscript 04_Figures/F04_association/limma/pathways/a_script/01_run.R
 
-Rscript 04_Figures/F05_prediction/prediction_responder/baseline/a_script/01_run_baseline.R
-Rscript 04_Figures/F05_prediction/prediction_responder/training/a_script/01_run_training.R
-Rscript 04_Figures/F05_prediction/prediction_responder/acute/a_script/01_run_acute.R
-Rscript 04_Figures/F05_prediction/prediction_continuous/baseline/a_script/01_run_baseline.R
-Rscript 04_Figures/F05_prediction/prediction_continuous/training/a_script/01_run_training.R
-Rscript 04_Figures/F05_prediction/prediction_continuous/acute/a_script/01_run_acute.R
+Rscript 04_Figures/F05_prediction/WGCNA/responder/a_script/01_run.R
+Rscript 04_Figures/F05_prediction/WGCNA/continuous/a_script/01_run.R
+Rscript 04_Figures/F05_prediction/singscore/responder/a_script/01_run.R
+Rscript 04_Figures/F05_prediction/singscore/continuous/a_script/01_run.R
 ```
 
 ## Repository Conventions
