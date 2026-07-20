@@ -1,0 +1,99 @@
+---
+title: "F05 prediction — WGCNA co-expression modules"
+subtitle: "Responder class and training gains, out of sample: nothing, and even the upper bound is nothing"
+author: "A_HRvLR_2026"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    df-print: paged
+execute:
+  eval: true
+  echo: false
+  warning: false
+  message: false
+---
+
+## In plain terms
+
+Can the proteome, summarised as WGCNA co-expression modules, predict a
+held-out person? We train on 15 people and predict the 16th, rotating
+through everyone, for two questions: which responder group they're in, and
+how much they actually gained.
+
+## Method
+
+Each fold is a nested leave-one-subject-out: features are z-scored on the
+training people only and that centre and scale are applied to the held-out
+person, so nothing about the held-out subject touches the transform.
+glmnet and sparse-PLS are tuned by an inner leave-one-out on the training
+people alone, and the winning setting is refit on all of them before
+scoring the held-out subject. A permutation null shuffles the outcome
+across subjects and re-runs the entire nested procedure, giving each cell
+its own p-value; Benjamini-Hochberg correction is then applied across the
+whole metric grid. n = 16, exploratory.
+
+**The module eigengenes here are derived from the whole cohort**, not
+re-derived inside each training fold — the WGCNA network itself is fit
+once, upstream, in F04_association. Only the downstream prediction step
+(scaling, model tuning, scoring) is nested and leakage-free; the features
+being predicted from already contain a trace of every subject, including
+the held-out one. Any positive result in this family is therefore an
+**optimistic upper bound**, not a clean out-of-sample estimate.
+
+## Results
+
+```{r}
+#| label: load-results
+pacman::p_load(here, openxlsx, dplyr)
+
+class_metrics <- read.xlsx(
+  here(
+    "04_Figures", "F05_prediction", "WGCNA", "responder", "c_data",
+    "class_source_data.xlsx"
+  ),
+  "metrics"
+)
+cont_metrics <- read.xlsx(
+  here(
+    "04_Figures", "F05_prediction", "WGCNA", "continuous", "c_data",
+    "cont_source_data.xlsx"
+  ),
+  "metrics"
+)
+
+best_class <- class_metrics |> slice_max(estimate, n = 1, with_ties = FALSE)
+best_cont <- cont_metrics |> slice_max(q2, n = 1, with_ties = FALSE)
+
+n_class_cells <- nrow(class_metrics)
+n_cont_cells <- nrow(cont_metrics)
+n_class_hits <- sum(class_metrics$q_bh < 0.05, na.rm = TRUE)
+n_cont_hits <- sum(cont_metrics$q_bh < 0.05, na.rm = TRUE)
+```
+
+Across the `r n_class_cells` phase-by-model cells that predict responder
+class, the best is `r best_class$model` on the `r best_class$phase` phase:
+AUC = `r sprintf("%.2f", best_class$estimate)` (permutation
+p = `r sprintf("%.2f", best_class$perm_p)`, BH q = `r sprintf("%.2f", best_class$q_bh)`).
+An AUC that low is not even a candidate hit, and its own null confirms it.
+
+Across the `r n_cont_cells` outcome-by-phase-by-model cells that predict a
+training gain, the best Q² anywhere is
+`r sprintf("%.3f", best_cont$q2)` (`r best_cont$outcome`, `r best_cont$phase`
+phase, `r best_cont$model`; permutation p = `r sprintf("%.2f", best_cont$perm_p_q2)`,
+BH q = `r sprintf("%.2f", best_cont$q_bh)`). A negative Q² means the model
+predicts a held-out subject worse than that subject's own group mean
+would. `r n_class_hits` of `r n_class_cells` responder-class cells and
+`r n_cont_hits` of `r n_cont_cells` continuous cells pass BH < 0.05.
+
+**Nothing beats its permutation null, even with a whole-cohort-derived
+feature space stacking the deck in its favour.** The proteome, summarised
+as co-expression modules, does not predict responder class or training
+gains out of sample. This agrees with the association null reported
+elsewhere in F04 and with the study-wide null: the leaky raw-protein
+feature space that an earlier version of this analysis used was dropped
+rather than reported alongside a result it could not honestly support.
+
+```{r sessioninfo}
+sessionInfo()
+```

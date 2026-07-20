@@ -1,0 +1,96 @@
+---
+title: "F05 prediction — singscore pathway scores"
+subtitle: "Responder class and training gains, out of sample: a clean negative"
+author: "A_HRvLR_2026"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    df-print: paged
+execute:
+  eval: true
+  echo: false
+  warning: false
+  message: false
+---
+
+## In plain terms
+
+Can the proteome, summarised as knowledge-based pathway scores, predict a
+held-out person? We train on 15 people and predict the 16th, rotating
+through everyone, for two questions: which responder group they're in, and
+how much they actually gained.
+
+## Method
+
+Each fold is a nested leave-one-subject-out: features are z-scored on the
+training people only and that centre and scale are applied to the held-out
+person, so nothing about the held-out subject touches the transform.
+glmnet and sparse-PLS are tuned by an inner leave-one-out on the training
+people alone, and the winning setting is refit on all of them before
+scoring the held-out subject. A permutation null shuffles the outcome
+across subjects and re-runs the entire nested procedure, giving each cell
+its own p-value; Benjamini-Hochberg correction is then applied across the
+whole metric grid. n = 16, exploratory.
+
+**singscore is scored per sample**: each sample's pathway score depends
+only on that sample's own within-sample gene ranks, never on any other
+sample in the cohort. Unlike a cohort-relative summary such as GSVA, the
+feature itself carries no trace of the held-out subject, so this family is
+genuinely leakage-free — there is no upper-bound caveat to attach to it.
+
+## Results
+
+```{r}
+#| label: load-results
+pacman::p_load(here, openxlsx, dplyr)
+
+class_metrics <- read.xlsx(
+  here(
+    "04_Figures", "F05_prediction", "singscore", "responder", "c_data",
+    "class_source_data.xlsx"
+  ),
+  "metrics"
+)
+cont_metrics <- read.xlsx(
+  here(
+    "04_Figures", "F05_prediction", "singscore", "continuous", "c_data",
+    "cont_source_data.xlsx"
+  ),
+  "metrics"
+)
+
+best_class <- class_metrics |> slice_max(estimate, n = 1, with_ties = FALSE)
+best_cont <- cont_metrics |> slice_max(q2, n = 1, with_ties = FALSE)
+
+n_class_cells <- nrow(class_metrics)
+n_cont_cells <- nrow(cont_metrics)
+n_class_hits <- sum(class_metrics$q_bh < 0.05, na.rm = TRUE)
+n_cont_hits <- sum(cont_metrics$q_bh < 0.05, na.rm = TRUE)
+```
+
+Across the `r n_class_cells` phase-by-model cells that predict responder
+class, the best is `r best_class$model` on the `r best_class$phase` phase:
+AUC = `r sprintf("%.2f", best_class$estimate)` (permutation
+p = `r sprintf("%.2f", best_class$perm_p)`), but after BH correction across
+the grid its q = `r sprintf("%.2f", best_class$q_bh)` — it does not survive.
+
+Across the `r n_cont_cells` outcome-by-phase-by-model cells that predict a
+training gain, the best Q² anywhere is
+`r sprintf("%.3f", best_cont$q2)` (`r best_cont$outcome`, `r best_cont$phase`
+phase, `r best_cont$model`; permutation p = `r sprintf("%.2f", best_cont$perm_p_q2)`),
+and its BH q = `r sprintf("%.2f", best_cont$q_bh)`. `r n_class_hits` of
+`r n_class_cells` responder-class cells and `r n_cont_hits` of
+`r n_cont_cells` continuous cells pass BH < 0.05.
+
+**Nothing beats its permutation null.** The proteome, summarised as
+per-sample pathway activity, does not predict responder class or training
+gains out of sample, and this family carries no leakage to explain the
+result away. This agrees with the association null reported elsewhere in
+F04 and with the study-wide null: the leaky raw-protein feature space that
+an earlier version of this analysis used was dropped rather than reported
+alongside a result it could not honestly support.
+
+```{r sessioninfo}
+sessionInfo()
+```
