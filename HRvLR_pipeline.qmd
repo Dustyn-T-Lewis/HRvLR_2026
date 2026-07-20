@@ -162,14 +162,14 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F04_association/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
 | `04_Figures/F04_association/HLM/` | Which proteins and pathways track the training-response trajectory across all three timepoints (mixed models on proteins and singscore pathway scores) |
 | `04_Figures/F04_association/limma/` | Which proteins and pathways associate with the training response at baseline, training, and acute snapshots (limma regression on proteins and singscore pathway scores) |
-| `04_Figures/F06_prediction/` | Out-of-sample prediction of responder class and continuous phenotype (nested LOSO CV against a permutation null) |
+| `04_Figures/F05_prediction/` | Out-of-sample prediction of responder class and continuous phenotype (nested LOSO CV against a permutation null) |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
 search space, which had no contaminant FASTA and no decoys, so reagent contaminants cannot be
 detected at all (`01_filtering.qmd`); the 34 proteins the missingness filter admits and the
 model then cannot test (`03_dep.qmd`); the circular module test in F04_association/WGCNA; and the
-transductive eigengenes in F04_association/WGCNA and F06_prediction.
+transductive eigengenes in F04_association/WGCNA and F05_prediction.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
@@ -325,12 +325,12 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F04_association/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype |
 | F04_association/HLM | Protein and pathway association with the training-response trajectory (mixed model, all three timepoints) |
 | F04_association/limma | Protein and pathway association with the training response at baseline/training/acute snapshots (limma regression) |
-| F06_prediction | Out-of-sample prediction of responder class and continuous phenotype |
+| F05_prediction | Out-of-sample prediction of responder class and continuous phenotype |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
 up module-wise in F04_association/WGCNA and by direct association and prediction
-in F04_association/HLM, F04_association/limma, and F06_prediction.
+in F04_association/HLM, F04_association/limma, and F05_prediction.
 
 # Reproducing {#sec-repro}
 
