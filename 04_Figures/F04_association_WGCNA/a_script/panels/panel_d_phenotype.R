@@ -14,7 +14,7 @@
 #
 # This panel owns its supplement: the mixed model that keeps the full repeated-measures
 # structure this panel collapses to T1.
-if (!exists("mods")) source(here::here("04_Figures", "F04_modules", "a_script", "setup.R"))
+if (!exists("mods")) source(here::here("04_Figures", "F04_association_WGCNA", "a_script", "setup.R"))
 pacman::p_load(ggplot2, dplyr, tidyr, purrr, forcats, lmerTest, lme4)
 
 loo_q2 <- function(x, y) {

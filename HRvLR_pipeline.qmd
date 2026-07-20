@@ -158,7 +158,7 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
 | `04_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `04_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
-| `04_Figures/F04_modules/a_script/F04_modules.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
+| `04_Figures/F04_association_WGCNA/a_script/F04_association_WGCNA.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
 | `04_Figures/F05_association/` | Which proteins and pathways associate with the continuous training responses (mixed models on proteins and singscore pathway scores) |
 | `04_Figures/F06_prediction/` | Out-of-sample prediction of responder class and continuous phenotype (nested LOSO CV against a permutation null) |
 

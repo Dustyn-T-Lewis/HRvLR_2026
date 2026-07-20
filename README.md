@@ -16,7 +16,7 @@ forward.
 `HRvLR_pipeline.qmd` is the ground-up walkthrough and the map into everything else.
 Most stages and figures also ship their own tutorial (`00_inputs.qmd`,
 `01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, and the figure narratives
-`F01_phenotype.qmd`, `F02_proteome.qmd`, `F03_pathway.qmd`, `F04_modules.qmd`),
+`F01_phenotype.qmd`, `F02_proteome.qmd`, `F03_pathway.qmd`, `F04_association_WGCNA.qmd`),
 written to be read on its own: what it does, how, why that method and not another, and
 how to read the output — including what a null looks like.
 
@@ -102,7 +102,7 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `04_Figures/F04_modules` (see Figures);
+Clustering is computed self-contained inside `04_Figures/F04_association_WGCNA` (see Figures);
 WGCNA is the inferential engine for the module-phenotype linkage.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
@@ -141,7 +141,7 @@ F03_pathway/supp concordance leaves read, so run F03 before F03_pathway/supp.
 - `04_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
 - `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
-- `04_Figures/F04_modules`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
+- `04_Figures/F04_association_WGCNA`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
 - `04_Figures/F05_association`: continuous training-response association
 - `04_Figures/F06_prediction`: out-of-sample HR/LR and continuous prediction, six leaves
 
@@ -154,7 +154,7 @@ Rscript 04_Figures/F03_pathway/supp/concordance_training/a_script/01_run_concord
 Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordance_acute.R
 Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
-Rscript 04_Figures/F04_modules/a_script/01_run_modules.R
+Rscript 04_Figures/F04_association_WGCNA/a_script/01_run_modules.R
 Rscript 04_Figures/F05_association/a_script/01_run_association.R
 
 Rscript 04_Figures/F06_prediction/prediction_responder/baseline/a_script/01_run_baseline.R
@@ -192,7 +192,7 @@ the top level.
 | `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
-| `F04_modules/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
+| `F04_association_WGCNA/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
 | `F05_association/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
 | `F06_prediction/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested LOSO CV against a permutation null. Both arms null after BH. |
 
