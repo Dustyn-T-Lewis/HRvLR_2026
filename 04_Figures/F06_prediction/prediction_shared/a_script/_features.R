@@ -12,6 +12,7 @@
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble, limma, singscore)
 source(here("functions", "shared_pathway_utils.R"))
+source(here("functions", "shared_singscore.R"))
 
 pred_paths <- function() {
   list(
@@ -44,15 +45,7 @@ pred_singscore <- function(expr, cache_path) {
     include_goslim = TRUE, exclude_variants = TRUE
   )
   gene_sets <- pw[classify_database(names(pw)) %in% c("Hallmark", "GO Slim")]
-  ranks <- rankGenes(expr)
-  scores <- suppressWarnings(
-    vapply(
-      gene_sets, function(g) simpleScore(ranks, upSet = g)$TotalScore,
-      numeric(ncol(expr))
-    )
-  )
-  scores <- t(scores)
-  colnames(scores) <- colnames(expr)
+  scores <- score_singscore(expr, gene_sets, min_size = 1L)
   dir.create(dirname(cache_path), recursive = TRUE, showWarnings = FALSE)
   saveRDS(scores, cache_path)
   scores
