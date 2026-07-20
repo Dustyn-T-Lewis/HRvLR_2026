@@ -5,7 +5,7 @@
 # merely underpowered.
 #
 # This panel owns its supplement: the top-30 audit for its own four contrasts.
-if (!exists("fg")) source(here::here("04_Figures", "F03_volcanoes", "a_script", "setup.R"))
+if (!exists("fg")) source(here::here("04_Figures", "F03_pathway", "a_script", "setup.R"))
 
 WITHIN_GROUP_CONTRASTS <- c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR")
 

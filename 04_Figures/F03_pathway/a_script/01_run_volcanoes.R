@@ -9,7 +9,7 @@ F03_REPORTS <- list()
 F03_SUPP <- list()
 F03_TABLES <- list()
 
-a_script <- here("04_Figures", "F03_volcanoes", "a_script")
+a_script <- here("04_Figures", "F03_pathway", "a_script")
 source(file.path(a_script, "setup.R"))
 source(file.path(a_script, "rings.R"))
 source(here("functions", "shared_utils.R"))
@@ -23,10 +23,10 @@ source(file.path(a_script, "panels", "panel_a_responders.R"))
 source(file.path(a_script, "panels", "panel_b_within_group.R"))
 source(file.path(a_script, "composite.R"))
 
-ggsave(file.path(RPT_DIR, "F03_volcanoes.png"), composite,
+ggsave(file.path(RPT_DIR, "F03_pathway.png"), composite,
   width = 450, height = 320, units = "mm", dpi = 200, bg = "white"
 )
-ggsave(file.path(RPT_DIR, "F03_volcanoes.pdf"), composite,
+ggsave(file.path(RPT_DIR, "F03_pathway.pdf"), composite,
   width = 450, height = 320, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
@@ -79,6 +79,6 @@ writeData(wb, "fgsea_all", fg)
 writeData(wb, "fgsea_significant", fg_sig)
 writeData(wb, "ring_pathways", ring_pathways)
 writeData(wb, "top30_updown", top30_updown)
-saveWorkbook(wb, file.path(DAT_DIR, "F03_volcanoes_source_data.xlsx"), overwrite = TRUE)
+saveWorkbook(wb, file.path(DAT_DIR, "F03_pathway_source_data.xlsx"), overwrite = TRUE)
 
 cat("F03 rebuilt: 5 responder rings, within-group supplement, top-30 audits, workbook\n")

@@ -6,7 +6,7 @@
 #
 # This panel owns its supplement: the un-deduplicated top-30 audit for its own five
 # contrasts, so the rings' parsimony can be checked against the full ranked enrichment.
-if (!exists("fg")) source(here::here("04_Figures", "F03_volcanoes", "a_script", "setup.R"))
+if (!exists("fg")) source(here::here("04_Figures", "F03_pathway", "a_script", "setup.R"))
 
 RESPONDER_CONTRASTS <- c(
   "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
