@@ -142,7 +142,7 @@ F03_pathway/supp concordance leaves read, so run F03 before F03_pathway/supp.
 - `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
 - `04_Figures/F04_association_WGCNA`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
-- `04_Figures/F05_association`: continuous training-response association
+- `04_Figures/F04_association_HLM`: continuous training-response association
 - `04_Figures/F06_prediction`: out-of-sample HR/LR and continuous prediction, six leaves
 
 ```sh
@@ -155,7 +155,7 @@ Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordanc
 Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
 Rscript 04_Figures/F04_association_WGCNA/a_script/01_run_modules.R
-Rscript 04_Figures/F05_association/a_script/01_run_association.R
+Rscript 04_Figures/F04_association_HLM/a_script/01_run_association.R
 
 Rscript 04_Figures/F06_prediction/prediction_responder/baseline/a_script/01_run_baseline.R
 Rscript 04_Figures/F06_prediction/prediction_responder/training/a_script/01_run_training.R
@@ -193,7 +193,7 @@ the top level.
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `F04_association_WGCNA/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
-| `F05_association/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
+| `F04_association_HLM/` | Which proteins and pathways associate with the continuous training responses (ΔmCSA, strength, ΔfCSA)? | Mixed models on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
 | `F06_prediction/` | Can baseline, training-response, or acute features predict HR vs LR out of sample? | Elastic net (`glmnet`) + sparse PLS-DA (`mixOmics`), nested LOSO CV against a permutation null. Both arms null after BH. |
 
 Prediction is scored against a permutation null, never zero; composite hypertrophy
