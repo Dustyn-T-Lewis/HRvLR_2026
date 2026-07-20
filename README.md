@@ -44,8 +44,9 @@ blood-tagged proteins leaves every one of those contrasts at zero.
 Known limitations are stated on the page where the reader meets them: the π gate in
 `HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
 reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
-by the missingness filter that the model then cannot test; the circular module test in F04; and
-the transductive eigengenes in F04 and `04_Figures/F03_pathway/supp`.
+by the missingness filter that the model then cannot test; the circular module test in
+F04_association_WGCNA; and the transductive eigengenes in F04_association_WGCNA and
+`04_Figures/F03_pathway/supp`.
 
 ## Design and Canonical Contrasts
 
