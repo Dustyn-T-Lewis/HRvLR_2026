@@ -4,6 +4,7 @@ pacman::p_load(
   here, dplyr, tidyr, readr, tibble, purrr, forcats,
   effectsize, lmerTest, emmeans
 )
+source(here::here("functions", "shared_hlm.R"))
 
 # Repeated-measures outcomes (T1 -> T2). The MyoVision_fCSA_* columns are left
 # out: at 200-560 they sit 10-30x below plausible fibre CSA and correlate
@@ -48,11 +49,7 @@ prepost_long <- function(meta, col) {
 # The raw mixed model for one outcome, reused by the report tables and the
 # diagnostics. Fitted on the response scale by REML with Satterthwaite df.
 fit_lmm <- function(meta, col) {
-  lmerTest::lmer(
-    value ~ Group * Timepoint + (1 | subject),
-    data = prepost_long(meta, col),
-    REML = TRUE
-  )
+  fit_hlm(prepost_long(meta, col), response = "value")
 }
 
 # The divergence estimate: each subject's T2-T1 change, then the HR-minus-LR
@@ -93,7 +90,7 @@ lmm_loso_influence <- function(meta) {
   bind_rows(lapply(seq_len(nrow(MEASURES)), function(i) {
     d <- prepost_long(meta, MEASURES$col[i])
     d$z <- as.numeric(scale(d$value))
-    beta <- function(x) lme4::fixef(lmerTest::lmer(z ~ Group * Timepoint + (1 | subject), data = x))[["GroupLR:TimepointT2"]]
+    beta <- function(x) lme4::fixef(fit_hlm(x, response = "z"))[["GroupLR:TimepointT2"]]
     full <- beta(d)
     shift <- vapply(unique(d$subject), function(s) full - beta(d[d$subject != s, ]), numeric(1))
     tibble(
