@@ -89,7 +89,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | Seven figures: F03_pathway/supp HR-vs-LR training/acute concordance, which reads F03's source data; F01 phenotype atlas; F02 proteome overview + QC; F03 enrichVolcano ring-volcanoes, which also builds the shared fgsea source data; F04 WGCNA module-phenotype linkage; F05 continuous training-response association; F06 out-of-sample prediction |
+| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association_WGCNA module-phenotype linkage; F04_association_HLM continuous training-response association; F06_prediction out-of-sample prediction |
 
 ## Canonical Run Order
 
@@ -131,9 +131,10 @@ Perseus tops the π table while being null on BH.
 
 ### Figures
 
-Seven figures, rendered into `b_reports`; rerun only after stages `01` to `03`
-complete cleanly. F03 writes `F03_pathway_source_data.xlsx`, which the two
-F03_pathway/supp concordance leaves read, so run F03 before F03_pathway/supp.
+The results-layer figures render into `b_reports`; rerun only after stages `01`
+to `03` complete cleanly. F03_pathway writes `F03_pathway_source_data.xlsx`,
+which its two `supp` concordance leaves read, so run F03_pathway before the
+`supp` leaves.
 
 - `04_Figures/F01_phenotype`: phenotype atlas
 - `04_Figures/F02_proteome`: global proteome overview and QC
@@ -182,9 +183,9 @@ Shared helpers live by scope:
 ## Figures
 
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F05 and F03_pathway/supp/summary do not, and F06 carries its triad
-and its two `a_narrative.qmd` files inside the six prediction leaves rather than at
-the top level.
+ship a narrative `.qmd`; F04_association_HLM and F03_pathway/supp/summary do not, and
+F06_prediction carries its triad and its two `a_narrative.qmd` files inside the six
+prediction leaves rather than at the top level.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
@@ -214,7 +215,7 @@ scoring the one leakage-free exception. At n = 16 the null is the finding.
 
 ## Working on enrichVolcano Without Disturbing This Pipeline
 
-F03 depends on `enrichVolcano`, which is developed separately in
+F03_pathway depends on `enrichVolcano`, which is developed separately in
 `D_Tools/enrichVolcano`. renv keeps the two apart: this project reads only
 `renv/library`, and the system library is not on its search path. Installing a
 work-in-progress build of the package the usual way puts it in the *system*
@@ -228,5 +229,5 @@ renv::install("Dustyn-T-Lewis/enrichVolcano@<sha>")
 renv::snapshot()
 ```
 
-Re-run F03 afterwards and diff the renders. Push the commit first: a sha that
+Re-run F03_pathway afterwards and diff the renders. Push the commit first: a sha that
 exists only on one machine pins nothing.
