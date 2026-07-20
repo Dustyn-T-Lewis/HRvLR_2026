@@ -6,7 +6,7 @@ pacman::p_load(here, patchwork, ggplot2, openxlsx, dplyr, tibble)
 F04_PANELS <- list()
 F04_AUDIT <- list()
 
-a_script <- here("04_Figures", "F04_association_WGCNA", "a_script")
+a_script <- here("04_Figures", "F04_association", "WGCNA", "a_script")
 source(file.path(a_script, "setup.R"))
 source(here("functions", "shared_utils.R"))
 
@@ -23,10 +23,10 @@ for (p in c(
 
 source(file.path(a_script, "composite.R"))
 
-ggsave(file.path(RPT_DIR, "F04_association_WGCNA.png"), composite,
+ggsave(file.path(RPT_DIR, "WGCNA.png"), composite,
   width = 300, height = 340, units = "mm", dpi = 200, bg = "white"
 )
-ggsave(file.path(RPT_DIR, "F04_association_WGCNA.pdf"), composite,
+ggsave(file.path(RPT_DIR, "WGCNA.pdf"), composite,
   width = 300, height = 340, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
@@ -87,6 +87,6 @@ for (s in sheets) {
 }
 addWorksheet(wb, "metadata")
 writeData(wb, "metadata", metadata)
-saveWorkbook(wb, file.path(DAT_DIR, "F04_association_WGCNA_source_data.xlsx"), overwrite = TRUE)
+saveWorkbook(wb, file.path(DAT_DIR, "WGCNA_source_data.xlsx"), overwrite = TRUE)
 
 cat("F04 rebuilt: atlas, pathways, fry, phenotype, supplements, workbook\n")

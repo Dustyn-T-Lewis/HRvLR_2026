@@ -19,7 +19,7 @@ muscle size and strength — `d_fcsa_I`, `d_fcsa_II`, `d_mcsa`,
 As in the class arm we ask it three ways — baseline (T1), training
 (T1 to T2 change), and acute (T2 to T3 change) features — and within each
 phase we compare singscore pathway scores (primary), proteins, and the
-F04_association_WGCNA module eigengenes, under an elastic net and a sparse PLS regression.
+F04_association/WGCNA module eigengenes, under an elastic net and a sparse PLS regression.
 
 # How a continuous prediction is scored honestly
 
@@ -49,7 +49,7 @@ continuous end to end.
 One exception matters, and it lands squarely on the only lead this arm
 produces.
 
-The **F04_association_WGCNA module eigengenes were not built inside the cross-validation
+The **F04_association/WGCNA module eigengenes were not built inside the cross-validation
 loop.** WGCNA was run once, on all 45 samples, before any fold was drawn. So
 on every leave-one-subject-out fold, the held-out subject's own data had
 already helped define the modules whose eigengene is then used to predict
@@ -125,7 +125,7 @@ max-statistic null anywhere in this arm, which is what a search over 108 cells
 would properly call for.
 
 **Where any signal lives.** One lead recurs: change in whole-muscle CSA
-(`d_mcsa`) predicted from the F04_association_WGCNA module eigengenes under the elastic net, in
+(`d_mcsa`) predicted from the F04_association/WGCNA module eigengenes under the elastic net, in
 both the baseline window (Q² ≈ 0.56, Spearman ≈ 0.82, permutation p ≈ 0.015)
 and the acute window (Q² ≈ 0.71, Spearman ≈ 0.85, permutation p ≈ 0.010). A
 few strength cells (`d_1rm_ext` at baseline) also clear the nominal null.
@@ -169,7 +169,7 @@ outcomes, so the null carries the same optimism as the real fit. With 200
 permutations the smallest reachable p is 1/201 ≈ 0.005.
 
 **Transductive** — the held-out sample influenced how the *features* were
-built, even though its outcome label was never seen. The F04_association_WGCNA eigengenes are
+built, even though its outcome label was never seen. The F04_association/WGCNA eigengenes are
 transductive. See @sec-transductive.
 
 # Recap
