@@ -2,7 +2,7 @@
 # regression (snapshot) and a three-timepoint mixed model (trajectory). Feature
 # assembly for proteins and singscore pathways lives here so the four leaves
 # stay thin. Association is descriptive; there is no train/test split.
-pacman::p_load(dplyr, tibble, purrr, limma, lmerTest, parallel)
+pacman::p_load(dplyr, tibble, purrr, limma, lmerTest, lme4, parallel)
 
 phase_subject_matrix <- function(mat, meta, phase,
                                  subject_col = "Subject_ID",
@@ -66,6 +66,13 @@ associate_limma <- function(mat, meta, pheno, traits,
     error = function(e) NULL
   )
   if (is.null(fit)) {
+    return(c(f = NA_real_, df1 = NA_real_, df2 = NA_real_, p = NA_real_))
+  }
+  # Degenerate fits produce explosive, meaningless interaction F values at this
+  # sample size: a boundary random effect, or a residual variance collapsed to a
+  # tiny fraction of the feature's own spread (the model overfitting sparse data).
+  # Both are dropped to NA so they cannot masquerade as the top hits.
+  if (lme4::isSingular(fit) || stats::sigma(fit) < 0.05 * stats::sd(d$score)) {
     return(c(f = NA_real_, df1 = NA_real_, df2 = NA_real_, p = NA_real_))
   }
   a <- suppressWarnings(stats::anova(fit))

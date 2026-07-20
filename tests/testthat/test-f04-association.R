@@ -65,3 +65,24 @@ test_that("associate_hlm returns the interaction F-test and guards sparse featur
     tolerance = 1e-6
   )
 })
+
+test_that("associate_hlm drops overfit (residual-collapsed) fits to NA", {
+  source(here::here("04_Figures", "functions", "f04_association.R"))
+
+  set.seed(3)
+  meta <- data.frame(
+    Col_ID = paste0("s", 1:24),
+    Subject_ID = rep(paste0("S", 1:8), each = 3),
+    Timepoint = rep(c("T1", "T2", "T3"), times = 8)
+  )
+  resp <- setNames(rnorm(8), paste0("S", 1:8))
+  # score is a near-exact function of the design: residual variance collapses,
+  # so the interaction F would explode without the degenerate-fit guard.
+  perfect <- resp[meta$Subject_ID] * as.integer(factor(meta$Timepoint))
+  mat <- rbind(overfit = perfect + rnorm(24, sd = 1e-8))
+  colnames(mat) <- meta$Col_ID
+  pheno <- data.frame(subject = paste0("S", 1:8), d_mcsa = resp)
+
+  got <- associate_hlm(mat, meta, pheno, "d_mcsa")
+  expect_true(is.na(got$p[got$feature == "overfit"]))
+})
