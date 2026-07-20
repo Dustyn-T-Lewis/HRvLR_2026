@@ -1,4 +1,4 @@
-# Concordance builders shared by F04 (training) and F05 (acute). Each figure maps
+# Concordance builders shared by the training and acute concordance leaves. Each figure maps
 # one phase's HR and LR response as a 5-panel composite matching the YvO engine:
 #   A quadrant ORA scatter, B pattern heatmap + Sankey, C fry rotation test,
 #   D pathway NES scatter, E RRHO2. Both figures are the concordance flavour

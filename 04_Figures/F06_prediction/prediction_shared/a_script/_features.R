@@ -1,6 +1,6 @@
 # Shared inputs and feature/outcome builders for the prediction suite.
 # Loads the imputed proteome, collapses to genes, scores singscore pathways
-# once on the full cohort, reshapes the F04 module eigengenes, and exposes
+# once on the full cohort, reshapes the F04_association_WGCNA module eigengenes, and exposes
 # per-phase subject-level feature matrices plus the phenotype outcomes.
 #
 # singscore is single-sample and rank-based: each sample's pathway score
