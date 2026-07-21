@@ -118,8 +118,8 @@ as a per-contrast count, not a between-group difference test.
 panel("D")
 panel("E")
 panel("F")
-pE
 pD
+pE
 pF
 ```
 
