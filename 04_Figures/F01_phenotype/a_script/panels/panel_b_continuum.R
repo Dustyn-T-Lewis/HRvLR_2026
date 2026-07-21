@@ -30,7 +30,8 @@ build_continuum <- function(meta, tag = "B") {
     theme(
       plot.subtitle = element_text(size = 6.5, face = "italic", color = "grey40"),
       axis.text.y = element_text(size = 6.5),
-      legend.position = c(0.85, 0.2),
+      legend.position = "inside",
+      legend.position.inside = c(0.85, 0.2),
       panel.grid.major.y = element_blank()
     )
   audit <- comp |>
