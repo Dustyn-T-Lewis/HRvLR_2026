@@ -121,7 +121,8 @@ fry |>
 ```
 
 Across `r nrow(fry)` module × contrast tests, **`r sum(fry$fdr < 0.05)` is significant**: the
-purple module in `Acute_LR` (FDR = `r sprintf("%.4f", min(fry$fdr))`). That is a
+`r fry$module[which.min(fry$fdr)]` module in `r fry$contrast[which.min(fry$fdr)]`
+(FDR = `r sprintf("%.4f", min(fry$fdr))`). That is a
 **within-group** response — the acute bout moves the proteome inside the LR arm. It is the
 positive control, and it agrees with F03.
 
@@ -134,8 +135,8 @@ positive control, and it agrees with F03.
 The panel this replaces ran **fgsea with the WGCNA modules as the gene sets**, ranked by
 moderated *t* **from the same matrix that defined those modules**. The sets were built to be
 co-expressed, so of course their members rank together: the test was circular. It returned
-**padj = 7 × 10⁻³³** in a study whose minimum *q* anywhere else is 0.36. That number was the
-tell.
+**padj = 7 × 10⁻³³**, orders of magnitude below anything the non-circular tests in this study
+produce. That number was the tell.
 
 `limma::fry` [@wu2010] is the correct instrument. It is a **rotation-based, self-contained**
 set test: it asks whether the proteins in a predefined set move together **in a specified
@@ -155,7 +156,7 @@ pred |>
     Module = sub("^ME", "", module), Trait = trait,
     r = round(r, 2), `q2` = round(q2, 3), `BH q` = round(fdr, 2)
   ) |>
-  kable(caption = "The five best cells of 72, ranked by q².")
+  kable(caption = sprintf("The five best cells of %d, ranked by q².", nrow(pred)))
 ```
 
 No. The best cell in the entire `r nrow(pred)`-cell grid has
