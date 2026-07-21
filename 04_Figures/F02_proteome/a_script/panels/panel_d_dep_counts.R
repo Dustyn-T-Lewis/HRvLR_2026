@@ -1,4 +1,4 @@
-# F02 DEPs-per-contrast panel, renders as composite tag D (diverging down/up, p and Pi counts)
+# F02 Panel D: DEPs per contrast (diverging down/up, p and Pi counts)
 # Down (left) / up (right) % of proteome; per direction two bars overlaid from zero:
 # nominal p < 0.05 (light) and Pi < 0.05 (dark). Per-contrast background bands carry the
 # contrast code; Pi counts sit at the bar tips.
@@ -50,7 +50,7 @@ band_df <- tibble(
 pi_lab <- frac_df |> filter(threshold == "Pi", n > 0)
 chance_pct <- 100 * 0.05 / 2
 
-pE <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
+pD <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
   geom_rect(
     data = band_df, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
     inherit.aes = FALSE, fill = scales::alpha(band_df$band, 0.14),
@@ -82,6 +82,6 @@ pE <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
     plot.margin = margin(6, 6, 4, 4)
   )
 
-save_png(pE, file.path(RPT_DIR, "panels", "panel_e_dep_counts"), PF_W, PF_H)
-F02_AUDIT[["panel_E_dep_counts"]] <- frac_df
+save_png(pD, file.path(RPT_DIR, "panels", "panel_d_dep_counts"), PF_W, PF_H)
+F02_AUDIT[["panel_D_dep_counts"]] <- frac_df
 cat("F02 Panel E done.\n")
