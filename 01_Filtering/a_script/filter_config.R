@@ -33,6 +33,17 @@
 # why the rule is kept - readmitting them floods Acute_LR from 19 to 97 hits, 57 of them the
 # readmitted blood proteins, which is the 2x-bloodier T3 biopsy confound arriving on cue.
 
+# The blood-index rule is the data-driven counterpart to the annotation rules above. HPA's
+# ery_cut keys on single-cell erythrocyte RNA, which undercounts the red-cell membrane skeleton
+# (mature erythrocytes are enucleate and RNA-poor), so band 3, alpha-spectrin, protein 4.2 and
+# CA1 escape it. The index is the per-sample mean log2 intensity of the haemoglobin anchor,
+# measured before removal; each protein's Spearman correlation with it (blood_cor) measures how
+# far its abundance tracks contamination in THIS dataset, no transcriptomic prior. blood_cor_max
+# is 0.45: a 300x permutation null of the index puts the 99.9th percentile |rho| at 0.43, and
+# validating against markers, 0.45 catches 13/16 canonical red-cell proteins and the whole
+# plasma/complement/immunoglobulin compartment while flagging 0/16 muscle markers and 0 cytosolic
+# ribosomal proteins. Removal is gated by the same muscle rescue, so muscle-isoform-ambiguous
+# proteins (ANK1, SPTB, EPB41, SYNE2, THBS4) with real myonuclei RNA are kept.
 filter_cfg <- list(
   hpa_file        = "HPA_annotations_full.tsv",
   miss_min_reps   = 5, # min detected samples in a Group_Time cell
@@ -42,7 +53,9 @@ filter_cfg <- list(
   mad_k           = 3, # Hampel constant for MAD-based flags
   ery_cut         = 5000, # erythrocyte nCPM at/above = red-cell protein
   myo_cut         = 20, # myonuclei nCPM at/above = candidate for muscle rescue
-  blood_max       = 1e9 # rescue only below this blood conc (pg/L); above = true plasma
+  blood_max       = 1e9, # rescue only below this blood conc (pg/L); above = true plasma
+  blood_anchor    = c("HBB", "HBA1", "HBD", "HBG1", "HBG2"), # haemoglobins define the index
+  blood_cor_max   = 0.45 # Spearman with the blood index at/above = contamination-tracking
 )
 
 # Handling contaminants no annotation rule can catch. Matched by ACCESSION only: cRAP
