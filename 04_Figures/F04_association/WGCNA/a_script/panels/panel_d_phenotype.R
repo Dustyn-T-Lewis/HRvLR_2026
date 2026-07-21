@@ -9,8 +9,10 @@
 #
 # The gap between them is the point. An earlier version of this analysis reported a q2 of
 # 0.713 - an artifact of modules that encoded subject identity (see wgcna.R). With the
-# modules defined on within-subject co-regulation, the best cell in the whole 12 x 6 grid is
-# a q2 of ~0.08, and that is the ARGMAX of 72 cells, so it is nearly free.
+# modules defined on within-subject co-regulation, the best cell in the whole grid is a q2
+# near 0.1, and that is the ARGMAX of every module-by-trait cell, so it is nearly free. A
+# fully nested per-fold refit reproduces the same null, so the transductive shortcut here is
+# not inflating it.
 #
 # This panel owns its supplement: the mixed model that keeps the full repeated-measures
 # structure this panel collapses to T1.
@@ -68,7 +70,7 @@ pD <- ggplot(pred_plot, aes(trait, module, fill = q2)) +
   labs(
     title = "Can a baseline module predict the size of the response?",
     subtitle = sprintf(
-      "Leave-one-subject-out q2. Blue = predicts; red = worse than the trait's own mean. Best of %d cells: q2 = %.3f. Nothing survives FDR (min q = %.2f).",
+      "Leave-one-subject-out q2. Blue = predicts; red = worse than the trait's own mean.\nBest of %d cells: q2 = %.3f. Nothing survives FDR (min q = %.2f).",
       nrow(pred), max(pred$q2, na.rm = TRUE), min(pred$fdr, na.rm = TRUE)
     ),
     x = NULL, y = NULL, tag = "D"

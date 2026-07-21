@@ -15,6 +15,9 @@ ora_plot <- ora |>
     lp = -log10(padj)
   )
 
+n_modules <- length(setdiff(unique(mods), "grey"))
+n_with_term <- dplyr::n_distinct(ora_plot$module)
+
 pB <- ggplot(ora_plot, aes(lp, reorder_within(term, lp, module), fill = module)) +
   geom_col(width = 0.75, color = "black", linewidth = 0.25) +
   shadowtext::geom_shadowtext(
@@ -27,7 +30,10 @@ pB <- ggplot(ora_plot, aes(lp, reorder_within(term, lp, module), fill = module))
   facet_wrap(~module, scales = "free_y", ncol = 3) +
   labs(
     title = "What each module is (GO:BP over-representation)",
-    subtitle = "Universe = the measured proteome. Top 3 terms per module by BH q.",
+    subtitle = sprintf(
+      "Universe = the measured proteome. Top 3 terms per module by BH q. %d of %d modules carry a significant term.",
+      n_with_term, n_modules
+    ),
     x = expression(-log[10] * " BH q"), y = NULL, tag = "B"
   ) +
   FIG_THEME +
