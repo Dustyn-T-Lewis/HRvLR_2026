@@ -53,7 +53,8 @@ panel("A")
 pA
 ```
 
-Groups overlap (p = 0.62); timepoint does separate (p = 0.02) — everyone moves
+Groups overlap (p = `r sprintf("%.2f", perm_group[["Pr(>F)"]][1])`); timepoint does
+separate (p = `r sprintf("%.2f", perm_time[["Pr(>F)"]][1])`) — everyone moves
 with training, the responder split just isn't a global axis.
 
 ## Panel B — response magnitude (RRPP)
@@ -68,7 +69,7 @@ panel("B")
 pB
 ```
 
-It isn't (training p = 0.38, acute p = 0.92). HR and LR move about equally far.
+It isn't (training p = `r sprintf("%.2f", mag_stat$p[1])`, acute p = `r sprintf("%.2f", mag_stat$p[2])`). HR and LR move about equally far.
 
 ## Panel C — protein-specific divergence leads
 
@@ -93,11 +94,20 @@ int_counts <- function(ph) {
     min_q = round(min(q, na.rm = TRUE), 3)
   )
 }
-knitr::kable(rbind(int_counts("Training"), int_counts("Acute")))
+int_tbl <- rbind(int_counts("Training"), int_counts("Acute"))
+pi_off_p <- vapply(c("Training", "Acute"), function(ph) {
+  p <- dep_df[[paste0("P.Value_", ph, "_Interaction")]]
+  pi <- dep_df[[paste0("sig_pi_", ph, "_Interaction")]]
+  gated <- !is.na(pi) & pi != 0
+  100 * sum(gated & p >= 0.05, na.rm = TRUE) / sum(gated)
+}, numeric(1))
+knitr::kable(int_tbl)
 ```
 
-The pi-gate is no stricter than raw p (55 vs 51, 86 vs 114), and **zero proteins
-survive FDR** (minimum q ≈ 0.76–0.89). So the divergent points are exploratory
+The pi-gate is no stricter than raw p (`r int_tbl$pi_gated[1]` vs `r int_tbl$raw_p_lt_05[1]`,
+`r int_tbl$pi_gated[2]` vs `r int_tbl$raw_p_lt_05[2]`), and **zero proteins
+survive FDR** (minimum q ≈ `r sprintf("%.2f", min(int_tbl$min_q))`–`r sprintf("%.2f", max(int_tbl$min_q))`).
+So the divergent points are exploratory
 leads, not discoveries; the panel prints both counts so the distinction is visible.
 An error-rate-controlled alternative with an effect-size floor is `limma::treat()`.
 
@@ -111,26 +121,33 @@ pC
 Descriptive scale for the figure. **D** counts DEPs per contrast as a percent of
 the proteome against a chance line; **E** shows each contrast's log2FC density; **F**
 runs preranked GO GSEA per contrast, collapsing redundant sets, and is the only
-FDR-controlled panel. Read F's asymmetry (HR 85 vs LR 10 GO sets in the acute bout)
-as a per-contrast count, not a between-group difference test.
+FDR-controlled panel. F's acute bout is lopsided toward HR, but read that as a
+per-contrast count, not a between-group difference test.
 
 ```{r panels-def}
 panel("D")
 panel("E")
 panel("F")
+go_tot <- aggregate(cbind(Up, Down) ~ contrast, go_counts, sum) |>
+  within(total <- Up + Down)
+acute_go <- setNames(go_tot$total, go_tot$contrast)[c("Acute_HR", "Acute_LR")]
 pD
 pE
 pF
 ```
+
+In the acute bout that asymmetry is `r acute_go[["Acute_HR"]]` non-redundant GO
+sets in HR against `r acute_go[["Acute_LR"]]` in LR — two separate counts, not a
+tested difference.
 
 ## Supplements — the rest of the null argument
 
 Two supplements corroborate "no global divergence" with subjects as the unit. The
 **dispersion** supplement uses PERMDISP (distance to the group centroid per
 timepoint) to check responders aren't simply more heterogeneous — they aren't
-(p = 0.33 / 0.20 / 0.35). The **direction** supplement runs RRPP on the full
+(p = `r sprintf("%.2f", disp_p$pval[1])` / `r sprintf("%.2f", disp_p$pval[2])` / `r sprintf("%.2f", disp_p$pval[3])`). The **direction** supplement runs RRPP on the full
 per-subject change matrix and the angle between the groups' mean change vectors —
-no directional difference either (p = 0.87 / 0.18).
+no directional difference either (p = `r sprintf("%.2f", dir_stat$p[1])` / `r sprintf("%.2f", dir_stat$p[2])`).
 
 ```{r supplements}
 source(here::here("04_Figures", "F02_proteome", "a_script", "panels", "panel_c_divergence.R"))
@@ -152,7 +169,7 @@ DOI below was resolved against Crossref.
 | **A** state | The proteome does not separate HR from LR at any timepoint | PERMANOVA on the sample × sample distance matrix (Anderson 2001, [10.1046/j.1442-9993.2001.01070.x](https://doi.org/10.1046/j.1442-9993.2001.01070.x)), **`strata = Subject_ID`** | The `strata` argument is doing essential work: it restricts permutations **within subject**, which is what makes the test valid under repeated measures. Without it the 45 samples would be treated as independent and the *p* would be anticonservative. A PCA is shown, but the test is on distances, not on the two plotted axes. |
 | **B** magnitude | HR and LR change by the same *amount* | ‖Δ‖ per subject per phase, then RRPP (Collyer & Adams 2018, [10.1111/2041-210x.13029](https://doi.org/10.1111/2041-210x.13029)), 999 permutations | Correct. Each subject contributes **one** Δ per phase, so the rows are independent and the repeated-measures problem is collapsed away by construction. This is the right way to test a within-subject change between groups. |
 | **B** supp | HR and LR change in the same *direction* | Δ-score PCA plus an RRPP vector test and the angle between the two group-mean change vectors | Companion to B: magnitude and direction are separate claims, and both are null. The angle is descriptive (no test on the angle itself). |
-| **C** divergence | Candidate proteins whose HR and LR responses part company | π-gated leads (π = p^\|log2FC\|, Xiao et al. 2014, [10.1093/bioinformatics/btr671](https://doi.org/10.1093/bioinformatics/btr671)) | **π is a ranking statistic, not an FDR.** It is fold-change-weighted and is *not* a subset of *p* < 0.05 — 14.5 % of π-calls have raw *p* ≥ 0.05. **Nothing here survives BH.** The panel is labelled exploratory and must never be read as a discovery list. |
+| **C** divergence | Candidate proteins whose HR and LR responses part company | π-gated leads (π = p^\|log2FC\|, Xiao et al. 2014, [10.1093/bioinformatics/btr671](https://doi.org/10.1093/bioinformatics/btr671)) | **π is a ranking statistic, not an FDR.** It is fold-change-weighted and is *not* a subset of *p* < 0.05 — `r sprintf("%.1f", min(pi_off_p))`–`r sprintf("%.1f", max(pi_off_p))` % of π-calls have raw *p* ≥ 0.05. **Nothing here survives BH.** The panel is labelled exploratory and must never be read as a discovery list. |
 | **C** supp | HR and LR are equally variable | PERMDISP on multivariate dispersion per timepoint (Anderson 2006, [10.1111/j.1541-0420.2005.00440.x](https://doi.org/10.1111/j.1541-0420.2005.00440.x)); per-protein CV scatter on the **linear** scale (Brenes et al. 2019, [10.1074/mcp.ra119.001472](https://doi.org/10.1074/mcp.ra119.001472)) | Reframes replicate variability from QC to biology. CV must be computed on the linear scale, not on log2 — a CV of a log-transformed variable is not interpretable as relative dispersion. |
 | **D–F** | Effect-size, DEP-count, and pathway overview | Descriptive distributions and counts from the non-imputed limma arm | Descriptive. The DEP-count panel plots a chance line, which is the honest reference when the counts are at chance. |
 
