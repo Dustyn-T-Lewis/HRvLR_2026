@@ -33,6 +33,7 @@ perm_time <- adonis2(dist_mat ~ Timepoint,
 subj_mat <- rowsum(mat, pca_df$Subject_ID)
 subj_mat <- subj_mat / as.integer(table(pca_df$Subject_ID)[rownames(subj_mat)])
 subj_group <- pca_df$Group[match(rownames(subj_mat), pca_df$Subject_ID)]
+set.seed(42)
 perm_group <- adonis2(vegdist(subj_mat, method = "euclidean") ~ subj_group, permutations = 999)
 
 sig_mark <- function(p) if (p < 0.05) "*" else "ns"
