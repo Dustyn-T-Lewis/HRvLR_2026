@@ -400,7 +400,7 @@ pragmatic threshold from dropping a good sample by itself.
 
 - Stage 01 turns the raw spreadsheet into a filtered `DAList`: remove blood
   contamination and curated handling contaminants, drop consensus-outlier samples,
-  then drop sparsely-detected proteins. 2,400 × 48 becomes 1,920 × 45.
+  then drop sparsely-detected proteins. 2,400 × 48 becomes 1,902 × 45.
 - **45 samples is 48 minus three QC failures**, not a collection roster. `S29_T1`,
   `S28_T2` and `S28_T3` were taken and measured; they failed the 3-of-4 consensus.
 - DIA zeros become `NA` because the gaps are mostly MNAR — "below detection", not

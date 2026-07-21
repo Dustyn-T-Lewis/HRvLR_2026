@@ -29,13 +29,14 @@ fry <- read.xlsx(wb, "module_fry")
 pred <- read.xlsx(wb, "module_prediction")
 lmm <- read.xlsx(wb, "module_phenotype_lmm")
 ora <- read.xlsx(wb, "module_ora")
+membership <- read.xlsx(wb, "module_membership")
 
 responder <- c(
   "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
   "Training_Interaction", "Acute_Interaction"
 )
 fry_r <- fry[fry$contrast %in% responder, ]
-n_grey <- 1920 - sum(atlas$n_proteins)
+n_grey <- sum(membership$module == "grey")
 ```
 
 ## What F04 asks
@@ -212,7 +213,7 @@ Stated plainly, because it is the real limitation and nothing else covers it:
 - **There is no published guidance for WGCNA on repeated-measures designs.** None. The
   within-subject centring here is a defensible response to a documented failure mode, not a
   validated method.
-- **1,920 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
+- **1,902 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
   concedes small feature counts are unlikely to be scale-free, so a mediocre fit is expected
   rather than a bug.
 - **12.2 % of the matrix was imputed** by missForest, which predicts proteins *from other

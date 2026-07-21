@@ -86,7 +86,7 @@ internally, so the normalized matrix comes back on the log2 scale.
 
 The span is **0.5075, not 0.7**. proteoDA never passes `span`, and limma defaults
 `adaptive.span = TRUE`, which overrides the `span = 0.7` formal with
-`chooseLowessSpan(nrow(x))` — at 1,920 proteins that evaluates to 0.5075. The span is
+`chooseLowessSpan(nrow(x))` — at 1,902 proteins that evaluates to 0.5081. The span is
 therefore a function of the protein count and moves if the filter moves. Cyclic loess rests on two
 assumptions: that most proteins do not change between samples, and that whatever
 bias exists varies smoothly with intensity rather than jumping around. Both are
@@ -459,7 +459,7 @@ been done to it, so an object states its own provenance.
 `method = "fast"`, which is what proteoDA passes, it regresses each sample against the
 row-mean reference and pulls the samples onto a common scale, correcting
 intensity-dependent bias rather than just shifting a median. The span is not the `0.7`
-in limma's signature: `adaptive.span = TRUE` overrides it with `chooseLowessSpan(1920)`
+in limma's signature: `adaptive.span = TRUE` overrides it with `chooseLowessSpan(1902)`
 = 0.5075. It rescales
 observed values and fills nothing in.
 
