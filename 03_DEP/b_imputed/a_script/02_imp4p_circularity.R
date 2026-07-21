@@ -13,8 +13,8 @@
 # change nothing else. Random cells cannot manufacture real Group_Time signal, so any collapse in
 # the hit count is attributable to the tested factor having been inside the imputation.
 #
-# Result: real cells give 117 BH<0.10 hits across the five HR-vs-LR / interaction contrasts;
-# random cells give zero, reproducibly. See b_reports/imp4p_circularity.csv.
+# Result: real cells give a three-figure BH<0.10 count across the five HR-vs-LR / interaction
+# contrasts; random cells collapse it to near zero. See b_reports/imp4p_circularity.csv.
 
 pacman::p_load(proteoDA, imp4p, here, readr, dplyr, tibble, purrr)
 source(here("03_DEP", "contrasts.R"))
@@ -79,6 +79,18 @@ dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 write_csv(out, file.path(report_dir, "imp4p_circularity.csv"))
 
 print(as.data.frame(out), row.names = FALSE)
-cat("\nnon-imputed primary arm: 21 BH<0.10 total, 0 in the null contrasts.\n")
+
+ni_dir <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results")
+ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), function(f) {
+  read_csv(f, show_col_types = FALSE) |>
+    transmute(contrast = tools::file_path_sans_ext(basename(f)), adj.P.Val)
+})
+ni_total <- sum(ni$adj.P.Val < 0.10, na.rm = TRUE)
+ni_null <- sum(ni$adj.P.Val < 0.10 & ni$contrast %in% NULL_CONTRASTS, na.rm = TRUE)
+
+cat(sprintf(
+  "\nnon-imputed primary arm: %d BH<0.10 total, %d in the null contrasts.\n",
+  ni_total, ni_null
+))
 cat("Imputing within the tested cells is what produces the hits; imputing within random\n")
 cat("cells of the same size does not. The null is robust; the imp4p arm is circular.\n")
