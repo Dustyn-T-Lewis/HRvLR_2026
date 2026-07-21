@@ -41,4 +41,4 @@ pE <- ggplot(lfc_long, aes(logFC, contrast, fill = contrast)) +
 
 save_png(pE, file.path(RPT_DIR, "panels", "panel_e_effectsize"), PD_W, PD_H)
 F02_AUDIT[["panel_E_effectsize"]] <- lfc_stats
-cat("F02 Panel D done.\n")
+cat("F02 Panel E done.\n")

@@ -84,4 +84,4 @@ pD <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
 
 save_png(pD, file.path(RPT_DIR, "panels", "panel_d_dep_counts"), PF_W, PF_H)
 F02_AUDIT[["panel_D_dep_counts"]] <- frac_df
-cat("F02 Panel E done.\n")
+cat("F02 Panel D done.\n")
