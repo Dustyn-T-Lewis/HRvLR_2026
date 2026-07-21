@@ -1,109 +1,109 @@
 contrast,stratum,method,rho,n
-Acute_HR,0 (imputation is a no-op),missforest,1,944
-Acute_HR,1-9,missforest,0.9846722484553608,522
-Acute_HR,>=10,missforest,0.9467360442520416,454
-Acute_HRvLR,0 (imputation is a no-op),missforest,0.9999842516584972,944
-Acute_HRvLR,1-9,missforest,0.9854140853076948,522
-Acute_HRvLR,>=10,missforest,0.9239432424535553,454
-Acute_Interaction,0 (imputation is a no-op),missforest,1,944
-Acute_Interaction,1-9,missforest,0.9830152010748663,522
-Acute_Interaction,>=10,missforest,0.9121228954154158,454
-Acute_LR,0 (imputation is a no-op),missforest,1,944
-Acute_LR,1-9,missforest,0.9870146913309493,522
-Acute_LR,>=10,missforest,0.91913672718551,454
-Baseline_HRvLR,0 (imputation is a no-op),missforest,0.999988046095852,944
-Baseline_HRvLR,1-9,missforest,0.9767427017802779,522
-Baseline_HRvLR,>=10,missforest,0.8836869831622093,454
-Trained_HRvLR,0 (imputation is a no-op),missforest,0.999981370168476,944
-Trained_HRvLR,1-9,missforest,0.9882791802133307,522
-Trained_HRvLR,>=10,missforest,0.9507828174122641,454
-Training_HR,0 (imputation is a no-op),missforest,0.9999772761702772,944
-Training_HR,1-9,missforest,0.9793729196477132,522
-Training_HR,>=10,missforest,0.9199796038205249,454
-Training_Interaction,0 (imputation is a no-op),missforest,0.9999800007474756,944
-Training_Interaction,1-9,missforest,0.9738790411094298,522
-Training_Interaction,>=10,missforest,0.8931524547803618,454
-Training_LR,0 (imputation is a no-op),missforest,1,944
-Training_LR,1-9,missforest,0.9883592442611944,522
-Training_LR,>=10,missforest,0.9304914972982201,454
-Acute_HR,0 (imputation is a no-op),imp4p,1,944
-Acute_HR,1-9,imp4p,0.9362270876247011,522
-Acute_HR,>=10,imp4p,0.8870759962360707,454
-Acute_HRvLR,0 (imputation is a no-op),imp4p,0.9999097465972028,944
-Acute_HRvLR,1-9,imp4p,0.9392730648471123,522
-Acute_HRvLR,>=10,imp4p,0.8665526768921782,454
-Acute_Interaction,0 (imputation is a no-op),imp4p,1,944
-Acute_Interaction,1-9,imp4p,0.9343698379411713,522
-Acute_Interaction,>=10,imp4p,0.8741354376351136,454
-Acute_LR,0 (imputation is a no-op),imp4p,1,944
-Acute_LR,1-9,imp4p,0.9493130458291589,522
-Acute_LR,>=10,imp4p,0.8904389986336743,454
-Baseline_HRvLR,0 (imputation is a no-op),imp4p,0.9999371350172077,944
-Baseline_HRvLR,1-9,imp4p,0.9040059907143423,522
-Baseline_HRvLR,>=10,imp4p,0.8444031484981798,454
-Trained_HRvLR,0 (imputation is a no-op),imp4p,0.9998857817296986,944
-Trained_HRvLR,1-9,imp4p,0.9304580891074046,522
-Trained_HRvLR,>=10,imp4p,0.8845772846842098,454
-Training_HR,0 (imputation is a no-op),imp4p,0.999880546547333,944
-Training_HR,1-9,imp4p,0.9150722088704808,522
-Training_HR,>=10,imp4p,0.8699217342709713,454
-Training_Interaction,0 (imputation is a no-op),imp4p,0.9998923007442517,944
-Training_Interaction,1-9,imp4p,0.9092087195906898,522
-Training_Interaction,>=10,imp4p,0.8430833588134079,454
-Training_LR,0 (imputation is a no-op),imp4p,1,944
-Training_LR,1-9,imp4p,0.9321692155760768,522
-Training_LR,>=10,imp4p,0.8552560884493658,454
-Acute_HR,0 (imputation is a no-op),mscoreutils,1,944
-Acute_HR,1-9,mscoreutils,0.9688665592593546,522
-Acute_HR,>=10,mscoreutils,0.5780395702802111,454
-Acute_HRvLR,0 (imputation is a no-op),mscoreutils,0.999964623290827,944
-Acute_HRvLR,1-9,mscoreutils,0.9779743719960429,522
-Acute_HRvLR,>=10,mscoreutils,0.6371845896793629,454
-Acute_Interaction,0 (imputation is a no-op),mscoreutils,1,944
-Acute_Interaction,1-9,mscoreutils,0.9732537991086738,522
-Acute_Interaction,>=10,mscoreutils,0.6217982837651904,454
-Acute_LR,0 (imputation is a no-op),mscoreutils,1,944
-Acute_LR,1-9,mscoreutils,0.9835183643851494,522
-Acute_LR,>=10,mscoreutils,0.5778344068475607,454
-Baseline_HRvLR,0 (imputation is a no-op),mscoreutils,0.9999741807082246,944
-Baseline_HRvLR,1-9,mscoreutils,0.925613665827766,522
-Baseline_HRvLR,>=10,mscoreutils,0.5641590117543835,454
-Trained_HRvLR,0 (imputation is a no-op),mscoreutils,0.9999549517550128,944
-Trained_HRvLR,1-9,mscoreutils,0.9750043248506362,522
-Trained_HRvLR,>=10,mscoreutils,0.5693948639981765,454
-Training_HR,0 (imputation is a no-op),mscoreutils,0.999948660977293,944
-Training_HR,1-9,mscoreutils,0.9215598433832487,522
-Training_HR,>=10,mscoreutils,0.5862331462028781,454
-Training_Interaction,0 (imputation is a no-op),mscoreutils,0.9999560358799714,944
-Training_Interaction,1-9,mscoreutils,0.9161427385894918,522
-Training_Interaction,>=10,mscoreutils,0.5651615436728478,454
-Training_LR,0 (imputation is a no-op),mscoreutils,1,944
-Training_LR,1-9,mscoreutils,0.9660755383621741,522
-Training_LR,>=10,mscoreutils,0.5583112965465907,454
-Acute_HR,0 (imputation is a no-op),perseus,1,944
-Acute_HR,1-9,perseus,0.47161634590638396,522
-Acute_HR,>=10,perseus,0.2942608250412956,454
-Acute_HRvLR,0 (imputation is a no-op),perseus,0.9999190472481627,944
-Acute_HRvLR,1-9,perseus,0.5086073702541646,522
-Acute_HRvLR,>=10,perseus,0.26526422839182223,454
-Acute_Interaction,0 (imputation is a no-op),perseus,1,944
-Acute_Interaction,1-9,perseus,0.44731129699075195,522
-Acute_Interaction,>=10,perseus,0.16523210489120374,454
-Acute_LR,0 (imputation is a no-op),perseus,1,944
-Acute_LR,1-9,perseus,0.47031363888524363,522
-Acute_LR,>=10,perseus,0.33768462005016087,454
-Baseline_HRvLR,0 (imputation is a no-op),perseus,0.9999467494938135,944
-Baseline_HRvLR,1-9,perseus,0.2143001138824605,522
-Baseline_HRvLR,>=10,perseus,0.013928767147087972,454
-Trained_HRvLR,0 (imputation is a no-op),perseus,0.9998992477028676,944
-Trained_HRvLR,1-9,perseus,0.3615363793021191,522
-Trained_HRvLR,>=10,perseus,0.24649555678118812,454
-Training_HR,0 (imputation is a no-op),perseus,0.9998962378296276,944
-Training_HR,1-9,perseus,0.3156423846920578,522
-Training_HR,>=10,perseus,0.19146948941469488,454
-Training_Interaction,0 (imputation is a no-op),perseus,0.9999094042419528,944
-Training_Interaction,1-9,perseus,0.20211907346239175,522
-Training_Interaction,>=10,perseus,0.09592438712926492,454
-Training_LR,0 (imputation is a no-op),perseus,1,944
-Training_LR,1-9,perseus,0.31268828286282213,522
-Training_LR,>=10,perseus,0.14908620790973734,454
+Acute_HR,0 (imputation is a no-op),missforest,1,936
+Acute_HR,1-9,missforest,0.9850513124985533,516
+Acute_HR,>=10,missforest,0.9435266414258011,450
+Acute_HRvLR,0 (imputation is a no-op),missforest,0.9999860540823564,936
+Acute_HRvLR,1-9,missforest,0.9850809221619594,516
+Acute_HRvLR,>=10,missforest,0.9198650896510904,450
+Acute_Interaction,0 (imputation is a no-op),missforest,1,936
+Acute_Interaction,1-9,missforest,0.9829067518330258,516
+Acute_Interaction,>=10,missforest,0.9123309661075865,450
+Acute_LR,0 (imputation is a no-op),missforest,1,936
+Acute_LR,1-9,missforest,0.986336144795621,516
+Acute_LR,>=10,missforest,0.9180754958617582,450
+Baseline_HRvLR,0 (imputation is a no-op),missforest,0.9999888344856642,936
+Baseline_HRvLR,1-9,missforest,0.9753341895970508,516
+Baseline_HRvLR,>=10,missforest,0.8846473241262035,450
+Trained_HRvLR,0 (imputation is a no-op),missforest,0.9999827761331936,936
+Trained_HRvLR,1-9,missforest,0.9872941353214023,516
+Trained_HRvLR,>=10,missforest,0.9492114261922862,450
+Training_HR,0 (imputation is a no-op),missforest,0.9999802884039182,936
+Training_HR,1-9,missforest,0.9797495232101765,516
+Training_HR,>=10,missforest,0.9177850152419246,450
+Training_Interaction,0 (imputation is a no-op),missforest,0.9999812395945236,936
+Training_Interaction,1-9,missforest,0.9721449056748797,516
+Training_Interaction,>=10,missforest,0.8940324268959171,450
+Training_LR,0 (imputation is a no-op),missforest,1,936
+Training_LR,1-9,missforest,0.9878299042751898,516
+Training_LR,>=10,missforest,0.9320164698031116,450
+Acute_HR,0 (imputation is a no-op),imp4p,1,936
+Acute_HR,1-9,imp4p,0.9386526205643914,516
+Acute_HR,>=10,imp4p,0.8922784498414752,450
+Acute_HRvLR,0 (imputation is a no-op),imp4p,0.999919309769269,936
+Acute_HRvLR,1-9,imp4p,0.9375096351504262,516
+Acute_HRvLR,>=10,imp4p,0.859524708537373,450
+Acute_Interaction,0 (imputation is a no-op),imp4p,1,936
+Acute_Interaction,1-9,imp4p,0.9351425216165827,516
+Acute_Interaction,>=10,imp4p,0.8616814470958796,450
+Acute_LR,0 (imputation is a no-op),imp4p,1,936
+Acute_LR,1-9,imp4p,0.9483461605481367,516
+Acute_LR,>=10,imp4p,0.8630602058300784,450
+Baseline_HRvLR,0 (imputation is a no-op),imp4p,0.999934967830002,936
+Baseline_HRvLR,1-9,imp4p,0.9091904814103282,516
+Baseline_HRvLR,>=10,imp4p,0.8690384544888008,450
+Trained_HRvLR,0 (imputation is a no-op),imp4p,0.9998869107538828,936
+Trained_HRvLR,1-9,imp4p,0.9244492406082121,516
+Trained_HRvLR,>=10,imp4p,0.8961551628812663,450
+Training_HR,0 (imputation is a no-op),imp4p,0.9998897057908923,936
+Training_HR,1-9,imp4p,0.9095599471218575,516
+Training_HR,>=10,imp4p,0.8728139756274993,450
+Training_Interaction,0 (imputation is a no-op),imp4p,0.9998953690334192,936
+Training_Interaction,1-9,imp4p,0.8982817224089686,516
+Training_Interaction,>=10,imp4p,0.8717994124765996,450
+Training_LR,0 (imputation is a no-op),imp4p,1,936
+Training_LR,1-9,imp4p,0.9173749766900325,516
+Training_LR,>=10,imp4p,0.853712428520496,450
+Acute_HR,0 (imputation is a no-op),mscoreutils,1,936
+Acute_HR,1-9,mscoreutils,0.968437496315169,516
+Acute_HR,>=10,mscoreutils,0.5859291968535667,450
+Acute_HRvLR,0 (imputation is a no-op),mscoreutils,0.9999648352150078,936
+Acute_HRvLR,1-9,mscoreutils,0.978051815164078,516
+Acute_HRvLR,>=10,mscoreutils,0.6338622934759315,450
+Acute_Interaction,0 (imputation is a no-op),mscoreutils,1,936
+Acute_Interaction,1-9,mscoreutils,0.9733466736949582,516
+Acute_Interaction,>=10,mscoreutils,0.619576378883871,450
+Acute_LR,0 (imputation is a no-op),mscoreutils,1,936
+Acute_LR,1-9,mscoreutils,0.9822137634275238,516
+Acute_LR,>=10,mscoreutils,0.57619680269237,450
+Baseline_HRvLR,0 (imputation is a no-op),mscoreutils,0.9999733520293506,936
+Baseline_HRvLR,1-9,mscoreutils,0.9287810732236493,516
+Baseline_HRvLR,>=10,mscoreutils,0.5653045767215475,450
+Trained_HRvLR,0 (imputation is a no-op),mscoreutils,0.9999545769901725,936
+Trained_HRvLR,1-9,mscoreutils,0.9758875147229464,516
+Trained_HRvLR,>=10,mscoreutils,0.5717267285452121,450
+Training_HR,0 (imputation is a no-op),mscoreutils,0.9999492210553796,936
+Training_HR,1-9,mscoreutils,0.9243399730892704,516
+Training_HR,>=10,mscoreutils,0.5885900600200893,450
+Training_Interaction,0 (imputation is a no-op),mscoreutils,0.9999558501222134,936
+Training_Interaction,1-9,mscoreutils,0.9194445087394361,516
+Training_Interaction,>=10,mscoreutils,0.5613445846324658,450
+Training_LR,0 (imputation is a no-op),mscoreutils,1,936
+Training_LR,1-9,mscoreutils,0.965339050298433,516
+Training_LR,>=10,mscoreutils,0.5582850674342081,450
+Acute_HR,0 (imputation is a no-op),perseus,1,936
+Acute_HR,1-9,perseus,0.4650573217753744,516
+Acute_HR,>=10,perseus,0.3374874425294594,450
+Acute_HRvLR,0 (imputation is a no-op),perseus,0.9999188561245188,936
+Acute_HRvLR,1-9,perseus,0.47957164686938947,516
+Acute_HRvLR,>=10,perseus,0.2779424349466496,450
+Acute_Interaction,0 (imputation is a no-op),perseus,1,936
+Acute_Interaction,1-9,perseus,0.40581851721967876,516
+Acute_Interaction,>=10,perseus,0.21808328028643645,450
+Acute_LR,0 (imputation is a no-op),perseus,1,936
+Acute_LR,1-9,perseus,0.43279230917379863,516
+Acute_LR,>=10,perseus,0.3313551189677987,450
+Baseline_HRvLR,0 (imputation is a no-op),perseus,0.9999348946614939,936
+Baseline_HRvLR,1-9,perseus,0.18740873083287438,516
+Baseline_HRvLR,>=10,perseus,0.05588636656579739,450
+Trained_HRvLR,0 (imputation is a no-op),perseus,0.999886442475431,936
+Trained_HRvLR,1-9,perseus,0.34205013291594477,516
+Trained_HRvLR,>=10,perseus,0.28210923195463283,450
+Training_HR,0 (imputation is a no-op),perseus,0.9998888570361983,936
+Training_HR,1-9,perseus,0.32184586117609754,516
+Training_HR,>=10,perseus,0.20789839300110652,450
+Training_Interaction,0 (imputation is a no-op),perseus,0.9998945495461284,936
+Training_Interaction,1-9,perseus,0.17473142768800495,516
+Training_Interaction,>=10,perseus,0.14302458687321565,450
+Training_LR,0 (imputation is a no-op),perseus,1,936
+Training_LR,1-9,perseus,0.29542190058227963,516
+Training_LR,>=10,perseus,0.18655844365887372,450
