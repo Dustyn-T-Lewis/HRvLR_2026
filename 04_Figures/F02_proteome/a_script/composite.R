@@ -22,13 +22,12 @@ composite <- titled(pA, "Global Proteome State", sprintf(
   titled(pD, "DEPs per Contrast", "% of proteome (light = nominal p, dark = pi); dotted = chance") +
   titled(pE, "Effect-Size Distribution", "logFC density per contrast; number = median |log2FC|") +
   titled(pF, "Pathway Enrichment (GO)", "non-redundant sets, BH < 0.05") +
-  plot_layout(ncol = 3, widths = c(1.3, 1, 1.35), guides = "collect") +
+  plot_layout(ncol = 3, widths = c(1.3, 1, 1.35)) +
   plot_annotation(
     tag_levels = "A",
     theme = theme(plot.margin = margin(2, 2, 2, 2))
   ) &
   theme(
-    legend.position = "bottom",
     plot.tag = element_text(face = "bold", size = 11),
     plot.tag.position = c(0, 1)
   )

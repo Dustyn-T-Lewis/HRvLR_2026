@@ -38,7 +38,7 @@ perm_group <- adonis2(vegdist(subj_mat, method = "euclidean") ~ subj_group, perm
 
 sig_mark <- function(p) if (p < 0.05) "*" else "ns"
 perm_label <- sprintf(
-  "PERMANOVA: Group %s (p=%.2f) . Time %s (p=%.2f)",
+  "PERMANOVA\nGroup %s (p = %.2f)\nTime %s (p = %.2f)",
   sig_mark(perm_group$`Pr(>F)`[1]), perm_group$`Pr(>F)`[1],
   sig_mark(perm_time$`Pr(>F)`[1]), perm_time$`Pr(>F)`[1]
 )
@@ -49,13 +49,14 @@ pca_df <- pca_df |>
 # Horizontal key above the plot: group by colour, timepoint by symbol.
 xr <- range(pca_df$PC1, na.rm = TRUE)
 yr <- range(pca_df$PC2, na.rm = TRUE)
-ky <- yr[2] + diff(yr) * 0.14
+fx <- function(f) xr[1] + diff(xr) * f
+ky <- yr[2] + diff(yr) * 0.20
 key_grp <- tibble(
-  x = xr[1] + diff(xr) * c(0.05, 0.19), lab = c("HR", "LR"),
+  x = fx(c(0.14, 0.26)), lab = c("HR", "LR"),
   col = c(GROUP_COLORS[["HR"]], GROUP_COLORS[["LR"]])
 )
 key_tp <- tibble(
-  x = xr[1] + diff(xr) * c(0.44, 0.58, 0.72), lab = c("T1", "T2", "T3"),
+  x = fx(c(0.58, 0.69, 0.80)), lab = c("T1", "T2", "T3"),
   shp = c(16, 17, 15)
 )
 
@@ -66,27 +67,36 @@ pA <- ggplot(pca_df, aes(PC1, PC2)) +
   ggnewscale::new_scale_color() +
   stat_ellipse(aes(color = gt, group = gt), level = 0.80, linewidth = 0.45) +
   scale_color_manual(values = GROUP_TIME_COLORS, guide = "none") +
+  annotate("text",
+    x = fx(0.01), y = ky, label = "Group", hjust = 0, fontface = "bold",
+    size = FIG_GEOM_TEXT - 0.3, color = "grey25"
+  ) +
   geom_point(data = key_grp, aes(x, ky), color = key_grp$col, size = 2.6, inherit.aes = FALSE) +
   geom_text(
-    data = key_grp, aes(x + diff(xr) * 0.025, ky, label = lab), hjust = 0,
+    data = key_grp, aes(x + diff(xr) * 0.02, ky, label = lab), hjust = 0,
     fontface = "bold", size = FIG_GEOM_TEXT - 0.4, inherit.aes = FALSE
+  ) +
+  annotate("text",
+    x = fx(0.45), y = ky, label = "Time", hjust = 0, fontface = "bold",
+    size = FIG_GEOM_TEXT - 0.3, color = "grey25"
   ) +
   geom_point(data = key_tp, aes(x, ky), shape = key_tp$shp, color = "grey30", size = 2.3, inherit.aes = FALSE) +
   geom_text(
-    data = key_tp, aes(x + diff(xr) * 0.025, ky, label = lab), hjust = 0,
+    data = key_tp, aes(x + diff(xr) * 0.02, ky, label = lab), hjust = 0,
     size = FIG_GEOM_TEXT - 0.4, inherit.aes = FALSE
   ) +
   annotate("label",
-    x = -Inf, y = -Inf, label = perm_label, hjust = -0.02, vjust = -0.05,
-    size = FIG_GEOM_TEXT - 0.7, color = "grey15", fill = scales::alpha("white", 0.85),
-    label.size = 0, label.padding = unit(1.5, "pt")
+    x = -Inf, y = Inf, label = perm_label, hjust = -0.03, vjust = 1.08,
+    size = FIG_GEOM_TEXT - 0.7, fontface = "bold", color = "grey15",
+    fill = scales::alpha("white", 0.85),
+    label.size = 0, label.padding = unit(2, "pt"), lineheight = 0.95
   ) +
   coord_cartesian(
     ylim = c(yr[1] - diff(yr) * 0.05, yr[2] + diff(yr) * 0.05), clip = "off"
   ) +
   labs(x = sprintf("PC1 (%.1f%%)", var_pct[1]), y = sprintf("PC2 (%.1f%%)", var_pct[2])) +
   FIG_THEME +
-  theme(legend.position = "none", plot.margin = margin(t = 16, r = 5, b = 4, l = 4))
+  theme(legend.position = "none", plot.margin = margin(t = 24, r = 5, b = 4, l = 4))
 
 save_png(pA, file.path(RPT_DIR, "panels", "panel_a_pca"), PA_W, PA_H)
 F02_AUDIT[["panel_A_pca_scores"]] <- pca_df |> select(sample, PC1, PC2, Group, Timepoint)
