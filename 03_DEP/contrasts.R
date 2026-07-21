@@ -5,7 +5,7 @@
 # only for proteins observed in every cell they touch. The missingness filter keeps a protein
 # detected in one cell alone (min_groups = 1), so 34 proteins reach the model with at least one
 # empty cell. Their cell mean is inestimable, limma returns NA, and the protein is never tested.
-# The true tested-N is 1897-1912 depending on the contrast, never 1920, and p.adjust sets the BH
+# The true tested-N is 1880-1894 depending on the contrast, never 1902, and p.adjust sets the BH
 # denominator from the non-NA count. 03_DEP/a_non_imputed/a_script/03_untested_proteins.R names
 # them.
 HRVLR_CONTRASTS <- c(

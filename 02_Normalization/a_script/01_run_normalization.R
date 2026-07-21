@@ -4,7 +4,7 @@
 # non-imputed; the imputation/ arms add exploratory imputed DALists alongside.
 # cycloess is limma::normalizeCyclicLoess(method = "fast"), 3 iterations. The span is not
 # 0.7: limma defaults adaptive.span = TRUE, which overrides the 0.7 formal with
-# chooseLowessSpan(nrow) = 0.5075 at 1920 proteins. It moves if the protein count moves.
+# chooseLowessSpan(nrow) = 0.5081 at 1902 proteins. It moves if the protein count moves.
 
 pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
 source(here("functions", "shared_pca.R"))
