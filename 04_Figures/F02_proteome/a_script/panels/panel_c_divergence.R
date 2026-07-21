@@ -106,7 +106,7 @@ disp <- lapply(timepoints, function(tp) {
   p <- permutest(bd, permutations = 999)$tab$`Pr(>F)`[1]
   list(
     dist = tibble(timepoint = tp, Group = grp, dist_centroid = bd$distances),
-    p = tibble(timepoint = tp, label = sprintf("PERMDISP %s", fmt_p(p)))
+    p = tibble(timepoint = tp, pval = p, label = sprintf("PERMDISP %s", fmt_p(p)))
   )
 })
 disp_df <- bind_rows(lapply(disp, `[[`, "dist")) |>
