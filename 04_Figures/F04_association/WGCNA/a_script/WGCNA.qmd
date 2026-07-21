@@ -184,7 +184,7 @@ Every DOI was resolved against Crossref.
 | **A** atlas | The modules exist, and subject identity no longer drives them | Module sizes; ICC of each eigengene by subject | The ICC column is the diagnostic that exposed the earlier artifact, so it sits on the face of the figure, not in a supplement. Raw R² would mislead here: 15 subject df on 45 samples gives an expected R² of 0.34 under pure noise, so the **adjusted** R² and the ICC are the honest numbers. |
 | **B** pathways | The modules are coherent biology | GO:BP over-representation, universe = **the measured proteome** | The universe matters. A protein that was never quantified could not have been assigned to a module, so scoring against the whole genome would inflate every term. |
 | **C** fry | No module moves with responder status | `limma::fry` [@wu2010], modules as the index, on the 03_DEP design with the subject block and `duplicateCorrelation` | Correct, and not circular: the contrast comes from the experimental design, not from the matrix that built the sets. A **self-contained** rotation test, not a competitive one. |
-| **D** phenotype | No baseline module predicts adaptation | In-sample *r* and **leave-one-subject-out q²**, BH across the grid | LOSO is the right resampling unit: the dependency is *within subject*, so holding out a sample rather than a subject would leak. q² ≤ 0 means the model predicts a held-out subject worse than the trait's own mean does. |
+| **D** phenotype | No baseline module predicts adaptation | In-sample *r* and **leave-one-subject-out q²**, BH across the grid | LOSO is the right resampling unit: the dependency is *within subject*, so holding out a sample rather than a subject would leak. q² ≤ 0 means the model predicts a held-out subject worse than the trait's own mean does. The eigengene is unsupervised but built on all subjects; a fully nested per-fold refit of the whole network reproduces the same null (best q² 0.116 vs 0.108), so the transductive feature is not inflating the estimate. |
 | **D** supp | Nor does the module's trajectory bend with it | `ME ~ trait * timepoint + (1 \| subject)`, BH within trait | Keeps the repeated-measures structure. **`r sum(lmm$singular, na.rm = TRUE)` of `r nrow(lmm)` fits are singular** and are flagged, not dropped: a time-invariant trait can drive the random-intercept variance to zero, inflating the trait main effect — so the interaction is the term to trust. |
 
 ### The WGCNA parameters, and their sources
@@ -214,6 +214,9 @@ Stated plainly, because it is the real limitation and nothing else covers it:
 - **There is no published guidance for WGCNA on repeated-measures designs.** None. The
   within-subject centring here is a defensible response to a documented failure mode, not a
   validated method.
+- **The responder contrast is 8 HR vs 8 LR at the subject level, not 45 samples.** Scoring the
+  eigengene on raw abundance recovers the between-subject signal, but the power for it is
+  eight against eight — the `fry` and prediction read-outs carry that ceiling.
 - **1,902 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
   concedes small feature counts are unlikely to be scale-free, so a mediocre fit is expected
   rather than a bug.
