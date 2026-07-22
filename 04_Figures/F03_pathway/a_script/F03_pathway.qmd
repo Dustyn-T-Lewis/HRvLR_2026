@@ -1,6 +1,6 @@
 ---
 title: "HRvLR F03 — Differential Response Volcanoes"
-subtitle: "The five responder contrasts as volcano-in-ring plots; the four within-group responses as the positive control"
+subtitle: "Each arm's training and acute response as the lead figure; the between-responder contrasts as the null test"
 author: "A_HRvLR_2026"
 date: today
 bibliography: ../../shared/references.bib
@@ -52,10 +52,11 @@ up to.** The plot is drawn by the `enrichVolcano` package; F03 supplies the two 
 frames and a family palette.
 
 The study is 8 high responders (HR) against 8 low responders (LR) across baseline,
-trained, and acute states. Nine contrasts are estimable: the five that test responder
-status carry the main figure, and the four within-group responses sit in the supplement as
-the positive control. Each ring is keyed to a family palette so a reader never mistakes one
-kind of comparison for another.
+trained, and acute states. Nine contrasts are estimable, split across two figures: the
+**lead figure** shows each arm's own response — Training and Acute, HR beside LR — so the
+reader sees the biology that moves; the **second figure** runs the between-responder and
+interaction contrasts that formally test whether the arms differ. Each ring is keyed to a
+family palette so a reader never mistakes one kind of comparison for another.
 
 ## What F03 found
 
@@ -89,33 +90,40 @@ carried in with them. The contrast that isolates the *response* difference is th
 interaction (`r sc[["Training_Interaction"]]` training, `r sc[["Acute_Interaction"]]`
 acute), read as exploratory for the reasons below.
 
-## The main figure, and what it deliberately leaves out
+## The lead figure — how each arm responds
 
-Nine contrasts are estimable. Only **five** of them test the question this study asks —
-*does a high responder's proteome differ from a low responder's?* Those five are the main
-figure. The other four describe what training does *inside* each arm, which is a different
-question, and they sit in the supplement.
+The lead figure shows the four **within-group responses**: what training (T2 − T1) and the
+acute bout (T3 − T2) do to the proteome inside each arm, HR in the left column and LR in the
+right, red-up / blue-down. HR beside LR is the direct view of the responder question — a
+reader compares the two arms' rings for the same stimulus.
 
-The main figure holds the five responder contrasts:
+![F03 lead. The four within-group responses, arms in columns: HR (blue wash, left) and LR (red wash, right), Training (A–B) and Acute (C–D). Both arms respond strongly.](../b_reports/F03_pathway.png)
+
+**Both arms respond, and they respond alike.** That is the substance: training and the acute
+bout move the proteome inside HR and inside LR, over the same broad biology. This is also the
+positive control — a null between responders would be uninterpretable if nothing moved at
+all, and clearly things move. Whether the two arms move *differently* is not a look at these
+rings; it is the formal test in the second figure.
+
+## The second figure — the between-responder test
+
+The five contrasts that formally test *does a high responder's proteome differ from a low
+responder's?* — the three between-responder states and the two response interactions:
 
 - **Differential** (green up, purple down) — `Baseline_HRvLR`, `Trained_HRvLR`,
-  `Acute_HRvLR` (A–C), read as the untrained, trained, and acute states.
+  `Acute_HRvLR` (A–C), the untrained, trained, and acute states.
 - **Interaction** (orange up, purple down) — `Training_Interaction`, `Acute_Interaction`
-  (D–E), where the two groups' *responses* diverge.
+  (D–E), where the two arms' *responses* diverge.
 
-![F03. The five contrasts that test responder status: HR vs LR at baseline, trained and acute (A–C), and the two differential-response interactions (D–E).](../b_reports/F03_pathway.png)
+![F03 second figure. The between-responder states (A–C) and the differential-response interactions (D–E). No protein survives FDR in any of them.](../b_reports/F03_pathway_contrasts.png)
 
-The supplement holds the four within-group responses — what moves inside HR and inside LR
-over training (T2 − T1) and over the acute bout (T3 − T2), in red-up / blue-down.
-
-**These are the positive control, and they are why the main figure is worth reading.** A
-null between responders means nothing if nothing moved at all; it would just mean the
-assay, or the study, was too weak to see anything. Because the within-group responses *are*
-strongly enriched, the absence of a between-responder difference is **informative** rather
-than merely underpowered. That is the whole argument, and it is why these four rings are
-kept and shown rather than dropped.
-
-![Supplement: the four within-group responses (positive control). Training and the acute bout do move the proteome inside each arm — which is what makes the null in the main figure meaningful rather than merely underpowered.](../b_reports/supp/within_group_responses.png)
+**No protein clears FDR in any of these five contrasts.** The arcs are FDR-controlled
+pathway enrichment, but at the protein level the between-responder comparison is null — the
+central result of the study. Read `Baseline_HRvLR`'s `r sc[["Baseline_HRvLR"]]` enriched
+pathways as a caution: the groups are not perfectly identical at baseline, so some of
+`Acute_HRvLR`'s `r sc[["Acute_HRvLR"]]` is a state difference carried in rather than a
+response difference. The interactions isolate the response difference and are read as
+exploratory for the reasons below.
 
 ## What NES means {#sec-nes}
 
@@ -208,8 +216,8 @@ F03 reads one file:
 
 It writes:
 
-- `b_reports/F03_pathway.{png,pdf}` — the five responder contrasts (three HRvLR + two interactions).
-- `b_reports/supp/within_group_responses.{png,pdf}` — the four within-group responses (positive control).
+- `b_reports/F03_pathway.{png,pdf}` — the lead figure: the four within-group responses (Training and Acute, HR and LR).
+- `b_reports/F03_pathway_contrasts.{png,pdf}` — the second figure: the five between-responder and interaction contrasts.
 - `b_reports/supp/top30_<contrast>.{png,pdf}` — a no-dedup top-30 up / top-30 down figure
   per contrast.
 - `c_data/F03_pathway_source_data.xlsx` — the fgsea cache plus the ring provenance.
@@ -331,14 +339,14 @@ below was resolved against Crossref.
 
 | Figure | Claim | Statistic | Fit to this design |
 |---|---|---|---|
-| **Main** (A–C) | HR and LR proteomes do not differ at baseline, trained, or acute | Ring arcs: fgsea preranked GSEA on moderated-*t* ranks [@korotkevich2021] against Hallmark, KEGG, Reactome, GO:BP/CC/MF and GO Slim (MSigDB [@liberzon2015]), BH-adjusted **within contrast**. Volcano points: π-gated | Sound, with one caveat that must be read: **the arcs and the points are different statistics.** Arcs carry a genuine fgsea BH *q*. Points carry π, which is **not** an FDR. |
-| **Main** (D–E) | The *change* differs between HR and LR | The Group × Time interaction terms from the limma fit | These are the **lowest-powered cells in the study** (8 vs 8, a between-subject comparison of within-subject changes). They inherit the between-subject precision and are the weak stratum **by design** — a structural explanation for the null, not a disappointing one. Read as hypothesis-generating. |
-| **Supp** within-group | Training and the acute bout do move the proteome | Same fgsea machinery, applied within each arm | This is the **positive control**, and it is why the main figure's null is interpretable. If nothing moved anywhere, the HRvLR null would just mean "underpowered." Because the within-group responses *are* enriched, the absence of a between-responder difference is informative. |
+| **Fig 2** (A–C) | HR and LR proteomes do not differ at baseline, trained, or acute | Ring arcs: fgsea preranked GSEA on moderated-*t* ranks [@korotkevich2021] against Hallmark, KEGG, Reactome, GO:BP/CC/MF and GO Slim (MSigDB [@liberzon2015]), BH-adjusted **within contrast**. Volcano points: π-gated | Sound, with one caveat that must be read: **the arcs and the points are different statistics.** Arcs carry a genuine fgsea BH *q*. Points carry π, which is **not** an FDR. |
+| **Fig 2** (D–E) | The *change* differs between HR and LR | The Group × Time interaction terms from the limma fit | These are the **lowest-powered cells in the study** (8 vs 8, a between-subject comparison of within-subject changes). They inherit the between-subject precision and are the weak stratum **by design** — a structural explanation for the null, not a disappointing one. Read as hypothesis-generating. |
+| **Lead** within-group | Training and the acute bout move the proteome inside each arm | Same fgsea machinery, applied within each arm | The direct view of each arm's response, and the **positive control**: the between-responder null in the second figure is interpretable precisely because these rings show the proteome does respond. If nothing moved anywhere, the HRvLR null would just mean "underpowered." |
 | **Supp** top-30 | The rings are parsimonious, not cherry-picked | The un-deduplicated top-30 up / top-30 down by NES, per contrast | An audit, not a result. The rings apply an EnrichmentMap redundancy collapse at **display** time (Merico et al. 2010, [10.1371/journal.pone.0013984](https://doi.org/10.1371/journal.pone.0013984)); this supplement shows the full ranked list the collapse was applied to, so the reduction is checkable. |
 
 **The π-score, stated correctly.** π = *p*^\|log2FC\| [@xiao2014] is the
 primary protein-selection statistic **by decision**. It is fold-change-weighted, and it is
-**not** a subset of *p* < 0.05: **14.5 % of π-calls have raw *p* ≥ 0.05.** It is a
+**not** a subset of *p* < 0.05: **`r pi_over_pct` % of π-calls have raw *p* ≥ 0.05.** It is a
 *ranking* statistic. It is **never** an FDR, and it must never be described as one. The
 `enrichVolcano` package accepts it in a slot named `padj` — that is the package's name for
 its significance channel, not a claim about the statistic. `rings.R` documents this at the

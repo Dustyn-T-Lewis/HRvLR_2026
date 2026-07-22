@@ -34,14 +34,14 @@ mag_fit <- function(phase) {
   tab <- anova(lm.rrpp(mag ~ grp, data = rrpp.data.frame(mag = mag, grp = grp), iter = 999))$table
   list(
     mag = tibble(subject = rownames(dm), phase = phase, Group = grp, magnitude = mag),
-    stat = tibble(phase = phase, label = sprintf("RRPP %s", fmt_p(tab$`Pr(>F)`[1])))
+    stat = tibble(phase = phase, p = tab$`Pr(>F)`[1], label = sprintf("RRPP %s", fmt_p(tab$`Pr(>F)`[1])))
   )
 }
 
 fits <- lapply(c("Training", "Acute"), mag_fit)
 relabel <- function(x) factor(recode(x, Training = phase_levels[1], Acute = phase_levels[2]), levels = phase_levels)
 mag_df <- bind_rows(lapply(fits, `[[`, "mag")) |> mutate(phase = relabel(phase))
-stat_df <- bind_rows(lapply(fits, `[[`, "stat")) |> mutate(phase = relabel(phase))
+mag_stat <- bind_rows(lapply(fits, `[[`, "stat")) |> mutate(phase = relabel(phase))
 
 pB <- ggplot(mag_df, aes(Group, magnitude, color = Group, fill = Group)) +
   geom_boxplot(alpha = 0.18, outlier.shape = NA, width = 0.55, linewidth = 0.4) +
@@ -53,7 +53,7 @@ pB <- ggplot(mag_df, aes(Group, magnitude, color = Group, fill = Group)) +
     size = 1.6, alpha = 0.85
   ) +
   geom_text(
-    data = stat_df, aes(x = 1.5, y = Inf, label = label), inherit.aes = FALSE,
+    data = mag_stat, aes(x = 1.5, y = Inf, label = label), inherit.aes = FALSE,
     vjust = 1.4, size = FIG_GEOM_TEXT, fontface = "bold", color = "grey25"
   ) +
   facet_wrap(~phase) +
@@ -108,21 +108,21 @@ dir_fit <- function(phase) {
   pca <- prcomp(dm, center = TRUE, scale. = FALSE)
   list(
     scores = as_tibble(pca$x[, 1:2]) |> mutate(Group = grp, phase = phase),
-    stat = tibble(phase = phase, label = sprintf("vector %s\nangle = %.0f°", fmt_p(vec_tab$`Pr(>F)`[1]), vector_angle(dm, grp)))
+    stat = tibble(phase = phase, p = vec_tab$`Pr(>F)`[1], label = sprintf("vector %s\nangle = %.0f°", fmt_p(vec_tab$`Pr(>F)`[1]), vector_angle(dm, grp)))
   )
 }
 
 fits <- lapply(c("Training", "Acute"), dir_fit)
 relabel <- function(x) factor(recode(x, Training = phase_levels[1], Acute = phase_levels[2]), levels = phase_levels)
-score_df <- bind_rows(lapply(fits, `[[`, "scores")) |> mutate(phase = relabel(phase))
-stat_df <- bind_rows(lapply(fits, `[[`, "stat")) |> mutate(phase = relabel(phase))
+dir_score <- bind_rows(lapply(fits, `[[`, "scores")) |> mutate(phase = relabel(phase))
+dir_stat <- bind_rows(lapply(fits, `[[`, "stat")) |> mutate(phase = relabel(phase))
 
-pDir <- ggplot(score_df, aes(PC1, PC2, color = Group)) +
+pDir <- ggplot(dir_score, aes(PC1, PC2, color = Group)) +
   stat_ellipse(aes(fill = Group), geom = "polygon", alpha = 0.10, level = 0.80, show.legend = FALSE) +
   stat_ellipse(aes(group = Group), level = 0.80, linewidth = 0.4, linetype = "dashed") +
   geom_point(size = 1.7, alpha = 0.9) +
   geom_text(
-    data = stat_df, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
+    data = dir_stat, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
     hjust = -0.05, vjust = 1.15, size = FIG_GEOM_TEXT, fontface = "bold", color = "grey25"
   ) +
   facet_wrap(~phase, scales = "free") +
@@ -137,5 +137,5 @@ pDir <- ggplot(score_df, aes(PC1, PC2, color = Group)) +
   theme(legend.position = "bottom")
 
 save_png(pDir, file.path(supp_dir, "panel_o_direction"), PD_W, PD_H)
-F02_AUDIT[["panel_O_direction"]] <- score_df
+F02_AUDIT[["panel_O_direction"]] <- dir_score
 cat("F02 Supp Panel O (direction) done.\n")

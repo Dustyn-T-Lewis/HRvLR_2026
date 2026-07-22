@@ -106,7 +106,7 @@ disp <- lapply(timepoints, function(tp) {
   p <- permutest(bd, permutations = 999)$tab$`Pr(>F)`[1]
   list(
     dist = tibble(timepoint = tp, Group = grp, dist_centroid = bd$distances),
-    p = tibble(timepoint = tp, label = sprintf("PERMDISP %s", fmt_p(p)))
+    p = tibble(timepoint = tp, pval = p, label = sprintf("PERMDISP %s", fmt_p(p)))
   )
 })
 disp_df <- bind_rows(lapply(disp, `[[`, "dist")) |>
@@ -196,13 +196,13 @@ pC_cv <- ggplot(cv_df, aes(cv_HR, cv_LR)) +
   FIG_THEME +
   theme(legend.position = "right", legend.key.size = unit(3, "mm"))
 
-pC <- (pC_disp / pC_cv) +
+pC_supp <- (pC_disp / pC_cv) +
   plot_annotation(
     tag_levels = list(c("C", "")),
     theme = theme(plot.tag = element_text(face = "bold", size = FIG_TAG_SIZE))
   )
 
-save_png(pC, file.path(supp_dir, "panel_c_variability"), PC_W, PC_H)
+save_png(pC_supp, file.path(supp_dir, "panel_c_variability"), PC_W, PC_H)
 F02_AUDIT[["panel_C_dispersion"]] <- disp_df
 F02_AUDIT[["panel_C_cv_scatter"]] <- cv_df |> select(uniprot_id, gene, timepoint, cv_HR, cv_LR)
 cat("F02 Supp Panel C done.\n")

@@ -1,4 +1,4 @@
-# F02 effect-size distribution panel, renders as composite tag E (per-contrast logFC density ridges)
+# F02 Panel E: effect-size distribution (per-contrast logFC density ridges)
 # One horizontal ridge per contrast, contrasts on the y-axis in the same order as the
 # DEP and pathway panels so the rows align across the bottom row. logFC left/right,
 # median |logFC| annotated. Title drawn on the composite.
@@ -24,7 +24,7 @@ lfc_stats <- lfc_long |>
   group_by(contrast) |>
   summarise(med_abs_lfc = median(abs(logFC)), .groups = "drop")
 
-pD <- ggplot(lfc_long, aes(logFC, contrast, fill = contrast)) +
+pE <- ggplot(lfc_long, aes(logFC, contrast, fill = contrast)) +
   geom_vline(xintercept = 0, linewidth = 0.3, color = "grey50") +
   ggridges::geom_density_ridges(scale = 1.5, linewidth = 0.3, color = "grey25", alpha = 0.9) +
   geom_text(
@@ -39,6 +39,6 @@ pD <- ggplot(lfc_long, aes(logFC, contrast, fill = contrast)) +
   FIG_THEME +
   theme(axis.text.y = element_text(face = "bold"))
 
-save_png(pD, file.path(RPT_DIR, "panels", "panel_d_effectsize"), PD_W, PD_H)
-F02_AUDIT[["panel_D_effectsize"]] <- lfc_stats
-cat("F02 Panel D done.\n")
+save_png(pE, file.path(RPT_DIR, "panels", "panel_e_effectsize"), PD_W, PD_H)
+F02_AUDIT[["panel_E_effectsize"]] <- lfc_stats
+cat("F02 Panel E done.\n")

@@ -136,13 +136,24 @@ build_cont_panel <- function(summ, preds, space) {
     FIG_THEME +
     theme(panel.spacing = unit(5, "pt"), strip.text.y = element_text(size = 7))
 
+  cont_sub <- sprintf(
+    "Nested LOSO Q^2 vs a %d-permutation null; scatters are elastic net. Null reference at Q^2 = 0.",
+    N_PERM
+  )
+  if (space == "eigengenes") {
+    cont_sub <- paste0(
+      cont_sub,
+      "\nWhole-cohort features: a positive Q^2 is an optimistic upper bound. The one here dies under BH and collapses to ~0 when the network is refit in-fold."
+    )
+  }
+
   (p_bar / p_sc) +
     plot_layout(heights = c(0.8, 1.3)) +
     plot_annotation(
       title = sprintf(
         "Continuous-phenotype prediction — %s features", SPACE_LABELS[[space]]
       ),
-      subtitle = sprintf("Nested LOSO Q^2 vs a %d-permutation null; scatters are elastic net. Null reference at Q^2 = 0.", N_PERM),
+      subtitle = cont_sub,
       theme = theme(
         plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
         plot.subtitle = element_text(
