@@ -29,13 +29,14 @@ fry <- read.xlsx(wb, "module_fry")
 pred <- read.xlsx(wb, "module_prediction")
 lmm <- read.xlsx(wb, "module_phenotype_lmm")
 ora <- read.xlsx(wb, "module_ora")
+membership <- read.xlsx(wb, "module_membership")
 
 responder <- c(
   "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
   "Training_Interaction", "Acute_Interaction"
 )
 fry_r <- fry[fry$contrast %in% responder, ]
-n_grey <- 1920 - sum(atlas$n_proteins)
+n_grey <- sum(membership$module == "grey")
 ```
 
 ## What F04 asks
@@ -120,7 +121,8 @@ fry |>
 ```
 
 Across `r nrow(fry)` module × contrast tests, **`r sum(fry$fdr < 0.05)` is significant**: the
-purple module in `Acute_LR` (FDR = `r sprintf("%.4f", min(fry$fdr))`). That is a
+`r fry$module[which.min(fry$fdr)]` module in `r fry$contrast[which.min(fry$fdr)]`
+(FDR = `r sprintf("%.4f", min(fry$fdr))`). That is a
 **within-group** response — the acute bout moves the proteome inside the LR arm. It is the
 positive control, and it agrees with F03.
 
@@ -133,8 +135,8 @@ positive control, and it agrees with F03.
 The panel this replaces ran **fgsea with the WGCNA modules as the gene sets**, ranked by
 moderated *t* **from the same matrix that defined those modules**. The sets were built to be
 co-expressed, so of course their members rank together: the test was circular. It returned
-**padj = 7 × 10⁻³³** in a study whose minimum *q* anywhere else is 0.36. That number was the
-tell.
+**padj = 7 × 10⁻³³**, orders of magnitude below anything the non-circular tests in this study
+produce. That number was the tell.
 
 `limma::fry` [@wu2010] is the correct instrument. It is a **rotation-based, self-contained**
 set test: it asks whether the proteins in a predefined set move together **in a specified
@@ -154,7 +156,7 @@ pred |>
     Module = sub("^ME", "", module), Trait = trait,
     r = round(r, 2), `q2` = round(q2, 3), `BH q` = round(fdr, 2)
   ) |>
-  kable(caption = "The five best cells of 72, ranked by q².")
+  kable(caption = sprintf("The five best cells of %d, ranked by q².", nrow(pred)))
 ```
 
 No. The best cell in the entire `r nrow(pred)`-cell grid has
@@ -182,7 +184,7 @@ Every DOI was resolved against Crossref.
 | **A** atlas | The modules exist, and subject identity no longer drives them | Module sizes; ICC of each eigengene by subject | The ICC column is the diagnostic that exposed the earlier artifact, so it sits on the face of the figure, not in a supplement. Raw R² would mislead here: 15 subject df on 45 samples gives an expected R² of 0.34 under pure noise, so the **adjusted** R² and the ICC are the honest numbers. |
 | **B** pathways | The modules are coherent biology | GO:BP over-representation, universe = **the measured proteome** | The universe matters. A protein that was never quantified could not have been assigned to a module, so scoring against the whole genome would inflate every term. |
 | **C** fry | No module moves with responder status | `limma::fry` [@wu2010], modules as the index, on the 03_DEP design with the subject block and `duplicateCorrelation` | Correct, and not circular: the contrast comes from the experimental design, not from the matrix that built the sets. A **self-contained** rotation test, not a competitive one. |
-| **D** phenotype | No baseline module predicts adaptation | In-sample *r* and **leave-one-subject-out q²**, BH across the grid | LOSO is the right resampling unit: the dependency is *within subject*, so holding out a sample rather than a subject would leak. q² ≤ 0 means the model predicts a held-out subject worse than the trait's own mean does. |
+| **D** phenotype | No baseline module predicts adaptation | In-sample *r* and **leave-one-subject-out q²**, BH across the grid | LOSO is the right resampling unit: the dependency is *within subject*, so holding out a sample rather than a subject would leak. q² ≤ 0 means the model predicts a held-out subject worse than the trait's own mean does. The eigengene is unsupervised but built on all subjects; a fully nested per-fold refit of the whole network reproduces the same null (best q² 0.116 vs 0.108), so the transductive feature is not inflating the estimate. |
 | **D** supp | Nor does the module's trajectory bend with it | `ME ~ trait * timepoint + (1 \| subject)`, BH within trait | Keeps the repeated-measures structure. **`r sum(lmm$singular, na.rm = TRUE)` of `r nrow(lmm)` fits are singular** and are flagged, not dropped: a time-invariant trait can drive the random-intercept variance to zero, inflating the trait main effect — so the interaction is the term to trust. |
 
 ### The WGCNA parameters, and their sources
@@ -212,7 +214,10 @@ Stated plainly, because it is the real limitation and nothing else covers it:
 - **There is no published guidance for WGCNA on repeated-measures designs.** None. The
   within-subject centring here is a defensible response to a documented failure mode, not a
   validated method.
-- **1,920 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
+- **The responder contrast is 8 HR vs 8 LR at the subject level, not 45 samples.** Scoring the
+  eigengene on raw abundance recovers the between-subject signal, but the power for it is
+  eight against eight — the `fry` and prediction read-outs carry that ceiling.
+- **1,902 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
   concedes small feature counts are unlikely to be scale-free, so a mediocre fit is expected
   rather than a bug.
 - **12.2 % of the matrix was imputed** by missForest, which predicts proteins *from other

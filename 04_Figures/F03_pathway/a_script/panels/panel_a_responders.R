@@ -23,7 +23,7 @@ panel_responders <- function(fg, dep, pw) {
     list(contrast = "Training_Interaction", palette = intr, tag = "D"),
     list(contrast = "Acute_Interaction", palette = intr, tag = "E")
   )
-  build_ring_grid(fg, dep, pw, specs, ncol = 3, byrow = TRUE)
+  build_ring_grid(fg, dep, pw, specs, ncol = 3, byrow = TRUE, guide_area = TRUE)
 }
 
 responders <- panel_responders(fg, dep, pw)

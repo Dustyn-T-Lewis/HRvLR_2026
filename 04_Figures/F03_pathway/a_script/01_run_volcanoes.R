@@ -23,15 +23,18 @@ source(file.path(a_script, "panels", "panel_a_responders.R"))
 source(file.path(a_script, "panels", "panel_b_within_group.R"))
 source(file.path(a_script, "composite.R"))
 
-ggsave(file.path(RPT_DIR, "F03_pathway.png"), composite,
-  width = 450, height = 320, units = "mm", dpi = 200, bg = "white"
+ggsave(file.path(RPT_DIR, "F03_pathway.png"), composite_responses,
+  width = 360, height = 330, units = "mm", dpi = 200, bg = "white"
 )
-ggsave(file.path(RPT_DIR, "F03_pathway.pdf"), composite,
-  width = 450, height = 320, units = "mm", device = PDF_DEVICE, bg = "white"
+ggsave(file.path(RPT_DIR, "F03_pathway.pdf"), composite_responses,
+  width = 360, height = 330, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
-save_panel(F03_PANELS$within_group, file.path(supp_dir, "within_group_responses"),
-  width = 380, height = 320
+ggsave(file.path(RPT_DIR, "F03_pathway_contrasts.png"), composite_contrasts,
+  width = 450, height = 320, units = "mm", dpi = 200, bg = "white"
+)
+ggsave(file.path(RPT_DIR, "F03_pathway_contrasts.pdf"), composite_contrasts,
+  width = 450, height = 320, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
 for (grp in names(F03_SUPP)) {
@@ -81,4 +84,4 @@ writeData(wb, "ring_pathways", ring_pathways)
 writeData(wb, "top30_updown", top30_updown)
 saveWorkbook(wb, file.path(DAT_DIR, "F03_pathway_source_data.xlsx"), overwrite = TRUE)
 
-cat("F03 rebuilt: 5 responder rings, within-group supplement, top-30 audits, workbook\n")
+cat("F03 rebuilt: within-group lead (4 rings), between-responder second figure (5 rings), top-30 audits, workbook\n")

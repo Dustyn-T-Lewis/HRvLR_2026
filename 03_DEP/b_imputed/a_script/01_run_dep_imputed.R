@@ -7,10 +7,10 @@
 # five HR-vs-LR and interaction contrasts, against the non-imputed arm's zero. Three contradictory
 # missingness assumptions, same answer.
 #
-# imp4p returns 117 there, and that is circularity rather than fragility: impute.mle fits a
-# separate EM inside each Group_Time cell and these contrasts test among those same cells.
-# 02_imp4p_circularity.R proves it by re-imputing within random cells of equal size, which
-# collapses the count back to zero. The arm is kept BECAUSE it demonstrates that.
+# imp4p returns a three-figure BH count there, and that is circularity rather than fragility:
+# impute.mle fits a separate EM inside each Group_Time cell and these contrasts test among those
+# same cells. 02_imp4p_circularity.R proves it by re-imputing within random cells of equal size,
+# which collapses the count to near zero. The arm is kept BECAUSE it demonstrates that.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tidyr, tibble, purrr)
 source(here("03_DEP", "contrasts.R"))
@@ -65,8 +65,8 @@ runs <- imap(methods, function(rds, m) {
 # Sensitivity table: BH beside Pi, per contrast per arm.
 # BH is the metric the headline rests on. Pi is reported alongside it but must never carry a
 # cross-arm robustness claim: Pi = p^|log2FC| exponentiates the fold change, which is precisely
-# what imputation distorts. Perseus is the proof — the MOST Pi-hits of any arm and the SAME BH
-# count as the non-imputed fit.
+# what imputation distorts. Perseus is the proof — the MOST Pi-hits of any arm yet zero BH<0.10 in
+# the null contrasts, like the non-imputed fit.
 
 NULL_CONTRASTS <- c(
   "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",

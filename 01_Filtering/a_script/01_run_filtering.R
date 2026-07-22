@@ -5,9 +5,10 @@
 #
 # Removal is decided once, in protein_calls$verdict. Everything else is a view of that table.
 # Blood logic follows CvH: remove iff blood-derived (secreted-to-blood | immunoglobulin |
-# erythrocyte-high) AND NOT rescued as muscle. Absence from HPA is UNKNOWN, never a reason to
-# remove. Contaminants go before Stage 02 because cycloess estimates its reference from each
-# sample's own intensity distribution.
+# erythrocyte-high | tracks the blood index) AND NOT rescued as muscle. The blood-index term is
+# data-driven and catches the enucleate red-cell membrane skeleton the RNA cutoffs miss (see
+# filter_config.R). Absence from HPA is UNKNOWN, never a reason to remove. Contaminants go before
+# Stage 02 because cycloess estimates its reference from each sample's own intensity distribution.
 
 pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, tibble, stringr, purrr, openxlsx
@@ -41,6 +42,20 @@ if (any(duplicated(annotation$uniprot_id))) { # keep the highest-mean row per ac
   intensity <- intensity[keep_idx, ]
 }
 
+# Blood index: per-sample mean log2 haemoglobin intensity, and each protein's Spearman
+# correlation with it. Computed on the full pre-removal matrix so the haemoglobin anchor and
+# the contamination it tracks are both still present. A transcript-free measure of how far a
+# protein's abundance follows blood carryover in these samples.
+log_int <- log2(intensity)
+log_int[!is.finite(log_int)] <- NA
+anchor_rows <- annotation$gene %in% cfg$blood_anchor
+blood_index <- colMeans(log_int[anchor_rows, , drop = FALSE], na.rm = TRUE)
+n_obs <- rowSums(!is.na(log_int))
+blood_cor <- suppressWarnings(
+  as.vector(cor(t(log_int), blood_index, method = "spearman", use = "pairwise.complete.obs"))
+)
+blood_cor[n_obs < cfg$miss_min_reps * 3] <- NA
+
 # Contamination is measured on the full matrix, before anything is removed. Deleting the
 # evidence and then asserting the samples were clean proves nothing.
 qc_index <- imap(qc_panels, \(genes, panel) {
@@ -69,7 +84,7 @@ hpa <- read_tsv(here("00_input", cfg$hpa_file), show_col_types = FALSE) |>
   distinct(acc, .keep_all = TRUE)
 
 protein_calls <- annotation |>
-  mutate(acc = strip_iso(uniprot_id)) |>
+  mutate(acc = strip_iso(uniprot_id), blood_cor = blood_cor) |>
   left_join(hpa, by = "acc") |>
   left_join(select(contaminants, acc = uniprot_id, contam_class = class, contam_reason = reason),
     by = "acc"
@@ -78,18 +93,20 @@ protein_calls <- annotation |>
     is_ery = !is.na(ery) & ery >= cfg$ery_cut,
     is_ig = str_detect(coalesce(protein_class, ""), "Immunoglobulin genes"),
     is_plasma = !is.na(secretome) & secretome == "Secreted to blood",
+    is_blood_tracking = !is.na(blood_cor) & blood_cor > cfg$blood_cor_max,
     rescued = !is.na(myo) & myo >= cfg$myo_cut & (is.na(blood_conc) | blood_conc < cfg$blood_max),
     verdict = case_when(
       !is.na(contam_class) ~ paste0("remove: ", contam_class),
-      (is_ery | is_ig | is_plasma) & rescued ~ "keep: rescued (muscle-expressed)",
+      (is_ery | is_ig | is_plasma | is_blood_tracking) & rescued ~ "keep: rescued (muscle-expressed)",
       is_ery ~ "remove: erythrocyte",
       is_ig ~ "remove: immunoglobulin",
       is_plasma ~ "remove: plasma",
+      is_blood_tracking ~ "remove: blood-tracking",
       TRUE ~ "keep"
     ),
     reason = coalesce(contam_reason, verdict)
   ) |>
-  select(uniprot_id, gene, description, verdict, reason, secretome, blood_conc, ery, myo)
+  select(uniprot_id, gene, description, verdict, reason, secretome, blood_conc, ery, myo, blood_cor)
 
 keep <- !str_starts(protein_calls$verdict, "remove")
 
@@ -157,9 +174,14 @@ qc_index |>
   as.data.frame() |>
   print(digits = 3)
 
+blood_index_tbl <- metadata |>
+  select(Col_ID, Subject_ID, Group, Timepoint) |>
+  mutate(blood_index = blood_index[Col_ID])
+
 saveRDS(dal, file.path(data_dir, "DAList_filtered.rds"))
 write_csv(qc_index, file.path(data_dir, "contamination_index.csv"))
 write_csv(protein_calls, file.path(data_dir, "protein_calls.csv"))
+write_csv(blood_index_tbl, file.path(data_dir, "blood_index.csv"))
 
 write.xlsx(
   list(
@@ -176,7 +198,8 @@ write.xlsx(
 saveRDS(
   list(
     cfg = cfg, n_raw = n_raw, filter_log = filter_log, protein_calls = protein_calls,
-    qc_index = qc_index, outlier_diag = outlier_diag, outlier_ids = outlier_ids
+    qc_index = qc_index, blood_index = blood_index_tbl, outlier_diag = outlier_diag,
+    outlier_ids = outlier_ids
   ),
   file.path(data_dir, "filtering_intermediates.rds")
 )

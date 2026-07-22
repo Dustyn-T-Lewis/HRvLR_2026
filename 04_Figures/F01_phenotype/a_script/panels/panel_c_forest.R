@@ -42,7 +42,8 @@ build_forest <- function(meta, tag = "C") {
     FIG_THEME +
     theme(
       plot.subtitle = element_text(size = 6.5, face = "italic", color = "grey40"),
-      legend.position = c(0.88, 0.17),
+      legend.position = "inside",
+      legend.position.inside = c(0.88, 0.17),
       legend.background = element_rect(fill = scales::alpha("white", 0.7), color = NA),
       legend.title = element_text(size = 8, face = "bold"),
       panel.grid.major.y = element_blank()

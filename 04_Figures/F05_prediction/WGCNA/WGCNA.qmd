@@ -69,6 +69,7 @@ n_class_cells <- nrow(class_metrics)
 n_cont_cells <- nrow(cont_metrics)
 n_class_hits <- sum(class_metrics$q_bh < 0.05, na.rm = TRUE)
 n_cont_hits <- sum(cont_metrics$q_bh < 0.05, na.rm = TRUE)
+n_cont_pos <- sum(cont_metrics$q2 > 0, na.rm = TRUE)
 ```
 
 Across the `r n_class_cells` phase-by-model cells that predict responder
@@ -78,21 +79,29 @@ p = `r sprintf("%.2f", best_class$perm_p)`, BH q = `r sprintf("%.2f", best_class
 An AUC that low is not even a candidate hit, and its own null confirms it.
 
 Across the `r n_cont_cells` outcome-by-phase-by-model cells that predict a
-training gain, the best Q² anywhere is
-`r sprintf("%.3f", best_cont$q2)` (`r best_cont$outcome`, `r best_cont$phase`
-phase, `r best_cont$model`; permutation p = `r sprintf("%.2f", best_cont$perm_p_q2)`,
-BH q = `r sprintf("%.2f", best_cont$q_bh)`). A negative Q² means the model
-predicts a held-out subject worse than that subject's own group mean
-would. `r n_class_hits` of `r n_class_cells` responder-class cells and
-`r n_cont_hits` of `r n_cont_cells` continuous cells pass BH < 0.05.
+training gain, `r n_cont_pos` has a positive Q² at all. That one is the best
+anywhere: `r sprintf("%.3f", best_cont$q2)` (`r best_cont$outcome`,
+`r best_cont$phase` phase, `r best_cont$model`; permutation
+p = `r sprintf("%.2f", best_cont$perm_p_q2)`, BH q = `r sprintf("%.2f", best_cont$q_bh)`).
+It clears its own nominal null but not the BH correction, and it is the argmax of
+`r n_cont_cells` cells. Every other cell has a negative Q² — the model predicts a
+held-out subject worse than that subject's own mean would. `r n_class_hits` of
+`r n_class_cells` responder-class cells and `r n_cont_hits` of `r n_cont_cells`
+continuous cells pass BH < 0.05.
 
-**Nothing beats its permutation null, even with a whole-cohort-derived
-feature space stacking the deck in its favour.** The proteome, summarised
-as co-expression modules, does not predict responder class or training
-gains out of sample. This agrees with the association null reported
-elsewhere in F04 and with the study-wide null: the leaky raw-protein
-feature space that an earlier version of this analysis used was dropped
-rather than reported alongside a result it could not honestly support.
+That lone positive cell is a leakage artifact, not a signal. Refitting the WGCNA
+network inside each fold — so the held-out subject never touches the module
+definition — collapses its Q² from `r sprintf("%.2f", best_cont$q2)` to 0.05, and
+no continuous cell stays above 0.05 once the network is honest. The whole-cohort
+feature space was stacking the deck, and even so the result is nothing.
+
+**Nothing survives correction, and the one cell that clears its nominal null
+collapses when the leakage is removed.** The proteome, summarised as co-expression
+modules, does not predict responder class or training gains out of sample. This
+agrees with the association null reported elsewhere in F04 and with the study-wide
+null: the leaky raw-protein feature space that an earlier version of this analysis
+used was dropped rather than reported alongside a result it could not honestly
+support.
 
 ```{r sessioninfo}
 sessionInfo()

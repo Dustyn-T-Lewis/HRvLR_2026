@@ -110,3 +110,57 @@ fig <- panel_a / panel_b / panel_c +
 ggsave(file.path(report_dir, "filtering_qc.pdf"), fig, width = 10, height = 11)
 ggsave(file.path(report_dir, "filtering_qc.png"), fig, width = 10, height = 11, dpi = 200)
 cat("wrote", file.path(report_dir, "filtering_qc.png"), "\n")
+
+# Supplement: why the data-driven blood-index cut beats the erythrocyte-RNA cut. Each protein's
+# correlation with the per-sample blood index (x) against HPA's erythrocyte/myonuclei RNA ratio
+# (y). The blood cut cleanly separates red-cell from muscle where the RNA ratio traps ribosomes.
+muscle_markers <- c(
+  "MB", "CKM", "ACTA1", "MYH1", "MYH2", "MYH7", "ALDOA", "CASQ1", "PYGM",
+  "ATP2A1", "DES", "TNNT3", "TNNI2", "MYBPC1", "TNNC2", "MYL1"
+)
+bi_df <- fx$protein_calls |>
+  filter(!is.na(blood_cor)) |>
+  mutate(
+    class = case_when(
+      verdict == "remove: blood-tracking" ~ "removed: blood-tracking",
+      gene %in% muscle_markers ~ "muscle marker",
+      str_detect(gene, "^RP[LS]") ~ "ribosomal",
+      TRUE ~ "other"
+    ),
+    ratio = log2((ery + 1) / (myo + 1))
+  )
+bi_thr <- fx$cfg$blood_cor_max
+lab_bi <- filter(bi_df, class %in% c("removed: blood-tracking", "muscle marker"))
+pal_bi <- c("removed: blood-tracking" = "#B2182B", "muscle marker" = "#2166AC", "ribosomal" = "#F1A340", "other" = "grey80")
+
+blood_index_fig <- ggplot(bi_df, aes(blood_cor, ratio)) +
+  annotate("rect", xmin = bi_thr, xmax = Inf, ymin = -Inf, ymax = Inf, fill = "#B2182B", alpha = 0.06) +
+  geom_point(data = ~ filter(.x, class == "other"), colour = "grey82", size = 0.7, alpha = 0.4) +
+  geom_point(data = ~ filter(.x, class != "other"), aes(colour = class), size = 1.9, alpha = 0.9) +
+  geom_vline(xintercept = bi_thr, linetype = "dashed", colour = "#B2182B", linewidth = 0.4) +
+  ggrepel::geom_text_repel(
+    data = lab_bi, aes(label = gene, colour = class), size = 2.1,
+    max.overlaps = 16, seed = 42, min.segment.length = 0, segment.size = 0.2, show.legend = FALSE
+  ) +
+  scale_colour_manual(values = pal_bi, name = NULL) +
+  labs(
+    title = "Data-driven blood filter vs the erythrocyte-RNA ratio",
+    subtitle = sprintf(
+      "Blood-index correlation (x, cut at %.2f) removes red-cell without touching muscle; HPA's RNA ratio (y) would trap ribosomes",
+      bi_thr
+    ),
+    x = "Spearman correlation with the per-sample blood index",
+    y = expression(log[2] ~ "(erythrocyte / myonuclei RNA), HPA")
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold", size = 11),
+    plot.subtitle = element_text(size = 8, colour = "grey35"),
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.16, 0.16),
+    legend.background = element_rect(fill = alpha("white", 0.7), colour = NA)
+  )
+
+ggsave(file.path(report_dir, "filtering_blood_index.pdf"), blood_index_fig, width = 8, height = 6)
+ggsave(file.path(report_dir, "filtering_blood_index.png"), blood_index_fig, width = 8, height = 6, dpi = 200)
+cat("wrote", file.path(report_dir, "filtering_blood_index.png"), "\n")

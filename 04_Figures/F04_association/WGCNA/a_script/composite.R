@@ -6,9 +6,9 @@ composite <- (F04_PANELS$atlas / F04_PANELS$pathways / (F04_PANELS$fry | F04_PAN
   plot_layout(heights = c(1, 1.5, 1.2)) +
   plot_annotation(
     title = "F04 · Co-expression modules: coherent biology, no responder signal",
-    subtitle = paste(
-      "Modules are defined on within-subject co-regulation and scored on raw abundance.",
-      "They are biologically interpretable (B), but none moves with responder status (C)",
+    subtitle = paste0(
+      "Modules are defined on within-subject co-regulation and scored on raw abundance.\n",
+      "Biologically interpretable (B), but none moves with responder status (C) ",
       "and none predicts the size of the adaptation (D)."
     ),
     theme = theme(
