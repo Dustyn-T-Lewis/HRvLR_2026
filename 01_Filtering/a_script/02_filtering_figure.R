@@ -122,7 +122,7 @@ bi_df <- fx$protein_calls |>
   filter(!is.na(blood_cor)) |>
   mutate(
     class = case_when(
-      verdict == "remove: blood-tracking" ~ "removed: blood-tracking",
+      str_starts(verdict, "remove: red-cell") ~ "removed: blood-tracking",
       gene %in% muscle_markers ~ "muscle marker",
       str_detect(gene, "^RP[LS]") ~ "ribosomal",
       TRUE ~ "other"
