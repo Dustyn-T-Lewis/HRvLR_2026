@@ -39,13 +39,19 @@
 # CA1 escape it. The index is the per-sample mean log2 intensity of the haemoglobin anchor,
 # measured before removal; each protein's Spearman correlation with it (blood_cor) measures how
 # far its abundance tracks contamination in THIS dataset, no transcriptomic prior. blood_cor_max
-# is 0.45: a 300x permutation null of the index puts the 99.9th percentile |rho| at 0.43, and
-# validating against markers, 0.45 catches 13/16 canonical red-cell proteins and the whole
-# plasma/complement/immunoglobulin compartment while flagging 0/16 muscle markers and 0 cytosolic
-# ribosomal proteins. Removal is gated by the same muscle rescue, so muscle-isoform-ambiguous
-# proteins (ANK1, SPTB, EPB41, SYNE2, THBS4) with real myonuclei RNA are kept.
+# is 0.45: a 300x permutation null of the index puts the 99.9th percentile |rho| at 0.43.
+#
+# The blood_cor call is confirmed against the mature-RBC proteome (rbc_file). A red-cell removal
+# now needs two independent hits: it tracks the haemoglobin index in-sample AND appears in a
+# published erythrocyte proteome. Membership cannot remove on its own - a deep RBC proteome shares
+# ~70% of any muscle proteome (glycolysis, tubulins, ferritins), so it only corroborates. The gate
+# drops three blood_cor-only proteins that no RBC proteome lists (H1-5 nuclear, AKR1C2 muscle-
+# expressed, ARHGAP19 lymphocyte); they are leukocyte or spurious, not red-cell. Removal is still
+# gated by the muscle rescue, so muscle-isoform-ambiguous proteins (ANK1, SPTB, EPB41, SYNE2,
+# THBS4) with real myonuclei RNA are kept.
 filter_cfg <- list(
   hpa_file        = "HPA_annotations_full.tsv",
+  rbc_file        = "RBC_proteome_reference.tsv", # five-source mature-RBC proteome, built in stage 00
   miss_min_reps   = 5, # min detected samples in a Group_Time cell
   miss_min_groups = 1, # min Group_Time cells clearing miss_min_reps
   outlier_k       = 3, # methods that must agree for consensus (>=3/4)

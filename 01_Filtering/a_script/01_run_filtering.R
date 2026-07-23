@@ -83,6 +83,14 @@ hpa <- read_tsv(here("00_input", cfg$hpa_file), show_col_types = FALSE) |>
   mutate(acc = strip_iso(acc)) |>
   distinct(acc, .keep_all = TRUE)
 
+# Published mature-red-cell proteome (five sources, built in stage 00). Erythrocytes are enucleate,
+# so their membrane skeleton is invisible to transcriptomics; this list is the only annotation that
+# recognises it. Two-thirds of any muscle proteome also appears here, so RBC membership never removes
+# on its own - it only confirms the in-sample blood_cor call.
+rbc <- read_tsv(here("00_input", cfg$rbc_file), show_col_types = FALSE)
+rbc_acc <- rbc$acc[!is.na(rbc$acc)]
+rbc_gene <- rbc$gene[!is.na(rbc$gene)]
+
 protein_calls <- annotation |>
   mutate(acc = strip_iso(uniprot_id), blood_cor = blood_cor) |>
   left_join(hpa, by = "acc") |>
@@ -90,26 +98,36 @@ protein_calls <- annotation |>
     by = "acc"
   ) |>
   mutate(
+    is_curated = !is.na(contam_class),
     is_ery = !is.na(ery) & ery >= cfg$ery_cut,
     is_ig = str_detect(coalesce(protein_class, ""), "Immunoglobulin genes"),
     is_plasma = !is.na(secretome) & secretome == "Secreted to blood",
-    is_blood_tracking = !is.na(blood_cor) & blood_cor > cfg$blood_cor_max,
+    in_rbc = acc %in% rbc_acc | gene %in% rbc_gene,
+    is_red_cell = !is.na(blood_cor) & blood_cor > cfg$blood_cor_max & in_rbc,
     rescued = !is.na(myo) & myo >= cfg$myo_cut & (is.na(blood_conc) | blood_conc < cfg$blood_max),
+    is_blood = is_ery | is_ig | is_plasma | is_red_cell,
+    contaminant = is_curated | (is_blood & !rescued),
     verdict = case_when(
-      !is.na(contam_class) ~ paste0("remove: ", contam_class),
-      (is_ery | is_ig | is_plasma | is_blood_tracking) & rescued ~ "keep: rescued (muscle-expressed)",
-      is_ery ~ "remove: erythrocyte",
-      is_ig ~ "remove: immunoglobulin",
+      is_curated ~ paste0("remove: ", contam_class),
+      is_blood & rescued ~ "keep: rescued (muscle-expressed)",
       is_plasma ~ "remove: plasma",
-      is_blood_tracking ~ "remove: blood-tracking",
+      is_ig ~ "remove: immunoglobulin",
+      is_ery ~ "remove: erythrocyte",
+      is_red_cell ~ "remove: red-cell (blood-tracking + RBC proteome)",
       TRUE ~ "keep"
     ),
     reason = coalesce(contam_reason, verdict)
   ) |>
-  select(uniprot_id, gene, description, verdict, reason, secretome, blood_conc, ery, myo, blood_cor)
+  select(
+    uniprot_id, gene, description, verdict, reason, contaminant, in_rbc,
+    secretome, blood_conc, ery, myo, blood_cor
+  )
+stopifnot(protein_calls$contaminant == str_starts(protein_calls$verdict, "remove"))
 
-keep <- !str_starts(protein_calls$verdict, "remove")
-
+# Contaminants are flagged once in protein_calls$contaminant and dropped here. proteoDA's
+# filter_proteins_by_annotation would express this directly, but its class guard misfires on a
+# DAList (class length 2), so the flag drives a plain subset - the same route the group filter takes.
+keep <- !protein_calls$contaminant
 int_df <- as.data.frame(intensity[keep, ])
 annot_df <- as.data.frame(annotation[keep, ])
 rownames(int_df) <- rownames(annot_df) <- annot_df$uniprot_id
