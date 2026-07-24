@@ -26,8 +26,7 @@ pred_paths <- function() {
       "04_Figures", "F04_association", "WGCNA", "c_data", "wgcna_eigengene.csv"
     ),
     cache = here(
-      "04_Figures", "F05_prediction", "shared", "c_data",
-      "singscore_scores.rds"
+      "04_Figures", "F05_prediction", "c_data", "singscore_scores.rds"
     )
   )
 }
