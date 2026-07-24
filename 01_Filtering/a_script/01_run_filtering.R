@@ -199,7 +199,6 @@ blood_index_tbl <- metadata |>
 saveRDS(dal, file.path(data_dir, "DAList_filtered.rds"))
 write_csv(qc_index, file.path(data_dir, "contamination_index.csv"))
 write_csv(protein_calls, file.path(data_dir, "protein_calls.csv"))
-write_csv(blood_index_tbl, file.path(data_dir, "blood_index.csv"))
 
 write.xlsx(
   list(
