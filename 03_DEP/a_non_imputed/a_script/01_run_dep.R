@@ -40,8 +40,6 @@ dir.create(cfg$proteoDA_dir, recursive = TRUE, showWarnings = FALSE)
 
 required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time")
 
-# load data and build metadata
-
 df <- read_csv(cfg$norm_csv, show_col_types = FALSE)
 
 ann_cols <- c("uniprot_id", "protein", "gene", "description")
@@ -90,8 +88,6 @@ if (any(is.na(meta$subject)) || any(meta$subject == "")) {
 print(table(meta$responder, meta$time))
 stopifnot(setequal(colnames(mat), meta$sample_id))
 
-# build the DAList
-
 meta_df <- as.data.frame(meta)
 rownames(meta_df) <- meta$sample_id
 
@@ -102,16 +98,8 @@ dal <- DAList(
   tags       = list(norm_method = "cycloess", normalized = TRUE)
 )
 
-# design
-
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
-
-# contrasts
-
 dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
-
-# fit and extract
-
 dal <- fit_limma_model(dal)
 
 within_cor <- dal$eBayes_fit$correlation %||%
@@ -139,8 +127,6 @@ for (cname in contrast_names) {
 # proteoDA Excel formatting expects gene_symbol column
 dal$annotation$gene_symbol <- dal$annotation$gene
 
-# save the fitted DAList
-
 saveRDS(dal, file.path(cfg$data_dir, "01_limma_DAList.rds"))
 
 # proteoDA interactive report (non-essential; warn on failure)
@@ -156,7 +142,6 @@ tryCatch(
   error = function(e) warning("write_limma_plots failed: ", conditionMessage(e), call. = FALSE)
 )
 
-# write tables
 # Per-contrast CSVs, combined results (wide), and formatted Excel workbook
 # with conditional formatting & UniProt hyperlinks — all handled by proteoDA.
 # Pi-score columns pass through because they were injected into dal$results above.
@@ -174,7 +159,6 @@ write_limma_tables(dal,
 # proteoDA summary only has sig.PVal/sig.FDR; replace with Pi-enriched version
 file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 
-# DA summary
 # proteoDA's summarize_contrast_DA lacks Pi-score columns, so we build our own.
 #
 # Every count column names the threshold it applies. proteoDA drives both of its own columns
@@ -209,8 +193,6 @@ da_summary <- map_dfr(contrast_names, function(cname) {
 })
 
 write_csv(da_summary, file.path(cfg$data_dir, "02_DA_summary.csv"))
-
-# summary
 
 print(dal$design$contrast_matrix)
 print(da_summary)
