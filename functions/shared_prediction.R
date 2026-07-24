@@ -1,12 +1,14 @@
 # Leakage-free nested leave-one-subject-out harness for the prediction suite.
 # Rows are subjects, so leave-one-subject-out is leave-one-row-out. Every fold:
 # features are z-scored on the training subjects and that centre/scale is
-# applied to the held-out subject; glmnet (alpha/lambda) and sPLS (keepX) are
-# tuned by an inner LOSO on the training subjects only; the held-out subject is
-# never seen until it is predicted. The permutation null shuffles the outcome
-# across subjects and re-runs the entire nested LOSO.
+# applied to the held-out subject; each engine's hyperparameters are tuned by an
+# inner LOSO on the training subjects only; the held-out subject is never seen
+# until it is predicted. Every fit also reports which features it selected, so
+# the outer folds yield a per-feature selection frequency (methods doc Part 6).
+# The permutation null shuffles the outcome across subjects and re-runs the
+# entire nested LOSO.
 
-pacman::p_load(glmnet, mixOmics, pROC, parallel, withr)
+pacman::p_load(glmnet, mixOmics, pamr, pROC, parallel, withr)
 
 GLMNET_ALPHAS <- c(0.1, 0.5, 1.0)
 SPLS_NCOMP <- 1L
@@ -29,12 +31,17 @@ scale_train_apply <- function(x_train, x_test) {
   )
 }
 
+# keepX candidates scale with the feature count: a handful for the low-dimension
+# module space, a wider sparse sweep for pathways and proteins. Capped at p so a
+# 10-feature space never asks for 50.
 spls_keepx_grid <- function(p) {
-  unique(pmin(c(10L, 30L), p))
+  unique(pmin(c(2L, 5L, 10L, 20L, 50L), p))
 }
 
 # glmnet: inner LOSO over the training subjects tunes alpha and lambda together;
-# the winning (alpha, lambda.min) is refit on all training subjects.
+# the winning (alpha, lambda.1se) is refit on all training subjects. lambda.1se
+# is the parsimonious choice (methods doc Part 4); the caller can read
+# lambda.min off the same fit.
 fit_predict_glmnet <- function(x_tr, y_tr, x_te, family) {
   fold_id <- seq_len(nrow(x_tr))
   best <- NULL
@@ -47,11 +54,15 @@ fit_predict_glmnet <- function(x_tr, y_tr, x_te, family) {
     m <- min(cv$cvm)
     if (m < best_cvm) {
       best_cvm <- m
-      best <- list(cv = cv)
+      best <- cv
     }
   }
   type <- if (family == "binomial") "response" else "link"
-  as.numeric(predict(best$cv, x_te, s = "lambda.min", type = type))
+  beta <- as.matrix(coef(best, s = "lambda.1se"))[-1, 1]
+  list(
+    pred = as.numeric(predict(best, x_te, s = "lambda.1se", type = type)),
+    selected = names(beta)[beta != 0]
+  )
 }
 
 spls_score <- function(fit, x_te, family) {
@@ -93,22 +104,72 @@ fit_predict_spls <- function(x_tr, y_tr, x_te, family) {
     }
   }
   fit <- fit_one(x_tr, y_tr, best_k)
-  spls_score(fit, x_te, family)
+  sel <- mixOmics::selectVar(fit, comp = SPLS_NCOMP)
+  list(
+    pred = spls_score(fit, x_te, family),
+    selected = if (family == "binomial") sel$name else sel$X$name
+  )
 }
 
-# One full nested LOSO pass: returns out-of-fold predictions aligned to y.
+# Nearest shrunken centroids (Tibshirani 2002): the interpretable diagonal
+# baseline the small-n literature favours. pamr wants features x samples, so the
+# harness matrices are transposed on the way in. The shrinkage threshold is tuned
+# by a leave-one-out pamr.cv on the training subjects; ties break to the largest
+# threshold (sparsest centroid). Classification only.
+fit_predict_pam <- function(x_tr, y_tr, x_te) {
+  dat <- list(
+    x = t(x_tr), y = factor(y_tr, levels = c(0, 1)),
+    geneid = colnames(x_tr)
+  )
+  utils::capture.output(fit <- pamr::pamr.train(dat))
+  folds <- as.list(seq_len(nrow(x_tr)))
+  utils::capture.output(cv <- pamr::pamr.cv(fit, dat, folds = folds))
+  thr <- max(cv$threshold[cv$error == min(cv$error)])
+  post <- pamr::pamr.predict(fit, t(x_te), threshold = thr, type = "posterior")
+  nz <- pamr::pamr.predict(fit, t(x_te), threshold = thr, type = "nonzero")
+  list(pred = post[, "1"], selected = colnames(x_tr)[nz])
+}
+
+fit_predict <- function(model, x_tr, y_tr, x_te, family) {
+  switch(model,
+    glmnet = fit_predict_glmnet(x_tr, y_tr, x_te, family),
+    spls = fit_predict_spls(x_tr, y_tr, x_te, family),
+    pam = fit_predict_pam(x_tr, y_tr, x_te),
+    stop("unknown model: ", model)
+  )
+}
+
+# One full nested LOSO pass: out-of-fold predictions aligned to y, plus the set
+# of features each outer fold selected (for the selection-frequency readout).
 nested_loso <- function(x, y, model, family) {
   n <- length(y)
   preds <- numeric(n)
+  selected <- vector("list", n)
   for (o in seq_len(n)) {
     sc <- scale_train_apply(x[-o, , drop = FALSE], x[o, , drop = FALSE])
-    preds[o] <- if (model == "glmnet") {
-      fit_predict_glmnet(sc$train, y[-o], sc$test, family)
-    } else {
-      fit_predict_spls(sc$train, y[-o], sc$test, family)
-    }
+    fit <- fit_predict(model, sc$train, y[-o], sc$test, family)
+    preds[o] <- fit$pred
+    selected[[o]] <- fit$selected
   }
-  preds
+  list(preds = preds, selected = selected)
+}
+
+# Fraction of outer folds that selected each feature.
+selection_frequency <- function(selected, model) {
+  n <- length(selected)
+  tab <- table(unlist(selected))
+  if (!length(tab)) {
+    return(data.frame(
+      model = character(0), feature = character(0),
+      folds = integer(0), freq = numeric(0)
+    ))
+  }
+  data.frame(
+    model = model, feature = names(tab),
+    folds = as.integer(tab), freq = as.numeric(tab) / n,
+    row.names = NULL
+  ) |>
+    dplyr::arrange(dplyr::desc(freq))
 }
 
 # Statistic from out-of-fold predictions. Class arm reports AUC; the continuous
@@ -141,25 +202,28 @@ perm_matrix <- function(n, nperm = N_PERM, seed = PERM_SEED) {
 perm_p <- function(observed, null_vals, side = c("greater", "less")) {
   side <- match.arg(side)
   null_vals <- null_vals[is.finite(null_vals)]
-  hits <- if (side == "greater") sum(null_vals >= observed) else sum(null_vals <= observed)
+  hits <- if (side == "greater") {
+    sum(null_vals >= observed)
+  } else {
+    sum(null_vals <= observed)
+  }
   (hits + 1) / (length(null_vals) + 1)
 }
 
 # Run the class arm for one (feature space, model): observed AUC with a DeLong
-# CV interval and a permutation p from re-running the whole nested LOSO.
+# interval, a permutation p from re-running the whole nested LOSO, and the
+# per-fold selection frequency.
 run_class_cell <- function(x, y, model, nperm = N_PERM, cores = PERM_CORES) {
-  preds <- nested_loso(x, y, model, "binomial")
+  fit <- nested_loso(x, y, model, "binomial")
+  preds <- fit$preds
   obs <- stat_auc(y, preds)
-  ci <- as.numeric(pROC::ci.auc(pROC::roc(y, preds,
-    quiet = TRUE,
-    levels = c(0, 1), direction = "<"
-  )))
   roc_obj <- pROC::roc(y, preds, quiet = TRUE, levels = c(0, 1), direction = "<")
+  ci <- as.numeric(pROC::ci.auc(roc_obj))
 
   pm <- perm_matrix(length(y), nperm)
   null_auc <- unlist(mclapply(seq_len(nperm), function(b) {
     yp <- y[pm[, b]]
-    stat_auc(yp, nested_loso(x, yp, model, "binomial"))
+    stat_auc(yp, nested_loso(x, yp, model, "binomial")$preds)
   }, mc.cores = cores))
 
   list(
@@ -174,15 +238,19 @@ run_class_cell <- function(x, y, model, nperm = N_PERM, cores = PERM_CORES) {
       fpr = rev(1 - roc_obj$specificities),
       tpr = rev(roc_obj$sensitivities)
     ),
-    preds = data.frame(model = model, subject = rownames(x), y = y, pred = preds)
+    preds = data.frame(
+      model = model, subject = rownames(x), y = y, pred = preds
+    ),
+    selection = selection_frequency(fit$selected, model)
   )
 }
 
 # Run the continuous arm for one (feature space, model, outcome): Q^2, RMSE and
-# Spearman, each with a permutation p.
+# Spearman each with a permutation p, plus the per-fold selection frequency.
 run_cont_cell <- function(x, y, model, outcome, nperm = N_PERM,
                           cores = PERM_CORES) {
-  preds <- nested_loso(x, y, model, "gaussian")
+  fit <- nested_loso(x, y, model, "gaussian")
+  preds <- fit$preds
   obs_q2 <- stat_q2(y, preds)
   obs_rmse <- stat_rmse(y, preds)
   obs_rho <- stat_spearman(y, preds)
@@ -190,7 +258,7 @@ run_cont_cell <- function(x, y, model, outcome, nperm = N_PERM,
   pm <- perm_matrix(length(y), nperm)
   null <- mclapply(seq_len(nperm), function(b) {
     yp <- y[pm[, b]]
-    pp <- nested_loso(x, yp, model, "gaussian")
+    pp <- nested_loso(x, yp, model, "gaussian")$preds
     c(
       q2 = stat_q2(yp, pp), rmse = stat_rmse(yp, pp),
       rho = stat_spearman(yp, pp)
@@ -210,7 +278,8 @@ run_cont_cell <- function(x, y, model, outcome, nperm = N_PERM,
     preds = data.frame(
       outcome = outcome, model = model, subject = rownames(x),
       y = y, pred = preds
-    )
+    ),
+    selection = selection_frequency(fit$selected, model)
   )
 }
 
