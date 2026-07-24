@@ -686,6 +686,41 @@
       "LazyData": "true",
       "Repository": "CRAN"
     },
+    "EnvStats": {
+      "Package": "EnvStats",
+      "Version": "3.1.0",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Package for Environmental Statistics, Including US EPA Guidance",
+      "Date": "2025-04-17",
+      "Authors@R": "c( person(\"Steven P.\",\"Millard\",email=\"EnvStats@ProbStatInfo.com\",role=c(\"aut\")), person(\"Alexander\", \"Kowarik\", email = \"alexander.kowarik@statistik.gv.at\", role = c(\"ctb\",\"cre\"), comment=c(ORCID=\"0000-0001-8598-4130\")))",
+      "Depends": [
+        "R (>= 3.5.0)"
+      ],
+      "Imports": [
+        "MASS",
+        "ggplot2",
+        "nortest"
+      ],
+      "Suggests": [
+        "lattice",
+        "qcc",
+        "sp",
+        "boot",
+        "tinytest",
+        "covr",
+        "Hmisc"
+      ],
+      "Description": "Graphical and statistical analyses of environmental data, with  focus on analyzing chemical concentrations and physical parameters, usually in  the context of mandated environmental monitoring.  Major environmental  statistical methods found in the literature and regulatory guidance documents,  with extensive help that explains what these methods do, how to use them,  and where to find them in the literature.  Numerous built-in data sets from  regulatory guidance documents and environmental statistics literature.  Includes  scripts reproducing analyses presented in the book \"EnvStats:  An R Package for  Environmental Statistics\" (Millard, 2013, Springer, ISBN 978-1-4614-8455-4,  <doi:10.1007/978-1-4614-8456-1>).",
+      "License": "GPL (>= 3)",
+      "URL": "https://github.com/alexkowa/EnvStats, https://alexkowa.github.io/EnvStats/",
+      "LazyLoad": "yes",
+      "LazyData": "yes",
+      "NeedsCompilation": "no",
+      "Author": "Steven P. Millard [aut], Alexander Kowarik [ctb, cre] (<https://orcid.org/0000-0001-8598-4130>)",
+      "Maintainer": "Alexander Kowarik <alexander.kowarik@statistik.gv.at>",
+      "Repository": "CRAN"
+    },
     "FactoMineR": {
       "Package": "FactoMineR",
       "Version": "2.14",
@@ -1957,6 +1992,21 @@
       "Maintainer": "Georgi N. Boshnakov <georgi.boshnakov@manchester.ac.uk>",
       "Repository": "CRAN"
     },
+    "RhpcBLASctl": {
+      "Package": "RhpcBLASctl",
+      "Version": "0.23-42",
+      "Source": "Repository",
+      "Date": "2023-02-11",
+      "Title": "Control the Number of Threads on 'BLAS'",
+      "Author": "Junji NAKANO <nakanoj@ism.ac.jp> and Ei-ji Nakama <nakama@ki.rim.or.jp>",
+      "Maintainer": "Ei-ji Nakama <nakama@ki.rim.or.jp>",
+      "Description": "Control the number of threads on 'BLAS' (Aka 'GotoBLAS', 'OpenBLAS', 'ACML', 'BLIS' and 'MKL'). And possible to control the number of threads in 'OpenMP'. Get a number of logical cores and physical cores if feasible.",
+      "License": "AGPL-3",
+      "URL": "https://prs.ism.ac.jp/~nakama/Rhpc/",
+      "ByteCompile": "true",
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN"
+    },
     "S4Arrays": {
       "Package": "S4Arrays",
       "Version": "1.12.0",
@@ -2651,6 +2701,32 @@
       "NeedsCompilation": "no",
       "Maintainer": "Bioconductor Package Maintainer <maintainer@bioconductor.org>"
     },
+    "aod": {
+      "Package": "aod",
+      "Version": "1.3.3",
+      "Source": "Repository",
+      "Date": "2012-04-10",
+      "Title": "Analysis of Overdispersed Data",
+      "Author": "Matthieu Lesnoff <matthieu.lesnoff@cirad.fr> and Renaud Lancelot <renaud.lancelot@cirad.fr>",
+      "Maintainer": "Renaud Lancelot <renaud.lancelot@cirad.fr>",
+      "Depends": [
+        "R (>= 2.10)",
+        "methods",
+        "stats"
+      ],
+      "Suggests": [
+        "MASS",
+        "boot",
+        "lme4"
+      ],
+      "Description": "Provides a set of functions to analyse overdispersed counts or proportions. Most of the methods are already available elsewhere but are scattered in different packages. The proposed functions should be considered as complements to more sophisticated methods such as generalized estimating equations (GEE) or generalized linear mixed effect models (GLMM).",
+      "License": "GPL (>= 2)",
+      "URL": "https://cran.r-project.org/package=aod",
+      "LazyData": "yes",
+      "Encoding": "UTF-8",
+      "Repository": "CRAN",
+      "NeedsCompilation": "no"
+    },
     "ape": {
       "Package": "ape",
       "Version": "5.8-1",
@@ -3030,6 +3106,22 @@
       "Maintainer": "Michael Chirico <michaelchirico4@gmail.com>",
       "Repository": "CRAN"
     },
+    "bitops": {
+      "Package": "bitops",
+      "Version": "1.0-9",
+      "Source": "Repository",
+      "Date": "2024-10-03",
+      "Authors@R": "c( person(\"Steve\", \"Dutky\", role = \"aut\", email = \"sdutky@terpalum.umd.edu\", comment = \"S original; then (after MM's port) revised and modified\"), person(\"Martin\", \"Maechler\", role = c(\"cre\", \"aut\"), email = \"maechler@stat.math.ethz.ch\", comment = c(\"Initial R port; tweaks\", ORCID = \"0000-0002-8685-9910\")))",
+      "Title": "Bitwise Operations",
+      "Description": "Functions for bitwise operations on integer vectors.",
+      "License": "GPL (>= 2)",
+      "URL": "https://github.com/mmaechler/R-bitops",
+      "BugReports": "https://github.com/mmaechler/R-bitops/issues",
+      "NeedsCompilation": "yes",
+      "Author": "Steve Dutky [aut] (S original; then (after MM's port) revised and modified), Martin Maechler [cre, aut] (Initial R port; tweaks, <https://orcid.org/0000-0002-8685-9910>)",
+      "Maintainer": "Martin Maechler <maechler@stat.math.ethz.ch>",
+      "Repository": "CRAN"
+    },
     "blob": {
       "Package": "blob",
       "Version": "1.3.0",
@@ -3298,6 +3390,31 @@
       "Author": "Carson Sievert [aut, cre] (ORCID: <https://orcid.org/0000-0002-4958-2844>), Joe Cheng [aut], Garrick Aden-Buie [aut] (ORCID: <https://orcid.org/0000-0002-7111-0077>), Posit Software, PBC [cph, fnd], Bootstrap contributors [ctb] (Bootstrap library), Twitter, Inc [cph] (Bootstrap library), Javi Aguilar [ctb, cph] (Bootstrap colorpicker library), Thomas Park [ctb, cph] (Bootswatch library), PayPal [ctb, cph] (Bootstrap accessibility plugin)",
       "Maintainer": "Carson Sievert <carson@posit.co>",
       "Repository": "CRAN"
+    },
+    "caTools": {
+      "Package": "caTools",
+      "Version": "1.18.4",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Tools: Moving Window Statistics, GIF, Base64, ROC AUC, etc",
+      "Date": "2026-07-20",
+      "Authors@R": "c(person(given = \"Jarek\", family = \"Tuszynski\", role = \"aut\", email = \"jaroslaw.w.tuszynski@saic.com\"), person(given = \"Michael\", family = \"Dietze\", role = \"cre\", email = \"michael.dietze@geo.rwth-aachen.de\"))",
+      "Maintainer": "Michael Dietze <michael.dietze@geo.rwth-aachen.de>",
+      "Depends": [
+        "R (>= 3.6.0)"
+      ],
+      "Imports": [
+        "bitops"
+      ],
+      "Suggests": [
+        "MASS",
+        "rpart"
+      ],
+      "Description": "Contains several basic utility functions including: moving (rolling, running) window statistic functions, read/write for GIF and ENVI binary files, fast calculation of AUC, LogitBoost classifier, base64 encoder/decoder, round-off-error-free sum and cumsum, etc.",
+      "License": "GPL-3",
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN",
+      "Author": "Jarek Tuszynski [aut], Michael Dietze [cre]"
     },
     "cachem": {
       "Package": "cachem",
@@ -5280,6 +5397,22 @@
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "CRAN"
     },
+    "fANCOVA": {
+      "Package": "fANCOVA",
+      "Version": "0.6-1",
+      "Source": "Repository",
+      "Title": "Nonparametric Analysis of Covariance",
+      "Authors@R": "c(  person(given = \"Xiaofeng\", family = \"Wang\", role = c(\"aut\", \"cre\"), email = \"wangx6@ccf.org\"), person(given = \"Xinge\", family = \"Ji\", role = c(\"ctb\"), email = \"jix@ccf.org\"))",
+      "Description": "A collection of R functions to perform nonparametric  analysis of covariance for regression curves or surfaces.  Testing the equality or parallelism of nonparametric curves  or surfaces is equivalent to analysis of variance (ANOVA) or  analysis of covariance (ANCOVA) for one-sample functional data.  Three different testing methods are available in the package,  including one based on L-2 distance, one based on an ANOVA  statistic, and one based on variance estimators.",
+      "License": "GPL-3",
+      "Encoding": "UTF-8",
+      "LazyData": "true",
+      "RoxygenNote": "7.1.1",
+      "NeedsCompilation": "no",
+      "Author": "Xiaofeng Wang [aut, cre], Xinge Ji [ctb]",
+      "Maintainer": "Xiaofeng Wang <wangx6@ccf.org>",
+      "Repository": "CRAN"
+    },
     "farver": {
       "Package": "farver",
       "Version": "2.1.2",
@@ -6872,6 +7005,45 @@
       "Author": "Mark van der Loo [aut, cre], David Turner [ctb]",
       "Repository": "CRAN"
     },
+    "gplots": {
+      "Package": "gplots",
+      "Version": "3.3.0",
+      "Source": "Repository",
+      "Title": "Various R Programming Tools for Plotting Data",
+      "Description": "Various R programming tools for plotting data, including: - calculating and plotting locally smoothed summary function as ('bandplot', 'wapply'), - enhanced versions of standard plots ('barplot2', 'boxplot2', 'heatmap.2', 'smartlegend'), - manipulating colors ('col2hex', 'colorpanel', 'redgreen', 'greenred', 'bluered', 'redblue', 'rich.colors'), - calculating and plotting two-dimensional data summaries ('ci2d', 'hist2d'), - enhanced regression diagnostic plots ('lmplot2', 'residplot'), - formula-enabled interface to 'stats::lowess' function ('lowess'), - displaying textual data in plots ('textplot', 'sinkplot'), - plotting dots whose size reflects the relative magnitude of the elements ('balloonplot', 'bubbleplot'), - plotting \"Venn\" diagrams ('venn'), - displaying Open-Office style plots ('ooplot'), - plotting multiple data on same region, with separate axes ('overplot'), - plotting means and confidence intervals ('plotCI', 'plotmeans'), - spacing points in an x-y plot so they don't overlap ('space').",
+      "Depends": [
+        "R (>= 3.0)"
+      ],
+      "Imports": [
+        "gtools",
+        "stats",
+        "caTools",
+        "KernSmooth",
+        "methods"
+      ],
+      "Suggests": [
+        "grid",
+        "MASS",
+        "knitr",
+        "rmarkdown",
+        "r2d2",
+        "nlme",
+        "dendextend",
+        "heatmaply",
+        "RColorBrewer"
+      ],
+      "LazyData": "yes",
+      "VignetteBuilder": "knitr",
+      "Date": "2025-11-29",
+      "Authors@R": "c( person(\"Gregory R.\", \"Warnes\", , role = \"aut\"), person(\"Ben\", \"Bolker\", , role = \"aut\"), person(\"Lodewijk\", \"Bonebakker\", , role = \"aut\"), person(\"Robert\", \"Gentleman\", role = \"aut\"), person(\"Wolfgang\", \"Huber\", role = \"aut\"), person(\"Andy\", \"Liaw\", role = \"aut\"), person(\"Thomas\", \"Lumley\", role = \"aut\"), person(\"Martin\", \"Maechler\", role = \"aut\"), person(\"Arni\", \"Magnusson\", role = \"aut\"), person(\"Steffen\", \"Moeller\", role = \"aut\"), person(\"Marc\", \"Schwartz\", role = \"aut\"), person(\"Bill\", \"Venables\", role = \"aut\"), person(\"Tal\", \"Galili\", , \"tal.galili@gmail.com\", c(\"aut\", \"cre\")) )",
+      "License": "GPL-2",
+      "URL": "https://github.com/talgalili/gplots, https://talgalili.github.io/gplots/",
+      "BugReports": "https://github.com/talgalili/gplots/issues",
+      "NeedsCompilation": "no",
+      "Author": "Gregory R. Warnes [aut], Ben Bolker [aut], Lodewijk Bonebakker [aut], Robert Gentleman [aut], Wolfgang Huber [aut], Andy Liaw [aut], Thomas Lumley [aut], Martin Maechler [aut], Arni Magnusson [aut], Steffen Moeller [aut], Marc Schwartz [aut], Bill Venables [aut], Tal Galili [aut, cre]",
+      "Maintainer": "Tal Galili <tal.galili@gmail.com>",
+      "Repository": "CRAN"
+    },
     "graph": {
       "Package": "graph",
       "Version": "1.90.0",
@@ -7033,6 +7205,37 @@
       "NeedsCompilation": "no",
       "Author": "Hadley Wickham [aut], Thomas Lin Pedersen [aut, cre], Posit Software, PBC [cph, fnd]",
       "Maintainer": "Thomas Lin Pedersen <thomas.pedersen@posit.co>",
+      "Repository": "CRAN"
+    },
+    "gtools": {
+      "Package": "gtools",
+      "Version": "3.9.5",
+      "Source": "Repository",
+      "Title": "Various R Programming Tools",
+      "Description": "Functions to assist in R programming, including: - assist in developing, updating, and maintaining R and R packages ('ask', 'checkRVersion', 'getDependencies', 'keywords', 'scat'), - calculate the logit and inverse logit transformations ('logit', 'inv.logit'), - test if a value is missing, empty or contains only NA and NULL values ('invalid'), - manipulate R's .Last function ('addLast'), - define macros ('defmacro'), - detect odd and even integers ('odd', 'even'), - convert strings containing non-ASCII characters (like single quotes) to plain ASCII ('ASCIIfy'), - perform a binary search ('binsearch'), - sort strings containing both numeric and character components ('mixedsort'), - create a factor variable from the quantiles of a continuous variable ('quantcut'), - enumerate permutations and combinations ('combinations', 'permutation'), - calculate and convert between fold-change and log-ratio ('foldchange', 'logratio2foldchange', 'foldchange2logratio'), - calculate probabilities and generate random numbers from Dirichlet distributions ('rdirichlet', 'ddirichlet'), - apply a function over adjacent subsets of a vector ('running'), - modify the TCP_NODELAY ('de-Nagle') flag for socket objects, - efficient 'rbind' of data frames, even if the column names don't match ('smartbind'), - generate significance stars from p-values ('stars.pval'), - convert characters to/from ASCII codes ('asc', 'chr'), - convert character vector to ASCII representation ('ASCIIfy'), - apply title capitalization rules to a character vector ('capwords').",
+      "Authors@R": "c(person(\"Gregory R.\", \"Warnes\", role = \"aut\"), person(\"Ben\", \"Bolker\", role = c(\"aut\", \"cre\"), email = \"bolker@mcmaster.ca\", comment=c(ORCID=\"0000-0002-2127-0443\")), person(\"Thomas\", \"Lumley\", role = \"aut\"), person(\"Arni\", \"Magnusson\", role = \"aut\"), person(\"Bill\", \"Venables\", role = \"aut\"), person(\"Genei\", \"Ryodan\", role = \"aut\"), person(\"Steffen\", \"Moeller\", role = \"aut\"), person(\"Ian\", \"Wilson\", role = \"ctb\"), person(\"Mark\", \"Davis\", role = \"ctb\"), person(\"Nitin\", \"Jain\", role=\"ctb\"), person(\"Scott\", \"Chamberlain\", role = \"ctb\"))",
+      "License": "GPL-2",
+      "Depends": [
+        "methods",
+        "stats",
+        "utils"
+      ],
+      "URL": "https://github.com/r-gregmisc/gtools",
+      "BugReports": "https://github.com/r-gregmisc/gtools/issues",
+      "Language": "en-US",
+      "Suggests": [
+        "car",
+        "gplots",
+        "knitr",
+        "rstudioapi",
+        "SGP",
+        "taxize"
+      ],
+      "RoxygenNote": "7.2.3",
+      "Encoding": "UTF-8",
+      "NeedsCompilation": "yes",
+      "Author": "Gregory R. Warnes [aut], Ben Bolker [aut, cre] (<https://orcid.org/0000-0002-2127-0443>), Thomas Lumley [aut], Arni Magnusson [aut], Bill Venables [aut], Genei Ryodan [aut], Steffen Moeller [aut], Ian Wilson [ctb], Mark Davis [ctb], Nitin Jain [ctb], Scott Chamberlain [ctb]",
+      "Maintainer": "Ben Bolker <bolker@mcmaster.ca>",
       "Repository": "CRAN"
     },
     "hardhat": {
@@ -9580,6 +9783,23 @@
       "Repository/R-Forge/DateTimeStamp": "2023-06-18 14:31:55",
       "NeedsCompilation": "yes"
     },
+    "nortest": {
+      "Package": "nortest",
+      "Version": "1.0-4",
+      "Source": "Repository",
+      "Title": "Tests for Normality",
+      "Date": "2015-07-29",
+      "Description": "Five omnibus tests for testing the composite hypothesis of normality.",
+      "License": "GPL (>= 2)",
+      "Authors@R": "c(person(\"Juergen\", \"Gross\", role = \"aut\", email = \"gross@statistik.tu-dortmund.de\"), person(\"Uwe\", \"Ligges\", role = c(\"aut\", \"cre\"), email = \"ligges@statistik.tu-dortmund.de\"))",
+      "Imports": [
+        "stats"
+      ],
+      "Author": "Juergen Gross [aut], Uwe Ligges [aut, cre]",
+      "Maintainer": "Uwe Ligges <ligges@statistik.tu-dortmund.de>",
+      "NeedsCompilation": "no",
+      "Repository": "CRAN"
+    },
     "numDeriv": {
       "Package": "numDeriv",
       "Version": "2016.8-1.1",
@@ -9844,6 +10064,29 @@
       "NeedsCompilation": "no",
       "Author": "Tyler Rinker [aut, cre, ctb], Dason Kurkiewicz [aut, ctb], Keith Hughitt [ctb], Albert Wang [ctb], Garrick Aden-Buie [ctb], Albert Wang [ctb], Lukas Burk [ctb]",
       "Maintainer": "Tyler Rinker <tyler.rinker@gmail.com>",
+      "Repository": "CRAN"
+    },
+    "pamr": {
+      "Package": "pamr",
+      "Version": "1.57",
+      "Source": "Repository",
+      "Title": "Pam: Prediction Analysis for Microarrays",
+      "Authors@R": "c( person(\"Trevor\", \"Hastie\", role=c(\"aut\"), email = \"hastie@stanford.edu\"), person(\"Rob\", \"Tibshirani\", role=c(\"aut\"), email = \"tibs@stanford.edu\"), person(\"Balasubramanian\", \"Narasimhan\", role=c(\"aut\", \"cre\"), email = \"naras@stanford.edu\"), person(\"Gilbert\",\"Chu\", role=c(\"aut\")))",
+      "Description": "Some functions for sample classification in microarrays.",
+      "Depends": [
+        "R (>= 3.5)"
+      ],
+      "License": "GPL-2",
+      "Date": "2024-06-28",
+      "RoxygenNote": "7.3.1",
+      "Encoding": "UTF-8",
+      "Imports": [
+        "cluster",
+        "survival"
+      ],
+      "NeedsCompilation": "no",
+      "Author": "Trevor Hastie [aut], Rob Tibshirani [aut], Balasubramanian Narasimhan [aut, cre], Gilbert Chu [aut]",
+      "Maintainer": "Balasubramanian Narasimhan <naras@stanford.edu>",
       "Repository": "CRAN"
     },
     "pan": {
@@ -11688,6 +11931,52 @@
       "NeedsCompilation": "no",
       "Author": "Ben Bolker [aut, cre] (ORCID: <https://orcid.org/0000-0002-2127-0443>), Anna Ly [ctb] (ORCID: <https://orcid.org/0000-0002-0210-0342>)",
       "Maintainer": "Ben Bolker <bolker@mcmaster.ca>",
+      "Repository": "CRAN"
+    },
+    "remaCor": {
+      "Package": "remaCor",
+      "Version": "0.0.20",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Random Effects Meta-Analysis for Correlated Test Statistics",
+      "Date": "2025-08-04",
+      "Authors@R": "person(\"Gabriel\", \"Hoffman\", role=c(\"aut\", \"cre\"), email=\"gabriel.hoffman@mssm.edu\", comment=c(ORCID=\"0000-0002-0957-0224\"))",
+      "Description": "Meta-analysis is widely used to summarize estimated effects sizes across multiple statistical tests. Standard fixed and random effect meta-analysis methods assume that the estimated of the effect sizes are statistically independent.  Here we relax this assumption and enable meta-analysis when the correlation matrix between effect size estimates is known.  Fixed effect meta-analysis uses the method of Lin and Sullivan (2009) <doi:10.1016/j.ajhg.2009.11.001>, and random effects meta-analysis uses the method of Han, et al. <doi:10.1093/hmg/ddw049>.",
+      "License": "Artistic-2.0",
+      "URL": "https://diseaseneurogenomics.github.io/remaCor/",
+      "BugReports": "https://github.com/DiseaseNeurogenomics/remaCor/issues",
+      "Suggests": [
+        "knitr",
+        "RUnit",
+        "clusterGeneration",
+        "metafor"
+      ],
+      "Depends": [
+        "R (>= 3.6.0)",
+        "ggplot2",
+        "methods"
+      ],
+      "Imports": [
+        "mvtnorm",
+        "grid",
+        "reshape2",
+        "compiler",
+        "Rcpp",
+        "EnvStats",
+        "Rdpack",
+        "stats"
+      ],
+      "VignetteBuilder": "knitr",
+      "RdMacros": "Rdpack",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "LinkingTo": [
+        "Rcpp",
+        "RcppArmadillo"
+      ],
+      "NeedsCompilation": "yes",
+      "Author": "Gabriel Hoffman [aut, cre] (ORCID: <https://orcid.org/0000-0002-0957-0224>)",
+      "Maintainer": "Gabriel Hoffman <gabriel.hoffman@mssm.edu>",
       "Repository": "CRAN"
     },
     "rematch": {
@@ -14307,6 +14596,86 @@
       "BugReports": "https://github.com/s-u/uuid/issues",
       "NeedsCompilation": "yes",
       "Repository": "CRAN"
+    },
+    "variancePartition": {
+      "Package": "variancePartition",
+      "Version": "1.42.0",
+      "Source": "Bioconductor",
+      "Type": "Package",
+      "Title": "Quantify and interpret drivers of variation in multilevel gene expression experiments",
+      "Date": "2026-03-19",
+      "Authors@R": "person(\"Gabriel\", \"Hoffman\", role=c(\"aut\", \"cre\"), email=\"gabriel.hoffman@mssm.edu\", comment=c(ORCID=\"0000-0002-0957-0224\"))",
+      "Maintainer": "Gabriel E. Hoffman <gabriel.hoffman@mssm.edu>",
+      "Description": "Quantify and interpret multiple sources of biological and technical variation in gene expression experiments. Uses a linear mixed model to quantify variation in gene expression attributable to individual, tissue, time point, or technical variables.  Includes dream differential expression analysis for repeated measures.",
+      "VignetteBuilder": "knitr",
+      "License": "GPL-2",
+      "Encoding": "UTF-8",
+      "URL": "http://bioconductor.org/packages/variancePartition, https://DiseaseNeuroGenomics.github.io/variancePartition",
+      "BugReports": "https://github.com/DiseaseNeuroGenomics/variancePartition/issues",
+      "Suggests": [
+        "BiocStyle",
+        "knitr",
+        "pander",
+        "rmarkdown",
+        "edgeR",
+        "dendextend",
+        "tximport",
+        "tximportData",
+        "ballgown",
+        "DESeq2",
+        "RUnit",
+        "cowplot",
+        "Rfast",
+        "zenith",
+        "statmod",
+        "BiocGenerics",
+        "r2glmm",
+        "readr"
+      ],
+      "biocViews": "RNASeq, GeneExpression, GeneSetEnrichment, DifferentialExpression, BatchEffect, QualityControl, Regression, Epigenetics, FunctionalGenomics, Transcriptomics, Normalization, Preprocessing, Microarray, ImmunoOncology, Software",
+      "Depends": [
+        "R (>= 4.3.0)",
+        "ggplot2",
+        "limma (>= 3.62.2)",
+        "BiocParallel"
+      ],
+      "Imports": [
+        "MASS",
+        "pbkrtest (>= 0.4-4)",
+        "lmerTest",
+        "Matrix (>= 1.4.0)",
+        "iterators",
+        "gplots",
+        "corpcor",
+        "reformulas",
+        "matrixStats",
+        "RhpcBLASctl",
+        "reformulas",
+        "reshape2",
+        "gtools",
+        "remaCor (>= 0.0.15)",
+        "fANCOVA",
+        "aod",
+        "scales",
+        "Rdpack",
+        "rlang",
+        "lme4 (>= 2.0-1)",
+        "grDevices",
+        "graphics",
+        "Biobase",
+        "methods",
+        "utils",
+        "stats"
+      ],
+      "RoxygenNote": "7.3.3",
+      "RdMacros": "Rdpack",
+      "git_url": "https://git.bioconductor.org/packages/variancePartition",
+      "git_branch": "RELEASE_3_23",
+      "git_last_commit": "40803f2",
+      "git_last_commit_date": "2026-04-28",
+      "Repository": "Bioconductor 3.23",
+      "NeedsCompilation": "no",
+      "Author": "Gabriel Hoffman [aut, cre] (ORCID: <https://orcid.org/0000-0002-0957-0224>)"
     },
     "vctrs": {
       "Package": "vctrs",
