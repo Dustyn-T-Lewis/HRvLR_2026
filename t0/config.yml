@@ -1,0 +1,93 @@
+# Single source of truth for the t0 pipeline. Every path, contrast, gene set, model,
+# and threshold lives here; R/ functions read it through config::get(), _targets.R only wires.
+# Adding a feature level or engine is an edit here, not new code.
+
+default:
+  seed: 20260723
+
+  paths:
+    proteins: "02_Normalization/c_data/normalized.csv"   # log2 normalized, protein x sample
+    metadata: "00_input/HRvLR_meta.csv"
+    phenotype: "00_input/c_data/phenotype.csv"
+    gene_sets: "t0/data/hallmark.gmt"                     # written by data-prep if msigdbr present
+    outputs: "t0/outputs"
+
+  ids:
+    protein_key: "uniprot_id"
+    gene_key: "gene"
+    sample_key: "Col_ID"        # e.g. S03_T1
+    subject_key: "Subject_ID"   # e.g. HR_S03
+    group_col: "Group"
+    time_col: "Timepoint"
+
+  design:
+    timepoints: ["T1", "T2", "T3"]
+    contrasts:                  # feature sets over the paired design
+      dTrain:   {type: "delta",    from: "T1", to: "T2"}   # chronic training response
+      dAcute:   {type: "delta",    from: "T2", to: "T3"}   # acute bout response
+      baseline: {type: "baseline", at: "T1"}               # pre-training snapshot
+
+  targets:
+    responder:                  # (a) composite-hypertrophy responder class
+      source: "comp_hypertrophy"
+      split: "median"           # median -> two classes
+      levels: ["low", "high"]
+      positive: "high"
+    supplement:                 # (b) supplement group
+      source: "group_arm"
+      positive: "HR"
+
+  feature_levels: ["protein", "pathway", "module"]
+
+  scope:                        # which grid cells the sweep runs; quick profile narrows these
+    contrasts: ["dTrain", "dAcute", "baseline"]
+    targets: ["responder", "supplement"]
+    levels: ["protein", "pathway", "module"]
+
+  gene_sets:
+    collection: "H"             # MSigDB hallmark via msigdbr, or the gmt above
+    min_size: 10
+    max_size: 500
+
+  wgcna:
+    power: null                 # null -> pick by scale-free topology fit
+    power_candidates: [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+    fit_cut: 0.85               # scale-free R^2 target
+    network_type: "signed"
+    min_module_size: 20
+    merge_cut_height: 0.25
+
+  models:                       # glmnet tunes penalty+mixture over a size-cv.tune_grid grid
+    ranger: {trees: 1000}       # mtry and min_n are tuned
+
+  cv:
+    scheme: "group_vfold"       # leave-one-subject-out
+    group: "subject"            # the modeling-frame key
+    inner_v: 5                  # nested tuning folds
+    tune_grid: 20
+
+  permutation:
+    reps: 1000                  # label shuffles per workflow (key 'n' is a YAML boolean, avoid it)
+
+  thresholds:                   # QC flags only; protein filtering happens upstream in 01_Filtering
+    outlier_cor_z: -3           # median inter-sample correlation z below this = flag
+    outlier_mahal_p: 0.01       # PCA Mahalanobis chi-square tail
+
+  figures:
+    width: 7
+    height: 5
+    dpi: 300
+    device: "png"
+
+# Fast validation slice: one contrast, one target, few permutations. Everything else inherits default.
+quick:
+  inherits: default
+  scope:
+    contrasts: ["baseline"]
+    targets: ["responder"]
+    levels: ["protein", "pathway"]
+  permutation:
+    reps: 3
+  cv:
+    inner_v: 3
+    tune_grid: 3
