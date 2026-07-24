@@ -68,7 +68,13 @@ hlm_contrast_weights <- function(emm) {
     contrast = HLM_CONTRASTS, estimate = NA_real_, se = NA_real_,
     df = NA_real_, t = NA_real_, p = NA_real_
   )
-  if (is.null(fit) || lme4::isSingular(fit)) {
+  # A residual variance collapsed to a sliver of the feature's own spread is an
+  # overfit sparse-data fit that emits explosive contrast t-values and fake tiny
+  # p at n=16; drop it to NA the same way the per-feature HLM in
+  # f04_association.R does, so it cannot masquerade as a top hit.
+  degenerate <- !is.null(fit) &&
+    stats::sigma(fit) < 0.05 * stats::sd(d$y)
+  if (is.null(fit) || lme4::isSingular(fit) || degenerate) {
     return(na_row)
   }
   emm <- emmeans::emmeans(fit, ~ group * timepoint, lmer.df = "satterthwaite")

@@ -70,6 +70,20 @@ test_that("associate_global_hlm returns NA rows for an unfittable protein", {
   expect_true(all(is.na(na_rows$p)))
 })
 
+test_that("associate_global_hlm drops a degenerate near-zero-residual fit", {
+  source(here::here("functions", "shared_hlm.R"))
+  toy <- .hlm_toy()
+  # a feature that is an exact function of the design has ~zero residual
+  # variance and would emit an explosive contrast t; it must come back NA.
+  design_value <- as.numeric(toy$meta$group == "HR") +
+    2 * as.numeric(toy$meta$timepoint)
+  toy$mat["noise", ] <- design_value + rnorm(length(design_value), sd = 1e-4)
+
+  res <- suppressWarnings(associate_global_hlm(toy$mat, toy$meta))
+  deg <- res[res$feature == "noise", ]
+  expect_true(all(is.na(deg$p)))
+})
+
 test_that("varpart_global fractions sum to one and rank subject over group", {
   source(here::here("functions", "shared_hlm.R"))
   toy <- .hlm_toy()
