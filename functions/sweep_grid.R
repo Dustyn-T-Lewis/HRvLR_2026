@@ -49,6 +49,14 @@ sweep_leaf_dir <- function(root, level, config, method) {
   d
 }
 
+# A leaf is done when its workbook exists, so a killed run resumes by skipping
+# the leaves on disk.
+leaf_done <- function(root, level, config, method) {
+  file.exists(file.path(
+    sweep_root_dir(root), level, config, method, "c_data", "results.xlsx"
+  ))
+}
+
 write_sweep_workbook <- function(path, sheets) {
   wb <- createWorkbook()
   for (nm in names(sheets)) {

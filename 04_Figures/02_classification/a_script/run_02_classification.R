@@ -29,6 +29,13 @@ grid <- grid[!(grid$method == "plain" & grid$config == "trajectory"), ]
 
 for (i in seq_len(nrow(grid))) {
   g <- grid[i, ]
+  if (leaf_done("02_classification", g$level, g$config, g$method)) {
+    message(sprintf(
+      "[class %d/%d] %s | %s | %s  skip (done)",
+      i, nrow(grid), g$level, g$config, g$method
+    ))
+    next
+  }
   t0 <- Sys.time()
   s <- suppressWarnings(
     run_class_sweep_leaf(bundle, g$level, g$config, g$method, b_grid = b_grid)
