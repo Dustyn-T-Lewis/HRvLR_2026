@@ -3,7 +3,7 @@
 # source datasets ship in RBC_proteins.xlsx; this writes the collapsed lookup and nothing else,
 # so it belongs at stage 00, upstream of filtering.
 
-pacman::p_load(here, readxl, readr, dplyr, tidyr, stringr, purrr)
+pacman::p_load(here, readr)
 source(here("00_input", "a_script", "build_blood_list.R"))
 
 rbc_reference <- build_rbc_reference(here("00_input", "RBC_proteins.xlsx"))

@@ -6,7 +6,7 @@
 # model for all missing values. Rows are sorted before the stochastic fit so the
 # result is reproducible. This is the arm downstream QC/figures read by default.
 
-pacman::p_load(proteoDA, here, missForest)
+pacman::p_load(here, missForest)
 set.seed(42)
 
 data_dir <- here("02_Normalization", "imputation", "c_data")

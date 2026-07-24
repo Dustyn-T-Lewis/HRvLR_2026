@@ -30,7 +30,6 @@ null_contrasts <- c(
 )
 key_contrasts <- c(within_arm, null_contrasts)
 strata_levels <- c("0 (imputation is a no-op)", "1-9", ">=10")
-methods <- c("missforest", "imp4p", "mscoreutils", "perseus")
 method_lab <- c(
   missforest = "missForest", imp4p = "imp4p",
   mscoreutils = "MsCoreUtils", perseus = "Perseus"
