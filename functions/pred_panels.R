@@ -7,7 +7,7 @@ pacman::p_load(ggplot2, dplyr, tidyr, patchwork, scales)
 
 SPACE_LEVELS <- c("proteins", "singscore", "eigengenes")
 SPACE_LABELS <- c(
-  proteins = "proteins", singscore = "pathways (singscore)",
+  proteins = "proteins*", singscore = "pathways (singscore)",
   eigengenes = "modules (ME)*"
 )
 SPACE_COLORS <- c(
@@ -71,8 +71,9 @@ build_class_leaf_panel <- function(summ, roc_df, selection, contrast, model) {
       ),
       subtitle = sprintf(
         paste(
-          "Nested LOSO vs %d-permutation null.",
-          "*module eigengenes are cohort-relative (optimistic)."
+          "Nested LOSO vs %d-permutation null. *proteins (cohort-imputed)",
+          "and module eigengenes (cohort-relative) are optimistic; singscore",
+          "is leakage-free."
         ),
         N_PERM
       ),

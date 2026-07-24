@@ -89,8 +89,9 @@ composite <- (p_class / p_cont) +
     title = "F05 — out-of-sample prediction of training response",
     subtitle = sprintf(
       paste(
-        "Nested leave-one-subject-out, train-only scaling,",
-        "%d-permutation null. Penalized/sparse models only."
+        "Nested leave-one-subject-out, train-only scaling, %d-permutation",
+        "null. Penalized/sparse models only. singscore is leakage-free;",
+        "proteins (cohort-imputed) and modules (cohort-relative) optimistic."
       ),
       N_PERM
     ),
