@@ -6,7 +6,7 @@
 # the matrix and the Group_Time factor. Output feeds QC and sensitivity work; the
 # primary DEP stays on the non-imputed normalized matrix.
 
-pacman::p_load(proteoDA, here, imp4p)
+pacman::p_load(here, imp4p)
 set.seed(42)
 
 data_dir <- here("02_Normalization", "imputation", "c_data")

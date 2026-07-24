@@ -6,7 +6,7 @@
 # MsCoreUtils::impute_matrix(method = "mixed") routes the MAR subset through kNN
 # and the MNAR subset through QRILC (left-censored).
 
-pacman::p_load(proteoDA, here, MsCoreUtils, imputeLCMD)
+pacman::p_load(here, MsCoreUtils, imputeLCMD)
 set.seed(42)
 
 data_dir <- here("02_Normalization", "imputation", "c_data")

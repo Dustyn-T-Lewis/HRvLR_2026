@@ -1,4 +1,4 @@
-pacman::p_load(here, dplyr, readr)
+pacman::p_load(dplyr, readr)
 
 build_phenotype_table <- function(meta_path) {
   meta <- read_csv(meta_path, show_col_types = FALSE)
