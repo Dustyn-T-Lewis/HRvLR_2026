@@ -5,6 +5,7 @@
 
 pacman::p_load(here, dplyr, purrr, tidyr, ggplot2, openxlsx, patchwork)
 source(here("functions", "shared_style.R"))
+source(here("functions", "shared_prediction.R"))
 source(here("functions", "pred_panels.R"))
 
 root <- here("04_Figures", "F05_prediction")
@@ -110,9 +111,9 @@ save_panel(composite, file.path(root, "b_reports", "F05_composite"),
 
 wb <- createWorkbook()
 addWorksheet(wb, "classification")
-writeData(wb, "classification", class_metrics |> select(-row, -lab))
+writeData(wb, "classification", class_metrics |> dplyr::select(-row, -lab))
 addWorksheet(wb, "continuous")
-writeData(wb, "continuous", cont_metrics |> select(-row, -lab))
+writeData(wb, "continuous", cont_metrics |> dplyr::select(-row, -lab))
 saveWorkbook(wb, file.path(root, "c_data", "F05_metrics.xlsx"),
   overwrite = TRUE
 )
