@@ -8,9 +8,12 @@
 # The permutation null shuffles the outcome across subjects and re-runs the
 # entire nested LOSO.
 
-pacman::p_load(glmnet, mixOmics, pamr, pROC, parallel, withr)
+pacman::p_load(glmnet, mixOmics, pamr, pROC, ranger, e1071, parallel, withr)
 
 GLMNET_ALPHAS <- c(0.1, 0.5, 1.0)
+ENET_ALPHAS <- c(0.25, 0.5, 0.75)
+RF_TREES <- 500L
+SVM_COST <- 1
 SPLS_NCOMP <- 1L
 N_PERM <- 200L
 PERM_SEED <- 42L
@@ -42,11 +45,12 @@ spls_keepx_grid <- function(p) {
 # the winning (alpha, lambda.1se) is refit on all training subjects. lambda.1se
 # is the parsimonious choice (methods doc Part 4); the caller can read
 # lambda.min off the same fit.
-fit_predict_glmnet <- function(x_tr, y_tr, x_te, family) {
+fit_predict_glmnet <- function(x_tr, y_tr, x_te, family,
+                               alphas = GLMNET_ALPHAS) {
   fold_id <- seq_len(nrow(x_tr))
   best <- NULL
   best_cvm <- Inf
-  for (a in GLMNET_ALPHAS) {
+  for (a in alphas) {
     cv <- cv.glmnet(x_tr, y_tr,
       family = family, alpha = a,
       foldid = fold_id, grouped = FALSE, standardize = FALSE
@@ -130,11 +134,77 @@ fit_predict_pam <- function(x_tr, y_tr, x_te) {
   list(pred = post[, "1"], selected = colnames(x_tr)[nz])
 }
 
+# Random forest (ranger): a breadth-only robustness learner, single-threaded so
+# it nests cleanly inside the permutation mclapply, seeded for reproducibility.
+# It uses every feature, so it yields no sparse signature; selected is empty by
+# design (the methods doc forbids ranking off RF importance).
+fit_predict_ranger <- function(x_tr, y_tr, x_te, family) {
+  df_tr <- as.data.frame(x_tr)
+  df_te <- as.data.frame(x_te)
+  if (family == "binomial") {
+    rf <- ranger::ranger(
+      x = df_tr, y = factor(y_tr, levels = c(0, 1)),
+      probability = TRUE, num.trees = RF_TREES, num.threads = 1L, seed = 1L
+    )
+    pred <- predict(rf, df_te)$predictions[, "1"]
+  } else {
+    rf <- ranger::ranger(
+      x = df_tr, y = y_tr,
+      num.trees = RF_TREES, num.threads = 1L, seed = 1L
+    )
+    pred <- predict(rf, df_te)$predictions
+  }
+  list(pred = as.numeric(pred), selected = character(0))
+}
+
+# Linear-kernel SVM (e1071) at a fixed cost: nothing is tuned, so there is no
+# in-fold choice to leak. A dense robustness learner, no sparse signature.
+fit_predict_svm <- function(x_tr, y_tr, x_te, family) {
+  if (family == "binomial") {
+    fit <- e1071::svm(x_tr, factor(y_tr, levels = c(0, 1)),
+      kernel = "linear", cost = SVM_COST, scale = FALSE, probability = TRUE
+    )
+    pr <- predict(fit, x_te, probability = TRUE)
+    pred <- attr(pr, "probabilities")[, "1"]
+  } else {
+    fit <- e1071::svm(x_tr, y_tr,
+      kernel = "linear", cost = SVM_COST, scale = FALSE
+    )
+    pred <- predict(fit, x_te)
+  }
+  list(pred = as.numeric(pred), selected = character(0))
+}
+
+# Plain unpenalized model, only valid where p < n (the module space). Column
+# names are sanitised because the trajectory space carries non-syntactic tags.
+fit_predict_plain <- function(x_tr, y_tr, x_te, family) {
+  df_tr <- as.data.frame(x_tr)
+  df_te <- as.data.frame(x_te)
+  colnames(df_tr) <- paste0("v", seq_len(ncol(df_tr)))
+  colnames(df_te) <- colnames(df_tr)
+  if (family == "binomial") {
+    fit <- suppressWarnings(
+      stats::glm(y_tr ~ ., data = df_tr, family = stats::binomial())
+    )
+    pred <- stats::predict(fit, df_te, type = "response")
+  } else {
+    fit <- stats::lm(y_tr ~ ., data = df_tr)
+    pred <- stats::predict(fit, df_te)
+  }
+  list(pred = as.numeric(pred), selected = character(0))
+}
+
 fit_predict <- function(model, x_tr, y_tr, x_te, family) {
   switch(model,
     glmnet = fit_predict_glmnet(x_tr, y_tr, x_te, family),
+    enet = fit_predict_glmnet(x_tr, y_tr, x_te, family, ENET_ALPHAS),
+    lasso = fit_predict_glmnet(x_tr, y_tr, x_te, family, 1),
+    ridge = fit_predict_glmnet(x_tr, y_tr, x_te, family, 0),
     spls = fit_predict_spls(x_tr, y_tr, x_te, family),
     pam = fit_predict_pam(x_tr, y_tr, x_te),
+    rf = fit_predict_ranger(x_tr, y_tr, x_te, family),
+    svm = fit_predict_svm(x_tr, y_tr, x_te, family),
+    plain = fit_predict_plain(x_tr, y_tr, x_te, family),
     stop("unknown model: ", model)
   )
 }
@@ -277,6 +347,101 @@ run_cont_cell <- function(x, y, model, outcome, nperm = N_PERM,
       perm_p_spearman = perm_p(obs_rho, null[, "rho"], "greater"),
       null_q2_mean = mean(null[, "q2"], na.rm = TRUE)
     ),
+    preds = data.frame(
+      outcome = outcome, model = model, subject = rownames(x),
+      y = y, pred = preds
+    ),
+    selection = selection_frequency(fit$selected, model)
+  )
+}
+
+B_GRID <- c(0L, 200L, 1000L)
+
+# Metric null under B outcome shuffles, each re-running the whole nested LOSO.
+# Because perm_matrix is seeded, the first b columns of a bmax draw reproduce a
+# standalone b-permutation null, so one bmax pass serves every smaller B in the
+# grid by prefix-slicing.
+sweep_class_null <- function(x, y, model, bmax, cores) {
+  pm <- perm_matrix(length(y), bmax)
+  unlist(mclapply(seq_len(bmax), function(b) {
+    yp <- y[pm[, b]]
+    stat_auc(yp, nested_loso(x, yp, model, "binomial")$preds)
+  }, mc.cores = cores))
+}
+
+sweep_cont_null <- function(x, y, model, bmax, cores) {
+  pm <- perm_matrix(length(y), bmax)
+  null <- mclapply(seq_len(bmax), function(b) {
+    yp <- y[pm[, b]]
+    pp <- nested_loso(x, yp, model, "gaussian")$preds
+    c(q2 = stat_q2(yp, pp), rho = stat_spearman(yp, pp))
+  }, mc.cores = cores)
+  do.call(rbind, null)
+}
+
+# Classification cell across a grid of permutation counts: observed AUC once,
+# one null pass at max(B), one summary row per B with that B's permutation p.
+sweep_class_cell <- function(x, y, model, b_grid = B_GRID, cores = PERM_CORES) {
+  fit <- nested_loso(x, y, model, "binomial")
+  preds <- fit$preds
+  obs <- stat_auc(y, preds)
+  roc_obj <- pROC::roc(y, preds,
+    quiet = TRUE, levels = c(0, 1), direction = "<"
+  )
+  ci <- as.numeric(pROC::ci.auc(roc_obj))
+  bmax <- max(b_grid)
+  null <- if (bmax > 0) {
+    sweep_class_null(x, y, model, bmax, cores)
+  } else {
+    numeric(0)
+  }
+  summ <- do.call(rbind, lapply(sort(b_grid), function(b) {
+    nb <- if (b > 0) null[seq_len(b)] else numeric(0)
+    data.frame(
+      model = model, metric = "AUC", n = length(y), p = ncol(x), B = b,
+      estimate = obs, ci_lo = ci[1], ci_hi = ci[3],
+      perm_p = if (b > 0) perm_p(obs, nb, "greater") else NA_real_,
+      null_mean = if (b > 0) mean(nb) else NA_real_,
+      null_sd = if (b > 0) stats::sd(nb) else NA_real_
+    )
+  }))
+  list(
+    summary = summ, null = data.frame(model = model, auc = null),
+    preds = data.frame(
+      model = model, subject = rownames(x), y = y, pred = preds
+    ),
+    selection = selection_frequency(fit$selected, model)
+  )
+}
+
+# Continuous cell for one outcome across a grid of permutation counts.
+sweep_cont_cell <- function(x, y, model, outcome, b_grid = B_GRID,
+                            cores = PERM_CORES) {
+  fit <- nested_loso(x, y, model, "gaussian")
+  preds <- fit$preds
+  obs_q2 <- stat_q2(y, preds)
+  obs_rho <- stat_spearman(y, preds)
+  bmax <- max(b_grid)
+  null <- if (bmax > 0) sweep_cont_null(x, y, model, bmax, cores) else NULL
+  summ <- do.call(rbind, lapply(sort(b_grid), function(b) {
+    nq <- if (b > 0) null[seq_len(b), "q2"] else numeric(0)
+    nr <- if (b > 0) null[seq_len(b), "rho"] else numeric(0)
+    data.frame(
+      outcome = outcome, model = model, n = length(y), p = ncol(x), B = b,
+      q2 = obs_q2, spearman = obs_rho,
+      perm_p_q2 = if (b > 0) perm_p(obs_q2, nq, "greater") else NA_real_,
+      perm_p_spearman = if (b > 0) perm_p(obs_rho, nr, "greater") else NA_real_,
+      null_q2_mean = if (b > 0) mean(nq) else NA_real_,
+      null_q2_sd = if (b > 0) stats::sd(nq) else NA_real_
+    )
+  }))
+  null_df <- if (is.null(null)) {
+    data.frame(outcome = outcome, model = model, q2 = numeric(0))
+  } else {
+    data.frame(outcome = outcome, model = model, q2 = null[, "q2"])
+  }
+  list(
+    summary = summ, null = null_df,
     preds = data.frame(
       outcome = outcome, model = model, subject = rownames(x),
       y = y, pred = preds
