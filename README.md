@@ -90,7 +90,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association/WGCNA module-phenotype linkage, F04_association/HLM trajectory association and F04_association/limma snapshot association (proteins + pathways); F05_prediction out-of-sample prediction |
+| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association global mixed model + group and phenotype association (WGCNA module linkage kept as the eigengene source); F05_prediction out-of-sample prediction |
 
 ## Canonical Run Order
 
@@ -143,13 +143,19 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
 - `04_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
 - `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
-- `04_Figures/F04_association/WGCNA`: WGCNA module-phenotype linkage (self-contained on the missForest-imputed proteome)
-- `04_Figures/F04_association/HLM`: proteins + pathways, trajectory mixed model across all three timepoints
-- `04_Figures/F04_association/limma`: proteins + pathways, snapshot regression per phase
-- `04_Figures/F05_prediction`: out-of-sample HR/LR and continuous prediction, two
-  feature families (`WGCNA` module eigengenes, `singscore` pathway scores) each
-  split into `responder`/`continuous` leaves, plus a `shared/` LOSO harness. The
-  globally-imputed `proteins` feature space was dropped as leaky.
+- `04_Figures/F04_association/WGCNA`: WGCNA module-phenotype linkage, and the
+  source of the module eigengenes both figures consume (missForest-imputed proteome)
+- `04_Figures/F04_association/global`: one mixed model across all samples
+  (`mixed_model`, cached for the group slices) plus ordination and PERMANOVA
+  (`ordination`)
+- `04_Figures/F04_association/group_HRvLR`: five HR-vs-LR contrasts, each fit two
+  ways (`limma` snapshot, `mixed_slice` off the global model)
+- `04_Figures/F04_association/phenotype`: feature ~ continuous adaptation, per phase
+- `04_Figures/F05_prediction`: out-of-sample HR/LR classification (`group_HRvLR`,
+  three engines) and continuous prediction (`phenotype/baseline`), three feature
+  spaces each (proteins, singscore, module eigengenes), nested leave-one-subject-out
+  against a permutation null. singscore is leakage-free; the cohort-imputed proteins
+  and cohort-relative eigengenes are flagged optimistic.
 
 ```sh
 Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
@@ -161,15 +167,26 @@ Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordanc
 Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
 Rscript 04_Figures/F04_association/WGCNA/a_script/01_run_modules.R
-Rscript 04_Figures/F04_association/HLM/proteins/a_script/01_run.R
-Rscript 04_Figures/F04_association/HLM/pathways/a_script/01_run.R
-Rscript 04_Figures/F04_association/limma/proteins/a_script/01_run.R
-Rscript 04_Figures/F04_association/limma/pathways/a_script/01_run.R
 
-Rscript 04_Figures/F05_prediction/WGCNA/responder/a_script/01_run.R
-Rscript 04_Figures/F05_prediction/WGCNA/continuous/a_script/01_run.R
-Rscript 04_Figures/F05_prediction/singscore/responder/a_script/01_run.R
-Rscript 04_Figures/F05_prediction/singscore/continuous/a_script/01_run.R
+# F04 association: the global mixed model caches the contrasts the slices read
+Rscript 04_Figures/F04_association/global/mixed_model/a_script/01_run.R
+Rscript 04_Figures/F04_association/global/ordination/a_script/01_run.R
+for c in T1 T2 T3 training acute; do for m in limma mixed_slice; do
+  Rscript 04_Figures/F04_association/group_HRvLR/$c/$m/a_script/01_run.R
+done; done
+for p in baseline training acute; do
+  Rscript 04_Figures/F04_association/phenotype/$p/limma/a_script/01_run.R
+done
+Rscript 04_Figures/F04_association/a_script/composite.R
+
+# F05 prediction: nested LOSO + 200-permutation null (hours; PRED_CORES parallel)
+for c in T1 T2 T3 training acute; do for m in glmnet splsda pam; do
+  Rscript 04_Figures/F05_prediction/group_HRvLR/$c/$m/a_script/01_run.R
+done; done
+for m in glmnet spls; do
+  Rscript 04_Figures/F05_prediction/phenotype/baseline/$m/a_script/01_run.R
+done
+Rscript 04_Figures/F05_prediction/a_script/composite.R
 ```
 
 ## Repository Conventions
@@ -189,9 +206,9 @@ Shared helpers live by scope:
 ## Figures
 
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F03_pathway/supp/summary does not, and F05_prediction's two
-narrative files (`WGCNA/WGCNA.qmd`, `singscore/singscore.qmd`) sit one level above
-their `responder/`/`continuous/` leaves rather than one per leaf.
+ship a narrative `.qmd`; F03_pathway/supp/summary does not. F04_association and
+F05_prediction are organized by branch then contrast, with `a_script/composite.R`
+assembling each figure and applying BH once across its grid.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
@@ -200,9 +217,10 @@ their `responder/`/`continuous/` leaves rather than one per leaf.
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `F04_association/WGCNA/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
-| `F04_association/HLM/` | Which proteins and pathways track the training-response trajectory (ΔmCSA, strength, ΔfCSA) across all three timepoints? | Mixed models (`lmerTest`, random intercept per subject) on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
-| `F04_association/limma/` | Which proteins and pathways associate with the training response at baseline, training, and acute snapshots? | `limma` empirical-Bayes regression per phase on proteins and singscore pathway scores. Association only; no protein or pathway survives BH. |
-| `F05_prediction/` | Can WGCNA module eigengenes or singscore pathway scores predict responder class or training gains out of sample, at baseline, training, or acute phase? | Elastic net (`glmnet`) + sparse PLS (`mixOmics`), nested LOSO CV against a permutation null. Null in every leaf after BH. |
+| `F04_association/global/` | What does one model on all samples say, and the per-timepoint slices? | Mixed model `~ group*timepoint + (1\|subject)` via `lmerTest`/`emmeans` with `variancePartition`; PCA + PERMANOVA (`vegan`, strata = subject). Descriptive; subject variance dominates. |
+| `F04_association/group_HRvLR/` | Where do HR and LR differ, per contrast? | `limma` snapshot and mixed-model slice for T1/T2/T3/training/acute, over proteins, pathways, modules; reconciled with 03_DEP (ρ ≈ 0.99 cross-sectional). No survivor at BH. |
+| `F04_association/phenotype/` | Which features track how much a subject adapts? | Moderated `limma` on six adaptation deltas per phase. No survivor at BH. |
+| `F05_prediction/` | Can the proteome classify responder or predict gains out of sample? | Elastic net (`glmnet`), sparse PLS-DA/PLS (`mixOmics`), nearest shrunken centroids (`pamr`); nested LOSO with train-only scaling against a ≥200-permutation null, three feature spaces. Null in every cell after BH. |
 
 Prediction is scored against a permutation null, never zero; composite hypertrophy
 stays out of any model carrying the HR/LR term (the groups were defined from it);
