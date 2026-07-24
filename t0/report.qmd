@@ -1,0 +1,102 @@
+---
+title: "t0 · Proteomic signatures of hypertrophy response and supplement group"
+format:
+  html:
+    toc: true
+    df-print: kable
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(targets)
+library(dplyr)
+library(ggplot2)
+# Quarto renders with cwd = t0/, so anchor the store to an absolute path and keep the
+# resolved config out of the repo.
+Sys.setenv(TAR_CONFIG = tempfile(fileext = ".yaml"))
+tar_config_set(store = here::here("t0", "_targets"))
+tar_source(here::here("t0", "R"))
+cfg <- tar_read(cfg)
+```
+
+## What this pipeline asks
+
+Two prediction targets from the same muscle proteome: composite-hypertrophy **responder class**
+and **supplement group**. Each is predicted from three feature levels — protein, pathway
+(singscore), module (WGCNA eigengene) — under leave-one-subject-out cross-validation with the
+pathway and module transforms learned **inside each fold**, so nothing a subject predicts is derived
+from that subject. Every model is scored against a label-permutation null.
+
+## Quality control
+
+```{r qc-pairing}
+tar_read(qc_pair)
+```
+
+```{r qc-outliers}
+tar_read(qc_out) |>
+  filter(flagged) |>
+  select(sample, cor_z, mahal, flag_cor, flag_pca)
+```
+
+Outliers are flagged, never dropped; the modeling frames keep every subject with a complete
+timepoint pair.
+
+```{r qc-fig}
+#| fig-width: 7
+#| fig-height: 4
+fig_missingness(tar_read(qc_miss))
+```
+
+Per-sample signal spread (median intensity, IQR, coefficient of variation):
+
+```{r qc-dist}
+tar_read(qc_dist) |>
+  transmute(sample, group, timepoint,
+    median = round(median, 2), iqr = round(iqr, 2), cv = round(cv, 3)
+  )
+```
+
+## Supervised sweep
+
+Leave-one-subject-out AUC per (feature level × engine × contrast × target), with the
+permutation-null p-value and its BH-adjusted q.
+
+```{r sweep-table}
+tar_read(sweep) |>
+  transmute(contrast, target, level, model,
+    AUC = round(roc_auc, 3), bal_acc = round(bal_accuracy, 3),
+    p_perm = round(p_perm, 3), q = round(q_perm, 3)
+  ) |>
+  arrange(target, contrast, desc(AUC))
+```
+
+```{r sweep-fig}
+#| fig-width: 8
+#| fig-height: 6
+fig_cv_performance(tar_read(sweep))
+```
+
+## Unsupervised mapping
+
+Do whole-cohort clusters of each feature representation recover either label? Adjusted Rand index
+against a 2-cluster k-means (0 = chance, 1 = perfect).
+
+```{r unsup}
+tar_read(unsupervised) |>
+  transmute(contrast, level,
+    ARI_responder = round(ari_responder, 3),
+    ARI_supplement = round(ari_supplement, 3)
+  )
+```
+
+## Reproducibility
+
+```{r session}
+tar_read(cfg)$seed
+sessioninfo::session_info()$platform
+```

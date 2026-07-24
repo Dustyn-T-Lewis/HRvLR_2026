@@ -40,3 +40,11 @@ docs/
 03_DEP/b_imputed/c_data/imp4p/combined_results_pi.csv
 03_DEP/b_imputed/c_data/mscoreutils/combined_results_pi.csv
 03_DEP/b_imputed/c_data/perseus/combined_results_pi.csv
+
+# t0: experimental targets prediction pipeline (WIP). Track the source and the
+# outputs/ skeleton; the store and materialized outputs regenerate from tar_make().
+t0/_targets/
+t0/outputs/figures/*.png
+t0/outputs/qc/*.csv
+t0/outputs/results/*.csv
+t0/outputs/session_info.txt
