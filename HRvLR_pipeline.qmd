@@ -338,6 +338,7 @@ Run the stage scripts in order from the project root:
 
 ```bash
 Rscript 00_input/a_script/01_build_phenotype.R
+Rscript 00_input/a_script/02_build_blood_list.R
 Rscript 01_Filtering/a_script/01_run_filtering.R
 Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 02_Normalization/imputation/a_script/impute_missforest.R
@@ -345,7 +346,13 @@ Rscript 02_Normalization/imputation/a_script/impute_imp4p.R
 Rscript 02_Normalization/imputation/a_script/impute_mscoreutils.R
 Rscript 02_Normalization/imputation/a_script/impute_perseus.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
+Rscript 03_DEP/a_non_imputed/a_script/02_blood_filter_sensitivity.R
+Rscript 03_DEP/a_non_imputed/a_script/03_untested_proteins.R
 Rscript 03_DEP/b_imputed/a_script/01_run_dep_imputed.R
+Rscript 03_DEP/b_imputed/a_script/02_imp4p_circularity.R
+
+# imputation QC reads the b_imputed outputs, so it runs last, after stage 03:
+Rscript 02_Normalization/imputation/a_script/imputation_qc.R
 ```
 
 # References {#sec-refs}
