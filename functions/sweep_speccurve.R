@@ -13,8 +13,8 @@ SPEC_LEVEL_COLORS <- c(
   proteins = "#2166AC", pathways = "#238B45", modules = "#9E9AC8"
 )
 
-# cells: roll-up all_cells rows at one B. value/mean/sd/p name the metric and its
-# null; chance is the no-skill reference; spec_cols are the axes to read off.
+# cells: roll-up all_cells rows at one B. value/mean/sd/p name the metric and
+# its null; chance is the no-skill reference; spec_cols are the read-off axes.
 spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
                        spec_cols, title, subtitle) {
   d <- cells |>

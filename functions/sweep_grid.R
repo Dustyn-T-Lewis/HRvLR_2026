@@ -33,8 +33,8 @@ CLASS_METHODS <- c("enet", "lasso", "ridge", "spls", "pam", "rf", "svm")
 CONT_METHODS <- c("enet", "lasso", "ridge", "spls", "rf", "svm")
 PLAIN_METHOD <- "plain"
 
-# Methods that run at a given level: the unpenalised plain model is only valid on
-# the low-dimension module space (p < n).
+# Methods that run at a given level: the unpenalised plain model is only valid
+# on the low-dimension module space (p < n).
 methods_for_level <- function(base_methods, level) {
   if (level == "modules") c(base_methods, PLAIN_METHOD) else base_methods
 }
