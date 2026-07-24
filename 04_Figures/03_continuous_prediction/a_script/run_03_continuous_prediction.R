@@ -29,6 +29,13 @@ grid <- grid[!(grid$method == "plain" & grid$config == "trajectory"), ]
 
 for (i in seq_len(nrow(grid))) {
   g <- grid[i, ]
+  if (leaf_done("03_continuous_prediction", g$level, g$config, g$method)) {
+    message(sprintf(
+      "[cont %d/%d] %s | %s | %s  skip (done)",
+      i, nrow(grid), g$level, g$config, g$method
+    ))
+    next
+  }
   t0 <- Sys.time()
   s <- suppressWarnings(
     run_cont_sweep_leaf(bundle, g$level, g$config, g$method, b_grid = b_grid)
