@@ -122,7 +122,11 @@ build_cont_leaf_panel <- function(summ, null, selection, level, config,
     filter(.data$B == max(.data$B)) |>
     slice_max(.data$q2, n = 1, with_ties = FALSE) |>
     pull(.data$outcome)
-  sel_best <- selection |> filter(.data$outcome == best)
+  sel_best <- if ("outcome" %in% names(selection)) {
+    filter(selection, .data$outcome == best)
+  } else {
+    selection[0, , drop = FALSE]
+  }
 
   (p_q2 | selection_panel(sel_best, fill)) +
     plot_layout(widths = c(1.5, 1)) +

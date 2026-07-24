@@ -23,6 +23,9 @@ grid <- do.call(rbind, lapply(levels_run, function(lv) {
     stringsAsFactors = FALSE
   )
 }))
+# plain needs p < n; the trajectory encoding triples the module count past n, so
+# the plain model is undefined there and is dropped.
+grid <- grid[!(grid$method == "plain" & grid$config == "trajectory"), ]
 
 for (i in seq_len(nrow(grid))) {
   g <- grid[i, ]
