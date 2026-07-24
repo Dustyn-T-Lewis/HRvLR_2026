@@ -97,17 +97,33 @@ pred_sample_at <- function(meta, subj, tp) {
 
 # Subject-level feature matrix (subjects x features) for one contrast. T1/T2/T3
 # and baseline (= T1) are the level at that timepoint; training is the T2 - T1
-# change, acute the T3 - T2 change. Subjects missing a required sample drop out.
+# change, acute the T3 - T2, total the T3 - T1. trajectory concatenates a
+# subject's T1, T2, T3 vectors into one 3p feature row (columns suffixed by
+# timepoint). Subjects missing a required sample drop out.
 pred_contrast_matrix <- function(feature_mat, meta, contrast) {
   spec <- switch(contrast,
-    baseline = list(tps = "T1", diff = FALSE),
-    T1 = list(tps = "T1", diff = FALSE),
-    T2 = list(tps = "T2", diff = FALSE),
-    T3 = list(tps = "T3", diff = FALSE),
+    baseline = list(tps = "T1"),
+    T1 = list(tps = "T1"),
+    T2 = list(tps = "T2"),
+    T3 = list(tps = "T3"),
     training = list(tps = c("T1", "T2"), diff = TRUE),
     acute = list(tps = c("T2", "T3"), diff = TRUE),
+    total = list(tps = c("T1", "T3"), diff = TRUE),
+    trajectory = list(tps = c("T1", "T2", "T3"), concat = TRUE),
     stop("unknown contrast: ", contrast)
   )
+  build_row <- function(ids) {
+    if (isTRUE(spec$concat)) {
+      unlist(lapply(spec$tps, function(tp) {
+        v <- feature_mat[, ids[[tp]]]
+        setNames(v, paste0(names(v), "@", tp))
+      }))
+    } else if (isTRUE(spec$diff)) {
+      feature_mat[, ids[[2]]] - feature_mat[, ids[[1]]]
+    } else {
+      feature_mat[, ids[[1]]]
+    }
+  }
   subjects <- levels(factor(meta$subject))
   rows <- lapply(subjects, function(s) {
     ids <- vapply(
@@ -116,11 +132,7 @@ pred_contrast_matrix <- function(feature_mat, meta, contrast) {
     if (anyNA(ids) || !all(ids %in% colnames(feature_mat))) {
       return(NULL)
     }
-    if (spec$diff) {
-      feature_mat[, ids[[2]]] - feature_mat[, ids[[1]]]
-    } else {
-      feature_mat[, ids[[1]]]
-    }
+    build_row(ids)
   })
   names(rows) <- subjects
   rows <- rows[!vapply(rows, is.null, logical(1))]
