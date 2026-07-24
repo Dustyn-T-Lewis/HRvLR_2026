@@ -8,6 +8,15 @@
 # The permutation null shuffles the outcome across subjects and re-runs the
 # entire nested LOSO.
 
+# The permutation null forks PERM_CORES workers; each would otherwise let its
+# BLAS spawn one thread per core, oversubscribing the machine by orders of
+# magnitude. Pin every math library to a single thread so the only parallelism
+# is the fork level.
+Sys.setenv(
+  OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1",
+  VECLIB_MAXIMUM_THREADS = "1", MKL_NUM_THREADS = "1"
+)
+
 pacman::p_load(glmnet, mixOmics, pamr, pROC, ranger, e1071, parallel, withr)
 
 GLMNET_ALPHAS <- c(0.1, 0.5, 1.0)
