@@ -15,8 +15,11 @@ SPEC_LEVEL_COLORS <- c(
 
 # cells: roll-up all_cells rows at one B. value/mean/sd/p name the metric and
 # its null; chance is the no-skill reference; spec_cols are the read-off axes.
+# y_lim clamps the display so a few catastrophic negatives (a plain model
+# overfitting the module space to Q^2 of -1e6) cannot squash the informative
+# range; clamped points and bands pile at the floor via scales::squish.
 spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
-                       spec_cols, title, subtitle) {
+                       spec_cols, title, subtitle, y_lim = NULL) {
   d <- cells |>
     mutate(
       value = .data[[value]], null_mean = .data[[mean]],
@@ -27,6 +30,12 @@ spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
     ) |>
     arrange(.data$value) |>
     mutate(rank = dplyr::row_number())
+
+  y_scale <- if (is.null(y_lim)) {
+    scale_y_continuous()
+  } else {
+    scale_y_continuous(limits = y_lim, oob = scales::squish)
+  }
 
   p_curve <- ggplot(d, aes(.data$rank, .data$value)) +
     geom_linerange(aes(ymin = .data$lo, ymax = .data$hi),
@@ -39,6 +48,7 @@ spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
     scale_shape_manual(
       values = c(`FALSE` = 16, `TRUE` = 17), guide = "none"
     ) +
+    y_scale +
     labs(
       x = NULL, y = metric_label, title = title, subtitle = subtitle
     ) +
@@ -94,7 +104,7 @@ spec_curve_cont <- function(cells, title, subtitle) {
     value = "q2", mean = "null_q2_mean", sd = "null_q2_sd", p = "perm_p_q2",
     chance = 0, metric_label = expression(LOSO ~ Q^2),
     spec_cols = c("level", "config", "model", "outcome"),
-    title = title, subtitle = subtitle
+    title = title, subtitle = subtitle, y_lim = c(-1, 0.7)
   )
 }
 
@@ -119,7 +129,10 @@ render_root_speccurve <- function(root) {
     spec_curve_cont(
       cells, "Continuous-prediction screen -- specification curve",
       sprintf(
-        "Six deltas by nested LOSO. Each cell vs its null band. Levels: %s.",
+        paste(
+          "Six deltas by nested LOSO. Each cell vs its null band; Q^2 clamped",
+          "at -1. Chance = 0. Levels: %s."
+        ),
         levels_txt
       )
     )
