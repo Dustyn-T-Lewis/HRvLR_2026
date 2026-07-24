@@ -43,7 +43,7 @@ sweep_root_dir <- function(root) here("04_Figures", root)
 
 sweep_leaf_dir <- function(root, level, config, method) {
   d <- file.path(sweep_root_dir(root), level, config, method)
-  for (sub in c("a_script", "b_reports", "c_data")) {
+  for (sub in c("b_reports", "c_data")) {
     dir.create(file.path(d, sub), recursive = TRUE, showWarnings = FALSE)
   }
   d
