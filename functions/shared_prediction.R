@@ -113,8 +113,8 @@ fit_predict_spls <- function(x_tr, y_tr, x_te, family) {
 
 # Nearest shrunken centroids (Tibshirani 2002): the interpretable diagonal
 # baseline the small-n literature favours. pamr wants features x samples, so the
-# harness matrices are transposed on the way in. The shrinkage threshold is tuned
-# by a leave-one-out pamr.cv on the training subjects; ties break to the largest
+# harness matrices are transposed on the way in. The shrinkage threshold is
+# tuned by a leave-one-out pamr.cv on training subjects; ties break to largest
 # threshold (sparsest centroid). Classification only.
 fit_predict_pam <- function(x_tr, y_tr, x_te) {
   dat <- list(
@@ -217,7 +217,9 @@ run_class_cell <- function(x, y, model, nperm = N_PERM, cores = PERM_CORES) {
   fit <- nested_loso(x, y, model, "binomial")
   preds <- fit$preds
   obs <- stat_auc(y, preds)
-  roc_obj <- pROC::roc(y, preds, quiet = TRUE, levels = c(0, 1), direction = "<")
+  roc_obj <- pROC::roc(y, preds,
+    quiet = TRUE, levels = c(0, 1), direction = "<"
+  )
   ci <- as.numeric(pROC::ci.auc(roc_obj))
 
   pm <- perm_matrix(length(y), nperm)
