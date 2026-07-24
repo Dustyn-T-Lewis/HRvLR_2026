@@ -23,9 +23,15 @@ class_dirs <- list.dirs(file.path(root, "group_HRvLR"), recursive = TRUE) |>
 cont_dirs <- list.dirs(file.path(root, "phenotype"), recursive = TRUE) |>
   keep(~ file.exists(file.path(.x, "c_data", "source_data.xlsx")))
 
+# BH within each question (per contrast for classification, per outcome for
+# continuous), the least stringent valid family: it controls FDR within each
+# scientific question without pooling the whole grid, so the method comparison
+# is not buried under 45/36 tests.
 class_metrics <- map_dfr(class_dirs, read_metrics) |>
+  group_by(contrast) |>
+  mutate(q_bh = p.adjust(perm_p, "BH")) |>
+  ungroup() |>
   mutate(
-    q_bh = p.adjust(perm_p, "BH"),
     contrast = factor(
       contrast,
       levels = c("T1", "T2", "T3", "training", "acute")
@@ -37,8 +43,10 @@ class_metrics <- map_dfr(class_dirs, read_metrics) |>
   )
 
 cont_metrics <- map_dfr(cont_dirs, read_metrics) |>
+  group_by(outcome) |>
+  mutate(q_bh = p.adjust(perm_p_q2, "BH")) |>
+  ungroup() |>
   mutate(
-    q_bh = p.adjust(perm_p_q2, "BH"),
     space = space_factor(space),
     model = factor(model, levels = c("glmnet", "spls")),
     row = interaction(model, space, sep = " / "),
@@ -56,7 +64,7 @@ p_class <- ggplot(class_metrics, aes(contrast, row, fill = estimate)) +
     x = NULL, y = NULL, title = "Classification (HR vs LR)",
     subtitle = paste(
       "T1 = forecast; T2/T3 = separability; training/acute = trajectory.",
-      "* BH q<.05 on the permutation p."
+      "* BH q<.05, within each contrast."
     )
   ) +
   FIG_THEME +
@@ -75,7 +83,10 @@ p_cont <- ggplot(cont_metrics, aes(outcome, row, fill = q2_disp)) +
   ) +
   labs(
     x = NULL, y = NULL, title = "Continuous adaptation (baseline features)",
-    subtitle = "Q^2 <= 0 means no better than the outcome mean. * BH q<.05."
+    subtitle = paste(
+      "Q^2 <= 0 means no better than the outcome mean.",
+      "* BH q<.05, within each outcome."
+    )
   ) +
   FIG_THEME +
   theme(
@@ -109,11 +120,27 @@ save_panel(composite, file.path(root, "b_reports", "F05_composite"),
   width = 240, height = 250
 )
 
+# Best method (engine x feature space) per question, for picking a winner.
+class_best <- class_metrics |>
+  group_by(contrast) |>
+  slice_max(estimate, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  transmute(contrast, space, model, AUC = estimate, perm_p, q_bh)
+cont_best <- cont_metrics |>
+  group_by(outcome) |>
+  slice_max(q2, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  transmute(outcome, space, model, q2, perm_p = perm_p_q2, q_bh)
+
 wb <- createWorkbook()
 addWorksheet(wb, "classification")
 writeData(wb, "classification", class_metrics |> dplyr::select(-row, -lab))
 addWorksheet(wb, "continuous")
 writeData(wb, "continuous", cont_metrics |> dplyr::select(-row, -lab))
+addWorksheet(wb, "best_classifier_per_contrast")
+writeData(wb, "best_classifier_per_contrast", class_best)
+addWorksheet(wb, "best_regressor_per_outcome")
+writeData(wb, "best_regressor_per_outcome", cont_best)
 saveWorkbook(wb, file.path(root, "c_data", "F05_metrics.xlsx"),
   overwrite = TRUE
 )
