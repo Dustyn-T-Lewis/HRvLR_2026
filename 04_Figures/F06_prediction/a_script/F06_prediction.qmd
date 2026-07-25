@@ -1,0 +1,39 @@
+---
+title: "F06 -- Continuous-prediction screen"
+format: html
+---
+
+## What this figure is
+
+An out-of-sample test of whether the proteome can forecast **how much** a
+subject adapts. Each feature level x timepoint config x method (elastic net,
+lasso, ridge, sparse PLS, random forest, SVM regression; plain linear on modules
+only) runs a nested leave-one-subject-out cell for each of the six adaptation
+deltas, scored by Q² against a permutation null (B = 200). Q² <= 0 means the
+model predicts worse than the outcome's own mean.
+
+![F06 prediction composite](../b_reports/F06_prediction_composite.png)
+
+## Panels
+
+- **A** The 12 cells with the smallest permutation p, each as observed vs
+  predicted with points coloured by responder arm and a fit line keyed to
+  feature level; Q² and its permutation p are printed per cell.
+- **B** The whole specification curve: all cells sorted by Q² against their
+  null bands, with a strip reading off level, config, method, and outcome.
+
+## Reading it honestly
+
+Of 48 nominal leads, 35 land on `d_mcsa` (muscle cross-sectional area change),
+spanning all three feature levels, several configs (T2, trajectory, acute), and
+several methods -- a consistency well beyond a single lucky cell. The strongest
+leakage-free evidence is `pathways | T2 | sPLS`, Q² = 0.41, p = .015.
+
+Two cautions travel with it. First, every cell rides on the cohort-imputed
+(missForest) proteome, so the signal inherits the optimism an earlier
+in-fold-refit experiment exposed for the module -> ΔmCSA q²; the clean test
+refits imputation inside each fold. Second, some "significant" cells carry Q² < 0
+(e.g. `proteins | trajectory | ridge`, Q² = -0.02, p = .010) -- the discrete
+permutation null flagging a below-chance value as unusual, not a real forecast.
+`d_mcsa` is the lead to validate in-fold and in an external cohort, not a
+confirmed predictor.
