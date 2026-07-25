@@ -95,12 +95,17 @@ assoc_drivers <- function(stage, level, config, n = 10) {
   bind_rows(rows) |>
     mutate(feature = base_feature(.data$feature)) |>
     group_by(.data$feature) |>
-    summarise(
-      score = -log10(min(.data$p, na.rm = TRUE)),
-      best_bh = min(.data$bh, na.rm = TRUE), .groups = "drop"
-    ) |>
-    slice_max(.data$score, n = n, with_ties = FALSE) |>
-    mutate(label = feature_label(.data$feature, level))
+    slice_min(.data$p, n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    slice_min(.data$p, n = n, with_ties = FALSE) |>
+    transmute(
+      .data$feature,
+      # the moderated t is signed like the effect but comparable across
+      # features, so bar length ranks the way the p-value does
+      score = ifelse(is.na(.data$t), sign(.data$effect), .data$t),
+      p = .data$p, bh = .data$bh,
+      label = feature_label(.data$feature, level)
+    )
 }
 
 # Prediction / classification drivers: fold-selection frequency pooled over the
@@ -139,8 +144,46 @@ empty_panel <- function(msg) {
     theme_void()
 }
 
-driver_panel <- function(d, level, xlab, subtitle) {
-  driver_bars(d, level, xlab, "Named drivers", subtitle)
+driver_panel <- function(d, level, xlab, subtitle, signed = FALSE) {
+  driver_bars(d, level, xlab, "Named drivers", subtitle, signed = signed)
+}
+
+# Classification reads best as arm separation: the out-of-fold score each
+# subject received, split by the arm they actually belong to. Overlap is the
+# null; a gap is the signal.
+arm_separation_panel <- function(stage, level, config) {
+  files <- cell_files(stage, level, config)
+  summ <- bind_rows(lapply(files, function(f) read.xlsx(f, "summary"))) |>
+    filter(.data$B == max(.data$B)) |>
+    mutate(q = stats::p.adjust(.data$perm_p, "BH"))
+  top <- summ |> slice_min(.data$perm_p, n = 1, with_ties = FALSE)
+  pr <- leaf_sheet(stage, level, config, top$model, "predictions") |>
+    mutate(arm = ifelse(.data$y == 1, "HR", "LR"))
+  sig <- top$q < 0.05
+
+  ggplot(pr, aes(.data$arm, .data$pred, fill = .data$arm)) +
+    geom_boxplot(
+      width = 0.5, alpha = 0.35, outlier.shape = NA,
+      colour = "grey30"
+    ) +
+    geom_jitter(aes(colour = .data$arm), width = 0.12, size = 2, alpha = 0.9) +
+    scale_fill_manual(values = GROUP_COLORS, guide = "none") +
+    scale_colour_manual(values = GROUP_COLORS, guide = "none") +
+    annotate("label",
+      x = 1.5, y = Inf, vjust = 1.1,
+      label = sprintf(
+        "AUC = %.2f\np = %.3f\nq = %.3f", top$estimate, top$perm_p, top$q
+      ),
+      size = 2.6, fontface = if (sig) "bold" else "plain",
+      fill = alpha("white", 0.9), lineheight = 0.95
+    ) +
+    labs(
+      x = NULL, y = "out-of-fold score",
+      title = sprintf("Arm separation -- %s", top$model),
+      subtitle = "Held-out score by true arm. Overlap = null. Bold = q < .05."
+    ) +
+    FIG_THEME +
+    theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
 }
 
 # The statistics block: the stage's metric against its null, with p and the BH q
@@ -152,21 +195,47 @@ stat_panel <- function(stage, level, config) {
     d <- bind_rows(lapply(files, function(f) {
       if (!LEAD_OUTCOME %in% getSheetNames(f)) NULL else read.xlsx(f, LEAD_OUTCOME)
     }))
-    n_bh <- sum(d$bh < 0.05, na.rm = TRUE)
+    d <- d |>
+      mutate(
+        dir = case_when(
+          .data$bh < 0.05 & .data$effect > 0 ~ "Up",
+          .data$bh < 0.05 & .data$effect < 0 ~ "Down",
+          TRUE ~ "NS"
+        ),
+        name = feature_label(base_feature(.data$feature), level)
+      )
+    n_bh <- sum(d$dir != "NS", na.rm = TRUE)
+    lab <- d |> slice_min(.data$p, n = 6, with_ties = FALSE)
     return(
       ggplot(d, aes(.data$effect, -log10(.data$p))) +
-        geom_point(size = 0.7, alpha = 0.5, colour = SPEC_LEVEL_COLORS[[level]]) +
+        geom_hline(
+          yintercept = -log10(0.05), linetype = "dotted",
+          colour = "grey55"
+        ) +
+        geom_vline(xintercept = 0, colour = "grey70", linewidth = 0.3) +
+        geom_point(aes(colour = .data$dir), size = 0.9, alpha = 0.6) +
+        ggrepel::geom_text_repel(
+          data = lab, aes(label = .data$name), size = 2,
+          max.overlaps = 10, min.segment.length = 0, colour = "grey20"
+        ) +
+        scale_colour_manual(values = DIR_COLORS, guide = "none") +
         labs(
           x = sprintf("effect vs %s", LEAD_OUTCOME),
           y = expression(-log[10] * " p"), title = "In-sample statistic",
-          subtitle = sprintf("BH q<.05 in cell: %d / %d", n_bh, nrow(d))
+          subtitle = sprintf(
+            "BH q<.05 in cell: %d / %d. Dotted = nominal .05.", n_bh, nrow(d)
+          )
         ) +
         FIG_THEME +
         theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
     )
   }
 
-  is_class <- stage == "F05_classification"
+  if (stage == "F05_classification") {
+    return(arm_separation_panel(stage, level, config))
+  }
+
+  is_class <- FALSE
   summ <- filter(summ, .data$B == max(.data$B))
   if (!is_class) summ <- filter(summ, .data$outcome == LEAD_OUTCOME)
   metric <- if (is_class) "estimate" else "q2"
@@ -220,14 +289,20 @@ build_reference <- function(stage, level, config) {
   } else {
     pred_drivers(stage, level, config)
   }
-  xlab <- if (is_assoc) "-log10 p (best method)" else "mean fold-selection freq."
-  sub <- if (is_assoc) {
-    sprintf("Strongest %s associations, named", LEAD_OUTCOME)
+  xlab <- if (is_assoc) {
+    sprintf("signed t vs %s", LEAD_OUTCOME)
   } else {
-    sprintf("Selected for %s across sparse models", LEAD_OUTCOME)
+    "mean fold-selection freq."
+  }
+  target <- if (stage == "F05_classification") "HR vs LR" else LEAD_OUTCOME
+  sub <- if (is_assoc) {
+    sprintf("Strongest %s associations, by direction", target)
+  } else {
+    sprintf("Selected for %s across sparse models", target)
   }
 
-  panel <- (driver_panel(d, level, xlab, sub) | stat_panel(stage, level, config)) +
+  panel <- (driver_panel(d, level, xlab, sub, signed = is_assoc) |
+    stat_panel(stage, level, config)) +
     plot_annotation(
       title = sprintf(
         "REFERENCE -- %s | %s | %s", STAGES[[stage]], level, config

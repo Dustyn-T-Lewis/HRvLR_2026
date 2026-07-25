@@ -77,8 +77,10 @@ driver_keys <- function(features, level) {
 }
 
 # Ranked driver bars. `score` is whatever the stage measures (selection
-# frequency or -log10 p); the axis carries the key, the bar carries the name.
-driver_bars <- function(d, level, xlab, title, subtitle) {
+# frequency or a signed effect); the axis carries the key, the bar carries the
+# name. `signed = TRUE` diverges the bars about zero so an association reads its
+# direction, and the in-bar label flips to the side the bar grows from.
+driver_bars <- function(d, level, xlab, title, subtitle, signed = FALSE) {
   if (!nrow(d)) {
     return(
       ggplot() +
@@ -107,7 +109,6 @@ driver_bars <- function(d, level, xlab, title, subtitle) {
   p <- ggplot(d, aes(.data$score, .data$row)) +
     geom_col(fill = d$fill, width = 0.78, colour = "grey25", linewidth = 0.2) +
     scale_y_discrete(labels = function(x) sub(" [0-9]+$", "", x)) +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.04))) +
     labs(x = xlab, y = NULL, title = title, subtitle = subtitle) +
     FIG_THEME +
     theme(
@@ -115,12 +116,20 @@ driver_bars <- function(d, level, xlab, title, subtitle) {
       plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE)
     )
 
+  p <- if (signed) {
+    p +
+      geom_vline(xintercept = 0, colour = "grey30", linewidth = 0.4) +
+      scale_x_continuous(expand = expansion(mult = 0.1))
+  } else {
+    p + scale_x_continuous(expand = expansion(mult = c(0, 0.04)))
+  }
+
   if (any(nzchar(d$description))) {
     p <- p +
       geom_text(
         aes(x = 0, label = .data$description),
-        hjust = -0.03, size = 2.2,
-        colour = d$text_colour, fontface = "bold"
+        hjust = if (signed) ifelse(d$score < 0, 1.03, -0.03) else -0.03,
+        size = 2.2, colour = d$text_colour, fontface = "bold"
       )
   }
   p
