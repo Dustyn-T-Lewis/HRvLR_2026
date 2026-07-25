@@ -12,6 +12,7 @@ suppressWarnings(suppressMessages({
   library(here)
   source(here("functions", "sweep_composites.R"))
   source(here("functions", "sweep_pred_leaf.R"))
+  source(here("functions", "sweep_drivers.R"))
   pacman::p_load(openxlsx, dplyr, ggplot2, patchwork, stringr, scales)
 }))
 
@@ -139,17 +140,7 @@ empty_panel <- function(msg) {
 }
 
 driver_panel <- function(d, level, xlab, subtitle) {
-  if (!nrow(d)) {
-    return(empty_panel("no sparse signature\nin this cell"))
-  }
-  ggplot(d, aes(.data$score, stats::reorder(.data$label, .data$score))) +
-    geom_col(fill = SPEC_LEVEL_COLORS[[level]], width = 0.72, alpha = 0.9) +
-    labs(x = xlab, y = NULL, title = "Named drivers", subtitle = subtitle) +
-    FIG_THEME +
-    theme(
-      axis.text.y = element_text(size = 6.5),
-      plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE)
-    )
+  driver_bars(d, level, xlab, "Named drivers", subtitle)
 }
 
 # The statistics block: the stage's metric against its null, with p and the BH q
