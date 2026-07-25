@@ -29,7 +29,7 @@ sweep_feature_label <- function(feature, level) {
 }
 
 run_assoc_leaf <- function(bundle, level, config, method,
-                           root = "01_association") {
+                           root = "F04_association") {
   key <- SWEEP_LEVEL_KEY[[level]]
   x0 <- pred_contrast_matrix(bundle$feature_sets[[key]], bundle$meta, config)
   outcomes <- assoc_method_outcomes(method)

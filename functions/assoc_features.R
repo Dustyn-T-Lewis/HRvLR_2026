@@ -18,7 +18,7 @@ assoc_paths <- function() {
     ),
     pheno = here("00_input", "c_data", "phenotype.csv"),
     eigen = here(
-      "04_Figures", "F04_association", "WGCNA", "c_data", "wgcna_eigengene.csv"
+      "04_Figures", "shared", "WGCNA", "c_data", "wgcna_eigengene.csv"
     ),
     dep = here("03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv")
   )

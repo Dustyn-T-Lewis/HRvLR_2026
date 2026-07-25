@@ -160,7 +160,7 @@ LEAK_NOTE <- c(
 )
 
 run_class_sweep_leaf <- function(bundle, level, config, method, b_grid = B_GRID,
-                                 root = "02_classification") {
+                                 root = "F05_classification") {
   x0 <- leaf_x(bundle, level, config)
   al <- align_xy(x0, pred_outcome(bundle, "group"))
   res <- sweep_class_cell(al$x, al$y, method, b_grid = b_grid)
@@ -183,7 +183,7 @@ run_class_sweep_leaf <- function(bundle, level, config, method, b_grid = B_GRID,
 
 run_cont_sweep_leaf <- function(bundle, level, config, method, b_grid = B_GRID,
                                 outcomes = ADAPT_OUTCOMES,
-                                root = "03_continuous_prediction") {
+                                root = "F06_prediction") {
   x0 <- leaf_x(bundle, level, config)
   cells <- lapply(outcomes, function(oc) {
     al <- align_xy(x0, pred_outcome(bundle, oc))
