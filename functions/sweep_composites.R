@@ -38,7 +38,9 @@ cell_tag <- function(level, config, method) {
 # significance; the fill is the feature-level hue.
 roc_panel <- function(root, cell) {
   pr <- leaf_sheet(root, cell$level, cell$config, cell$model, "predictions")
-  roc <- pROC::roc(pr$y, pr$pred, quiet = TRUE, levels = c(0, 1), direction = "<")
+  roc <- pROC::roc(pr$y, pr$pred,
+    quiet = TRUE, levels = c(0, 1), direction = "<"
+  )
   df <- data.frame(
     fpr = 1 - roc$specificities, tpr = roc$sensitivities
   ) |>
@@ -49,7 +51,9 @@ roc_panel <- function(root, cell) {
     group_by(.data$fpr) |>
     summarise(tpr = max(.data$tpr), .groups = "drop")
   ggplot(df, aes(.data$fpr, .data$tpr)) +
-    geom_abline(slope = 1, linetype = "dashed", colour = "grey60", linewidth = 0.3) +
+    geom_abline(
+      slope = 1, linetype = "dashed", colour = "grey60", linewidth = 0.3
+    ) +
     geom_area(data = fill_df, fill = fill, alpha = 0.35) +
     geom_step(colour = fill, linewidth = 0.8, direction = "hv") +
     annotate("label",
@@ -122,51 +126,218 @@ obs_pred_grid <- function(root, n = 12, ncol = 4) {
   top <- root_cells(root) |>
     arrange(.data$perm_p_q2, dplyr::desc(.data$q2)) |>
     head(n)
-  panels <- lapply(seq_len(nrow(top)), function(i) obs_pred_panel(root, top[i, ]))
+  panels <- lapply(
+    seq_len(nrow(top)), function(i) obs_pred_panel(root, top[i, ])
+  )
   wrap_plots(panels, ncol = ncol)
 }
 
-composite_title <- function(title, subtitle) {
-  plot_annotation(
-    title = title, subtitle = subtitle, tag_levels = "A",
-    theme = theme(
-      plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE + 3),
-      plot.subtitle = element_text(
-        face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30"
-      ),
-      plot.tag = element_text(face = "bold", size = FIG_TAG_SIZE)
+section_theme <- function() {
+  theme(
+    plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
+    plot.subtitle = element_text(
+      face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30"
     )
   )
 }
 
+figure_theme <- function() {
+  theme(plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE + 4))
+}
+
 build_class_composite <- function(root = "F05_classification") {
   cells <- root_cells(root)
-  a <- roc_grid(root, n = 12)
-  b <- spec_curve_class(cells, NULL, NULL)$patches$plots[[1]]
-  a / b +
-    plot_layout(heights = c(1.6, 1)) +
-    composite_title(
-      "Classification screen -- can the proteome assign HR vs LR?",
-      paste(
-        "A: top-12 cells by permutation p, filled ROC per feature level, bold",
-        "border = nominal p<.05. B: full specification curve. Nested LOSO;",
-        "chance = 0.5. One nominal lead at the chance rate -- an honest null."
+  a <- roc_grid(root, n = 12) +
+    plot_annotation(
+      title = "A   Top-12 cells by permutation p -- per-cell ROC",
+      subtitle = "Filled by feature level; bold border = nominal p < .05.",
+      theme = section_theme()
+    )
+  b <- spec_curve_class(
+    cells, "B   Specification curve -- every cell vs its null band",
+    "Chance = 0.5. One nominal lead at the chance rate: an honest null."
+  )
+  wrap_elements(a) / wrap_elements(b) +
+    plot_layout(heights = c(1.7, 1.1)) +
+    plot_annotation(
+      title = "F05 Classification -- can the proteome assign HR vs LR?",
+      theme = figure_theme()
+    )
+}
+
+level_factor <- function(x) {
+  factor(x, levels = c("proteins", "pathways", "modules"))
+}
+
+# Stacked survivor-count bars for the association screen, split by level.
+assoc_hit_bars <- function(hits, key, title, subtitle) {
+  d <- hits |>
+    count(.data[[key]], .data$level, name = "n") |>
+    mutate(level = level_factor(.data$level))
+  ord <- d |>
+    group_by(.data[[key]]) |>
+    summarise(tot = sum(.data$n), .groups = "drop") |>
+    arrange(.data$tot)
+  d[[key]] <- factor(d[[key]], levels = ord[[key]])
+  ggplot(d, aes(.data$n, .data[[key]], fill = .data$level)) +
+    geom_col(width = 0.7, colour = "white", linewidth = 0.2) +
+    geom_text(
+      data = ord, aes(.data$tot, .data[[key]], label = .data$tot),
+      inherit.aes = FALSE, hjust = -0.3, size = 2.5, fontface = "bold",
+      colour = "grey20"
+    ) +
+    scale_fill_manual(values = SPEC_LEVEL_COLORS, name = "level") +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    labs(
+      x = "BH < .05 associations", y = NULL, title = title, subtitle = subtitle
+    ) +
+    FIG_THEME +
+    theme(
+      legend.position = c(0.78, 0.3),
+      plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE)
+    )
+}
+
+assoc_rate_bars <- function(cell_summary) {
+  d <- cell_summary |>
+    group_by(config = factor(.data$config, levels = SWEEP_CONFIGS)) |>
+    summarise(
+      rate = sum(.data$n_nominal) / sum(.data$n_feature), .groups = "drop"
+    )
+  ggplot(d, aes(.data$config, .data$rate)) +
+    geom_col(fill = "grey60", width = 0.7) +
+    geom_hline(yintercept = 0.05, linetype = "dashed", colour = "#B2182B") +
+    geom_text(aes(label = scales::percent(.data$rate, accuracy = 1)),
+      vjust = -0.4, size = 2.3, colour = "grey25"
+    ) +
+    scale_y_continuous(
+      labels = scales::percent, expand = expansion(mult = c(0, 0.15))
+    ) +
+    labs(
+      x = NULL, y = "nominal hit rate",
+      title = "Nominal hit rate per config",
+      subtitle = "Dashed = 5% chance; excess = structure to test out-of-sample."
+    ) +
+    FIG_THEME +
+    theme(
+      axis.text.x = element_text(angle = 30, hjust = 1),
+      plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE)
+    )
+}
+
+assoc_effect_strip <- function(hits, lead) {
+  d <- hits |>
+    filter(.data$outcome == lead) |>
+    mutate(level = level_factor(.data$level))
+  ggplot(d, aes(.data$effect, .data$level, colour = .data$level)) +
+    geom_vline(xintercept = 0, colour = "grey60", linewidth = 0.3) +
+    geom_jitter(height = 0.18, size = 1.2, alpha = 0.7) +
+    scale_colour_manual(values = SPEC_LEVEL_COLORS, guide = "none") +
+    labs(
+      x = sprintf("effect of %s survivors", lead), y = NULL,
+      title = sprintf("Effect sizes of %s survivors", lead),
+      subtitle = "Direction of the in-sample associations that pass BH."
+    ) +
+    FIG_THEME +
+    theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
+}
+
+assoc_euler <- function(hits, lead) {
+  sets <- hits |>
+    filter(.data$outcome == lead, .data$level == "pathways") |>
+    distinct(.data$config, .data$feature) |>
+    (\(d) split(d$feature, d$config))()
+  sets <- sets[lengths(sets) > 0]
+  if (length(sets) < 2) {
+    return(
+      ggplot() +
+        annotate("text", 0, 0,
+          label = "too few sets\nto draw",
+          size = 3, colour = "grey45", fontface = "italic"
+        ) +
+        labs(title = sprintf("Pathway overlap -- %s", lead)) +
+        theme_void() +
+        theme(plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE))
+    )
+  }
+  pal <- scales::alpha(
+    c("#E69F00", "#0072B2", "#009E73", "#CC79A7", "#D55E00")[seq_along(sets)],
+    0.5
+  )
+  grob <- grid::grid.grabExpr(print(plot(
+    eulerr::euler(sets),
+    fills = pal,
+    quantities = list(cex = 0.8), labels = list(cex = 0.8)
+  )))
+  wrap_elements(grob) +
+    labs(
+      title = sprintf("Pathway overlap -- %s survivors", lead),
+      subtitle = "Do configs pick the same pathways?"
+    ) +
+    theme(
+      plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
+      plot.subtitle = element_text(
+        face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30"
+      )
+    )
+}
+
+build_assoc_composite <- function(root = "F04_association", lead = "d_mcsa") {
+  path <- file.path(sweep_root_dir(root), "c_data", "results.xlsx")
+  hits <- openxlsx::read.xlsx(path, "bh_hits")
+  cs <- openxlsx::read.xlsx(path, "cell_summary")
+
+  a <- assoc_hit_bars(
+    hits, "outcome",
+    "BH survivors per outcome", "One adaptation dominates."
+  )
+  b <- assoc_hit_bars(
+    hits, "config",
+    "BH survivors per config", "Mid-training and trajectory lead."
+  )
+  cc <- assoc_hit_bars(
+    hits, "method",
+    "BH survivors per method", "Consistent across the association methods."
+  )
+  d <- assoc_rate_bars(cs)
+  e <- assoc_effect_strip(hits, lead)
+  f <- assoc_euler(hits, lead)
+
+  (a | b | cc) / (d | e | f) +
+    plot_annotation(
+      title = "F04 Association -- in-sample description across the multiverse",
+      subtitle = paste(
+        "Every level x config x method x outcome; BH within cell, no",
+        "correction across the screen. A survivor is a lead, not a result:",
+        "F05/F06 adjudicate out of sample."
+      ),
+      tag_levels = "A",
+      theme = theme(
+        plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE + 4),
+        plot.subtitle = element_text(
+          face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30"
+        ),
+        plot.tag = element_text(face = "bold", size = FIG_TAG_SIZE)
       )
     )
 }
 
 build_cont_composite <- function(root = "F06_prediction") {
   cells <- root_cells(root)
-  a <- obs_pred_grid(root, n = 12)
-  b <- spec_curve_cont(cells, NULL, NULL)$patches$plots[[1]]
-  a / b +
-    plot_layout(heights = c(1.6, 1)) +
-    composite_title(
-      "Continuous-prediction screen -- forecasting how much a subject adapts",
-      paste(
-        "A: top-12 cells by permutation p, observed vs predicted, points by",
-        "responder group. B: full specification curve; Q^2 clamped at -1.",
-        "Leads concentrate on d_mcsa but ride on the cohort-imputed proteome."
-      )
+  a <- obs_pred_grid(root, n = 12) +
+    plot_annotation(
+      title = "A   Top-12 cells by permutation p -- observed vs predicted",
+      subtitle = "Points by responder group (HR blue, LR red); line per level.",
+      theme = section_theme()
+    )
+  b <- spec_curve_cont(
+    cells, "B   Specification curve -- every cell vs its null band",
+    "Chance = 0. Q^2 clamped at -1. Leads concentrate on d_mcsa."
+  )
+  wrap_elements(a) / wrap_elements(b) +
+    plot_layout(heights = c(1.7, 1.1)) +
+    plot_annotation(
+      title = "F06 Prediction -- forecasting how much a subject adapts",
+      theme = figure_theme()
     )
 }

@@ -1,0 +1,33 @@
+---
+title: "F05 -- Classification screen"
+format: html
+---
+
+## What this figure is
+
+An out-of-sample test of whether the proteome can assign a new subject to the
+high- or low-responder arm. Every feature level x timepoint config x method
+(elastic net, lasso, ridge, sparse PLS-DA, nearest shrunken centroids, random
+forest, linear SVM; plain logistic on modules only) runs as one nested
+leave-one-subject-out cell: scaling, feature selection, and tuning happen on the
+training subjects only, the held-out subject is predicted once, and the whole
+loop re-runs under a permutation null (B = 200). No timepoints are pooled.
+
+![F05 classification composite](../b_reports/F05_classification_composite.png)
+
+## Panels
+
+- **A** The 12 cells with the smallest permutation p, each as a filled ROC keyed
+  to feature level, with AUC, its interval, and the permutation p. A bold border
+  marks nominal p < .05.
+- **B** The whole specification curve: all 153 cells sorted by AUC against their
+  own permutation-null bands, with a strip reading off level, config, and method.
+
+## Reading it honestly
+
+The screen is a null. Across 153 cells only one clears nominal p < .05
+(`modules | total | plain`, AUC 0.90, p = .045) -- at the chance rate for a
+screen this size, and it is the plain model on cohort-relative eigengenes, the
+most optimistic cell in the grid. Every observed AUC sits inside its null band.
+HR/LR classification does not generalize here, consistent with the small-n
+signature-instability literature (Michiels 2005; Ein-Dor 2006).

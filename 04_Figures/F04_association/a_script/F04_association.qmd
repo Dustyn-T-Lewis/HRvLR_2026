@@ -1,0 +1,40 @@
+---
+title: "F04 -- Association screen"
+format: html
+---
+
+## What this figure is
+
+An in-sample description of the training-response proteome across a fully
+crossed screen: every **feature level** (proteins, singscore pathways, WGCNA
+module eigengenes) by every **timepoint config** (T1, T2, T3, training = T2-T1,
+acute = T3-T2, total = T3-T1, trajectory = T1|T2|T3 concatenated) by every
+**method** (moderated `limma`, ordinary `lm`, Spearman for the six adaptation
+deltas; `limma` and Wilcoxon for the HR-vs-LR difference). Benjamini-Hochberg is
+applied **within each cell**, never across the screen. This is description; F05
+and F06 test whether any of it generalizes out of sample.
+
+![F04 association composite](../b_reports/F04_association_composite.png)
+
+## Panels
+
+- **A-C** BH survivors split by feature level, tallied per outcome, per config,
+  and per method. One adaptation, `d_mcsa` (muscle cross-sectional area change),
+  carries ~95% of the survivors; they cluster at T2 and trajectory and recur
+  across all three association methods.
+- **D** Nominal hit rate per config against the 5% chance line. Most configs sit
+  at chance; the excess at T2/T3/trajectory is the in-sample structure the
+  prediction figures adjudicate.
+- **E** Effect directions of the `d_mcsa` survivors, per level.
+- **F** Area-proportional overlap of the `d_mcsa` pathway survivors across
+  configs. The sets barely intersect, so different configs select different
+  pathways -- the instability expected at n = 16 (Ein-Dor 2006).
+
+## Reading it honestly
+
+A survivor here is a **lead, not a result**. The screen runs uncorrected by
+design (exploratory multiverse; Steegen 2016, Simonsohn 2015), so at 420 cells
+some BH-within-cell survivors are expected under the null. Proteins and modules
+are cohort-based (imputed / cohort-relative eigengenes) and flagged optimistic;
+singscore pathways are leakage-free. The `d_mcsa` signal is the lead to carry
+into F05/F06.
