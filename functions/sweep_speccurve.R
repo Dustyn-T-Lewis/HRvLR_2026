@@ -116,7 +116,7 @@ render_root_speccurve <- function(root) {
     file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "all_cells"
   )
   levels_txt <- paste(sort(unique(cells$level)), collapse = ", ")
-  is_class <- root == "02_classification"
+  is_class <- root == "F05_classification"
   panel <- if (is_class) {
     spec_curve_class(
       cells, "Classification screen -- specification curve",
