@@ -5,7 +5,7 @@
 #
 # This panel owns two supplements: the soft-threshold sweep and the gene dendrogram, both of
 # which document how the modules were arrived at.
-if (!exists("mods")) source(here::here("04_Figures", "F04_association", "WGCNA", "a_script", "setup.R"))
+if (!exists("mods")) source(here::here("04_Figures", "shared", "WGCNA", "a_script", "setup.R"))
 pacman::p_load(ggplot2, dplyr, forcats, patchwork, scales, WGCNA)
 
 # subject_variance keys modules by their ME* eigengene names; the colours are the bare form.
