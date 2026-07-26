@@ -2,7 +2,7 @@
 # measured proteome as the universe. This is the one panel in F04 that carries a positive
 # result, and it is a descriptive one: the modules are coherent biology, whatever they do or
 # do not predict.
-if (!exists("mods")) source(here::here("04_Figures", "F04_association", "WGCNA", "a_script", "setup.R"))
+if (!exists("mods")) source(here::here("04_Figures", "shared", "WGCNA", "a_script", "setup.R"))
 pacman::p_load(ggplot2, dplyr, forcats, stringr, shadowtext)
 
 ora <- module_ora(mods, top_n = 3)
