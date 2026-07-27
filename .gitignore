@@ -1,6 +1,9 @@
 .DS_Store
 **/.DS_Store
 .RData
+# WGCNA::modulePreservation drops permutedStats-*.RData checkpoints in the
+# working directory; they are resumable scratch, not results.
+*.RData
 **/.Rhistory
 **/.Rapp.history
 .claude/
