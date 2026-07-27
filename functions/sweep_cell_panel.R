@@ -22,7 +22,7 @@ cell_feature_label <- function(feature, level) {
 
 cell_footer <- function(metric_lab, metric, p, root, level) {
   sprintf(
-    "%s = %.2f | p = %s | 1 of %d cells screened | %s",
+    "%s = %.2f  ·  p = %s  ·  1 of %d cells screened  ·  %s",
     metric_lab, metric,
     if (is.na(p)) "not estimated" else sprintf("%.3f", p),
     SCREEN_SIZE[[root]], LEAK_NOTE[[level]]
@@ -78,7 +78,7 @@ build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
   sc <- assoc_score(cell)
   bars <- drivers_or_empty(
     cell |> mutate(score = sc$value), level, method,
-    sc$axis, NULL, "signed t, strongest features",
+    sc$axis, NULL, sprintf("signed %s, strongest features", sc$axis),
     signed = TRUE
   )
 
