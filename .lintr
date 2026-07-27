@@ -1,0 +1,17 @@
+linters: linters_with_defaults(
+    line_length_linter(80L),
+    object_name_linter(styles = c("snake_case", "SNAKE_CASE", "symbols")),
+    object_length_linter(40L),
+    object_usage_linter = NULL
+  )
+exclusions: list("renv", "packrat")
+
+# object_usage_linter is off on purpose. Every script loads through
+# pacman::p_load(), which static analysis cannot see into, so the linter reports
+# every dplyr and readr verb as undefined - 85 false positives across stages
+# 00-03 alone. That volume buries any real finding. The same blind spot makes
+# renv's implicit snapshot drop pacman-loaded packages; see the C2 note in the
+# scientific-r-clean-code skill.
+#
+# object_name_linter allows SNAKE_CASE because this project names constants that
+# way in 144 places (RPT_DIR, NULL_CONTRASTS, SWEEP_LEVELS, PI_THRESH).
