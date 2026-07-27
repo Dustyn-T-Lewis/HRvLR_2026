@@ -56,7 +56,7 @@ roc_panel <- function(root, cell) {
     fpr = 1 - roc$specificities, tpr = roc$sensitivities
   ) |>
     dplyr::arrange(.data$fpr, .data$tpr)
-  sig <- cell$perm_p < 0.05
+  sig <- is_lead(cell$estimate, cell$perm_p, "class")
   fill <- SPEC_LEVEL_COLORS[[cell$level]]
   fill_df <- df |>
     group_by(.data$fpr) |>
@@ -111,7 +111,7 @@ obs_pred_panel <- function(root, cell) {
   ) |>
     mutate(group = ifelse(grepl("^HR", .data$subject), "HR", "LR"))
   fill <- SPEC_LEVEL_COLORS[[cell$level]]
-  sig <- cell$perm_p_q2 < 0.05
+  sig <- is_lead(cell$q2, cell$perm_p_q2, "cont")
   ggplot(pr, aes(.data$y, .data$pred)) +
     geom_smooth(method = "lm", se = FALSE, colour = fill, linewidth = 0.6) +
     geom_point(aes(colour = group), size = 1.4, alpha = 0.9) +

@@ -12,13 +12,14 @@ mixed_table <- function() {
       B = c(0L, 200L), q2 = 0.41, perm_p_q2 = c(NA, 0.015)
     ),
     data.frame(
-      level = "proteins", config = "T1", outcome = "d_fcsa_I", model = "lasso",
+      level = "proteins", config = "T1", outcome = "d_fcsa_I",
+      model = "lasso",
       B = c(0L, 200L), q2 = -0.3, perm_p_q2 = c(NA, 0.8)
     )
   )
 }
 
-test_that("best_b_per_cell keeps every cell when B values differ across cells", {
+test_that("best_b_per_cell keeps cells whose B values differ", {
   out <- best_b_per_cell(mixed_table())
 
   expect_equal(nrow(out), 3L)
@@ -56,4 +57,30 @@ test_that("a single-B table is returned one row per cell", {
   )
 
   expect_equal(nrow(best_b_per_cell(d)), 2L)
+})
+
+test_that("is_lead needs both the null and the baseline", {
+  expect_true(is_lead(0.41, 0.015, "cont"))
+  expect_false(is_lead(-0.14, 0.005, "cont"))
+  expect_false(is_lead(0.41, 0.9, "cont"))
+  expect_true(is_lead(0.78, 0.01, "class"))
+  expect_false(is_lead(0.30, 0.01, "class"))
+  expect_true(is.na(is_lead(1, 0.01, "assoc")))
+})
+
+test_that("is_lead is vectorised and NA-safe on p", {
+  expect_equal(
+    is_lead(c(0.4, -0.1, 0.4), c(0.01, 0.005, NA), "cont"),
+    c(TRUE, FALSE, FALSE)
+  )
+})
+
+test_that("every lead site agrees on the same cell", {
+  metric <- c(0.41, -0.14)
+  p <- c(0.015, 0.005)
+  expect_equal(is_lead(metric, p, "cont"), is_lead_at(metric, p, 0))
+  expect_equal(
+    is_lead(c(0.78, 0.30), c(0.01, 0.01), "class"),
+    is_lead_at(c(0.78, 0.30), c(0.01, 0.01), 0.5)
+  )
 })

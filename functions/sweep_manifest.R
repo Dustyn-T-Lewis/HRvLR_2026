@@ -77,15 +77,7 @@ assoc_row <- function(f) {
 }
 
 lead_flag <- function(kind, metric, p) {
-  baseline <- switch(kind,
-    cont = 0,
-    class = 0.5,
-    NA_real_
-  )
-  if (is.na(baseline)) {
-    return(NA)
-  }
-  !is.na(p) & p < 0.05 & metric > baseline
+  is_lead(metric, p, kind)
 }
 
 build_manifest <- function(root, kind, screen_size, root_name) {
