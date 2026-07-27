@@ -43,11 +43,15 @@ permutation nulls otherwise manufacture significance on their own.
 
 F05 classification is a complete null: 0 leads of 153. F06 prediction clears
 32 leads of 792 (4.0%, under the 5% chance rate), yet 26 of the 32 concentrate
-on `d_mcsa`. The module arm does not predict: all 8 module leads invert under
-in-fold network refitting, median drop 0.461 — the module network is built once
-on the full cohort, so any subject held out for testing already shaped the
-network that scores them. HR and LR share module architecture (preservation
-strong in both directions), so the WGCNA modules describe this cohort without
+on `d_mcsa`. The module arm does not predict: all 8 module leads fall below
+zero, median drop 0.461. That drop decomposes as 0.428 from restricting the
+feature space to the two modules reproducible in every fold, and 0.000 from
+rebuilding the network in-fold. The leads therefore rested on the nine modules
+that do not survive subsampling, not on circular network construction, which
+contributes nothing measurable here. HR and LR share module architecture
+(preservation strong in both directions, though the test uses cohort-defined
+labels and so is not free of the same circularity), so the WGCNA modules
+describe this cohort without
 distinguishing the two arms. Contrast-specific networks (built on the training
 or acute contrast alone) were tested and are not viable at this cohort size.
 
@@ -256,7 +260,7 @@ figure and writing `MANIFEST.xlsx`.
 | `shared/WGCNA/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
 | `F04_association/` | Where do features associate with HR/LR or with continuous adaptation, per level and config? | `limma`/`lm`/Spearman/Wilcoxon per `<level>/<config>/<phenotype>/<method>` cell; 420 cells, raw permutation p, no BH across the screen. |
 | `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
-| `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads invert under in-fold network refitting. |
+| `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads fall below zero once restricted to the two reproducible modules; in-fold refitting adds nothing. |
 
 A cell in F04-F06 reports a metric, a raw permutation p, the screen size, and a
 leakage label; there is no BH q anywhere in these three, because a screen this
