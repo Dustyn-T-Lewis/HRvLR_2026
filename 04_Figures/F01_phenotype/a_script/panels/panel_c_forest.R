@@ -64,7 +64,7 @@ build_secondary <- function(meta) {
       transmute(subject, Group,
         delta = T2 - T1,
         measure = lab, order = i,
-        facet = sprintf("%s  (p %s)", lab, fmt_p(p_holm))
+        facet = sprintf("%s  (%s)", lab, fmt_p(p_holm))
       )
   })
   df <- bind_rows(rows) |> mutate(facet = fct_reorder(facet, order))
