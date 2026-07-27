@@ -5,6 +5,11 @@
 # Random-forest imputation (Stekhoven & Buhlmann 2012), mechanism-agnostic: one
 # model for all missing values. Rows are sorted before the stochastic fit so the
 # result is reproducible. This is the arm downstream QC/figures read by default.
+#
+# backend is pinned rather than left to the default. missForest 1.6.1 added a
+# ranger backend and made it the default, so the engine now differs from the
+# randomForest one the 2012 paper describes. Naming it keeps the current
+# results reproducible if a later version flips the default back.
 
 pacman::p_load(here, missForest)
 set.seed(42)
@@ -20,7 +25,9 @@ cat(sprintf(
 ))
 
 ord <- order(rownames(mat)) # deterministic order before the stochastic fit
-mf <- missForest(t(mat[ord, ]), maxiter = 10, ntree = 100, verbose = FALSE)
+mf <- missForest(t(mat[ord, ]),
+  maxiter = 10, ntree = 100, verbose = FALSE, backend = "ranger"
+)
 imp <- t(mf$ximp)[rownames(mat), ]
 dimnames(imp) <- dimnames(mat)
 stopifnot(sum(is.na(imp)) == 0, identical(dim(imp), dim(mat)))
