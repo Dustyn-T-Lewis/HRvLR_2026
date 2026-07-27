@@ -9,6 +9,7 @@ suppressWarnings(suppressMessages({
   source(here("functions", "sweep_composites.R"))
   source(here("functions", "sweep_pred_leaf.R"))
   source(here("functions", "pred_features.R"))
+  source(here("functions", "sweep_cell_panel.R"))
   pacman::p_load(openxlsx, dplyr, tidyr, ggplot2, patchwork, stringr, scales)
 }))
 
@@ -62,7 +63,7 @@ SPARSE_MODELS <- c("lasso", "enet", "spls", "pam")
 # each named feature is picked, pooled over every sparse cell in the root.
 selection_across_cells <- function(root, level, outcome_id, n = 10) {
   files <- Sys.glob(file.path(
-    sweep_root_dir(root), level, "*", "*", "c_data", "results.xlsx"
+    sweep_root_dir(root), level, "*", "*", "*", "c_data", "results.xlsx"
   ))
   rows <- lapply(files, function(f) {
     sel <- read.xlsx(f, "selection")
@@ -106,22 +107,21 @@ ref_named_drivers <- function(root, level, outcome_id, title) {
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
 }
 
-# The per-cell statistics block the review mandates: metric, permutation p, BH q
-# within the figure family, bold when q < 0.05, over the null band.
+# The per-cell statistics block the review mandates: metric, raw permutation
+# p, how many cells were screened, and the level's leakage status, over the
+# null band.
 ref_stats_cell <- function(root = "F06_prediction") {
-  cells <- root_cells(root) |>
-    mutate(q = stats::p.adjust(.data$perm_p_q2, "BH"))
+  cells <- root_cells(root)
   top <- cells |> slice_min(.data$perm_p_q2, n = 1, with_ties = FALSE)
   null <- read.xlsx(
     file.path(
-      sweep_root_dir(root), top$level, top$config, top$model, "c_data",
-      "results.xlsx"
+      sweep_root_dir(root), top$level, top$config, top$outcome, top$model,
+      "c_data", "results.xlsx"
     ),
     "null"
   ) |>
     filter(.data$outcome == top$outcome)
 
-  sig <- top$q < 0.05
   ggplot(null, aes(.data$q2)) +
     geom_histogram(
       bins = 30, fill = "grey78", colour = "white",
@@ -131,21 +131,15 @@ ref_stats_cell <- function(root = "F06_prediction") {
     geom_vline(xintercept = top$q2, colour = "#B2182B", linewidth = 1) +
     annotate("label",
       x = -Inf, y = Inf, hjust = -0.05, vjust = 1.15,
-      label = sprintf(
-        "Q2 = %.2f\np = %.3f\nq = %.3f", top$q2, top$perm_p_q2, top$q
-      ),
-      size = 2.8, fontface = if (sig) "bold" else "plain",
-      fill = alpha("white", 0.9), lineheight = 0.95
+      label = cell_footer("Q2", top$q2, top$perm_p_q2, root, top$level),
+      size = 2.8, fill = alpha("white", 0.9), lineheight = 0.95
     ) +
     labs(
       x = "permutation-null Q2", y = "count",
       title = sprintf(
         "%s | %s | %s -- %s", top$level, top$config, top$model, top$outcome
       ),
-      subtitle = paste(
-        "Observed (red) vs its own null. Bold stats = q < .05.",
-        LEAK_NOTE[[top$level]]
-      )
+      subtitle = "Observed (red) vs its own null."
     ) +
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
@@ -200,7 +194,13 @@ ref_named_heatmap <- function(root = "F06_prediction", level = "pathways",
 ref_calibration <- function(root = "F06_prediction") {
   cells <- root_cells(root)
   top <- cells |> slice_max(.data$q2, n = 1, with_ties = FALSE)
-  pr <- leaf_sheet(root, top$level, top$config, top$model, "predictions") |>
+  pr <- read.xlsx(
+    file.path(
+      sweep_root_dir(root), top$level, top$config, top$outcome, top$model,
+      "c_data", "results.xlsx"
+    ),
+    "predictions"
+  ) |>
     filter(.data$outcome == top$outcome) |>
     mutate(group = ifelse(grepl("^HR", .data$subject), "HR", "LR"))
   ggplot(pr, aes(.data$y, .data$pred)) +
@@ -313,8 +313,8 @@ main_ref <-
     paste(
       "A-C: drivers under their real names; modules renamed by ORA, not",
       "colour. D: named-feature heatmap ordered by phenotype. E: the",
-      "statistics block every panel carries -- metric, p, BH q (bold if",
-      "q<.05), null band, leakage flag."
+      "statistics block every panel carries -- metric, raw permutation p,",
+      "cells screened, null band, leakage flag."
     )
   )
 save_panel(main_ref, file.path(REF_DIR, "REFERENCE_main_idiom"), 330, 200)

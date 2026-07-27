@@ -28,7 +28,7 @@ strip_tp <- function(x) sub("@T[123]$", "", x)
 
 cell_files <- function(stage, level, config = "*", model = "*") {
   Sys.glob(file.path(
-    sweep_root_dir(stage), level, config, model, "c_data", "results.xlsx"
+    sweep_root_dir(stage), level, config, "*", model, "c_data", "results.xlsx"
   ))
 }
 
@@ -43,20 +43,20 @@ row_labels <- function(features, level) {
 }
 
 # Association: the moderated t per feature x config x outcome, limma throughout
-# so the grid reflects one model rather than a mixture.
+# so the grid reflects one model rather than a mixture. A split leaf holds one
+# outcome, named by its phenotype directory, in a single `cell` sheet.
 assoc_matrix <- function(level) {
   bind_rows(lapply(
     cell_files("F04_association", level, model = "limma"),
     function(f) {
-      config <- basename(dirname(dirname(dirname(f))))
-      bind_rows(lapply(intersect(OUTCOMES, getSheetNames(f)), function(s) {
-        read.xlsx(f, s) |>
-          transmute(
-            feature_id = .data$feature, feature = strip_tp(.data$feature),
-            value = .data$t, p = .data$p, bh = .data$bh,
-            outcome = s, config = config
-          )
-      }))
+      config <- basename(dirname(dirname(dirname(dirname(f)))))
+      outcome <- basename(dirname(dirname(dirname(f))))
+      read.xlsx(f, "cell") |>
+        transmute(
+          feature_id = .data$feature, feature = strip_tp(.data$feature),
+          value = .data$t, p = .data$p,
+          outcome = outcome, config = config
+        )
     }
   )) |>
     group_by(.data$feature, .data$outcome, .data$config) |>
@@ -77,12 +77,12 @@ select_matrix <- function(stage, level) {
       filter(.data$model %in% SPARSE_MODELS) |>
       mutate(
         feature = strip_tp(.data$feature),
-        config = basename(dirname(dirname(dirname(f))))
+        config = basename(dirname(dirname(dirname(dirname(f)))))
       )
   })) |>
     group_by(.data$feature, .data$outcome, .data$config) |>
     summarise(value = mean(.data$freq), .groups = "drop") |>
-    mutate(p = NA_real_, bh = NA_real_)
+    mutate(p = NA_real_)
 }
 
 stage_matrix <- function(stage, level) {
@@ -136,18 +136,13 @@ stage_heatmap <- function(stage, level) {
     )
   }
   sub <- if (is_assoc) {
-    "limma moderated t. Stars = nominal p; bold border = BH q<.05 in cell."
+    "limma moderated t. Stars = nominal p."
   } else {
     "Mean fold-selection frequency across the sparse models."
   }
 
-  p <- ggplot(d, aes(.data$outcome, .data$row, fill = .data$disp)) +
-    geom_tile(colour = "white", linewidth = 0.35)
-  hits <- filter(d, !is.na(.data$bh), .data$bh < 0.05)
-  if (nrow(hits)) {
-    p <- p + geom_tile(data = hits, colour = "black", linewidth = 0.7, fill = NA)
-  }
-  p +
+  ggplot(d, aes(.data$outcome, .data$row, fill = .data$disp)) +
+    geom_tile(colour = "white", linewidth = 0.35) +
     geom_text(aes(label = .data$star),
       size = 2.1, vjust = 0.72,
       colour = "grey15", fontface = "bold"
@@ -222,7 +217,14 @@ pred_detail <- function(stage, level, n = 6) {
   cells <- cells |> slice_min(.data[[pcol]], n = n, with_ties = FALSE)
   panels <- lapply(seq_len(nrow(cells)), function(i) {
     r <- cells[i, ]
-    pr <- leaf_sheet(stage, level, r$config, r$model, "predictions")
+    phenotype <- if (is_class) "HR_LR" else r$outcome
+    pr <- read.xlsx(
+      file.path(
+        sweep_root_dir(stage), level, r$config, phenotype, r$model,
+        "c_data", "results.xlsx"
+      ),
+      "predictions"
+    )
     if (!is_class) pr <- filter(pr, .data$outcome == r$outcome)
     pr$arm <- ifelse(grepl("^HR", pr$subject), "HR", "LR")
     if (is_class) {

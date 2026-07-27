@@ -3,16 +3,17 @@
 # F04/F05/F06. Each reference is drawn from that cell's real output, so it shows
 # both the intended layout and what the data actually supports there.
 #
-# Stage sets the statistic (association: effect and BH q; classification: AUC;
-# prediction: Q^2), the feature level sets how a driver is named (gene symbol,
-# pathway name, module ORA term), and the config sets the readout label
-# (abundance, logFC, trajectory).
+# Stage sets the statistic (association: effect and nominal p; classification:
+# AUC; prediction: Q^2), the feature level sets how a driver is named (gene
+# symbol, pathway name, module ORA term), and the config sets the readout
+# label (abundance, logFC, trajectory).
 
 suppressWarnings(suppressMessages({
   library(here)
   source(here("functions", "sweep_composites.R"))
   source(here("functions", "sweep_pred_leaf.R"))
   source(here("functions", "sweep_drivers.R"))
+  source(here("functions", "sweep_cell_panel.R"))
   pacman::p_load(openxlsx, dplyr, ggplot2, patchwork, stringr, scales)
 }))
 
@@ -78,18 +79,27 @@ feature_label <- function(features, level) {
 
 cell_files <- function(stage, level, config) {
   Sys.glob(file.path(
-    sweep_root_dir(stage), level, config, "*", "c_data", "results.xlsx"
+    sweep_root_dir(stage), level, config, "*", "*", "c_data", "results.xlsx"
   ))
 }
 
+# A leaf's phenotype directory sits two levels above its method directory, so
+# a file already matched by `cell_files()` can be filtered down to one outcome
+# without re-globbing.
+file_phenotype <- function(files) {
+  vapply(
+    files, function(f) basename(dirname(dirname(dirname(f)))), character(1)
+  )
+}
+
 # Association drivers: strongest features by raw p in the lead outcome, pooled
-# over the methods run in that cell.
+# over the methods run in that cell. A split leaf holds one outcome's `cell`
+# sheet, named by its phenotype directory.
 assoc_drivers <- function(stage, level, config, n = 10) {
-  rows <- lapply(cell_files(stage, level, config), function(f) {
-    if (!LEAD_OUTCOME %in% getSheetNames(f)) {
-      return(NULL)
-    }
-    read.xlsx(f, LEAD_OUTCOME) |>
+  files <- cell_files(stage, level, config)
+  files <- files[file_phenotype(files) == LEAD_OUTCOME]
+  rows <- lapply(files, function(f) {
+    read.xlsx(f, "cell") |>
       mutate(method = basename(dirname(dirname(f))))
   })
   bind_rows(rows) |>
@@ -103,7 +113,7 @@ assoc_drivers <- function(stage, level, config, n = 10) {
       # the moderated t is signed like the effect but comparable across
       # features, so bar length ranks the way the p-value does
       score = ifelse(is.na(.data$t), sign(.data$effect), .data$t),
-      p = .data$p, bh = .data$bh,
+      p = .data$p,
       label = feature_label(.data$feature, level)
     )
 }
@@ -153,13 +163,13 @@ driver_panel <- function(d, level, xlab, subtitle, signed = FALSE) {
 # null; a gap is the signal.
 arm_separation_panel <- function(stage, level, config) {
   files <- cell_files(stage, level, config)
-  summ <- bind_rows(lapply(files, function(f) read.xlsx(f, "summary"))) |>
-    filter(.data$B == max(.data$B)) |>
-    mutate(q = stats::p.adjust(.data$perm_p, "BH"))
+  summ <- bind_rows(lapply(files, function(f) {
+    cbind(file = f, read.xlsx(f, "summary"))
+  })) |>
+    filter(.data$B == max(.data$B))
   top <- summ |> slice_min(.data$perm_p, n = 1, with_ties = FALSE)
-  pr <- leaf_sheet(stage, level, config, top$model, "predictions") |>
+  pr <- read.xlsx(top$file, "predictions") |>
     mutate(arm = ifelse(.data$y == 1, "HR", "LR"))
-  sig <- top$q < 0.05
 
   ggplot(pr, aes(.data$arm, .data$pred, fill = .data$arm)) +
     geom_boxplot(
@@ -171,40 +181,36 @@ arm_separation_panel <- function(stage, level, config) {
     scale_colour_manual(values = GROUP_COLORS, guide = "none") +
     annotate("label",
       x = 1.5, y = Inf, vjust = 1.1,
-      label = sprintf(
-        "AUC = %.2f\np = %.3f\nq = %.3f", top$estimate, top$perm_p, top$q
-      ),
-      size = 2.6, fontface = if (sig) "bold" else "plain",
-      fill = alpha("white", 0.9), lineheight = 0.95
+      label = cell_footer("AUC", top$estimate, top$perm_p, stage, level),
+      size = 2.6, fill = alpha("white", 0.9), lineheight = 0.95
     ) +
     labs(
       x = NULL, y = "out-of-fold score",
       title = sprintf("Arm separation -- %s", top$model),
-      subtitle = "Held-out score by true arm. Overlap = null. Bold = q < .05."
+      subtitle = "Held-out score by true arm. Overlap = null."
     ) +
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
 }
 
-# The statistics block: the stage's metric against its null, with p and the BH q
-# taken within the cell; bold when q clears 0.05.
+# The statistics block: the stage's metric against its null, with the raw
+# permutation p taken within the cell.
 stat_panel <- function(stage, level, config) {
   files <- cell_files(stage, level, config)
   summ <- bind_rows(lapply(files, function(f) read.xlsx(f, "summary")))
   if (stage == "F04_association") {
-    d <- bind_rows(lapply(files, function(f) {
-      if (!LEAD_OUTCOME %in% getSheetNames(f)) NULL else read.xlsx(f, LEAD_OUTCOME)
-    }))
+    lead_files <- files[file_phenotype(files) == LEAD_OUTCOME]
+    d <- bind_rows(lapply(lead_files, function(f) read.xlsx(f, "cell")))
     d <- d |>
       mutate(
         dir = case_when(
-          .data$bh < 0.05 & .data$effect > 0 ~ "Up",
-          .data$bh < 0.05 & .data$effect < 0 ~ "Down",
+          .data$p < 0.05 & .data$effect > 0 ~ "Up",
+          .data$p < 0.05 & .data$effect < 0 ~ "Down",
           TRUE ~ "NS"
         ),
         name = feature_label(base_feature(.data$feature), level)
       )
-    n_bh <- sum(d$dir != "NS", na.rm = TRUE)
+    n_nominal <- sum(d$dir != "NS", na.rm = TRUE)
     lab <- d |> slice_min(.data$p, n = 6, with_ties = FALSE)
     return(
       ggplot(d, aes(.data$effect, -log10(.data$p))) +
@@ -223,7 +229,7 @@ stat_panel <- function(stage, level, config) {
           x = sprintf("effect vs %s", LEAD_OUTCOME),
           y = expression(-log[10] * " p"), title = "In-sample statistic",
           subtitle = sprintf(
-            "BH q<.05 in cell: %d / %d. Dotted = nominal .05.", n_bh, nrow(d)
+            "nominal p<.05 in cell: %d / %d.", n_nominal, nrow(d)
           )
         ) +
         FIG_THEME +
@@ -240,7 +246,6 @@ stat_panel <- function(stage, level, config) {
   if (!is_class) summ <- filter(summ, .data$outcome == LEAD_OUTCOME)
   metric <- if (is_class) "estimate" else "q2"
   pcol <- if (is_class) "perm_p" else "perm_p_q2"
-  summ <- summ |> mutate(q = stats::p.adjust(.data[[pcol]], "BH"))
   top <- summ |> slice_min(.data[[pcol]], n = 1, with_ties = FALSE)
 
   null <- bind_rows(lapply(files, function(f) {
@@ -249,7 +254,6 @@ stat_panel <- function(stage, level, config) {
   }))
   null <- filter(null, .data$model == top$model)
   vcol <- if (is_class) "auc" else "q2"
-  sig <- top$q < 0.05
 
   ggplot(null, aes(.data[[vcol]])) +
     geom_histogram(
@@ -263,17 +267,15 @@ stat_panel <- function(stage, level, config) {
     geom_vline(xintercept = top[[metric]], colour = "#B2182B", linewidth = 1) +
     annotate("label",
       x = -Inf, y = Inf, hjust = -0.05, vjust = 1.15,
-      label = sprintf(
-        "%s = %.2f\np = %.3f\nq = %.3f",
-        if (is_class) "AUC" else "Q2", top[[metric]], top[[pcol]], top$q
+      label = cell_footer(
+        if (is_class) "AUC" else "Q2", top[[metric]], top[[pcol]], stage, level
       ),
-      size = 2.6, fontface = if (sig) "bold" else "plain",
-      fill = alpha("white", 0.9), lineheight = 0.95
+      size = 2.6, fill = alpha("white", 0.9), lineheight = 0.95
     ) +
     labs(
       x = sprintf("permutation null (%s)", if (is_class) "AUC" else "Q2"),
       y = "count", title = sprintf("Out-of-sample statistic -- %s", top$model),
-      subtitle = "Observed (red) vs its own null. Bold = q < .05."
+      subtitle = "Observed (red) vs its own null."
     ) +
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
