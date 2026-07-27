@@ -1,8 +1,8 @@
 # Association reference in the YvO F06 idiom: one feature x outcome heatmap per
 # feature level, with the timepoint configs as column families. Cells carry the
-# signed moderated t, stars mark nominal significance, and a bold border marks
-# BH within the cell. Rows are named the way their level demands -- module ORA
-# term, cleaned pathway name, gene symbol.
+# signed moderated t, and stars mark nominal significance. Rows are named the
+# way their level demands -- module ORA term, cleaned pathway name, gene
+# symbol.
 
 suppressWarnings(suppressMessages({
   library(here)
@@ -20,24 +20,23 @@ OUTCOME_SHORT <- c(
   group_diff = "HR-LR"
 )
 
-# Every association cell for one feature level: the moderated t and BH q per
-# feature x config x outcome, taking limma as the common method so the grid is
-# one model rather than a mix.
+# Every association cell for one feature level: the moderated t per feature x
+# config x outcome, taking limma as the common method so the grid is one model
+# rather than a mix. A split leaf holds one outcome, named by its phenotype
+# directory, in a single `cell` sheet.
 assoc_grid <- function(level, method = "limma") {
   files <- Sys.glob(file.path(
-    sweep_root_dir(STAGE), level, "*", method, "c_data", "results.xlsx"
+    sweep_root_dir(STAGE), level, "*", "*", method, "c_data", "results.xlsx"
   ))
   bind_rows(lapply(files, function(f) {
-    config <- basename(dirname(dirname(dirname(f))))
-    sheets <- intersect(OUTCOMES, getSheetNames(f))
-    bind_rows(lapply(sheets, function(s) {
-      read.xlsx(f, s) |>
-        transmute(
-          feature = sub("@T[123]$", "", .data$feature),
-          t = .data$t, p = .data$p, bh = .data$bh,
-          outcome = s, config = config
-        )
-    }))
+    config <- basename(dirname(dirname(dirname(dirname(f)))))
+    outcome <- basename(dirname(dirname(dirname(f))))
+    read.xlsx(f, "cell") |>
+      transmute(
+        feature = sub("@T[123]$", "", .data$feature),
+        t = .data$t, p = .data$p,
+        outcome = outcome, config = config
+      )
   })) |>
     group_by(.data$feature, .data$outcome, .data$config) |>
     slice_min(.data$p, n = 1, with_ties = FALSE) |>
@@ -83,13 +82,9 @@ assoc_heatmap <- function(level, n_show = 18) {
       ),
       t_disp = pmin(pmax(.data$t, -5), 5)
     )
-  hits <- filter(d, .data$bh < 0.05)
 
   ggplot(d, aes(.data$outcome, .data$row, fill = .data$t_disp)) +
     geom_tile(colour = "white", linewidth = 0.4) +
-    geom_tile(
-      data = hits, colour = "black", linewidth = 0.7, fill = NA
-    ) +
     geom_text(aes(label = .data$star),
       size = 2.4, vjust = 0.72,
       colour = "grey15", fontface = "bold"
@@ -102,10 +97,7 @@ assoc_heatmap <- function(level, n_show = 18) {
     labs(
       x = NULL, y = NULL,
       title = sprintf("%s -- association across configs and outcomes", level),
-      subtitle = paste(
-        "limma moderated t. Stars = nominal p; bold border = BH q<.05",
-        "within cell."
-      )
+      subtitle = "limma moderated t. Stars = nominal p."
     ) +
     FIG_THEME +
     theme(
@@ -124,7 +116,7 @@ composite <- wrap_plots(panels, ncol = 1, heights = c(1, 1.5, 1.5)) +
     subtitle = paste(
       "Every feature level x timepoint config x outcome in one grid. Rows",
       "named per level; modules by ORA term. Read the null honestly: most",
-      "cells are pale and unbordered."
+      "cells are pale and unstarred."
     ),
     tag_levels = "A",
     theme = theme(
