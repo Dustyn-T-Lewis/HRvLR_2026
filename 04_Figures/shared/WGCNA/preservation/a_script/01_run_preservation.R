@@ -129,12 +129,11 @@ composite <- (
     title = "Module preservation between HR and LR",
     subtitle = sprintf(
       paste0(
-        "HR %d samples from %d subjects, LR %d samples from %d subjects, ",
-        "each arm centred within subject before splitting (one degree of ",
-        "freedom spent per subject). At this size a low Zsummary cannot be ",
-        "cleanly separated from a genuine difference in module ",
-        "architecture; Z > 10 = strong, Z < 2 = none (Langfelder & ",
-        "Horvath, 2011)."
+        "HR %d samples from %d subjects, LR %d samples from %d subjects; ",
+        "centred within subject before splitting, which spends one degree\n",
+        "of freedom per subject. Z > 10 = strong, Z < 2 = none (Langfelder ",
+        "& Horvath, 2011). At this size a low Zsummary cannot be cleanly\n",
+        "separated from a genuine difference in module architecture."
       ),
       hr_row$n_samples, hr_row$n_subjects, lr_row$n_samples, lr_row$n_subjects
     ),
