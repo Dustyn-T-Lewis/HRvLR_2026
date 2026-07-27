@@ -171,10 +171,12 @@ p_slope <- ggplot(slope_long, aes(.data$stage_x, .data$metric,
     title = "Module leads, cohort network vs refit inside every fold",
     subtitle = sprintf(
       paste(
-        "median drop = %.3f. Refit measures module-definition circularity",
-        "only; every cell still runs on the cohort-imputed proteome."
+        "median drop = %.3f; %d of %d stay above zero.",
+        "\nCircularity of module definition only: every",
+        "cell\nstill runs on the cohort-imputed proteome."
       ),
-      stats::median(refit_summary$drop)
+      stats::median(refit_summary$drop),
+      sum(refit_summary$metric_loso_refit > 0), nrow(refit_summary)
     )
   ) +
   FIG_THEME +
@@ -197,7 +199,10 @@ p_stab <- ggplot(stability, aes(
   coord_flip() +
   labs(
     x = NULL, y = "Jaccard overlap with the cohort module",
-    subtitle = "bar = mean across folds, whisker down to the worst fold"
+    subtitle = paste(
+      "bar = mean across folds, whisker to the worst.\nDashed line is the 0.5",
+      "match cut: only turquoise and\nmagenta clear it in all 16 folds."
+    )
   ) +
   FIG_THEME +
   theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
