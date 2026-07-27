@@ -13,13 +13,21 @@ source(here("functions", "shared_style.R"))
 source(here("functions", "sweep_grid.R"))
 source(here("functions", "sweep_speccurve.R"))
 
-leaf_sheet <- function(root, level, config, method, sheet) {
+# Leaves carry a phenotype directory between config and model. Classification
+# sweeps one outcome and its roll-up has no outcome column, so it resolves to
+# the single HR_LR leaf.
+leaf_sheet <- function(root, level, config, phenotype, method, sheet) {
   openxlsx::read.xlsx(
     file.path(
-      sweep_root_dir(root), level, config, method, "c_data", "results.xlsx"
+      sweep_root_dir(root), level, config, phenotype, method,
+      "c_data", "results.xlsx"
     ),
     sheet
   )
+}
+
+cell_phenotype <- function(cell) {
+  if (is.null(cell$outcome)) "HR_LR" else cell$outcome
 }
 
 root_cells <- function(root) {
@@ -37,7 +45,10 @@ cell_tag <- function(level, config, method) {
 # stored out-of-fold predictions. Border weight and linetype encode nominal
 # significance; the fill is the feature-level hue.
 roc_panel <- function(root, cell) {
-  pr <- leaf_sheet(root, cell$level, cell$config, cell$model, "predictions")
+  pr <- leaf_sheet(
+    root, cell$level, cell$config, cell_phenotype(cell), cell$model,
+    "predictions"
+  )
   roc <- pROC::roc(pr$y, pr$pred,
     quiet = TRUE, levels = c(0, 1), direction = "<"
   )
@@ -94,8 +105,10 @@ roc_grid <- function(root, n = 12, ncol = 4) {
 # One observed-vs-predicted panel for a continuous cell, coloured by responder
 # group with a fitted line and the Spearman rho.
 obs_pred_panel <- function(root, cell) {
-  pr <- leaf_sheet(root, cell$level, cell$config, cell$model, "predictions") |>
-    filter(.data$outcome == cell$outcome) |>
+  pr <- leaf_sheet(
+    root, cell$level, cell$config, cell_phenotype(cell), cell$model,
+    "predictions"
+  ) |>
     mutate(group = ifelse(grepl("^HR", .data$subject), "HR", "LR"))
   fill <- SPEC_LEVEL_COLORS[[cell$level]]
   sig <- cell$perm_p_q2 < 0.05
