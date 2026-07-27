@@ -131,7 +131,10 @@ ref_stats_cell <- function(root = "F06_prediction") {
     geom_vline(xintercept = top$q2, colour = "#B2182B", linewidth = 1) +
     annotate("label",
       x = -Inf, y = Inf, hjust = -0.05, vjust = 1.15,
-      label = cell_footer("Q2", top$q2, top$perm_p_q2, root, top$level),
+      label = sub(
+        "  ·  1 of", "\n1 of",
+        cell_footer("Q2", top$q2, top$perm_p_q2, root, top$level)
+      ),
       size = 2.8, fill = alpha("white", 0.9), lineheight = 0.95
     ) +
     labs(
@@ -312,9 +315,9 @@ main_ref <-
     "REFERENCE -- main composite idiom (named features + per-cell statistics)",
     paste(
       "A-C: drivers under their real names; modules renamed by ORA, not",
-      "colour. D: named-feature heatmap ordered by phenotype. E: the",
+      "colour. D: named-feature heatmap ordered by phenotype.\nE: the",
       "statistics block every panel carries -- metric, raw permutation p,",
-      "cells screened, null band, leakage flag."
+      "cells screened, null band, leakage flag. No BH q anywhere."
     )
   )
 save_panel(main_ref, file.path(REF_DIR, "REFERENCE_main_idiom"), 330, 200)
