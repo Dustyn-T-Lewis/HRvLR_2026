@@ -23,7 +23,9 @@ best_b_per_cell <- function(df) {
 
 rollup_root <- function(root, p_col) {
   files <- Sys.glob(
-    file.path(sweep_root_dir(root), "*", "*", "*", "c_data", "results.xlsx")
+    file.path(
+      sweep_root_dir(root), "*", "*", "*", "*", "c_data", "results.xlsx"
+    )
   )
   all_cells <- bind_rows(lapply(files, function(f) {
     openxlsx::read.xlsx(f, sheet = "summary")
