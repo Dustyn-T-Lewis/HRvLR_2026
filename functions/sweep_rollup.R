@@ -30,9 +30,11 @@ rollup_root <- function(root, p_col) {
   all_cells <- bind_rows(lapply(files, function(f) {
     openxlsx::read.xlsx(f, sheet = "summary")
   }))
+  kind <- root_kind(root)
+  metric_col <- root_metric_col(kind)
   leads <- all_cells |>
     best_b_per_cell() |>
-    filter(.data[[p_col]] < 0.05) |>
+    filter(is_lead(.data[[metric_col]], .data[[p_col]], kind)) |>
     arrange(.data[[p_col]])
 
   dir.create(file.path(sweep_root_dir(root), "c_data"),

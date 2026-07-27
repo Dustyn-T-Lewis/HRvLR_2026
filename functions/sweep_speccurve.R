@@ -26,7 +26,7 @@ spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
       null_sd = .data[[sd]], perm_p = .data[[p]],
       lo = .data[[mean]] - 1.96 * .data[[sd]],
       hi = .data[[mean]] + 1.96 * .data[[sd]],
-      hit = .data[[p]] < 0.05
+      hit = is_lead_at(.data[[value]], .data[[p]], chance)
     ) |>
     arrange(.data$value) |>
     mutate(rank = dplyr::row_number())

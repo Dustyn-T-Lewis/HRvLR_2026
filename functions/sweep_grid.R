@@ -65,3 +65,29 @@ write_sweep_workbook <- function(path, sheets) {
   }
   saveWorkbook(wb, path, overwrite = TRUE)
 }
+
+# A lead clears its permutation null AND beats the trivial baseline: predicting
+# the mean for Q2, chance for AUC. Ridge and the unpenalised plain model
+# collapse their nulls, so p alone promotes cells whose metric is worse than
+# the baseline. Every place that counts or highlights a lead calls this, so the
+# manifest, the roll-up, the composites and the specification curve cannot
+# disagree. Association is in-sample with no permutation null; it returns NA.
+LEAD_BASELINE <- c(cont = 0, class = 0.5)
+
+is_lead_at <- function(metric, p, baseline) {
+  !is.na(p) & p < 0.05 & metric > baseline
+}
+
+is_lead <- function(metric, p, kind) {
+  if (!kind %in% names(LEAD_BASELINE)) {
+    return(rep(NA, length(p)))
+  }
+  is_lead_at(metric, p, LEAD_BASELINE[[kind]])
+}
+
+# Which metric and p a root's summary carries, so callers need not hardcode it.
+root_kind <- function(root) {
+  if (grepl("classification", root)) "class" else "cont"
+}
+
+root_metric_col <- function(kind) if (kind == "class") "estimate" else "q2"
