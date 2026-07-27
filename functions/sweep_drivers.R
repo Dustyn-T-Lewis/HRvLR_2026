@@ -116,21 +116,35 @@ driver_bars <- function(d, level, xlab, title, subtitle, signed = FALSE) {
       plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE)
     )
 
+  # The in-bar label is drawn in points from zero, so it does not shrink with
+  # the axis. Short diverging bars carry long names, so the signed panel needs
+  # room on both sides or the text runs off the plot.
   p <- if (signed) {
     p +
       geom_vline(xintercept = 0, colour = "grey30", linewidth = 0.4) +
-      scale_x_continuous(expand = expansion(mult = 0.1))
+      scale_x_continuous(expand = expansion(mult = 0.9))
   } else {
     p + scale_x_continuous(expand = expansion(mult = c(0, 0.04)))
   }
 
+  # Selection-frequency bars span 0-1, so the name fits inside them and reads
+  # in the fill's contrast colour. Signed bars are effect sizes: they are short
+  # and vary in width, so a name placed inside would run past the bar and turn
+  # white-on-white. Those sit outside the bar end instead, growing away from
+  # zero in dark text.
   if (any(nzchar(d$description))) {
-    p <- p +
+    p <- p + if (signed) {
+      geom_text(
+        aes(x = .data$score, label = .data$description),
+        hjust = ifelse(d$score < 0, 1.05, -0.05),
+        size = 2.2, colour = "grey10", fontface = "bold"
+      )
+    } else {
       geom_text(
         aes(x = 0, label = .data$description),
-        hjust = if (signed) ifelse(d$score < 0, 1.03, -0.03) else -0.03,
-        size = 2.2, colour = d$text_colour, fontface = "bold"
+        hjust = -0.03, size = 2.2, colour = d$text_colour, fontface = "bold"
       )
+    }
   }
   p
 }
