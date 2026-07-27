@@ -30,12 +30,14 @@ untested <- tibble(
   select(uniprot_id, gene, protein, n_detected, n_empty_cells, HR_T1:LR_T3) |>
   arrange(desc(n_empty_cells), n_detected)
 
-# The BH denominator is the non-NA count, not the 1902 rows in the matrix.
-denominators <- imap_dfr(fit$results, \(r, cname) tibble(
-  contrast = cname,
-  n_tested = sum(!is.na(r$adj.P.Val)),
-  n_untested = sum(is.na(r$adj.P.Val))
-))
+# The BH denominator is the non-NA count, not every row in the matrix.
+denominators <- imap_dfr(fit$results, \(r, cname) {
+  tibble(
+    contrast = cname,
+    n_tested = sum(!is.na(r$adj.P.Val)),
+    n_untested = sum(is.na(r$adj.P.Val))
+  )
+})
 
 out_dir <- here("03_DEP", "a_non_imputed", "b_reports")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -47,5 +49,8 @@ cat(sprintf(
   nrow(untested)
 ))
 print(count(untested, n_empty_cells, name = "n_proteins"), n = Inf)
-cat("\nTrue tested-N per contrast (the BH denominator; the matrix has 1902 rows):\n")
+cat(sprintf(
+  "\nTested-N per contrast (the BH denominator; matrix has %d rows):\n",
+  nrow(fit$data)
+))
 print(as.data.frame(denominators), row.names = FALSE)
