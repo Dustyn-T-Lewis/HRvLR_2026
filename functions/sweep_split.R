@@ -1,11 +1,13 @@
 # Re-slice a swept leaf into one leaf per phenotype. The swept workbooks are the
 # source of truth; nothing here recomputes a model.
 
-pacman::p_load(here, dplyr, openxlsx)
+pacman::p_load(here, openxlsx)
 source(here("functions", "sweep_grid.R"))
 
 PRED_SHEETS <- c("summary", "null", "predictions", "selection")
 
+# `root` is an already-resolved figure directory, so callers pass
+# sweep_root_dir("F06_prediction") rather than the bare name.
 split_leaf_dir <- function(root, level, config, phenotype, model) {
   d <- file.path(root, level, config, phenotype, model)
   for (sub in c("b_reports", "c_data")) {
