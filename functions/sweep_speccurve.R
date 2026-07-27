@@ -60,7 +60,7 @@ spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
     )
 
   strip <- d |>
-    select(rank, all_of(spec_cols)) |>
+    dplyr::select(.data$rank, dplyr::all_of(spec_cols)) |>
     pivot_longer(all_of(spec_cols), names_to = "axis", values_to = "spec") |>
     mutate(axis = factor(axis, levels = spec_cols))
 

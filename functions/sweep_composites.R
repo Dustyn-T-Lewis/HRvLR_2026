@@ -163,7 +163,11 @@ build_class_composite <- function(root = "F05_classification") {
   a <- roc_grid(root, n = 12) +
     plot_annotation(
       title = "A   Top-12 cells by permutation p -- per-cell ROC",
-      subtitle = "Filled by feature level; bold border = nominal p < .05.",
+      subtitle = paste(
+        "Filled by feature level. Bold border = a lead: beats its null AND",
+        "beats chance.\nCells shown are the 12 smallest p, so a thin border",
+        "marks one that clears p but not the baseline."
+      ),
       theme = section_theme()
     )
   b <- spec_curve_class(
@@ -340,7 +344,12 @@ build_cont_composite <- function(root = "F06_prediction") {
   a <- obs_pred_grid(root, n = 12) +
     plot_annotation(
       title = "A   Top-12 cells by permutation p -- observed vs predicted",
-      subtitle = "Points by responder group (HR blue, LR red); line per level.",
+      subtitle = paste(
+        "Points by responder group (HR blue, LR red); line per level.",
+        "Bold border = a\nlead: beats its null AND beats predicting the",
+        "mean. Cells are the 12 smallest p,\nso a thin border marks one that",
+        "clears p on a collapsed null."
+      ),
       theme = section_theme()
     )
   b <- spec_curve_cont(
