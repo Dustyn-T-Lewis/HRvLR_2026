@@ -70,8 +70,7 @@ hlm_contrast_weights <- function(emm) {
   )
   # A residual variance collapsed to a sliver of the feature's own spread is an
   # overfit sparse-data fit that emits explosive contrast t-values and fake tiny
-  # p at n=16; drop it to NA the same way the per-feature HLM in
-  # f04_association.R does, so it cannot masquerade as a top hit.
+  # p at n=16; drop it to NA so it cannot masquerade as a top hit.
   degenerate <- !is.null(fit) &&
     stats::sigma(fit) < 0.05 * stats::sd(d$y)
   if (is.null(fit) || lme4::isSingular(fit) || degenerate) {
