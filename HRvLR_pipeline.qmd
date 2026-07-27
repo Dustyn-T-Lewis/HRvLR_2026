@@ -101,11 +101,13 @@ floor while predicting worse than the group mean.
 
 F05 classification is a complete null: 0 leads of 153. F06 prediction clears 32
 leads of 792 (4.0%, below the 5% chance rate), yet 26 of the 32 concentrate on
-`d_mcsa`. The module arm does not predict: all 8 module leads invert under
-in-fold network refitting, median drop 0.461 — the eigengenes are built once on
-the full cohort, so a held-out subject already shaped the network that scores
-them. HR and LR share module architecture (preservation strong in both
-directions), and training- and acute-only contrast networks were tested and are
+`d_mcsa`. The module arm does not predict: all 8 module leads fall below
+zero, median drop 0.461. The decomposition matters: 0.428 of that comes from
+restricting the features to the two modules recoverable in every fold, and
+0.000 from rebuilding the network in-fold. The leads depended on the nine
+modules that do not reproduce under subsampling. HR and LR share module
+architecture (preservation strong both directions, using cohort-defined labels,
+so not itself free of circularity), and training- and acute-only contrast networks were tested and are
 not viable at this cohort size (`shared/WGCNA`).
 
 **So: the proteome does not separate high from low responders at this sample size.**
@@ -177,7 +179,7 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/shared/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
 | `04_Figures/F04_association/` | Association screen: `<level>/<config>/<phenotype>/<method>`, 420 cells, `limma`/`lm`/Spearman/Wilcoxon; raw permutation p, no BH across the screen |
 | `04_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
-| `04_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads invert under in-fold refitting |
+| `04_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
@@ -342,7 +344,7 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | shared/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype; the eigengene source for the `modules` level of F04-F06; `loso_refit`, `preservation`, `contrast_networks` test generalization |
 | F04_association | Association screen over `<level>/<config>/<phenotype>/<method>`: 420 cells, raw permutation p, no BH across the screen |
 | F05_classification | HR/LR classification screen over `<level>/<config>/HR_LR/<model>`: 153 cells, nested LOSO against a permutation null; 0 leads |
-| F06_prediction | Continuous-adaptation prediction screen over `<level>/<config>/<phenotype>/<model>`: 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, module leads invert under in-fold refitting |
+| F06_prediction | Continuous-adaptation prediction screen over `<level>/<config>/<phenotype>/<model>`: 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, module leads fall below zero on the two reproducible modules |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
