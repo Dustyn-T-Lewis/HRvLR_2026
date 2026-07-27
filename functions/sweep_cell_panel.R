@@ -43,8 +43,18 @@ drivers_or_empty <- function(selection, level, method, xlab, title, subtitle,
   driver_bars(d, level, xlab, title, subtitle, signed = signed)
 }
 
+# Wilcoxon is rank-based and carries no t, so a cell scores on whatever its
+# method produced: the moderated t where it exists, the group difference
+# otherwise.
+assoc_score <- function(cell) {
+  if (any(is.finite(cell$t))) {
+    list(value = cell$t, axis = "moderated t", stat = "top |t|")
+  } else {
+    list(value = cell$effect, axis = "effect", stat = "top |effect|")
+  }
+}
+
 build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
-  top <- cell |> slice_min(.data$p, n = 1, with_ties = FALSE)
   df <- cell |>
     filter(is.finite(.data$p), is.finite(.data$effect)) |>
     mutate(nlp = -log10(.data$p))
@@ -65,9 +75,10 @@ build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
 
+  sc <- assoc_score(cell)
   bars <- drivers_or_empty(
-    cell |> mutate(score = .data$t), level, method,
-    "moderated t", NULL, "signed t, strongest features",
+    cell |> mutate(score = sc$value), level, method,
+    sc$axis, NULL, "signed t, strongest features",
     signed = TRUE
   )
 
@@ -78,7 +89,7 @@ build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
         "%s | %s | %s association -- %s", level, config, phenotype, method
       ),
       subtitle = cell_footer(
-        "top |t|", max(abs(cell$t), na.rm = TRUE), min(cell$p, na.rm = TRUE),
+        sc$stat, max(abs(sc$value), na.rm = TRUE), min(cell$p, na.rm = TRUE),
         "F04_association", level
       ),
       theme = leaf_title_theme()
@@ -98,6 +109,8 @@ null_panel <- function(null_values, observed, chance, xlab, subtitle) {
 }
 
 build_class_cell_panel <- function(sheets, level, config, method) {
+  # sheets$summary is pre-filtered to one phenotype by sweep_split.R, so the
+  # max-B row is a single row and `[[1]]` is safe here and below.
   s <- sheets$summary |> filter(.data$B == max(.data$B))
   obs <- s$estimate[[1]]
 
@@ -125,6 +138,8 @@ build_class_cell_panel <- function(sheets, level, config, method) {
 }
 
 build_cont_cell_panel <- function(sheets, level, config, phenotype, method) {
+  # sheets$summary is pre-filtered to one phenotype by sweep_split.R, so the
+  # max-B row is a single row and `[[1]]` is safe here and below.
   s <- sheets$summary |> filter(.data$B == max(.data$B))
   obs <- s$q2[[1]]
 
