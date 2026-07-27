@@ -187,7 +187,7 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
 
 Each screen runs `run_*` (compute every leaf cell), then `split_*` (fan the
 pre-split `<level>/<config>/<method>` leaf into per-phenotype panels), then
-`rollup_*` (F05 and F06 only — pool the leaves into one workbook and render the
+`rollup_*` (all three — pool the leaves into one workbook, write MANIFEST.xlsx, and render the
 specification-curve figure), then `composite_*` (assemble the figure and write
 `MANIFEST.xlsx`). `functions/sweep_grid.R`'s `leaf_done()` checks the pre-split
 three-level path (`<level>/<config>/<method>/c_data/results.xlsx`) because the
@@ -206,14 +206,15 @@ Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordanc
 Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
 Rscript 04_Figures/shared/WGCNA/a_script/01_run_modules.R
-Rscript 04_Figures/shared/WGCNA/loso_refit/a_script/01_run_loso_refit.R
 Rscript 04_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
 Rscript 04_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
 Rscript 04_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
 
-# F04 association: run every cell, split into per-phenotype panels, composite
+# F04 association: run every cell, split into per-phenotype panels, manifest,
+# composite
 Rscript 04_Figures/F04_association/a_script/run_F04_association.R
 Rscript 04_Figures/F04_association/a_script/split_F04_association.R
+Rscript 04_Figures/F04_association/a_script/rollup_F04_association.R
 Rscript 04_Figures/F04_association/a_script/composite_F04_association.R
 
 # F05 classification: run, split, roll up (spec curve + manifest), composite
@@ -227,6 +228,13 @@ Rscript 04_Figures/F06_prediction/a_script/run_F06_prediction.R
 Rscript 04_Figures/F06_prediction/a_script/split_F06_prediction.R
 Rscript 04_Figures/F06_prediction/a_script/rollup_F06_prediction.R
 Rscript 04_Figures/F06_prediction/a_script/composite_F06_prediction.R
+
+# Module validation last: the refit reads the F05 and F06 manifests, so it must
+# follow both.
+Rscript 04_Figures/shared/WGCNA/loso_refit/a_script/01_run_loso_refit.R
+Rscript 04_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
+Rscript 04_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
+Rscript 04_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
 ```
 
 ## Repository Conventions
