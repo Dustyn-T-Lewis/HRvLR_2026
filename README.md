@@ -25,11 +25,31 @@ how to read the output — including what a null looks like.
 The phenotype is real: HR and LR trained the same and grew apart (F01). **The proteome
 does not separate them.** Every global test in F02 is null (PERMANOVA p = 0.62; RRPP
 p ≥ 0.38; CAP fails to classify). HR and LR responses are only weakly concordant
-(ρ = 0.20 training, 0.15 acute) and every fry rotation test is null. No WGCNA module
-tracks the phenotype (best BH q = 0.24), and nothing predicts it out of sample.
+(ρ = 0.20 training, 0.15 acute) and every fry rotation test is null.
 
 The one genuinely FDR-controlled signal is pathway-level: 691 significant pathway ×
 contrast tests, with HR's acute response enriching 217 pathways against LR's 33 (F03).
+
+**F04-F06 report a screen, not a discovery set.** Each of their 1,365 cells
+(F04 = 420, F05 = 153, F06 = 792) reports a metric, a raw permutation p, the
+screen size, and a leakage label — no BH q anywhere in these three, unlike
+F01-F03's limma BH FDR. A screen this size and this correlated (shared subjects,
+overlapping feature spaces, nested timepoint configs) has no defensible multiple-
+comparison correction; a raw p plus a screen-size denominator is the honest
+alternative to a q that would imply independence the cells do not have. A cell
+only counts as a **lead** when `perm_p < .05` *and* its metric beats the trivial
+baseline (`q2 > 0` for prediction, `auc > 0.5` for classification) — collapsed
+permutation nulls otherwise manufacture significance on their own.
+
+F05 classification is a complete null: 0 leads of 153. F06 prediction clears
+32 leads of 792 (4.0%, under the 5% chance rate), yet 26 of the 32 concentrate
+on `d_mcsa`. The module arm does not predict: all 8 module leads invert under
+in-fold network refitting, median drop 0.461 — the module network is built once
+on the full cohort, so any subject held out for testing already shaped the
+network that scores them. HR and LR share module architecture (preservation
+strong in both directions), so the WGCNA modules describe this cohort without
+distinguishing the two arms. Contrast-specific networks (built on the training
+or acute contrast alone) were tested and are not viable at this cohort size.
 
 **Read the protein-level counts with care.** Most of them come from the π gate
 (`p^|logFC| < 0.05`), which controls no error rate and admits proteins with raw p up to
@@ -44,9 +64,9 @@ blood-tagged proteins leaves every one of those contrasts at zero.
 Known limitations are stated on the page where the reader meets them: the π gate in
 `HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
 reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
-by the missingness filter that the model then cannot test; the circular module test in
-F04_association/WGCNA; and the transductive eigengenes in F04_association/WGCNA and
-`04_Figures/F03_pathway/supp`.
+by the missingness filter that the model then cannot test; the module-prediction circularity
+in `shared/WGCNA` that in-fold refitting exposed (see "What the pipeline found" above); and
+the transductive eigengenes in `shared/WGCNA` and `04_Figures/F03_pathway/supp`.
 
 ## Design and Canonical Contrasts
 
@@ -90,7 +110,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association global mixed model + group and phenotype association (WGCNA module linkage kept as the eigengene source); F05_prediction out-of-sample prediction |
+| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association per-cell association screen; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; `shared/WGCNA` builds the module eigengenes F04-F06 consume |
 
 ## Canonical Run Order
 
@@ -103,8 +123,8 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `04_Figures/F04_association/WGCNA` (see Figures);
-WGCNA is the inferential engine for the module-phenotype linkage.
+Clustering is computed self-contained inside `04_Figures/shared/WGCNA` (see Figures);
+WGCNA builds the module eigengenes that feed the `modules` level of F04, F05 and F06.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
 exploratory and feeds only QC and figure/WGCNA inputs. Each arm is independent
@@ -143,19 +163,34 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
 - `04_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
 - `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
-- `04_Figures/F04_association/WGCNA`: WGCNA module-phenotype linkage, and the
-  source of the module eigengenes both figures consume (missForest-imputed proteome)
-- `04_Figures/F04_association/global`: one mixed model across all samples
-  (`mixed_model`, cached for the group slices) plus ordination and PERMANOVA
-  (`ordination`)
-- `04_Figures/F04_association/group_HRvLR`: five HR-vs-LR contrasts, each fit two
-  ways (`limma` snapshot, `mixed_slice` off the global model)
-- `04_Figures/F04_association/phenotype`: feature ~ continuous adaptation, per phase
-- `04_Figures/F05_prediction`: out-of-sample HR/LR classification (`group_HRvLR`,
-  three engines) and continuous prediction (`phenotype/baseline`), three feature
-  spaces each (proteins, singscore, module eigengenes), nested leave-one-subject-out
-  against a permutation null. singscore is leakage-free; the cohort-imputed proteins
-  and cohort-relative eigengenes are flagged optimistic.
+- `04_Figures/shared/WGCNA`: builds the module eigengenes (missForest-imputed
+  proteome) that F04, F05 and F06 read at the `modules` level; `loso_refit/` tests
+  whether the modules survive leave-one-subject-out re-definition; `preservation/`
+  tests whether HR and LR share module architecture; `contrast_networks/` tests
+  whether a training- or acute-only network is viable
+- `04_Figures/shared/reference`: 85 worked design references (one per stage x
+  level x config, plus per-level heatmaps and raw-observation detail views)
+- `04_Figures/F04_association`: per-cell association screen — 420 cells over
+  `<level>/<config>/<phenotype>/<method>`, three levels (proteins, pathways,
+  modules) x seven configs (T1, T2, T3, training, acute, total, trajectory) x
+  the six adaptation deltas plus `group_diff`
+- `04_Figures/F05_classification`: HR/LR classification screen — 153 cells over
+  `<level>/<config>/HR_LR/<model>`, nested leave-one-subject-out against a
+  permutation null
+- `04_Figures/F06_prediction`: continuous-adaptation prediction screen — 792
+  cells over `<level>/<config>/<phenotype>/<model>`, nested leave-one-subject-out
+  against a permutation null
+
+Each screen runs `run_*` (compute every leaf cell), then `split_*` (fan the
+pre-split `<level>/<config>/<method>` leaf into per-phenotype panels), then
+`rollup_*` (F05 and F06 only — pool the leaves into one workbook and render the
+specification-curve figure), then `composite_*` (assemble the figure and write
+`MANIFEST.xlsx`). `functions/sweep_grid.R`'s `leaf_done()` checks the pre-split
+three-level path (`<level>/<config>/<method>/c_data/results.xlsx`) because the
+runners write that shape and `split_*` converts it afterward; since the
+three-level leaves are deleted once `split_*` has verified them, a killed
+`run_*` cannot resume from where it left off and a re-run recomputes the whole
+screen from scratch.
 
 ```sh
 Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
@@ -166,27 +201,28 @@ Rscript 04_Figures/F03_pathway/supp/concordance_training/a_script/01_run_concord
 Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordance_acute.R
 Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
-Rscript 04_Figures/F04_association/WGCNA/a_script/01_run_modules.R
+Rscript 04_Figures/shared/WGCNA/a_script/01_run_modules.R
+Rscript 04_Figures/shared/WGCNA/loso_refit/a_script/01_run_loso_refit.R
+Rscript 04_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
+Rscript 04_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
+Rscript 04_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
 
-# F04 association: the global mixed model caches the contrasts the slices read
-Rscript 04_Figures/F04_association/global/mixed_model/a_script/01_run.R
-Rscript 04_Figures/F04_association/global/ordination/a_script/01_run.R
-for c in T1 T2 T3 training acute; do for m in limma mixed_slice; do
-  Rscript 04_Figures/F04_association/group_HRvLR/$c/$m/a_script/01_run.R
-done; done
-for p in baseline training acute; do
-  Rscript 04_Figures/F04_association/phenotype/$p/limma/a_script/01_run.R
-done
-Rscript 04_Figures/F04_association/a_script/composite.R
+# F04 association: run every cell, split into per-phenotype panels, composite
+Rscript 04_Figures/F04_association/a_script/run_F04_association.R
+Rscript 04_Figures/F04_association/a_script/split_F04_association.R
+Rscript 04_Figures/F04_association/a_script/composite_F04_association.R
 
-# F05 prediction: nested LOSO + 200-permutation null (hours; PRED_CORES parallel)
-for c in T1 T2 T3 training acute; do for m in glmnet splsda pam; do
-  Rscript 04_Figures/F05_prediction/group_HRvLR/$c/$m/a_script/01_run.R
-done; done
-for m in glmnet spls; do
-  Rscript 04_Figures/F05_prediction/phenotype/baseline/$m/a_script/01_run.R
-done
-Rscript 04_Figures/F05_prediction/a_script/composite.R
+# F05 classification: run, split, roll up (spec curve + manifest), composite
+Rscript 04_Figures/F05_classification/a_script/run_F05_classification.R
+Rscript 04_Figures/F05_classification/a_script/split_F05_classification.R
+Rscript 04_Figures/F05_classification/a_script/rollup_F05_classification.R
+Rscript 04_Figures/F05_classification/a_script/composite_F05_classification.R
+
+# F06 prediction: run, split, roll up (spec curve + manifest), composite
+Rscript 04_Figures/F06_prediction/a_script/run_F06_prediction.R
+Rscript 04_Figures/F06_prediction/a_script/split_F06_prediction.R
+Rscript 04_Figures/F06_prediction/a_script/rollup_F06_prediction.R
+Rscript 04_Figures/F06_prediction/a_script/composite_F06_prediction.R
 ```
 
 ## Repository Conventions
@@ -198,17 +234,18 @@ Shared helpers live by scope:
 
 | Path | Contents |
 | --- | --- |
-| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA). |
+| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `sweep_*` helpers run the F04-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_assoc.R`/`sweep_assoc_leaf.R` (F04), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
 | `04_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F03_pathway/supp driver) and `f00_concordance_panels.R` (its panel builders). |
-| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites. |
+| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F04-F06; `reference/` — the 85 worked design references. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
 ## Figures
 
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F03_pathway/supp/summary does not. F04_association and
-F05_prediction are organized by branch then contrast, with `a_script/composite.R`
-assembling each figure and applying BH once across its grid.
+ship a narrative `.qmd`; F03_pathway/supp/summary does not. F04, F05 and F06 are
+organized `<level>/<config>/<phenotype-or-HR_LR>/<method>`, with `run_*` computing
+every cell, `split_*`/`rollup_*` pooling them, and `composite_*` assembling the
+figure and writing `MANIFEST.xlsx`.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
@@ -216,16 +253,24 @@ assembling each figure and applying BH once across its grid.
 | `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
-| `F04_association/WGCNA/` | Which WGCNA modules track the phenotype? | Signed WGCNA on the missForest-imputed proteome, `limma::fry`, LOSO q². |
-| `F04_association/global/` | What does one model on all samples say, and the per-timepoint slices? | Mixed model `~ group*timepoint + (1\|subject)` via `lmerTest`/`emmeans` with `variancePartition`; PCA + PERMANOVA (`vegan`, strata = subject). Descriptive; subject variance dominates. |
-| `F04_association/group_HRvLR/` | Where do HR and LR differ, per contrast? | `limma` snapshot and mixed-model slice for T1/T2/T3/training/acute, over proteins, pathways, modules; reconciled with 03_DEP (ρ ≈ 0.99 cross-sectional). No survivor at BH. |
-| `F04_association/phenotype/` | Which features track how much a subject adapts? | Moderated `limma` on six adaptation deltas per phase. No survivor at BH. |
-| `F05_prediction/` | Can the proteome classify responder or predict gains out of sample? | Elastic net (`glmnet`), sparse PLS-DA/PLS (`mixOmics`), nearest shrunken centroids (`pamr`); nested LOSO with train-only scaling against a ≥200-permutation null, three feature spaces. Null in every cell after BH. |
+| `shared/WGCNA/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
+| `F04_association/` | Where do features associate with HR/LR or with continuous adaptation, per level and config? | `limma`/`lm`/Spearman/Wilcoxon per `<level>/<config>/<phenotype>/<method>` cell; 420 cells, raw permutation p, no BH across the screen. |
+| `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
+| `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads invert under in-fold network refitting. |
 
-Prediction is scored against a permutation null, never zero; composite hypertrophy
-stays out of any model carrying the HR/LR term (the groups were defined from it);
-and fold-specific transforms stay train-only, with singscore's single-sample
-scoring the one leakage-free exception. At n = 16 the null is the finding.
+A cell in F04-F06 reports a metric, a raw permutation p, the screen size, and a
+leakage label; there is no BH q anywhere in these three, because a screen this
+correlated (shared subjects, overlapping feature spaces, nested configs) has no
+defensible multiple-comparison correction, unlike F01-F03's per-contrast limma
+BH-FDR. A **lead** requires both `perm_p < .05` and the metric beating the
+trivial baseline (`q2 > 0`, `auc > 0.5`) — a collapsed permutation null can
+otherwise reach its p floor while predicting worse than the group mean.
+Composite hypertrophy stays out of any model carrying the HR/LR term (the
+groups were defined from it); fold-specific transforms stay train-only, with
+singscore's single-sample scoring the one leakage-free exception; and the
+module leads are additionally flagged because the eigengenes are built once on
+the full cohort, so held-out subjects still shaped the network that scores
+them. At n = 16 the null is the finding.
 
 ## Reproducibility Rules
 

@@ -89,9 +89,24 @@ tests are BH-significant (F03), concentrated acutely, and HR's acute response en
 HR/LR asymmetry in the study. Note `Baseline_HRvLR` also returns 65 pathways, so the
 groups are not identical at baseline.
 
-**Nothing predicts the phenotype out of sample.** The WGCNA modules do not track it
-(F04_association/WGCNA, best BH q = 0.24), and no classifier or regressor beats its permutation null
-after correction (F05_prediction).
+**F04-F06 screen 1,365 cells and report a raw p, not a q.** F04 association (420
+cells), F05 classification (153 cells) and F06 prediction (792 cells) each report
+a metric, a raw permutation p, the screen size, and a leakage label — there is no
+BH q anywhere in these three, unlike F01-F03's limma BH-FDR, because a screen this
+correlated (shared subjects, overlapping feature spaces, nested timepoint
+configs) has no defensible multiple-comparison correction. A cell counts as a
+**lead** only when `perm_p < .05` *and* the metric beats the trivial baseline
+(`q2 > 0`, `auc > 0.5`); a collapsed permutation null can otherwise reach its p
+floor while predicting worse than the group mean.
+
+F05 classification is a complete null: 0 leads of 153. F06 prediction clears 32
+leads of 792 (4.0%, below the 5% chance rate), yet 26 of the 32 concentrate on
+`d_mcsa`. The module arm does not predict: all 8 module leads invert under
+in-fold network refitting, median drop 0.461 — the eigengenes are built once on
+the full cohort, so a held-out subject already shaped the network that scores
+them. HR and LR share module architecture (preservation strong in both
+directions), and training- and acute-only contrast networks were tested and are
+not viable at this cohort size (`shared/WGCNA`).
 
 **So: the proteome does not separate high from low responders at this sample size.**
 It is a null study with a strong phenotype and a pathway-level lead. Saying that
@@ -159,18 +174,18 @@ the top and follow the chain, or jump to the one you need.
 | `04_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
 | `04_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `04_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
-| `04_Figures/F04_association/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, limma::fry, LOSO q², and why the earlier positive was a subject-identity artifact |
-| `04_Figures/F04_association/global/` | One mixed model on all samples (`~ group*timepoint + (1\|subject)`), its variance partition, and PCA + PERMANOVA; the group contrasts are slices of it |
-| `04_Figures/F04_association/group_HRvLR/` | Five HR-vs-LR contrasts, each as a limma snapshot and a mixed-model slice, reconciled with 03_DEP |
-| `04_Figures/F04_association/phenotype/` | Feature ~ continuous adaptation per phase (moderated limma) |
-| `04_Figures/F05_prediction/` | Out-of-sample responder classification (glmnet, sparse PLS-DA, PAM) and continuous prediction, over proteins, singscore, and module eigengenes; nested LOSO against a permutation null. singscore is leakage-free; cohort-imputed proteins and eigengenes are flagged optimistic |
+| `04_Figures/shared/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
+| `04_Figures/F04_association/` | Association screen: `<level>/<config>/<phenotype>/<method>`, 420 cells, `limma`/`lm`/Spearman/Wilcoxon; raw permutation p, no BH across the screen |
+| `04_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
+| `04_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads invert under in-fold refitting |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
 search space, which had no contaminant FASTA and no decoys, so reagent contaminants cannot be
 detected at all (`01_filtering.qmd`); the 34 proteins the missingness filter admits and the
-model then cannot test (`03_dep.qmd`); the circular module test in F04_association/WGCNA; and the
-transductive eigengenes in F04_association/WGCNA and F05_prediction.
+model then cannot test (`03_dep.qmd`); the module-prediction circularity that in-fold
+refitting exposed in `shared/WGCNA`; and the transductive eigengenes `shared/WGCNA` shares
+with F04-F06's `modules` level.
 
 Architecture (shared house style): each stage is a numbered folder with
 `a_script/` (code), `b_reports/` (proteoDA QC PDFs + figures), `c_data/` (RDS
@@ -184,7 +199,8 @@ own outputs first.
 03_DEP/
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
-04_Figures/       F03_pathway/supp pilot read-outs; F01–F05 publication composites
+04_Figures/       F03_pathway/supp pilot read-outs; F01-F03 publication composites;
+                  shared/WGCNA module source; F04-F06 per-cell screens
 ```
 
 # Stage 00 — Inputs {#sec-inputs}
@@ -323,16 +339,15 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F02 | Proteome overview and QC: PCA, DEP counts, effect sizes, set overlaps, eta-squared |
 | F03_pathway | enrichVolcano ring-volcanoes per contrast |
 | F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
-| F04_association/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype; the eigengene source for the F04 and F05 module space |
-| F04_association/global | One mixed model on all samples, its variance partition, and PCA + PERMANOVA |
-| F04_association/group_HRvLR | Five HR-vs-LR contrasts, each a limma snapshot and a mixed-model slice; reconciled with 03_DEP |
-| F04_association/phenotype | Feature association with continuous adaptation, per phase |
-| F05_prediction | Out-of-sample responder classification and continuous prediction over proteins, singscore, and module eigengenes; nested LOSO against a permutation null, with the cohort-imputed proteins and eigengenes flagged optimistic |
+| shared/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype; the eigengene source for the `modules` level of F04-F06; `loso_refit`, `preservation`, `contrast_networks` test generalization |
+| F04_association | Association screen over `<level>/<config>/<phenotype>/<method>`: 420 cells, raw permutation p, no BH across the screen |
+| F05_classification | HR/LR classification screen over `<level>/<config>/HR_LR/<model>`: 153 cells, nested LOSO against a permutation null; 0 leads |
+| F06_prediction | Continuous-adaptation prediction screen over `<level>/<config>/<phenotype>/<model>`: 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, module leads invert under in-fold refitting |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
-up module-wise in F04_association/WGCNA and by direct association and prediction
-in F04_association/group_HRvLR, F04_association/phenotype, and F05_prediction.
+up module-wise in `shared/WGCNA` and by direct association, classification and prediction
+in F04_association, F05_classification, and F06_prediction.
 
 # Reproducing {#sec-repro}
 
