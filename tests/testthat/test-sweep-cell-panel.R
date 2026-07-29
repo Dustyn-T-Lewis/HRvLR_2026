@@ -56,7 +56,7 @@ test_that("wilcoxon-shaped input scores on effect, not an all-NA t", {
   sc <- assoc_score(cell)
 
   expect_identical(sc$axis, "effect")
-  expect_identical(sc$stat, "top |effect|")
+  expect_identical(sc$stat, "top absolute effect")
   expect_equal(sc$value, cell$effect)
 
   footer_stat <- max(abs(sc$value), na.rm = TRUE)
