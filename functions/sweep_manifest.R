@@ -57,13 +57,13 @@ pred_row <- function(f, kind) {
   )
 }
 
-# assoc_score()'s $stat is a display string ("top |t|" / "top |effect|");
-# the manifest reports the snake_case variant instead.
+# assoc_score()'s $stat is a display string; the manifest reports the
+# snake_case variant instead.
 ASSOC_METRIC_NAME <- c("moderated t" = "top_abs_t", "effect" = "top_abs_effect")
 
 assoc_row <- function(f) {
   cell <- openxlsx::read.xlsx(f, "cell")
-  summ <- openxlsx::read.xlsx(f, "summary")
+  summ <- openxlsx::read.xlsx(f, "cell_summary")
   sc <- assoc_score(cell)
   data.frame(
     n = cell$n[[1]], n_features = summ$n_feature[[1]],

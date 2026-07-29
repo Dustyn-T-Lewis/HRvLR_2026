@@ -48,7 +48,7 @@ run_assoc_leaf <- function(bundle, level, config, method,
   dir <- sweep_leaf_dir(root, level, config, method)
   write_sweep_workbook(
     file.path(dir, "c_data", "results.xlsx"),
-    c(cells, list(summary = assoc_cell_summary(tidy)))
+    c(cells, list(cell_summary = assoc_cell_summary(tidy)))
   )
   panel <- build_assoc_leaf_panel(tidy, level, config, method)
   save_panel(panel, file.path(dir, "b_reports", "panel"),
@@ -70,16 +70,17 @@ assoc_cell_summary <- function(tidy) {
     )
 }
 
-# Faceted effect vs -log10 p volcano, one facet per outcome, BH survivors
-# coloured by direction and the strongest few labelled.
+# Faceted effect vs -log10 p volcano, one facet per outcome, nominal hits
+# coloured by direction and the strongest few labelled. This is the pre-split
+# view: one facet per outcome before split_ fans them into per-phenotype leaves.
 build_assoc_leaf_panel <- function(tidy, level, config, method) {
   df <- tidy |>
     filter(is.finite(.data$p), is.finite(.data$effect)) |>
     mutate(
       nlp = -log10(.data$p),
       dir = case_when(
-        .data$bh < 0.05 & .data$effect > 0 ~ "Up",
-        .data$bh < 0.05 & .data$effect < 0 ~ "Down",
+        .data$p < 0.05 & .data$effect > 0 ~ "Up",
+        .data$p < 0.05 & .data$effect < 0 ~ "Down",
         TRUE ~ "NS"
       ),
       label = sweep_feature_label(.data$feature, .env$level)
@@ -91,7 +92,7 @@ build_assoc_leaf_panel <- function(tidy, level, config, method) {
   hits <- df |>
     group_by(.data$outcome) |>
     summarise(
-      lab = sprintf("BH<.05: %d", sum(.data$dir != "NS")), .groups = "drop"
+      lab = sprintf("p<.05: %d", sum(.data$dir != "NS")), .groups = "drop"
     )
 
   ggplot(df, aes(.data$effect, .data$nlp)) +
@@ -109,9 +110,9 @@ build_assoc_leaf_panel <- function(tidy, level, config, method) {
     scale_colour_manual(values = DIR_COLORS, guide = "none") +
     labs(
       x = "effect", y = expression(-log[10] * " p"),
-      title = sprintf("%s | %s association -- %s", level, config, method),
+      title = sprintf("%s · %s association -- %s", level, config, method),
       subtitle = paste(
-        "In-sample; BH within cell.",
+        "In-sample; nominal p, no correction across the screen.",
         "Proteins/modules cohort-based, optimistic; pathways leakage-free."
       )
     ) +

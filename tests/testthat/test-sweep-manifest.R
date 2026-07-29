@@ -66,7 +66,7 @@ test_that("build_manifest reads an association leaf's feature table", {
       effect = c(0.001, -0.002), t = c(1.02, -1.81),
       p = c(0.32, 0.09), bh = c(0.46, 0.22)
     ),
-    summary = data.frame(
+    cell_summary = data.frame(
       level = "pathways", config = "T2", method = "limma", outcome = "d_mcsa",
       n_feature = 79L, n_nominal = 3L, n_bh = 0L, med_abs_effect = 0.0015
     )
@@ -114,7 +114,7 @@ test_that("build_manifest handles an all-NA t column via assoc_score", {
       effect = c(0.011, -0.024), t = c(NA_real_, NA_real_),
       p = c(0.041, 0.09), bh = c(0.3, 0.3)
     ),
-    summary = data.frame(
+    cell_summary = data.frame(
       level = "pathways", config = "T2", method = "wilcoxon",
       outcome = "d_mcsa",
       n_feature = 79L, n_nominal = 1L, n_bh = 0L, med_abs_effect = 0.0175

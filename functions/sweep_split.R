@@ -59,10 +59,13 @@ split_pred_leaf <- function(path, root, level, config, method,
   outcomes
 }
 
+# F04's per-outcome counts sheet is `cell_summary`, not `summary`: `summary`
+# means the metric row in F05 and F06, and one name cannot mean both without
+# silently handing a generic reader the wrong table.
 split_assoc_leaf <- function(path, root, level, config, method) {
   present <- openxlsx::getSheetNames(path)
-  outcomes <- setdiff(present, "summary")
-  summary_all <- read_sheet(path, "summary")
+  outcomes <- setdiff(present, "cell_summary")
+  summary_all <- read_sheet(path, "cell_summary")
 
   for (oc in outcomes) {
     d <- split_leaf_dir(root, level, config, oc, method)
@@ -70,7 +73,7 @@ split_assoc_leaf <- function(path, root, level, config, method) {
       file.path(d, "c_data", "results.xlsx"),
       list(
         cell = read_sheet(path, oc),
-        summary = summary_all[summary_all$outcome == oc, , drop = FALSE]
+        cell_summary = summary_all[summary_all$outcome == oc, , drop = FALSE]
       )
     )
   }
