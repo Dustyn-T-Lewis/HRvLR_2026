@@ -104,7 +104,7 @@ test_that("split_assoc_leaf turns each outcome sheet into a leaf", {
   }
   write_sweep_workbook(path, list(
     d_mcsa = cell("d_mcsa"), group_diff = cell("group_diff"),
-    summary = data.frame(
+    cell_summary = data.frame(
       level = "pathways", config = "T2", method = "limma",
       outcome = c("d_mcsa", "group_diff"), n_feature = 2L, n_nominal = 0L,
       n_bh = 0L, med_abs_effect = 0.0015
@@ -118,11 +118,51 @@ test_that("split_assoc_leaf turns each outcome sheet into a leaf", {
     root_dir, "pathways", "T2", "group_diff", "limma",
     "c_data", "results.xlsx"
   )
-  expect_setequal(openxlsx::getSheetNames(out), c("cell", "summary"))
+  expect_setequal(openxlsx::getSheetNames(out), c("cell", "cell_summary"))
   d <- openxlsx::read.xlsx(out, "cell")
   expect_equal(nrow(d), 2L)
   expect_equal(d$t, c(1.02, -1.81), tolerance = 1e-8)
-  expect_equal(openxlsx::read.xlsx(out, "summary")$outcome, "group_diff")
+  expect_equal(openxlsx::read.xlsx(out, "cell_summary")$outcome, "group_diff")
+})
+
+test_that("`summary` never means two different tables across the screen", {
+  root_dir <- withr::local_tempdir()
+  src <- withr::local_tempdir()
+
+  assoc_src <- file.path(src, "assoc.xlsx")
+  write_sweep_workbook(assoc_src, list(
+    d_mcsa = data.frame(
+      outcome = "d_mcsa", n = 15L, feature = "GENE1",
+      effect = 0.1, t = 1.5, p = 0.2, bh = 0.4
+    ),
+    cell_summary = data.frame(
+      level = "proteins", config = "T2", method = "limma", outcome = "d_mcsa",
+      n_feature = 1L, n_nominal = 0L, n_bh = 0L, med_abs_effect = 0.1
+    )
+  ))
+  split_assoc_leaf(assoc_src, root_dir, "proteins", "T2", "limma")
+
+  pred_src <- file.path(src, "pred.xlsx")
+  write_sweep_workbook(pred_src, list(
+    summary = data.frame(
+      level = "proteins", config = "T2", model = "enet", outcome = "d_mcsa",
+      B = c(0L, 200L), n = 15L, p = 1903L, q2 = 0.3
+    ),
+    null = data.frame(outcome = "d_mcsa", q2 = c(0.01, -0.02))
+  ))
+  split_pred_leaf(pred_src, root_dir, "proteins", "T2", "enet")
+
+  assoc_sheets <- openxlsx::getSheetNames(file.path(
+    root_dir, "proteins", "T2", "d_mcsa", "limma", "c_data", "results.xlsx"
+  ))
+  pred_sheets <- openxlsx::getSheetNames(file.path(
+    root_dir, "proteins", "T2", "d_mcsa", "enet", "c_data", "results.xlsx"
+  ))
+
+  expect_false("summary" %in% assoc_sheets)
+  expect_true("cell_summary" %in% assoc_sheets)
+  expect_true("summary" %in% pred_sheets)
+  expect_false("cell_summary" %in% pred_sheets)
 })
 
 test_that("split_pred_leaf errors when the workbook has no usable outcome", {

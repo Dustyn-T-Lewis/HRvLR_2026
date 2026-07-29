@@ -166,7 +166,7 @@ arm_separation_panel <- function(stage, level, config) {
   summ <- bind_rows(lapply(files, function(f) {
     cbind(file = f, read.xlsx(f, "summary"))
   })) |>
-    filter(.data$B == max(.data$B))
+    best_b_per_cell()
   top <- summ |> slice_min(.data$perm_p, n = 1, with_ties = FALSE)
   pr <- read.xlsx(top$file, "predictions") |>
     mutate(arm = ifelse(.data$y == 1, "HR", "LR"))
@@ -197,7 +197,6 @@ arm_separation_panel <- function(stage, level, config) {
 # permutation p taken within the cell.
 stat_panel <- function(stage, level, config) {
   files <- cell_files(stage, level, config)
-  summ <- bind_rows(lapply(files, function(f) read.xlsx(f, "summary")))
   if (stage == "F04_association") {
     lead_files <- files[file_phenotype(files) == LEAD_OUTCOME]
     d <- bind_rows(lapply(lead_files, function(f) read.xlsx(f, "cell")))
@@ -242,7 +241,8 @@ stat_panel <- function(stage, level, config) {
   }
 
   is_class <- FALSE
-  summ <- filter(summ, .data$B == max(.data$B))
+  summ <- bind_rows(lapply(files, function(f) read.xlsx(f, "summary"))) |>
+    best_b_per_cell()
   if (!is_class) summ <- filter(summ, .data$outcome == LEAD_OUTCOME)
   metric <- if (is_class) "estimate" else "q2"
   pcol <- if (is_class) "perm_p" else "perm_p_q2"
@@ -307,7 +307,7 @@ build_reference <- function(stage, level, config) {
     stat_panel(stage, level, config)) +
     plot_annotation(
       title = sprintf(
-        "REFERENCE -- %s | %s | %s", STAGES[[stage]], level, config
+        "REFERENCE -- %s -- %s -- %s", STAGES[[stage]], level, config
       ),
       subtitle = sprintf(
         "Readout: %s. %s Drivers carry real names; the statistic carries its null.",
@@ -336,7 +336,7 @@ grid <- expand.grid(
 n_built <- sum(vapply(seq_len(nrow(grid)), function(i) {
   g <- grid[i, ]
   ok <- !is.null(build_reference(g$stage, g$level, g$config))
-  if (ok) message(sprintf("[ref] %s | %s | %s", g$stage, g$level, g$config))
+  if (ok) message(sprintf("[ref] %s | %s -- %s", g$stage, g$level, g$config))
   ok
 }, logical(1)))
 
