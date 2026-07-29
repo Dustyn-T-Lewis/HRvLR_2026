@@ -30,15 +30,21 @@ cell_phenotype <- function(cell) {
   if (is.null(cell$outcome)) "HR_LR" else cell$outcome
 }
 
+# Each cell reports at its own best B. Filtering on max(B) over the pooled
+# table instead would silently drop every cell swept at a lower B -- the
+# documented split runs the fast levels at 0/200/1000 and proteins at 0/200,
+# so that filter deletes the entire protein level from the figure with no gap
+# and no warning. sweep_rollup.R already solved this; the composites now use
+# the same helper.
 root_cells <- function(root) {
-  cells <- openxlsx::read.xlsx(
+  openxlsx::read.xlsx(
     file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "all_cells"
-  )
-  dplyr::filter(cells, .data$B == max(.data$B))
+  ) |>
+    best_b_per_cell()
 }
 
 cell_tag <- function(level, config, method) {
-  sprintf("%s | %s\n%s", level, config, method)
+  sprintf("%s · %s\n%s", level, config, method)
 }
 
 # One filled ROC panel for a single classification cell, recomputed from its
@@ -87,7 +93,7 @@ roc_panel <- function(root, cell) {
     theme(
       panel.border = element_rect(
         colour = "black", fill = NA,
-        linewidth = if (sig) 1.4 else 0.3
+        linewidth = if (isTRUE(sig)) 1.4 else 0.3
       ),
       panel.grid = element_blank(),
       axis.text = element_text(size = 6)
@@ -119,7 +125,7 @@ obs_pred_panel <- function(root, cell) {
     annotate("label",
       x = -Inf, y = Inf, hjust = -0.05, vjust = 1.1,
       label = sprintf(
-        "Q2 %.2f  p %.3f\n%s | %s | %s", cell$q2, cell$perm_p_q2,
+        "Q2 %.2f  p %.3f\n%s · %s · %s", cell$q2, cell$perm_p_q2,
         cell$level, cell$config, cell$model
       ),
       size = 2, label.size = 0, fill = alpha("white", 0.85), lineheight = 0.9,
@@ -129,7 +135,7 @@ obs_pred_panel <- function(root, cell) {
     FIG_THEME +
     theme(
       panel.border = element_rect(
-        colour = "black", fill = NA, linewidth = if (sig) 1.4 else 0.3
+        colour = "black", fill = NA, linewidth = if (isTRUE(sig)) 1.4 else 0.3
       ),
       axis.title = element_text(size = 6.5), axis.text = element_text(size = 6)
     )
@@ -186,7 +192,7 @@ level_factor <- function(x) {
   factor(x, levels = c("proteins", "pathways", "modules"))
 }
 
-# Stacked survivor-count bars for the association screen, split by level.
+# Stacked nominal-hit-count bars for the association screen, split by level.
 assoc_hit_bars <- function(hits, key, title, subtitle) {
   d <- hits |>
     count(.data[[key]], .data$level, name = "n") |>
@@ -206,7 +212,7 @@ assoc_hit_bars <- function(hits, key, title, subtitle) {
     scale_fill_manual(values = SPEC_LEVEL_COLORS, name = "level") +
     scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
     labs(
-      x = "BH < .05 associations", y = NULL, title = title, subtitle = subtitle
+      x = "p < .05 associations", y = NULL, title = title, subtitle = subtitle
     ) +
     FIG_THEME +
     theme(
@@ -251,9 +257,9 @@ assoc_effect_strip <- function(hits, lead) {
     geom_jitter(height = 0.18, size = 1.2, alpha = 0.7) +
     scale_colour_manual(values = SPEC_LEVEL_COLORS, guide = "none") +
     labs(
-      x = sprintf("effect of %s survivors", lead), y = NULL,
-      title = sprintf("Effect sizes of %s survivors", lead),
-      subtitle = "Direction of the in-sample associations that pass BH."
+      x = sprintf("effect of %s hits", lead), y = NULL,
+      title = sprintf("Effect sizes of %s hits", lead),
+      subtitle = "Direction of the in-sample associations at nominal p."
     ) +
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
@@ -288,7 +294,7 @@ assoc_euler <- function(hits, lead) {
   )))
   wrap_elements(grob) +
     labs(
-      title = sprintf("Pathway overlap -- %s survivors", lead),
+      title = sprintf("Pathway overlap -- %s hits", lead),
       subtitle = "Do configs pick the same pathways?"
     ) +
     theme(
@@ -301,20 +307,20 @@ assoc_euler <- function(hits, lead) {
 
 build_assoc_composite <- function(root = "F04_association", lead = "d_mcsa") {
   path <- file.path(sweep_root_dir(root), "c_data", "results.xlsx")
-  hits <- openxlsx::read.xlsx(path, "bh_hits")
+  hits <- openxlsx::read.xlsx(path, "hits")
   cs <- openxlsx::read.xlsx(path, "cell_summary")
 
   a <- assoc_hit_bars(
     hits, "outcome",
-    "BH survivors per outcome", "One adaptation dominates."
+    "Nominal hits per outcome", "One adaptation dominates."
   )
   b <- assoc_hit_bars(
     hits, "config",
-    "BH survivors per config", "Mid-training and trajectory lead."
+    "Nominal hits per config", "Mid-training and trajectory lead."
   )
   cc <- assoc_hit_bars(
     hits, "method",
-    "BH survivors per method", "Consistent across the association methods."
+    "Nominal hits per method", "Consistent across the association methods."
   )
   d <- assoc_rate_bars(cs)
   e <- assoc_effect_strip(hits, lead)
@@ -324,8 +330,8 @@ build_assoc_composite <- function(root = "F04_association", lead = "d_mcsa") {
     plot_annotation(
       title = "F04 Association -- in-sample description across the multiverse",
       subtitle = paste(
-        "Every level x config x method x outcome; BH within cell, no",
-        "correction across the screen. A survivor is a lead, not a result:",
+        "Every level x config x method x outcome; raw p against a screen of",
+        "420 cells, no correction anywhere. A hit is a lead, not a result:",
         "F05/F06 adjudicate out of sample."
       ),
       tag_levels = "A",
