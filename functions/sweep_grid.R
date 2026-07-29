@@ -2,7 +2,7 @@
 # defines the feature levels, timepoint configs, and method sets so every root
 # orchestrator and composite reads the same grid.
 
-pacman::p_load(here, openxlsx)
+pacman::p_load(here, dplyr, openxlsx)
 
 SWEEP_LEVELS <- c("pathways", "modules", "proteins")
 SWEEP_LEVEL_KEY <- c(
@@ -73,6 +73,26 @@ write_sweep_workbook <- function(path, sheets) {
 # manifest, the roll-up, the composites and the specification curve cannot
 # disagree. Association is in-sample with no permutation null; it returns NA.
 LEAD_BASELINE <- c(cont = 0, class = 0.5)
+
+# Models that retain every coefficient, so their fold-selection frequencies
+# describe the whole feature space rather than a signature. Both leaf-panel
+# builders read this; with two copies they disagreed, and the pre-split panel
+# was ranking ridge features alphabetically under the label "top features".
+DENSE_MODELS <- "ridge"
+
+# A cell is one level x config x model, and one outcome where the root sweeps
+# several. Classification workbooks carry no outcome column, so the key is
+# whichever of these the table actually has.
+cell_key <- function(df) {
+  intersect(c("level", "config", "outcome", "model"), names(df))
+}
+
+# Each cell reports at its own best resolution. Taking max(B) over the pooled
+# table instead would keep only the cells that reached the highest B anywhere,
+# silently dropping every cell swept at a lower B.
+best_b_per_cell <- function(df) {
+  slice_max(df, .data$B, by = all_of(cell_key(df)), with_ties = FALSE)
+}
 
 is_lead_at <- function(metric, p, baseline) {
   !is.na(p) & p < 0.05 & metric > baseline
