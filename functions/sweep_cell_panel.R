@@ -12,8 +12,6 @@ SCREEN_SIZE <- c(
   F04_association = 420L, F05_classification = 153L, F06_prediction = 792L
 )
 
-DENSE_MODELS <- "ridge"
-
 # `clean_pathway_name` arrives via sweep_drivers.R -> shared_pathway_utils.R.
 # Proteins and modules already name themselves.
 cell_feature_label <- function(feature, level) {
@@ -48,13 +46,19 @@ drivers_or_empty <- function(selection, level, method, xlab, title, subtitle,
 # otherwise.
 assoc_score <- function(cell) {
   if (any(is.finite(cell$t))) {
-    list(value = cell$t, axis = "moderated t", stat = "top |t|")
+    list(value = cell$t, axis = "moderated t", stat = "top absolute t")
   } else {
-    list(value = cell$effect, axis = "effect", stat = "top |effect|")
+    list(value = cell$effect, axis = "effect", stat = "top absolute effect")
   }
 }
 
-build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
+# A volcano earns its space through density, and a leaf is one cell: 1,905
+# features at proteins, 79 at pathways, 11 at modules. At the two small levels
+# the driver bars already name every feature the volcano would draw, so the
+# bars take the full width there instead.
+VOLCANO_LEVELS <- "proteins"
+
+assoc_volcano <- function(cell, level) {
   df <- cell |>
     filter(is.finite(.data$p), is.finite(.data$effect)) |>
     mutate(nlp = -log10(.data$p))
@@ -62,7 +66,7 @@ build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
     slice_min(.data$p, n = 5, with_ties = FALSE) |>
     mutate(label = cell_feature_label(.data$feature, .env$level))
 
-  p_vol <- ggplot(df, aes(.data$effect, .data$nlp)) +
+  ggplot(df, aes(.data$effect, .data$nlp)) +
     geom_point(size = 0.8, alpha = 0.6, colour = DIR_COLORS[["NS"]]) +
     ggrepel::geom_text_repel(
       data = labs_df, aes(label = .data$label), size = 2, max.overlaps = 8,
@@ -74,19 +78,28 @@ build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
     ) +
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
+}
 
+build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
   sc <- assoc_score(cell)
+  wide <- !level %in% VOLCANO_LEVELS
   bars <- drivers_or_empty(
     cell |> mutate(score = sc$value), level, method,
     sc$axis, NULL, sprintf("signed %s, strongest features", sc$axis),
-    signed = TRUE
+    signed = TRUE, n = if (wide) 15 else 10
   )
 
-  (p_vol | bars) +
-    plot_layout(widths = c(1.3, 1)) +
+  body <- if (wide) {
+    patchwork::wrap_plots(bars)
+  } else {
+    (assoc_volcano(cell, level) | bars) + plot_layout(widths = c(1.3, 1))
+  }
+
+  body +
     plot_annotation(
       title = sprintf(
-        "%s | %s | %s association -- %s", level, config, phenotype, method
+        "%s · %s · %s association -- %s", level, config, phenotype,
+        method
       ),
       subtitle = cell_footer(
         sc$stat, max(abs(sc$value), na.rm = TRUE), min(cell$p, na.rm = TRUE),
@@ -128,7 +141,7 @@ build_class_cell_panel <- function(sheets, level, config, method) {
     plot_layout(widths = c(1.4, 1)) +
     plot_annotation(
       title = sprintf(
-        "%s | %s | HR_LR classify -- %s", level, config, MODEL_LABEL[[method]]
+        "%s · %s · HR_LR classify -- %s", level, config, MODEL_LABEL[[method]]
       ),
       subtitle = cell_footer(
         "AUC", obs, s$perm_p[[1]], "F05_classification", level
@@ -157,7 +170,7 @@ build_cont_cell_panel <- function(sheets, level, config, phenotype, method) {
     plot_layout(widths = c(1.4, 1)) +
     plot_annotation(
       title = sprintf(
-        "%s | %s | %s predict -- %s", level, config, phenotype,
+        "%s · %s · %s predict -- %s", level, config, phenotype,
         MODEL_LABEL[[method]]
       ),
       subtitle = cell_footer(
