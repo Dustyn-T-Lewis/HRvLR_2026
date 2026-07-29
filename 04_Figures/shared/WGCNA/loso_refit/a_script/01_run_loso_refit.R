@@ -15,6 +15,8 @@ set.seed(54321)
 imputed <- readRDS(here(
   "02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"
 ))
+stopifnot(identical(imputed$metadata$Col_ID, colnames(imputed$data)))
+
 abund <- as.matrix(imputed$data)
 rownames(abund) <- imputed$annotation$gene
 
@@ -169,7 +171,7 @@ source(here("functions", "sweep_drivers.R"))
 slope_long <- refit_summary |>
   mutate(
     cell = sprintf(
-      "%s | %s | %s", .data$config, .data$phenotype, .data$model
+      "%s -- %s -- %s", .data$config, .data$phenotype, .data$model
     )
   ) |>
   pivot_longer(

@@ -79,6 +79,46 @@ preservation <- bind_rows(
   extract_direction(mp, "LR", "HR")
 )
 
+# Arm-native control. The run above hands both arms the cohort labels, so each
+# test arm helped define the labels being preserved into it. That inflates
+# Zsummary in the same direction as the shared-architecture reading, so the
+# cohort result cannot clear itself. Rebuilding the network on the reference
+# arm alone removes the borrowing: the test arm then had no hand in the labels
+# it is graded against. fit_modules() is the cohort fitter, so power, TOM type
+# and merge height cannot drift between the two.
+arm_native_direction <- function(ref_arm, test_arm) {
+  ref_id <- meta$sample_id[meta$group == ref_arm]
+  test_id <- meta$sample_id[meta$group == test_arm]
+  fit <- fit_modules(abund[, ref_id], meta$subject[meta$group == ref_arm])
+
+  md <- list(
+    list(data = t(centre_within_subject(
+      abund[, ref_id], meta$subject[meta$group == ref_arm]
+    ))),
+    list(data = t(centre_within_subject(
+      abund[, test_id], meta$subject[meta$group == test_arm]
+    )))
+  )
+  names(md) <- c(ref_arm, test_arm)
+
+  mp_native <- WGCNA::modulePreservation(
+    multiData = md,
+    multiColor = stats::setNames(list(fit$colors), ref_arm),
+    referenceNetworks = 1,
+    nPermutations = 200,
+    randomSeed = 42,
+    networkType = "signed",
+    verbose = 3
+  )
+  extract_direction(mp_native, ref_arm, test_arm) |>
+    mutate(n_ref_modules = dplyr::n_distinct(setdiff(fit$colors, "grey")))
+}
+
+arm_native <- bind_rows(
+  arm_native_direction("HR", "LR"),
+  arm_native_direction("LR", "HR")
+)
+
 out_data <- here("04_Figures", "shared", "WGCNA", "preservation", "c_data")
 out_reports <- here(
   "04_Figures", "shared", "WGCNA", "preservation", "b_reports"
@@ -89,6 +129,8 @@ dir.create(out_reports, recursive = TRUE, showWarnings = FALSE)
 wb <- createWorkbook()
 addWorksheet(wb, "preservation")
 writeData(wb, "preservation", preservation)
+addWorksheet(wb, "arm_native")
+writeData(wb, "arm_native", arm_native)
 addWorksheet(wb, "arm_sizes")
 writeData(wb, "arm_sizes", arm_sizes)
 saveWorkbook(wb, file.path(out_data, "preservation.xlsx"), overwrite = TRUE)
@@ -121,19 +163,37 @@ preservation_panel <- function(df, ref_arm, test_arm) {
 hr_row <- arm_sizes[arm_sizes$group == "HR", ]
 lr_row <- arm_sizes[arm_sizes$group == "LR", ]
 
+titled <- function(p, tag) {
+  p + labs(subtitle = tag) +
+    theme(plot.subtitle = element_text(
+      face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30"
+    ))
+}
+
+cohort_tag <- "cohort labels -- test arm helped define them"
+native_tag <- "arm-native labels -- test arm had no hand in them"
+
 composite <- (
-  preservation_panel(preservation, "HR", "LR") |
-    preservation_panel(preservation, "LR", "HR")
+  titled(preservation_panel(preservation, "HR", "LR"), cohort_tag) |
+    titled(preservation_panel(preservation, "LR", "HR"), cohort_tag)
+) / (
+  titled(preservation_panel(arm_native, "HR", "LR"), native_tag) |
+    titled(preservation_panel(arm_native, "LR", "HR"), native_tag)
 ) +
   plot_annotation(
     title = "Module preservation between HR and LR",
     subtitle = sprintf(
       paste0(
         "HR %d samples from %d subjects, LR %d samples from %d subjects; ",
-        "centred within subject before splitting, which spends one degree\n",
-        "of freedom per subject. Z > 10 = strong, Z < 2 = none (Langfelder ",
-        "& Horvath, 2011). At this size a low Zsummary cannot be cleanly\n",
-        "separated from a genuine difference in module architecture."
+        "centred within subject, which spends one degree of freedom per\n",
+        "subject. Z > 10 = strong, Z < 2 = none (Langfelder & Horvath, ",
+        "2011). TOP ROW: labels defined on the full cohort, so each test\n",
+        "arm helped define the labels preserved into it. That inflates ",
+        "Zsummary in the same direction as a shared-architecture reading,\n",
+        "so the top row cannot clear itself. BOTTOM ROW: the network is ",
+        "rebuilt on the reference arm alone, which removes the borrowing.\n",
+        "Read the two together: agreement means the circularity was not ",
+        "load-bearing, disagreement means the top row was measuring it."
       ),
       hr_row$n_samples, hr_row$n_subjects, lr_row$n_samples, lr_row$n_subjects
     ),
@@ -145,5 +205,5 @@ composite <- (
 
 save_panel(
   composite, file.path(out_reports, "preservation"),
-  width = 240, height = 135
+  width = 240, height = 230
 )
