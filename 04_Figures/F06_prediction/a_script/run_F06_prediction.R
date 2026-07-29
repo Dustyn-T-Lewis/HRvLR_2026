@@ -46,7 +46,7 @@ for (i in seq_len(nrow(grid))) {
     "[cont %d/%d] %s | %s | %s  best Q2=%.2f (%s) p=%.3f  (%.0fs)",
     i, nrow(grid), g$level, g$config, g$method,
     best$q2, best$outcome, best$perm_p_q2,
-    as.numeric(difftime(Sys.time(), t0, "secs"))
+    as.numeric(difftime(Sys.time(), t0, units = "secs"))
   ))
 }
 message("continuous run done for: ", paste(levels_run, collapse = ", "))

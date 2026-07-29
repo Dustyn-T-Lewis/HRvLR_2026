@@ -44,7 +44,8 @@ for (i in seq_len(nrow(grid))) {
   message(sprintf(
     "[class %d/%d] %s | %s | %s  AUC=%.2f p=%.3f  (%.0fs)",
     i, nrow(grid), g$level, g$config, g$method,
-    row$estimate, row$perm_p, as.numeric(difftime(Sys.time(), t0, "secs"))
+    row$estimate, row$perm_p,
+    as.numeric(difftime(Sys.time(), t0, units = "secs"))
   ))
 }
 message("classification run done for: ", paste(levels_run, collapse = ", "))
