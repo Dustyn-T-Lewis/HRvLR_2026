@@ -78,8 +78,8 @@ DEP fits the means model `~ 0 + group` (one mean per `Group_Time` cell) with
 `duplicateCorrelation` blocking on `Subject_ID`, and computes all 9 contrasts
 below. Each is a linear combination of the six cell means, and is estimable only
 for proteins observed in every cell it touches. 34 proteins reach the model with
-at least one empty cell, so the true tested-N is 1,897–1,912 per contrast, never
-1,920 (`03_DEP/a_non_imputed/b_reports/untested_proteins.csv`).
+at least one empty cell, so the true tested-N is 1,882–1,897 per contrast, never
+1,905 (`03_DEP/a_non_imputed/b_reports/bh_denominators.csv`).
 
 HR (within-responder):
 
@@ -191,10 +191,19 @@ pre-split `<level>/<config>/<method>` leaf into per-phenotype panels), then
 specification-curve figure), then `composite_*` (assemble the figure and write
 `MANIFEST.xlsx`). `functions/sweep_grid.R`'s `leaf_done()` checks the pre-split
 three-level path (`<level>/<config>/<method>/c_data/results.xlsx`) because the
-runners write that shape and `split_*` converts it afterward; since the
-three-level leaves are deleted once `split_*` has verified them, a killed
-`run_*` cannot resume from where it left off and a re-run recomputes the whole
-screen from scratch.
+runners write that shape and `split_*` converts it afterward.
+
+Each runner writes a leaf as soon as it finishes it, so a killed `run_*`
+**resumes** — relaunch it and `leaf_done()` skips every completed leaf, costing
+at most the one cell that was in flight. `split_*` copies the pre-split tree
+and never deletes it, so resume keeps working until that tree is removed by
+hand. Verified 2026-07-28: a killed F05 run resumed at leaf 119 of 153.
+
+Both runners take `[levels] [max B]`. **Pass `"" 200`.** `bmax` defaults to
+`1000`, which expands the grid to `c(0, 200, 1000)` and computes a
+1,000-permutation null instead of 200 — five times the work for p resolution
+(1/1001 vs 1/201) that nothing in this screen uses. Launching without arguments
+has cost this project two long detours; see `docs/decisions.md` 2026-07-26.
 
 ```sh
 Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
