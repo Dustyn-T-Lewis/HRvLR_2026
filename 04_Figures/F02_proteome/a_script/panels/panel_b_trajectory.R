@@ -1,5 +1,5 @@
 # F02 Panel B: response-trajectory magnitude (RRPP permutation)
-# Per-subject change-vector length ‖Δ‖ (training T2 - T1, acute T3 - T2), HR vs LR,
+# Per-subject change-vector length ||delta|| (training T2 - T1, acute T3 - T2), HR vs LR,
 # tested with RRPP (Collyer, Sekora & Adams 2015). How far the proteome moved; the
 # direction geometry is in the supplement. Title drawn on the composite.
 
@@ -59,7 +59,7 @@ pB <- ggplot(mag_df, aes(Group, magnitude, color = Group, fill = Group)) +
   facet_wrap(~phase) +
   scale_color_manual(values = GROUP_COLORS, guide = "none") +
   scale_fill_manual(values = GROUP_COLORS, guide = "none") +
-  labs(x = NULL, y = "‖Δ‖ (log2 units)") +
+  labs(x = NULL, y = "||delta|| (log2 units)") +
   FIG_THEME +
   theme(legend.position = "none")
 
@@ -130,7 +130,7 @@ pDir <- ggplot(dir_score, aes(PC1, PC2, color = Group)) +
   scale_fill_manual(values = GROUP_COLORS, guide = "none") +
   labs(
     title = "Response Direction (Δ-score PCA)",
-    subtitle = "geometry of the change vectors | RRPP vector test",
+    subtitle = "geometry of the change vectors -- RRPP vector test",
     x = "PC1", y = "PC2", tag = "O"
   ) +
   FIG_THEME +

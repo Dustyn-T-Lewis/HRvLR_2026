@@ -132,7 +132,7 @@ pC_disp <- ggplot(disp_df, aes(Group, dist_centroid, color = Group, fill = Group
   scale_fill_manual(values = GROUP_COLORS) +
   labs(
     title = "Responder Heterogeneity (multivariate dispersion)",
-    subtitle = "distance to group centroid per subject | PERMDISP per timepoint",
+    subtitle = "distance to group centroid per subject -- PERMDISP per timepoint",
     x = NULL, y = "distance to centroid"
   ) +
   FIG_THEME +

@@ -1124,7 +1124,7 @@ panel_nes_scatter <- function(nes_wide, c_hi, c_lo, cfg) {
       x = sprintf("NES (%s)", cfg$labels$x_short),
       y = sprintf("NES (%s)", cfg$labels$y_short),
       subtitle = sprintf(
-        "GO Slim + Hallmark | %d pathways | rho = %.2f [%.2f, %.2f] | %.0f%% concordant",
+        "GO Slim + Hallmark – %d pathways – rho = %.2f [%.2f, %.2f] – %.0f%% concordant",
         nrow(d), rho, ci["lo"], ci["hi"], conc_frac * 100
       )
     ) +

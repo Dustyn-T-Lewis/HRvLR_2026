@@ -140,7 +140,7 @@ ref_stats_cell <- function(root = "F06_prediction") {
     labs(
       x = "permutation-null Q2", y = "count",
       title = sprintf(
-        "%s | %s | %s -- %s", top$level, top$config, top$model, top$outcome
+        "%s -- %s -- %s -- %s", top$level, top$config, top$model, top$outcome
       ),
       subtitle = "Observed (red) vs its own null."
     ) +
@@ -215,7 +215,7 @@ ref_calibration <- function(root = "F06_prediction") {
       x = sprintf("observed %s", top$outcome), y = "predicted",
       title = "Calibration of the lead cell",
       subtitle = sprintf(
-        "%s | %s | %s. Dashed = identity; a good forecast tracks it.",
+        "%s -- %s -- %s. Dashed = identity; a good forecast tracks it.",
         top$level, top$config, top$model
       )
     ) +

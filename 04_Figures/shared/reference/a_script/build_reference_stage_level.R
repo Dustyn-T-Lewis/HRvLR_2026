@@ -152,7 +152,7 @@ stage_heatmap <- function(stage, level) {
     labs(
       x = NULL, y = NULL,
       title = sprintf(
-        "%s | %s -- across configs and outcomes",
+        "%s -- %s -- across configs and outcomes",
         STAGE_LABEL[[stage]], level
       ),
       subtitle = sub
@@ -199,7 +199,7 @@ assoc_detail <- function(level, n = 6) {
       scale_colour_manual(values = GROUP_COLORS, guide = "none") +
       labs(
         x = str_trunc(labs_map[[r$feature]], 28), y = r$outcome,
-        title = sprintf("%s | t=%.1f p=%.3f", r$config, r$value, r$p)
+        title = sprintf("%s -- t=%.1f p=%.3f", r$config, r$value, r$p)
       ) +
       FIG_THEME +
       theme(
@@ -236,7 +236,7 @@ pred_detail <- function(stage, level, n = 6) {
         labs(
           x = NULL, y = "score",
           title = sprintf(
-            "%s | %s\nAUC=%.2f p=%.3f", r$config, r$model,
+            "%s -- %s\nAUC=%.2f p=%.3f", r$config, r$model,
             r$estimate, r$perm_p
           )
         ) +
@@ -253,7 +253,7 @@ pred_detail <- function(stage, level, n = 6) {
         labs(
           x = r$outcome, y = "predicted",
           title = sprintf(
-            "%s | %s\nQ2=%.2f p=%.3f", r$config, r$model,
+            "%s -- %s\nQ2=%.2f p=%.3f", r$config, r$model,
             r$q2, r$perm_p_q2
           )
         ) +
@@ -286,7 +286,7 @@ for (stage in names(STAGE_LABEL)) {
     detail <- detail +
       plot_annotation(
         title = sprintf(
-          "%s | %s -- strongest cells, raw observations",
+          "%s -- %s -- strongest cells, raw observations",
           STAGE_LABEL[[stage]], level
         ),
         subtitle = "Points by responder arm. The claim checked against the data.",
@@ -298,6 +298,6 @@ for (stage in names(STAGE_LABEL)) {
         )
       )
     save_panel(detail, file.path(out, "reference_detail"), 230, 140)
-    message(sprintf("[set] %s | %s", stage, level))
+    message(sprintf("[set] %s -- %s", stage, level))
   }
 }
