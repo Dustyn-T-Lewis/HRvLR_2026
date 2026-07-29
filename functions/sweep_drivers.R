@@ -10,6 +10,25 @@ source(here("functions", "shared_pathway_utils.R"))
 
 PROTEIN_FILL <- "#2166AC"
 
+# The descriptive name is drawn in points from the bar end, so it does not
+# shrink with the axis and a long term runs off the panel. Clipping is worse
+# than truncating, because it takes the ellipsis with it: "small molecule
+# metabolic process" arrived as "all molecule metabolic process", which reads
+# as a different term rather than a shortened one.
+#
+# Truncating alone is not enough. The same panel is drawn full-width in a leaf
+# and half-width in a reference beside a volcano, so a single character budget
+# is either too tight for one or clips in the other. Wrapping to two short
+# lines keeps the whole term and needs half the horizontal room, which fits
+# both layouts. The outer truncation only bounds pathological names to two
+# lines.
+DRIVER_LABEL_CHARS <- 44L
+DRIVER_LABEL_WRAP <- 22L
+
+driver_label <- function(x) {
+  str_wrap(str_trunc(x, DRIVER_LABEL_CHARS), DRIVER_LABEL_WRAP)
+}
+
 # WGCNA module names are literal colours, so a module bar can be filled with
 # itself. Text flips to white on dark fills.
 module_fill <- function(module) {
@@ -48,14 +67,16 @@ driver_keys <- function(features, level) {
     term <- ora$term[i]
     data.frame(
       key = module,
-      description = ifelse(is.na(term), "no enriched term", str_trunc(term, 42)),
+      description = ifelse(
+        is.na(term), "no enriched term", driver_label(term)
+      ),
       fill = module_fill(module)
     )
   } else if (level == "pathways") {
     db <- classify_database(features)
     data.frame(
       key = db,
-      description = str_trunc(clean_pathway_name(features, 60), 46),
+      description = driver_label(clean_pathway_name(features, 60)),
       fill = unname(ifelse(db %in% names(DB_COLORS), DB_COLORS[db], "grey60"))
     )
   } else {
@@ -137,12 +158,13 @@ driver_bars <- function(d, level, xlab, title, subtitle, signed = FALSE) {
       geom_text(
         aes(x = .data$score, label = .data$description),
         hjust = ifelse(d$score < 0, 1.05, -0.05),
-        size = 2.2, colour = "grey10", fontface = "bold"
+        size = 2.2, colour = "grey10", fontface = "bold", lineheight = 0.85
       )
     } else {
       geom_text(
         aes(x = 0, label = .data$description),
-        hjust = -0.03, size = 2.2, colour = d$text_colour, fontface = "bold"
+        hjust = -0.03, size = 2.2, colour = d$text_colour,
+        fontface = "bold", lineheight = 0.85
       )
     }
   }
