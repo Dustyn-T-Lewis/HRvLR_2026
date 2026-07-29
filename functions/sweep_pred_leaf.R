@@ -23,13 +23,27 @@ leaf_x <- function(bundle, level, config) {
 }
 
 # Top selected features by fold frequency, or a note when the learner is dense.
-selection_panel <- function(selection, fill) {
-  top <- selection |> slice_max(.data$freq, n = 8, with_ties = FALSE)
+# Ridge retains every coefficient, so every feature sits at frequency 1 and
+# slice_max returns whichever eight come first alphabetically -- an ordering
+# with no meaning, printed under "top features". The same rule lives in
+# sweep_cell_panel.R's DENSE_MODELS; both panels describe the same cell and
+# must agree on when a signature exists.
+selection_panel <- function(selection, fill, method = NULL) {
+  dense <- !is.null(method) && method %in% DENSE_MODELS
+  top <- if (dense) {
+    selection[0, , drop = FALSE]
+  } else {
+    selection |> slice_max(.data$freq, n = 8, with_ties = FALSE)
+  }
   if (!nrow(top)) {
     return(
       ggplot() +
         annotate("text", 0, 0,
-          label = "no recurrent\nfeature selected",
+          label = if (dense) {
+            "no sparse signature\nin this cell"
+          } else {
+            "no recurrent\nfeature selected"
+          },
           size = 3, colour = "grey45", fontface = "italic"
         ) +
         theme_void()
@@ -73,11 +87,11 @@ build_class_leaf_panel <- function(res, level, config, method) {
     FIG_THEME +
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
 
-  (p_null | selection_panel(res$selection, fill)) +
+  (p_null | selection_panel(res$selection, fill, method)) +
     plot_layout(widths = c(1.4, 1)) +
     plot_annotation(
       title = sprintf(
-        "%s | %s classify HR/LR -- %s", level, config, MODEL_LABEL[[method]]
+        "%s · %s classify HR/LR -- %s", level, config, MODEL_LABEL[[method]]
       ),
       subtitle = sprintf(
         "%s. Nested LOSO, seeded; permutation null. %s",
@@ -128,11 +142,11 @@ build_cont_leaf_panel <- function(summ, null, selection, level, config,
     selection[0, , drop = FALSE]
   }
 
-  (p_q2 | selection_panel(sel_best, fill)) +
+  (p_q2 | selection_panel(sel_best, fill, method)) +
     plot_layout(widths = c(1.5, 1)) +
     plot_annotation(
       title = sprintf(
-        "%s | %s predict adaptation -- %s", level, config, MODEL_LABEL[[method]]
+        "%s · %s predict adaptation -- %s", level, config, MODEL_LABEL[[method]]
       ),
       subtitle = sprintf(
         "Six deltas, nested LOSO vs permutation null. %s", LEAK_NOTE[[level]]
