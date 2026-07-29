@@ -17,7 +17,7 @@ titled <- function(p, ttl, sub) {
 composite <- titled(pA, "Global Proteome State", sprintf(
   "PCA — no detectable group separation (PERMANOVA p = %.2f)", perm_group[["Pr(>F)"]][1]
 )) +
-  titled(pB, "Response Magnitude ‖Δ‖", "RRPP — no detectable magnitude difference") +
+  titled(pB, "Response Magnitude ||delta||", "RRPP — no detectable magnitude difference") +
   titled(pC, "Protein-level divergence leads", "pi-gated candidates; none survive FDR (exploratory)") +
   titled(pD, "DEPs per Contrast", "% of proteome (light = nominal p, dark = pi); dotted = chance") +
   titled(pE, "Effect-Size Distribution", "logFC density per contrast; number = median |log2FC|") +

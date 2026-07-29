@@ -77,17 +77,17 @@ render_concordance_figure <- function(cfg) {
   message("=== ", cfg$fig_id, " composite ===")
   ttl_A <- "Quadrant ORA (Concordance)"
   sub_A <- sprintf(
-    "N = %d | %d DEPs (\u03a0) | %d enriched (FDR) | \u03c1 = %.2f",
+    "N = %d – %d DEPs (\u03a0) – %d enriched (FDR) – \u03c1 = %.2f",
     pa$n_total, pa$n_sig, pa$n_enrich, pa$rho
   )
   ttl_B <- "Protein-to-Pathway"
-  sub_B <- sprintf("%d proteins | %d GO-Slim categories", pb$n_total, pb$n_pw)
+  sub_B <- sprintf("%d proteins – %d GO-Slim categories", pb$n_total, pb$n_pw)
   ttl_C <- "fry: Concordance"
-  sub_C <- sprintf("n = %d proteins | dupCor = %.3f", fry_out$n_all, fry_out$cor_within)
+  sub_C <- sprintf("n = %d proteins – dupCor = %.3f", fry_out$n_all, fry_out$cor_within)
   ttl_D <- "Pathway Concordance"
-  sub_D <- sprintf("\u03c1 = %.2f | %.0f%% concordant", pd$rho, pd$conc_frac * 100)
+  sub_D <- sprintf("\u03c1 = %.2f – %.0f%% concordant", pd$rho, pd$conc_frac * 100)
   ttl_E <- "RRHO2 Concordance"
-  sub_E <- sprintf("%d genes | %d concordant hotspot", pe$n_shared, pe$n_concordant)
+  sub_E <- sprintf("%d genes – %d concordant hotspot", pe$n_shared, pe$n_concordant)
 
   pd_comp <- pd$plot + labs(subtitle = NULL)
   pe_comp <- pe$plot
