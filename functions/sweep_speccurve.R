@@ -13,6 +13,35 @@ SPEC_LEVEL_COLORS <- c(
   proteins = "#2166AC", pathways = "#238B45", modules = "#9E9AC8"
 )
 
+# The read-off axes below the curve: one facet per specification dimension,
+# each cell's choice marked at its rank. Shared by all three screens so the
+# curves stay comparable.
+spec_strip <- function(d, spec_cols) {
+  strip <- d |>
+    dplyr::select(.data$rank, dplyr::all_of(spec_cols)) |>
+    pivot_longer(all_of(spec_cols), names_to = "axis", values_to = "spec") |>
+    mutate(axis = factor(axis, levels = spec_cols))
+
+  ggplot(strip, aes(.data$rank, fct_rev(.data$spec))) +
+    geom_point(aes(colour = .data$axis), size = 0.9) +
+    scale_colour_manual(
+      values = stats::setNames(
+        c("#2166AC", "#E69F00", "#238B45", "#6A51A3")[seq_along(spec_cols)],
+        spec_cols
+      ),
+      guide = "none"
+    ) +
+    facet_grid(axis ~ ., scales = "free_y", space = "free_y", switch = "y") +
+    labs(x = "specification (cells sorted by metric)", y = NULL) +
+    FIG_THEME +
+    theme(
+      axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+      strip.placement = "outside",
+      strip.text.y.left = element_text(angle = 0, face = "bold", size = 7),
+      panel.spacing = unit(1, "pt")
+    )
+}
+
 # cells: roll-up all_cells rows at one B. value/mean/sd/p name the metric and
 # its null; chance is the no-skill reference; spec_cols are the read-off axes.
 # y_lim clamps the display so a few catastrophic negatives (a plain model
@@ -59,38 +88,14 @@ spec_curve <- function(cells, value, mean, sd, p, chance, metric_label,
       axis.text.x = element_blank(), axis.ticks.x = element_blank()
     )
 
-  strip <- d |>
-    dplyr::select(.data$rank, dplyr::all_of(spec_cols)) |>
-    pivot_longer(all_of(spec_cols), names_to = "axis", values_to = "spec") |>
-    mutate(axis = factor(axis, levels = spec_cols))
-
-  p_strip <- ggplot(strip, aes(.data$rank, fct_rev(.data$spec))) +
-    geom_point(aes(colour = .data$axis), size = 0.9) +
-    scale_colour_manual(
-      values = stats::setNames(
-        c("#2166AC", "#E69F00", "#238B45", "#6A51A3")[seq_along(spec_cols)],
-        spec_cols
-      ),
-      guide = "none"
-    ) +
-    facet_grid(axis ~ ., scales = "free_y", space = "free_y", switch = "y") +
-    labs(x = "specification (cells sorted by metric)", y = NULL) +
-    FIG_THEME +
-    theme(
-      axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-      strip.placement = "outside",
-      strip.text.y.left = element_text(angle = 0, face = "bold", size = 7),
-      panel.spacing = unit(1, "pt")
-    )
-
-  p_curve / p_strip +
+  p_curve / spec_strip(d, spec_cols) +
     plot_layout(heights = c(1.5, 1.4)) +
     plot_annotation(theme = theme(plot.margin = margin(4, 4, 4, 4)))
 }
 
 spec_curve_class <- function(cells, title, subtitle) {
   spec_curve(
-    dplyr::filter(cells, .data$B == max(.data$B)),
+    best_b_per_cell(cells),
     value = "estimate", mean = "null_mean", sd = "null_sd", p = "perm_p",
     chance = 0.5, metric_label = "LOSO AUC",
     spec_cols = c("level", "config", "model"),
@@ -100,12 +105,70 @@ spec_curve_class <- function(cells, title, subtitle) {
 
 spec_curve_cont <- function(cells, title, subtitle) {
   spec_curve(
-    dplyr::filter(cells, .data$B == max(.data$B)),
+    best_b_per_cell(cells),
     value = "q2", mean = "null_q2_mean", sd = "null_q2_sd", p = "perm_p_q2",
     chance = 0, metric_label = expression(LOSO ~ Q^2),
     spec_cols = c("level", "config", "model", "outcome"),
     title = title, subtitle = subtitle, y_lim = c(-1, 0.7)
   )
+}
+
+# Association has no permutation null, so this curve draws no null band and
+# marks no leads. It also cannot rank cells by their metric: limma and lm carry
+# a moderated t, wilcoxon carries a group effect, and the two are different
+# scales. The nominal hit rate is the one quantity every cell reports on the
+# same scale, and 5% is where it lands when nothing is there.
+spec_curve_assoc <- function(cells, title, subtitle) {
+  d <- cells |>
+    mutate(rate = .data$n_nominal / .data$n_feature) |>
+    arrange(.data$rate) |>
+    mutate(rank = dplyr::row_number())
+
+  p_curve <- ggplot(d, aes(.data$rank, .data$rate)) +
+    geom_hline(yintercept = 0.05, linetype = "dashed", colour = "#B2182B") +
+    geom_point(aes(colour = .data$level), size = 1.4) +
+    scale_colour_manual(values = SPEC_LEVEL_COLORS, name = "level") +
+    scale_y_continuous(labels = scales::percent) +
+    labs(
+      x = NULL, y = "features at nominal p < .05",
+      title = title, subtitle = subtitle
+    ) +
+    FIG_THEME +
+    theme(
+      legend.position = c(0.14, 0.8),
+      plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE),
+      axis.text.x = element_blank(), axis.ticks.x = element_blank()
+    )
+
+  p_curve / spec_strip(d, c("level", "config", "method", "outcome")) +
+    plot_layout(heights = c(1.5, 1.4)) +
+    plot_annotation(theme = theme(plot.margin = margin(4, 4, 4, 4)))
+}
+
+render_assoc_speccurve <- function(root = "F04_association") {
+  cells <- openxlsx::read.xlsx(
+    file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "cell_summary"
+  )
+  panel <- spec_curve_assoc(
+    cells, "Association screen -- specification curve",
+    sprintf(
+      paste(
+        "%d in-sample cells ranked by nominal hit rate.",
+        "Dashed = the 5%% chance rate.\nAssociation has no permutation null,",
+        "so no cell is marked a lead here; F05 and F06 adjudicate",
+        "out of sample."
+      ),
+      nrow(cells)
+    )
+  )
+  dir.create(file.path(sweep_root_dir(root), "b_reports"),
+    recursive = TRUE, showWarnings = FALSE
+  )
+  save_panel(
+    panel, file.path(sweep_root_dir(root), "b_reports", "specification_curve"),
+    width = 300, height = 210
+  )
+  invisible(panel)
 }
 
 # Read a root's raw roll-up and render its specification curve to b_reports.
