@@ -1,10 +1,10 @@
 # A worked reference for every cell type in the screen: one panel per
 # stage x feature level x timepoint config, written into a tree that mirrors
-# F04/F05/F06. Each reference is drawn from that cell's real output, so it shows
+# F05/F06. Each reference is drawn from that cell's real output, so it shows
 # both the intended layout and what the data actually supports there.
 #
-# Stage sets the statistic (association: effect and nominal p; classification:
-# AUC; prediction: Q^2), the feature level sets how a driver is named (gene
+# Stage sets the statistic (classification: AUC; prediction: Q^2), the feature
+# level sets how a driver is named (gene
 # symbol, pathway name, module ORA term), and the config sets the readout
 # label (abundance, logFC, trajectory).
 
@@ -22,7 +22,6 @@ SPARSE_MODELS <- c("lasso", "enet", "spls", "pam")
 LEAD_OUTCOME <- "d_mcsa"
 
 STAGES <- c(
-  F04_association = "association",
   F05_classification = "classification",
   F06_prediction = "prediction"
 )
@@ -90,32 +89,6 @@ file_phenotype <- function(files) {
   vapply(
     files, function(f) basename(dirname(dirname(dirname(f)))), character(1)
   )
-}
-
-# Association drivers: strongest features by raw p in the lead outcome, pooled
-# over the methods run in that cell. A split leaf holds one outcome's `cell`
-# sheet, named by its phenotype directory.
-assoc_drivers <- function(stage, level, config, n = 10) {
-  files <- cell_files(stage, level, config)
-  files <- files[file_phenotype(files) == LEAD_OUTCOME]
-  rows <- lapply(files, function(f) {
-    read.xlsx(f, "cell") |>
-      mutate(method = basename(dirname(dirname(f))))
-  })
-  bind_rows(rows) |>
-    mutate(feature = base_feature(.data$feature)) |>
-    group_by(.data$feature) |>
-    slice_min(.data$p, n = 1, with_ties = FALSE) |>
-    ungroup() |>
-    slice_min(.data$p, n = n, with_ties = FALSE) |>
-    transmute(
-      .data$feature,
-      # the moderated t is signed like the effect but comparable across
-      # features, so bar length ranks the way the p-value does
-      score = ifelse(is.na(.data$t), sign(.data$effect), .data$t),
-      p = .data$p,
-      label = feature_label(.data$feature, level)
-    )
 }
 
 # Prediction / classification drivers: fold-selection frequency pooled over the
@@ -197,45 +170,6 @@ arm_separation_panel <- function(stage, level, config) {
 # permutation p taken within the cell.
 stat_panel <- function(stage, level, config) {
   files <- cell_files(stage, level, config)
-  if (stage == "F04_association") {
-    lead_files <- files[file_phenotype(files) == LEAD_OUTCOME]
-    d <- bind_rows(lapply(lead_files, function(f) read.xlsx(f, "cell")))
-    d <- d |>
-      mutate(
-        dir = case_when(
-          .data$p < 0.05 & .data$effect > 0 ~ "Up",
-          .data$p < 0.05 & .data$effect < 0 ~ "Down",
-          TRUE ~ "NS"
-        ),
-        name = feature_label(base_feature(.data$feature), level)
-      )
-    n_nominal <- sum(d$dir != "NS", na.rm = TRUE)
-    lab <- d |> slice_min(.data$p, n = 6, with_ties = FALSE)
-    return(
-      ggplot(d, aes(.data$effect, -log10(.data$p))) +
-        geom_hline(
-          yintercept = -log10(0.05), linetype = "dotted",
-          colour = "grey55"
-        ) +
-        geom_vline(xintercept = 0, colour = "grey70", linewidth = 0.3) +
-        geom_point(aes(colour = .data$dir), size = 0.9, alpha = 0.6) +
-        ggrepel::geom_text_repel(
-          data = lab, aes(label = .data$name), size = 2,
-          max.overlaps = 10, min.segment.length = 0, colour = "grey20"
-        ) +
-        scale_colour_manual(values = DIR_COLORS, guide = "none") +
-        labs(
-          x = sprintf("effect vs %s", LEAD_OUTCOME),
-          y = expression(-log[10] * " p"), title = "In-sample statistic",
-          subtitle = sprintf(
-            "nominal p<.05 in cell: %d / %d.", n_nominal, nrow(d)
-          )
-        ) +
-        FIG_THEME +
-        theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
-    )
-  }
-
   if (stage == "F05_classification") {
     return(arm_separation_panel(stage, level, config))
   }
@@ -285,25 +219,11 @@ build_reference <- function(stage, level, config) {
   if (!length(cell_files(stage, level, config))) {
     return(invisible(NULL))
   }
-  is_assoc <- stage == "F04_association"
-  d <- if (is_assoc) {
-    assoc_drivers(stage, level, config)
-  } else {
-    pred_drivers(stage, level, config)
-  }
-  xlab <- if (is_assoc) {
-    sprintf("signed t vs %s", LEAD_OUTCOME)
-  } else {
-    "mean fold-selection freq."
-  }
+  d <- pred_drivers(stage, level, config)
   target <- if (stage == "F05_classification") "HR vs LR" else LEAD_OUTCOME
-  sub <- if (is_assoc) {
-    sprintf("Strongest %s associations, by direction", target)
-  } else {
-    sprintf("Selected for %s across sparse models", target)
-  }
+  sub <- sprintf("Selected for %s across sparse models", target)
 
-  panel <- (driver_panel(d, level, xlab, sub, signed = is_assoc) |
+  panel <- (driver_panel(d, level, "mean fold-selection freq.", sub) |
     stat_panel(stage, level, config)) +
     plot_annotation(
       title = sprintf(
