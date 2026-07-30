@@ -1,0 +1,380 @@
+---
+title: "HRvLR — Acute Response Concordance"
+subtitle: "Shared vs responder-specific acute-bout response, HR vs LR"
+author: "A_HRvLR_2026"
+date: today
+bibliography: ../../../shared/references.bib
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+execute:
+  eval: true
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(here, openxlsx, dplyr)
+wb <- here(
+  "05_Figures", "F03_pathway", "supp", "concordance_acute", "c_data",
+  "concordance_acute_source_data.xlsx"
+)
+qa <- read.xlsx(wb, "panel_a_quadrants")
+pb <- read.xlsx(wb, "panel_b_pattern")
+pd <- read.xlsx(wb, "panel_d_nes")
+rr <- read.xlsx(wb, "panel_e_rrho2_hotspot")
+fr <- read.xlsx(wb, "panel_c_fry_results")
+bo <- read.xlsx(wb, "supp_bootstrap")
+
+comma <- function(x) format(x, big.mark = ",")
+quad <- table(factor(qa$quadrant))
+n_prot <- nrow(qa)
+n_conc <- sum(qa$quadrant %in% c("Concordant Up", "Concordant Down"))
+n_disc <- n_prot - n_conc
+pct_conc <- round(100 * n_conc / n_prot)
+scl <- table(factor(qa$sig_class))
+rho_prot <- round(bo$observed, 2)
+
+fr_up <- fr[fr$Direction == "Up", ]
+fr_dn <- fr[fr$Direction == "Down", ]
+
+nes_rho <- round(cor(pd$NES_Acute_HR, pd$NES_Acute_LR, method = "spearman"), 2)
+n_path <- nrow(pd)
+nes_cu <- sum(pd$NES_Acute_HR > 0 & pd$NES_Acute_LR > 0)
+nes_cd <- sum(pd$NES_Acute_HR < 0 & pd$NES_Acute_LR < 0)
+nes_disc <- n_path - nes_cu - nes_cd
+pct_path_conc <- round(100 * (nes_cu + nes_cd) / n_path)
+n_path_div <- sum(pd$divergent, na.rm = TRUE)
+
+n_sel <- nrow(pb)
+cat_tab <- sort(table(pb$pathway), decreasing = TRUE)
+lead_cats <- paste(sprintf("%s (%d)", names(cat_tab)[1:4], cat_tab[1:4]), collapse = ", ")
+
+rr_tot <- nrow(rr)
+rr_dd <- sum(rr$quadrant == "DD")
+rr_uu <- sum(rr$quadrant == "UU")
+```
+
+## The question
+
+This figure is the acute arm of the concordance comparison. Where the training figure asked how HR and LR
+proteomes move over a training block (T1 → T2), This figure asks how they move in the hour
+after a single bout (T2 → T3). Same question, different timescale: which proteins
+and pathways respond the same way in both groups, and which respond in a way that
+depends on responder status.
+
+The acute contrast is the one where a difference is most plausible *a priori*. A
+training-block change is slow and cumulative; the acute response is the muscle's
+immediate signalling reaction to a stimulus, and that is where a "high responder"
+might reasonably differ. This figure tests that.
+
+Divergence is read off the modelled interaction contrast, not off the eye. This figure and
+the training figure call the same driver, `render_concordance_figure()`, and differ only in
+configuration (the contrast triple, the factor levels, the labels). There is one
+pipeline, not two — so a method change lands in both figures at once and they
+cannot silently drift apart.
+
+## What this figure found
+
+**The acute responses of HR and LR are, if anything, *less* concordant than their
+training responses.** The protein-level Spearman correlation between the HR and LR
+acute logFC vectors is **ρ = `r rho_prot`** (bootstrap 95% CI `r round(bo$ci_lo, 2)`–`r round(bo$ci_hi, 2)`), below the training figure's 0.20.
+`r comma(n_conc)` of `r comma(n_prot)` proteins (**`r pct_conc`%**) sit in a concordant quadrant — `r pct_conc - 50` points above a
+coin flip.
+
+**Again, no set-level test survives correction.** fry along the LR acute ranking:
+HR-up (n = `r fr_up$n`) p = `r round(fr_up$PValue, 2)` (FDR `r round(fr_up$FDR, 2)`); HR-down (n = `r fr_dn$n`) p = `r round(fr_dn$PValue, 3)` (FDR `r round(fr_dn$FDR, 2)`). The
+HR-down direction is the closest thing to a signal anywhere in the training figure or This figure, and it is
+still not significant. (A mixed-direction fry, which ignores whether the shift is
+concordant, flags the up set at p = `r round(fr_up$PValue.Mixed, 3)`, FDR `r round(fr_up$FDR.Mixed, 3)`; the
+directional test that concordance actually needs is null.)
+
+**The divergent set is larger here but no better controlled.** `r scl[["Divergent"]]` proteins are flagged
+divergent, all by the π gate, which controls no error rate (see @sec-pi).
+
+**The pathway-level picture is the most interesting in the pipeline.** At the pathway
+grain the correlation rises to **ρ = `r nes_rho` with `r pct_path_conc`% concordant** — the highest agreement
+anywhere in the training figure/This figure — and `r n_path_div` of `r n_path` pathways are flagged divergent, against 2 in the training figure.
+The acute response is where HR and LR most resemble each other *in aggregate* and
+where the most individual pathways are flagged as differing. That tension is real and
+worth stating rather than resolving by picking whichever number reads better.
+
+The honest headline is unchanged from the training figure: **at n = 8 per group this figure does not
+establish a responder-specific acute program.** It generates leads.
+
+## Composite
+
+![Composite. A quadrant concordance map with per-quadrant ORA, B protein-to-pathway assignment, C the fry rotation test, D pathway NES concordance, E threshold-free RRHO2.](../b_reports/concordance_acute_composite.png)
+
+## Inputs and outputs
+
+Reads:
+
+- `03_DEP/a_non_imputed/c_data/03_combined_results.csv` — per-protein logFC, moderated
+  t, p-values, FDR, and the signed π flag for `Acute_HR`, `Acute_LR`, and
+  `Acute_Interaction`.
+- `02_Normalization/imputation/c_data/DAList_imputed_missforest.rds` — the
+  missForest-imputed matrix. fry needs a complete matrix.
+- `05_Figures/F03_pathway/c_data/F03_pathway_source_data.xlsx` (sheet `fgsea_all`) — the fgsea cache,
+  computed once in F03 and reused so no permutation test reruns.
+
+Writes, under `05_Figures/F03_pathway/supp/concordance_acute/`: panel and supplementary PNG + PDF, one `c_data/*.csv`
+per panel, and the bundled `c_data/concordance_acute_source_data.xlsx`.
+
+```r
+render_concordance_figure(list(
+  fig_id = "concordance_acute",
+  c_hi = "Acute_HR", c_lo = "Acute_LR", c_int = "Acute_Interaction",
+  lo_levels = c("LR_T2", "LR_T3"),
+  labels = list(
+    hi = "HR", lo = "LR", phase = "Acute",
+    x = "HR acute logFC", y = "LR acute logFC"
+  )
+))
+```
+
+The acute contrast is always **T3 − T2**, never T3 − T1. It isolates the response to
+the final bout from the training block that preceded it.
+
+## The two correlations, and why they differ {#sec-rho}
+
+The composite prints ρ twice and they are **not the same number**. Panel A's ρ = `r rho_prot`
+is the correlation across *proteins*. Panel D's ρ = `r nes_rho` is the correlation across
+*pathways*. Pathway scores average over many member proteins, so they cancel
+protein-level noise and correlate more tightly. Neither is more correct; they answer
+the question at different grain.
+
+The gap is wider here than in the training figure (`r rho_prot` → `r nes_rho`, versus 0.20 → 0.28), which is what you
+would expect if the acute signal is coherent at the level of pathways but noisy at the
+level of individual proteins. Quoting only the `r nes_rho` would be cherry-picking the
+flattering resolution.
+
+## Panel A — quadrant concordance map with per-quadrant ORA
+
+![Panel A. Proteins placed by the sign pair of their HR and LR acute logFC; each quadrant's over-representation shown as half-bars flanking its corner.](../b_reports/panels/panel_a_quadrant_ora.png)
+
+**What.** Each protein is placed by the sign pair of its HR and LR acute logFC. The
+concordant quadrants hold proteins moving the same direction in both groups; the
+off-diagonal quadrants hold proteins moving opposite ways. Points are coloured by
+class: divergent (interaction-flagged), significant in both, HR-only, LR-only, NS.
+
+**Result.** Concordant Down `r quad[["Concordant Down"]]`, Concordant Up `r quad[["Concordant Up"]]`, HR Up / LR Down `r quad[["HR Up / LR Down"]]`, HR Down / LR
+Up `r quad[["HR Down / LR Up"]]` — `r comma(n_conc)` concordant of `r comma(n_prot)` (`r pct_conc`%), ρ = `r rho_prot`. Of the `r n_sel` selected proteins: `r scl[["Divergent"]]`
+divergent, `r scl[["Sig HR only"]]` HR-only, `r scl[["Sig LR only"]]` LR-only, `r scl[["Sig Both"]]` significant in both arms.
+
+**How to read it.** The cloud is rounder than the training figure's. Note the asymmetry: the two
+*discordant* quadrants together (`r comma(n_disc)`) nearly match the two concordant ones (`r comma(n_conc)`).
+That is close to what you would see if the two groups' acute responses were largely
+independent of each other.
+
+**Why the universe is the measured proteome.** ORA runs per quadrant against the
+proteins actually tested here, not the human genome. A proteomics run measures a biased
+slice of the proteome (abundant, soluble, tryptic-friendly), so scoring a quadrant
+against all human genes would count that measurement bias as biology and inflate every
+term. Redundant pathways collapse by Jaccard overlap (`jaccard_cutoff = 0.5`);
+`padj_cutoff = 1` keeps non-significant terms visible so a sparse quadrant still reports
+its leading terms, with significance carried by bar alpha and stars rather than by
+omission.
+
+## Panel B — protein-to-pathway
+
+![Panel B. The `r n_sel` selected proteins, their HR and LR acute logFC, and the GO-Slim category each is assigned to.](../b_reports/panels/panel_b_pattern_heatmap.png)
+
+**What.** Panel B takes the `r n_sel` proteins selected in either arm or by the interaction,
+shows their HR and LR logFC side by side as a heatmap, and links each to a consolidated
+GO-Slim category, with bars counting proteins per category split by which arm selected
+them.
+
+**Why it exists.** Panel A counts proteins; Panel B says what they are. It is the bridge
+from quadrant counts to biology.
+
+**How to read it.** The leading categories are `r lead_cats` — a coherent acute-signalling picture, since
+a bout perturbs transport, transcription and the translational apparatus. Compare with
+the training figure, where the selected proteins scattered thinly across categories. The acute response
+is the more biologically organised of the two, which is exactly why the pathway-level ρ
+is higher.
+
+## Panel C — fry rotation test
+
+![Panel C. HR-significant up and down sets tested along the LR moderated-t ranking, with barcode rugs and leading-edge ORA.](../b_reports/panels/panel_c_fry.png)
+
+**What.** fry asks the directional version of the concordance question: do the proteins
+that changed acutely in HR sit high (or low) in the *LR* acute ranking?
+
+**Result — the null that matters.** HR-up set (n = `r fr_up$n`): **p = `r round(fr_up$PValue, 2)`**, FDR `r round(fr_up$FDR, 2)`. HR-down
+set (n = `r fr_dn$n`): **p = `r round(fr_dn$PValue, 3)`**, FDR `r round(fr_dn$FDR, 2)`. The rotation carries the within-subject
+`duplicateCorrelation` consensus. Neither is significant. The HR-down set is the nearest miss in the
+whole concordance analysis, and a p of `r round(fr_dn$PValue, 3)` on one of two tests, at n = 8 per group, is
+a lead and nothing more.
+
+**Why fry and not camera.** These are repeated measures on 16 subjects, so residuals
+within a subject are correlated. fry carries that structure directly: same design matrix,
+the within-subject block, and the `duplicateCorrelation` consensus that the DEP model
+uses, so the rotation respects the subject grouping [@wu2010]. camera has no route to
+carry the block here and would treat paired samples as independent, estimating its
+variance-inflation factor on the wrong footing. fry gives a valid set-level p-value where
+camera would not. The seed is fixed so the rotation is reproducible.
+
+```r
+run_fry_concordance <- function(da, dep, pw, c_hi, c_lo, lo_levels) {
+  set.seed(42)
+  mat <- as.matrix(da$data)
+  meta <- da$metadata
+  design <- model.matrix(~ 0 + factor(Group_Time), data = meta)
+  block <- meta$Subject_ID
+  corfit <- duplicateCorrelation(mat, design, block = block)
+  cm <- makeContrasts(contrasts = paste0(lo_levels[2], " - ", lo_levels[1]), levels = design)
+
+  sig <- dep[dep[[paste0("sig_pi_", c_hi)]] != 0 & dep$uniprot_id %in% rownames(mat), ]
+  lfc_hi <- sig[[paste0("logFC_", c_hi)]]
+  idx <- list(
+    Up   = match(sig$uniprot_id[lfc_hi > 0], rownames(mat)),
+    Down = match(sig$uniprot_id[lfc_hi < 0], rownames(mat))
+  )
+  fry(mat,
+    index = idx, design = design, contrast = cm[, 1],
+    block = block, correlation = corfit$consensus.correlation
+  )
+}
+```
+
+## Panel D — pathway NES concordance
+
+![Panel D. fgsea NES for HR acute against LR acute, one point per pathway, interaction-flagged pathways highlighted.](../b_reports/panels/panel_d_nes_scatter.png)
+
+**What is NES.** A gene-set enrichment score asks whether a pathway's proteins sit
+systematically high or low in a ranked list of all proteins. The raw score depends on how
+many proteins the set contains, so fgsea divides it by the mean score of random sets of
+the same size. That ratio is the **normalised enrichment score (NES)**: positive means
+the pathway is shifted up the ranking, negative means shifted down, and because it is
+size-normalised, a NES of +2 means the same thing for a 20-protein set as for a
+200-protein set. It is the colour scale of every ring in F03 and both axes here.
+
+**Result.** ρ = `r nes_rho` across `r n_path` pathways, **`r pct_path_conc`% concordant** (Concordant Up `r nes_cu`, Concordant
+Down `r nes_cd`, discordant `r nes_disc`). **`r n_path_div` of `r n_path`** pathways are flagged divergent by the cached
+interaction GSEA — over five times the training figure's two.
+
+**How to read it.** This is the strongest concordance number in the pipeline, and it still
+explains only about `r round(100 * nes_rho^2)`% of the cross-pathway variance. The interesting structure is in the
+labelled points: OXPHOS and mitochondrial organisation sit concordant-down in both groups
+(a bout acutely suppresses the oxidative program in everybody), while Heme Metabolism sits
+well off the diagonal. The panel is **not** a prediction: a high ρ would mean the groups
+respond alike, not that responder status can be read off the acute proteome.
+
+NES values are read from the F03 cache, not recomputed, so this panel is numerically
+identical to the F03 enrichment figure and no second stochastic run happens.
+
+## Panel E — RRHO2
+
+![Panel E. Threshold-free rank-rank hypergeometric overlap of the HR and LR acute moderated-t rankings.](../b_reports/panels/panel_e_rrho2.png)
+
+**What.** RRHO2 slides a threshold across both moderated-t rankings and maps where the HR
+and LR lists overlap, so agreement shows as signed hotspots without any protein being
+called significant. It checks that the quadrant story does not hinge on a cutoff.
+
+**Result.** Of `r comma(n_prot)` shared genes the concordant hotspot holds **`r comma(rr_dd + rr_uu)`** (`r rr_uu` concordant-up,
+`r rr_dd` concordant-down); the discordant corners hold `r rr_tot - rr_dd - rr_uu`. This is far smaller than the training figure's concordant hotspot,
+and the map is visibly cooler (peak −log₁₀ p ≈ 12 against ≈ 15).
+
+**How to read it.** The concordant-up corner carries nearly all of it, matching Panel D's
+`r nes_cu` concordant-up pathways. As in the training figure, a hot concordant corner is expected whenever two
+contrasts share *any* common component — including an acute bout effect present in
+everybody, which is not a responder result. It corroborates the direction of the weak ρ;
+it does not rescue it.
+
+## Supplements
+
+![Supplementary bootstrap. Resampling distribution of the HR-vs-LR acute logFC Spearman correlation.](../b_reports/supp/supp_bootstrap.png)
+
+The bootstrap puts an interval on Panel A's ρ: **`r round(bo$observed, 3)`, 95% CI `r round(bo$ci_lo, 3)`–`r round(bo$ci_hi, 3)`**, from `r comma(bo$reps)`
+resamples.
+
+The resampled unit is the **protein**, and that is the whole caveat. This is a confidence
+interval on cross-protein concordance — how stable the agreement is to which proteins
+entered the comparison. It is **not** a subject-level interval and does not capture
+between-subject sampling variability. With 8 per group the subject-level uncertainty is
+far larger and entirely separate. The CI excluding zero says the weak correlation is
+stably estimated across proteins, not that it would replicate in a new cohort.
+
+![Supplementary threshold sensitivity. Quadrant counts across the π flag, two FDR cuts, and a nominal-p cut.](../b_reports/supp/supp_threshold.png)
+
+Recomputes the concordant and discordant counts under four selection rules (signed π flag,
+FDR < 0.05, FDR < 0.10, nominal p < 0.05) so the balance reads as a function of stringency
+rather than at one arbitrary line.
+
+![Supplementary fry leading edge. Leading-edge ORA for the fry sets.](../b_reports/supp/supp_fry_leading.png)
+
+Leading-edge terms are shown for completeness. Since **neither fry test is significant**,
+these terms describe the leading edge of a null result and must not be reported as enriched
+biology.
+
+## The π gate is not an FDR gate {#sec-pi}
+
+Every "significant" protein on this page — the `r n_sel` in Panels A and B, the `r scl[["Divergent"]]` divergent, the
+fry input sets — is selected by `sig_pi`, the π-score flag [@xiao2014], not by BH-FDR.
+
+The π-score is `p^|log2FC|`, thresholded at 0.05. Because a large fold change drives the
+score down on its own, **fold change alone can buy admission**: across the nine contrasts,
+71 of 489 π-calls (14.5%) have a raw p ≥ 0.05, the largest being p = 0.269. π controls no
+error rate — not FDR, not FWER — and the π-selected set is *not* a subset of the p < 0.05
+set. Xiao's paper prescribes a dataset-specific empirical-null critical value rather than a
+flat 0.05.
+
+Under BH-FDR the acute interaction returns essentially nothing. Read the `r scl[["Divergent"]]` divergent
+proteins as an **effect-size-weighted, hypothesis-generating ranking**, never as an
+FDR-controlled discovery list. An error-rate-controlled alternative with a biological
+effect-size floor is `limma::treat()` [@mccarthy2009]; here it would very likely return
+zero, which is the correct and much stronger statement.
+
+The π score is also written into a column literally named `padj` in
+`05_Figures/F03_pathway/a_script/rings.R`, a few lines from a genuine fgsea BH q-value. The
+name is wrong. The number is not an adjusted p-value.
+
+## Key terms
+
+**Acute contrast** — always `T3 − T2`, the response to the final bout, never `T3 − T1`. It
+deliberately excludes the training block that preceded it.
+
+**Concordance (ρ)** — Spearman correlation between the HR and LR logFC vectors. Across
+proteins (Panel A, `r rho_prot`) or across pathway NES (Panel D, `r nes_rho`). A within-cohort
+association, not a prediction.
+
+**NES** — normalised enrichment score. Enrichment score divided by the mean score of random
+sets of the same size, so scores compare across sets of different size.
+
+**fry** — rotation-based gene-set test. Needs no minimum sample size and accepts a
+within-subject block plus a `duplicateCorrelation` consensus, so it is valid on this
+repeated-measures design where camera is not.
+
+**RRHO2** — rank-rank hypergeometric overlap. Threshold-free map of where two ranked lists
+agree.
+
+**Divergent** — flagged by the π gate on the *interaction* contrast. Not FDR-significant.
+See @sec-pi.
+
+## Recap
+
+- HR and LR acute responses are **weakly** concordant, and less so than their training
+  responses: ρ = `r rho_prot` across proteins (CI `r round(bo$ci_lo, 2)`–`r round(bo$ci_hi, 2)`), `r pct_conc`% in a concordant quadrant.
+- The fry rotation test is **null in both directions** (p = `r round(fr_up$PValue, 2)` up, p = `r round(fr_dn$PValue, 3)` down). The
+  down set is the nearest miss in the pipeline; it is still not significant.
+- At the pathway grain agreement is the best anywhere here (ρ = `r nes_rho`, `r pct_path_conc`% concordant) and
+  `r n_path_div` of `r n_path` pathways are flagged divergent. The acute response is the most organised, and
+  the most promising lead the data offer.
+- The `r scl[["Divergent"]]` "divergent" proteins come from the π gate, which controls no error rate.
+- This figure does not establish a responder-specific acute program. Stating that is the result.
+
+```{r sessioninfo, eval=TRUE}
+sessionInfo()
+```
+
+## References
+
+::: {#refs}
+:::
