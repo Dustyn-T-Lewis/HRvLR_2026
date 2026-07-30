@@ -3,12 +3,16 @@
 # group-wise missingness. Writes the filtered, un-normalized DAList for Stage 02, a verdict
 # for every protein, and per-sample contamination indices.
 #
-# Removal is decided once, in protein_calls$verdict. Everything else is a view of that table.
-# Blood logic follows CvH: remove iff blood-derived (secreted-to-blood | immunoglobulin |
-# erythrocyte-high | tracks the blood index) AND NOT rescued as muscle. The blood-index term is
-# data-driven and catches the enucleate red-cell membrane skeleton the RNA cutoffs miss (see
-# filter_config.R). Absence from HPA is UNKNOWN, never a reason to remove. Contaminants go before
-# Stage 02 because cycloess estimates its reference from each sample's own intensity distribution.
+# Removal is decided once, in protein_calls$verdict. Everything else is a view
+# of that table. Blood logic follows CvH: remove iff blood-derived AND NOT
+# rescued as muscle, with one exception. The transcript terms (secreted-to-blood
+# | immunoglobulin | erythrocyte-high) are priors and the muscle rescue can
+# overturn them. The blood-index term is measured on this matrix and catches the
+# enucleate red-cell membrane skeleton the RNA cutoffs miss, so it is final: a
+# myonuclei transcript prior does not outrank a protein's own correlation with
+# these samples' haemoglobin (see filter_config.R). Absence from HPA is UNKNOWN,
+# never a reason to remove. Contaminants go before Stage 02 because cycloess
+# estimates its reference from each sample's own intensity distribution.
 
 pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, tibble, stringr, purrr, openxlsx
@@ -106,14 +110,14 @@ protein_calls <- annotation |>
     is_red_cell = !is.na(blood_cor) & blood_cor > cfg$blood_cor_max & in_rbc,
     rescued = !is.na(myo) & myo >= cfg$myo_cut & (is.na(blood_conc) | blood_conc < cfg$blood_max),
     is_blood = is_ery | is_ig | is_plasma | is_red_cell,
-    contaminant = is_curated | (is_blood & !rescued),
+    contaminant = is_curated | is_red_cell | (is_blood & !rescued),
     verdict = case_when(
       is_curated ~ paste0("remove: ", contam_class),
+      is_red_cell ~ "remove: red-cell (blood-tracking + RBC proteome)",
       is_blood & rescued ~ "keep: rescued (muscle-expressed)",
       is_plasma ~ "remove: plasma",
       is_ig ~ "remove: immunoglobulin",
       is_ery ~ "remove: erythrocyte",
-      is_red_cell ~ "remove: red-cell (blood-tracking + RBC proteome)",
       TRUE ~ "keep"
     ),
     reason = coalesce(contam_reason, verdict)
@@ -124,12 +128,16 @@ protein_calls <- annotation |>
   )
 stopifnot(protein_calls$contaminant == str_starts(protein_calls$verdict, "remove"))
 
-# Contaminants are flagged once in protein_calls$contaminant and dropped here. proteoDA's
-# filter_proteins_by_annotation would express this directly, but its class guard misfires on a
-# DAList (class length 2), so the flag drives a plain subset - the same route the group filter takes.
-keep <- !protein_calls$contaminant
+# The call becomes one logical column on the annotation, which then drives the
+# subset. proteoDA's filter_proteins_by_annotation would consume that column
+# directly, but its guard evaluates if() on a length-2 class vector and errors on
+# every real DAList, so removal stays a plain subset - the same route the group
+# filter takes. The column is dropped afterwards: it is FALSE for every survivor,
+# and a constant column on the retained annotation only invites misreading.
+annotation$is_contaminant <- protein_calls$contaminant
+keep <- !annotation$is_contaminant
 int_df <- as.data.frame(intensity[keep, ])
-annot_df <- as.data.frame(annotation[keep, ])
+annot_df <- as.data.frame(annotation[keep, colnames(annotation) != "is_contaminant"])
 rownames(int_df) <- rownames(annot_df) <- annot_df$uniprot_id
 dal <- zero_to_missing(DAList(data = int_df, annotation = annot_df, metadata = metadata))
 
