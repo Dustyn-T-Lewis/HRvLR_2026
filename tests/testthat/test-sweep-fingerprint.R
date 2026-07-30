@@ -102,3 +102,19 @@ test_that("write_sweep_workbook keeps the sheets it was given", {
   expect_true(all(c("metrics", "folds") %in% getSheetNames(p)))
   expect_equal(read.xlsx(p, "folds")$i, 1:3)
 })
+
+test_that("input_fingerprint is stable, order-sensitive and short", {
+  a <- input_fingerprint(1:5, "x")
+  expect_identical(a, input_fingerprint(1:5, "x"))
+  expect_false(identical(a, input_fingerprint("x", 1:5)))
+  expect_false(identical(a, input_fingerprint(1:5, "y")))
+  expect_identical(nchar(a), 12L)
+})
+
+test_that("sweep_fingerprint is input_fingerprint over the bundle and grid", {
+  b <- fake_bundle()
+  expect_identical(
+    sweep_fingerprint(b, c(0L, 200L)),
+    input_fingerprint(b$feature_sets, c(0L, 200L))
+  )
+})

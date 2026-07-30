@@ -88,12 +88,18 @@ KEEPER_ROOTS <- list(
   list(
     root = "F05_classification", kind = "class", metric = "estimate",
     p = "perm_p", null_mean = "null_mean", null_sd = "null_sd",
-    label = "Classification: HR vs LR", axis = "AUC"
+    label = "Classification: HR vs LR", axis = "AUC",
+    note = paste(
+      "AUC 0 means no signal, not inverted signal: a model that shrinks to the",
+      "intercept predicts the training class proportion, and leave-one-out",
+      "shifts that proportion against the held-out subject."
+    )
   ),
   list(
     root = "F06_prediction", kind = "cont", metric = "q2",
     p = "perm_p_q2", null_mean = "null_q2_mean", null_sd = "null_q2_sd",
-    label = "Prediction: continuous adaptation", axis = "Q2"
+    label = "Prediction: continuous adaptation", axis = "Q2",
+    note = "Q2 below 0 is worse than predicting the outcome's own mean."
   )
 )
 
@@ -155,6 +161,8 @@ keeper_panel <- function(spec) {
       "the dashed line is the trivial baseline, not a significance threshold."
     )
   }
+
+  subtitle <- paste(subtitle, spec$note)
 
   ggplot(rows, aes(.data$metric, .data$row_key)) +
     geom_vline(
