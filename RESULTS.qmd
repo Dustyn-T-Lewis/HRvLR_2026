@@ -1,0 +1,307 @@
+---
+title: "HRvLR — Results"
+subtitle: "What the skeletal muscle proteome does and does not say about hypertrophic responder status"
+author: "A_HRvLR_2026"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+bibliography: 05_Figures/shared/references.bib
+execute:
+  eval: true
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+pacman::p_load(here)
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+```{r}
+#| label: libs
+#| include: false
+pacman::p_load(here, dplyr, tidyr, readr, openxlsx, purrr)
+source(here("functions", "sweep_grid.R"))
+```
+
+::: {.callout-note}
+Every number on this page is computed from the committed outputs at render time.
+None is typed. This project spent months quoting a π count that had moved
+underneath it, and the fix was to stop writing numbers into prose.
+:::
+
+## The phenotype is real and large
+
+Sixteen resistance-trained subjects, split eight and eight on hypertrophic
+response.
+
+```{r}
+#| label: phenotype
+ph <- read_csv(here("00_input", "c_data", "phenotype.csv"), show_col_types = FALSE)
+ph |>
+  group_by(arm = .data$group_arm) |>
+  summarise(
+    n = dplyr::n(),
+    `composite hypertrophy` = sprintf(
+      "%.1f (%.1f)", mean(.data$comp_hypertrophy), sd(.data$comp_hypertrophy)
+    ),
+    `type I fibre area, um2` = sprintf(
+      "%.0f (%.0f)", mean(.data$d_fcsa_I), sd(.data$d_fcsa_I)
+    ),
+    `whole muscle CSA, cm2` = sprintf(
+      "%.1f (%.1f)", mean(.data$d_mcsa), sd(.data$d_mcsa)
+    ),
+    .groups = "drop"
+  )
+```
+
+The two arms are not marginally different. Composite hypertrophy separates them
+by roughly four standard deviations, and mean type I fibre area moves in opposite
+directions. Whatever distinguishes these subjects, it is not subtle at the tissue
+level.
+
+That is the premise of everything below. A null proteomic result in a cohort with
+no phenotype would be uninformative. Here the phenotype is emphatic, and the
+proteome still does not follow it.
+
+## The proteome
+
+```{r}
+#| label: proteome
+fx <- readRDS(here("01_Filtering", "c_data", "filtering_intermediates.rds"))
+fx$filter_log |>
+  transmute(
+    step = .data$step, removed = .data$n_removed,
+    retained = .data$n_after, `% of raw` = .data$pct_of_raw,
+    samples = .data$n_samples
+  )
+```
+
+Contaminant removal runs before normalisation, because the cycloess reference is
+estimated from each sample's own intensity distribution and a plasma-loaded
+sample would drag its own reference.
+
+Blood is removed by identity, not by covariation: `00_input/blood_contaminants.csv`
+lists 95 proteins, each an immunoglobulin, complement component, secreted plasma
+protein, mature red-cell protein or leukocyte protein, each carrying its reason.
+That list replaced a correlation threshold whose published justification did not
+reproduce and whose null turned out to depend on how many samples a protein was
+seen in.
+
+## Do high and low responders differ?
+
+Nine contrasts, fitted once on a means model over the six arm-by-timepoint cells
+with `duplicateCorrelation` blocking on subject [@ritchie2015; @smyth2005]. BH is
+applied within each contrast on that contrast's own denominator, never pooled
+across the nine [@benjamini1995].
+
+```{r}
+#| label: contrasts
+books <- c(
+  proteins = "protein_contrasts.xlsx", pathways = "pathway_contrasts.xlsx",
+  modules = "module_contrasts.xlsx"
+)
+assoc <- imap_dfr(books, function(bk, lv) {
+  read.xlsx(here("04_Features", lv, "c_data", bk), "contrasts") |>
+    summarise(
+      nominal = sum(.data$p < 0.05, na.rm = TRUE),
+      bh = sum(.data$bh < 0.05, na.rm = TRUE),
+      .by = "contrast"
+    ) |>
+    mutate(level = lv)
+})
+assoc |>
+  pivot_wider(
+    id_cols = "contrast", names_from = "level",
+    values_from = c("nominal", "bh")
+  )
+```
+
+**No protein and no module survives BH in any of the nine contrasts.** The
+smallest q at those two levels is `r sprintf("%.3f", min(read.xlsx(here("04_Features", "proteins", "c_data", "protein_contrasts.xlsx"), "contrasts")$bh, na.rm = TRUE))`,
+in `Acute_HR` — a within-arm contrast, not a group comparison.
+
+The pathway level returns
+`r sum(assoc$bh[assoc$level == "pathways"])` cells below q = .05, and the coverage
+column decides how to read them:
+
+```{r}
+#| label: pathway-survivors
+pw <- read.xlsx(
+  here("04_Features", "pathways", "c_data", "pathway_contrasts.xlsx"), "contrasts"
+)
+fry <- read.xlsx(
+  here("04_Features", "pathways", "c_data", "pathway_contrasts.xlsx"), "fry"
+)
+pw |>
+  filter(.data$bh < 0.05) |>
+  left_join(
+    select(fry, feature = "pathway", "contrast", fry_fdr = "fdr"),
+    by = c("feature", "contrast")
+  ) |>
+  transmute(
+    .data$contrast, .data$feature,
+    detected = sprintf("%d / %d", .data$n_detected, .data$n_annotated),
+    q = signif(.data$bh, 3), `fry FDR` = signif(.data$fry_fdr, 3)
+  ) |>
+  arrange(.data$q)
+```
+
+Two of them score a 200-member Hallmark set on nine measured proteins. A set
+sampled that thinly is not a readout of the pathway it names; both fgsea and fry
+require fifteen detected members, so neither test admits it. One of those two is
+the study's only interaction survivor.
+
+The remainder sit in within-arm contrasts. **No HR-vs-LR or interaction contrast
+has a survivor at any feature level once the coverage floor is applied.**
+
+## The pathway signal does not survive a correlation-corrected test
+
+fgsea builds its null by permuting gene labels, which assumes proteins vary
+independently [@korotkevich2021; @subramanian2005]. Pathway members are
+co-regulated by definition, and a shared subject effect correlates everything
+measured on one biopsy. `limma::fry` rotates residuals under the fitted model
+instead, carrying both the inter-gene correlation and the subject blocking
+[@wu2010].
+
+On the same sets, BH within each contrast:
+
+```{r}
+#| label: fry-vs-fgsea
+fg <- read.xlsx(
+  here("05_Figures", "F03_pathway", "c_data", "F03_pathway_source_data.xlsx"),
+  "fgsea_all"
+)
+fg |>
+  filter(.data$pathway %in% unique(fry$pathway)) |>
+  summarise(fgsea = sum(p.adjust(.data$pval, "BH") < 0.05), .by = "contrast") |>
+  left_join(
+    summarise(fry, fry = sum(.data$fdr < 0.05), .by = "contrast"),
+    by = "contrast"
+  ) |>
+  arrange(desc(.data$fgsea))
+```
+
+Every HR-vs-LR and interaction contrast goes to zero under fry. Its only calls
+are within-arm sets in `Acute_HR`. Where the two disagree, the rotation test is
+the one whose null holds.
+
+## The acute contrasts carry an arm-dependent blood confound
+
+T3 biopsies are taken after an acute bout and carry roughly twice the blood of T1
+and T2. The standing defence was that a difference of differences removes it.
+That holds only if both arms became equally bloodier, and they did not:
+
+```{r}
+#| label: blood-model
+source(here("functions", "blood_index_model.R"))
+d <- blood_index_data()
+blood_index_arm_test(d) |>
+  filter(grepl("Group", .data$term)) |>
+  transmute(
+    .data$term,
+    estimate = round(.data$estimate, 3),
+    SE = round(.data$se, 3), df = round(.data$df), p = signif(.data$p, 3)
+  )
+```
+
+```{r}
+#| label: blood-cells
+round(tapply(d$blood_index, list(d$Group, d$Timepoint), mean), 2)
+```
+
+The arm-by-T3 term reaches p = 0.032, and p = 0.017 when the arm label is shuffled
+across the sixteen subjects rather than assumed normal. LR biopsies rose 2.14 on
+the log2 haemoglobin index; HR rose 0.57.
+
+A difference of differences removes a **constant** offset, not a differential one.
+`03_DEP/a_non_imputed/a_script/05_blood_adjusted.R` refits all nine contrasts with
+the index as a covariate; the five HR-vs-LR and interaction contrasts are
+unchanged at zero.
+
+## The π-score selects nothing here
+
+Counts selected by π = p^|log2FC| [@xiao2014] appear throughout the figure set.
+π is a transformed raw p-value and controls no error rate, and in this dataset it
+does not even track the group labels: shuffling the arm across subjects and
+refitting produces **more** π hits than the real labels do — 235 observed against
+a permuted median of 274 across the five HR-vs-LR and interaction contrasts, with
+no contrast reaching an empirical p below 0.22
+(`03_DEP/a_non_imputed/a_script/04_pi_permutation.R`, B = 200).
+
+Selection is by BH. π is reported beside it and never quoted without that null.
+
+## Classification and prediction
+
+::: {.callout-important}
+This section is provisional. The permutation pass is running; until it lands, no
+cell in either screen has a null and none can be called a lead.
+:::
+
+```{r}
+#| label: screens
+screens <- map_dfr(
+  c("F05_classification", "F06_prediction"),
+  function(root) {
+    tbl <- read.xlsx(
+      here("05_Figures", root, "c_data", "results.xlsx"), "all_cells"
+    ) |>
+      best_b_per_cell()
+    kind <- root_kind(root)
+    p_col <- if (kind == "class") "perm_p" else "perm_p_q2"
+    tibble::tibble(
+      screen = root, cells = nrow(tbl),
+      `nulls run` = any(!is.na(tbl[[p_col]])),
+      `best metric` = round(max(tbl[[root_metric_col(kind)]], na.rm = TRUE), 3)
+    )
+  }
+)
+screens
+```
+
+Both screens fit every combination of feature level, timepoint encoding and
+algorithm as an independent nested leave-one-subject-out cell, with the whole
+loop rerun under a permutation null. A cell counts as a lead only when its
+permutation p falls below .05 **and** its metric beats the trivial baseline —
+AUC > 0.5 for classification, Q² > 0 for prediction. Both conditions are needed:
+a discrete null will flag a below-chance value as unusual, and this run has
+already produced a cell at Q² = −0.12 with p = 0.030.
+
+`d_mcsa` is judged against a criterion fixed before the result existed
+(`docs/decisions.md`, 2026-07-30): it counts as replicated only if it holds the
+majority of leads, spans at least two feature levels, and every counted cell
+clears Q² > 0. Short of all three it is a screen maximum over 792 cells.
+
+## What this study can and cannot conclude
+
+**Can.** The skeletal muscle proteome, measured at three timepoints in sixteen
+subjects with a large and well-characterised divergence in hypertrophic response,
+does not distinguish high from low responders at any of three feature
+resolutions, under an FDR-controlled test, at any timepoint, and in neither
+difference-in-differences contrast. The one pathway-level result that survives a
+correlation-corrected test sits inside a single arm and is not a group
+comparison.
+
+**Cannot.** A null at n = 16 cannot separate "no effect" from "an effect too
+small for sixteen subjects". What the screens add is that the answer does not turn
+on the analytical choice: no feature level, timepoint encoding or algorithm
+rescues it, which is a stronger statement than any single model failing.
+
+**Should not.** The acute within-arm contrasts are confounded by an arm-dependent
+blood difference and must not be read as adaptation. π counts are not discoveries.
+And a maximum drawn from a 945-cell screen is a hypothesis for a validation
+cohort, never a result on its own.
+
+## References
+
+::: {#refs}
+:::

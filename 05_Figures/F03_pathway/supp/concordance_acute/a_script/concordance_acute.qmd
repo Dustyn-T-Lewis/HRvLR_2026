@@ -3,7 +3,7 @@ title: "HRvLR — Acute Response Concordance"
 subtitle: "Shared vs responder-specific acute-bout response, HR vs LR"
 author: "A_HRvLR_2026"
 date: today
-bibliography: ../../../shared/references.bib
+bibliography: ../../../../shared/references.bib
 format:
   html:
     toc: true
