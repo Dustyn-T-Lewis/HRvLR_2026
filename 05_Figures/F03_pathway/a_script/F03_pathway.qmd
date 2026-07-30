@@ -196,6 +196,13 @@ criterion.
 For scale: the nine contrasts hold **`r pi_calls` π-calls against `r bh_hits` proteins at
 BH < 0.05** — a `r inflation`× gap.
 
+**And in this dataset it selects nothing.** Shuffling the arm label across the sixteen
+subjects and refitting produces *more* π hits than the real labels do: 235 observed against
+a permuted median of 274 across the five HR-vs-LR and interaction contrasts, no contrast
+reaching an empirical p below 0.22 (`03_DEP/a_non_imputed/a_script/04_pi_permutation.R`,
+B = 200). Never quote a π count without that null beside it.
+
+
 ### The `padj` column name is a trap
 
 `enrichVolcano` expects point significance in a column named `padj`. The panel hands the

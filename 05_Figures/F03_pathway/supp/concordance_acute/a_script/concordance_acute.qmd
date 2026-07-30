@@ -321,10 +321,17 @@ fry input sets — is selected by `sig_pi`, the π-score flag [@xiao2014], not b
 
 The π-score is `p^|log2FC|`, thresholded at 0.05. Because a large fold change drives the
 score down on its own, **fold change alone can buy admission**: across the nine contrasts,
-71 of 489 π-calls (14.5%) have a raw p ≥ 0.05, the largest being p = 0.269. π controls no
+68 of 464 π-calls (14.7%) have a raw p ≥ 0.05, the largest being p = 0.269. π controls no
 error rate — not FDR, not FWER — and the π-selected set is *not* a subset of the p < 0.05
 set. Xiao's paper prescribes a dataset-specific empirical-null critical value rather than a
 flat 0.05.
+
+**And in this dataset π selects nothing.** Shuffling the arm label across the sixteen
+subjects and refitting produces *more* π hits than the real labels do: 235 observed against
+a permuted median of 274 across the five HR-vs-LR and interaction contrasts, with no
+contrast reaching an empirical p below 0.22
+(`03_DEP/a_non_imputed/a_script/04_pi_permutation.R`, B = 200). A π count without that null
+beside it is not interpretable.
 
 Under BH-FDR the acute interaction returns essentially nothing. Read the `r scl[["Divergent"]]` divergent
 proteins as an **effect-size-weighted, hypothesis-generating ranking**, never as an
