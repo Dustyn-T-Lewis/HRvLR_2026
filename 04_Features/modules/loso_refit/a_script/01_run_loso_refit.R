@@ -181,11 +181,11 @@ slope_long <- refit_summary |>
   mutate(
     stage_x = factor(
       c(
-        metric_insample = "cohort\n11 modules",
+        metric_insample = "cohort\n12 modules",
         metric_cohort_reduced = "cohort\n2 stable",
         metric_loso_refit = "refit\n2 stable"
       )[.data$stage_x],
-      levels = c("cohort\n11 modules", "cohort\n2 stable", "refit\n2 stable")
+      levels = c("cohort\n12 modules", "cohort\n2 stable", "refit\n2 stable")
     )
   )
 

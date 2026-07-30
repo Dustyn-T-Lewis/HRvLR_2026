@@ -83,11 +83,15 @@ in training, ρ = 0.15 in the acute bout. The fry
 rotation tests — the only properly blocked, error-rate-controlled set tests in the
 pipeline — are null in every direction (best p = 0.087).
 
-**Pathway enrichment is where the signal lives.** 691 of 14,088 pathway × contrast
-tests are BH-significant (F03), concentrated acutely, and HR's acute response enriches
-217 pathways against LR's 33. This is genuinely FDR-controlled and is the strongest
-HR/LR asymmetry in the study. Note `Baseline_HRvLR` also returns 65 pathways, so the
-groups are not identical at baseline.
+**Pathway enrichment does not survive a correlation-corrected test.** fgsea reports
+1,004 of 14,330 pathway × contrast tests as BH-significant (F03), concentrated acutely,
+with HR's acute response enriching 315 pathways against LR's 41 and `Baseline_HRvLR`
+returning 84. fgsea permutes gene labels, so its null assumes proteins vary
+independently. `limma::fry` over the same Hallmark and GO Slim sets rotates residuals
+under the fitted model, carrying inter-gene correlation and the subject blocking, and it
+returns **zero** in every HR-vs-LR and interaction contrast. Its only hits are four
+within-arm sets in `Acute_HR`: G2M checkpoint and MYC targets up, fatty acid metabolism
+and adipogenesis down.
 
 **F05-F06 screen 945 cells and report a permutation p, not a q.** F05
 classification (153 cells) and F06 prediction (792 cells) each report
@@ -104,30 +108,37 @@ leads of 792 (4.0%, below the 5% chance rate), yet 26 of the 32 concentrate on
 `d_mcsa`. The module arm does not predict: all 8 module leads fall below
 zero, median drop 0.461. The decomposition matters: 0.428 of that comes from
 restricting the features to the two modules recoverable in every fold, and
-0.000 from rebuilding the network in-fold. The leads depended on the nine
+0.000 from rebuilding the network in-fold. The leads depended on the ten
 modules that do not reproduce under subsampling. HR and LR share module
 architecture (preservation strong both directions, using cohort-defined labels,
 so not itself free of circularity), and training- and acute-only contrast networks were tested and are
 not viable at this cohort size (`04_Features/modules`).
 
-**F04 puts the nine contrasts at three feature levels, and only blood survives.**
-Every HR-LR contrast and both interactions return zero at BH q < .05, at protein,
-pathway and module level. The single surviving contrast is `Acute_LR` with 8
-proteins, and 6 of the 8 sit in the top 5% of correlation with per-sample
-haemoglobin (SPTB, ANK1, STOM, CAT, BLVRB, SYNE2; mean 0.44 against a cohort
-median of 0.03). The pathway level agrees, its strongest `Acute_LR` hit being heme
-metabolism. T3 biopsies carry twice the blood of T1 and T2, so `Acute_LR` reports
-blood content rather than adaptation, and the confound cancels in the interaction.
+**F04 puts the nine contrasts at three feature levels, and nothing survives.**
+All nine contrasts return zero at BH q < .05, at protein, pathway and module level.
+The smallest q anywhere is 0.0715, in `Acute_HR`. Earlier runs had eight survivors in
+`Acute_LR`; six were red-cell proteins (SPTB, ANK1, STOM, CAT, BLVRB, SYNE2) and a
+seventh, LCP1, is a leukocyte protein. All are now removed as blood by
+`00_input/blood_contaminants.csv`.
+
+**The T3 blood confound does not cancel in the interaction.** T3 biopsies carry roughly
+twice the blood of T1 and T2, and the rise is arm-dependent: on the log2 haemoglobin
+index the arm × T3 term is b = −1.21, p = 0.032, and p = 0.017 by subject-label
+permutation, LR rising 2.14 against HR's 0.57. A difference of differences removes a
+constant offset, not a differential one, so the interaction contrasts carry it too.
+`03_DEP/a_non_imputed/a_script/05_blood_adjusted.R` refits all nine with the index as a
+covariate.
 
 **So: the proteome does not separate high from low responders at this sample size.**
-It is a null study with a strong phenotype and a pathway-level lead. Saying that
-plainly is more defensible than any of the individual panels.
+It is a null study with a strong phenotype. Saying that plainly is more defensible than
+any of the individual panels.
 
 ## One caveat that changes how you read almost every figure {#sec-pi-warning}
 
-Most "significant" protein counts in F03_pathway/supp and F02 — the 55 divergent in training,
-the 86 acute, the DEP-count bars — come from the **π gate**, `p^|logFC| < 0.05`
-[@xiao2014], **not from BH-FDR**.
+Most "significant" protein counts in F03_pathway/supp and F02 — the divergent-protein counts and
+the DEP-count bars — come from the **π gate**, `p^|logFC| < 0.05` [@xiao2014], **not
+from BH-FDR**. A permutation of the arm label produces more π hits than the real labels
+do (235 observed against a permuted median of 274), so π is reported but never selects.
 
 ```{r}
 #| label: pi-stats
@@ -186,7 +197,7 @@ the top and follow the chain, or jump to the one you need.
 | `05_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `05_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Features/modules/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
-| `05_Figures/F04_association/` | The nine contrasts at protein, pathway and module level: HR-LR by timepoint, both interactions, and the four within-arm changes. Zero BH survivors in every HR-LR and interaction contrast at every level; the only survivors are `Acute_LR`'s 8 proteins, 6 of which track per-sample haemoglobin |
+| `05_Figures/F04_association/` | The nine contrasts at protein, pathway and module level: HR-LR by timepoint, both interactions, and the four within-arm changes. Zero BH survivors in all nine contrasts at every level; smallest q anywhere is 0.0715 |
 | `05_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
 | `05_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
 
@@ -272,7 +283,7 @@ dal <- filter_proteins_by_group(dal, min_reps = 5, min_groups = 1, grouping_colu
 # 4-method consensus -> filter_samples(dal, !(Col_ID %in% outlier_ids))
 ```
 
-Stage 01 turns the 2,400 × 48 spreadsheet into a clean **1,896 × 45** `DAList`
+Stage 01 turns the 2,400 × 48 spreadsheet into a clean **1,900 × 45** `DAList`
 (three samples — `S29_T1`, `S28_T2`, `S28_T3` — trip ≥3 flags), saved to
 `01_Filtering/c_data/DAList_filtered.rds`.
 

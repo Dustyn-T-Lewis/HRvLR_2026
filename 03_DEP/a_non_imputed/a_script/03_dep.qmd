@@ -323,8 +323,8 @@ means rather than a difference from an intercept.
 toward a pooled prior and yields the moderated *t* statistics and p-values.
 
 **BH-FDR (`adj.P.Val`)** — Benjamini-Hochberg adjustment of the raw p-values; the
-reported multiple-testing control. Every HR-vs-LR and interaction contrast returns
-zero BH hits.
+reported multiple-testing control. All nine contrasts return zero BH hits, the
+within-arm ones included.
 
 **Pi-score (`pi_score`, `sig_pi`)** — `p^|logFC|`, an effect-size-weighted filter
 gated at `PI_THRESH` (0.05, from `contrasts.R`). Computed on the raw p-value, so it

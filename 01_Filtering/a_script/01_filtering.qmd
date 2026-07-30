@@ -93,13 +93,26 @@ used: its UPS1 section is a spike-in standard we never spiked, and it contains
 myoglobin and creatine kinase M — ranks 1 and 2 of this proteome.
 
 **Blood proteins** are a different problem. A muscle biopsy genuinely carries blood,
-and plasma proteins are abundant enough to bury the muscle signal. A protein is
-removed when HPA marks it blood-derived (secreted-to-blood, immunoglobulin, or a
-strong erythrocyte marker) **and** it fails the muscle rescue: high skeletal-myonuclei
-expression keeps it, unless its measured plasma concentration marks it as a genuine
-plasma protein. The rescue matters because HPA tags *any* plasma-detectable protein as
-"Secreted to blood" — which is precisely why creatine kinase and myoglobin are clinical
-muscle-damage markers. Without it, GPI (a core glycolytic enzyme) is deleted.
+and plasma proteins are abundant enough to bury the muscle signal. Two mechanisms remove
+them.
+
+The first is a curated list, `00_input/blood_contaminants.csv`, matched by accession and
+final: 95 proteins, each an immunoglobulin (20), a complement component (10), a secreted
+plasma protein (41), a mature red-cell protein (19) or a leukocyte protein (5), each
+carrying its reason in the file. Membership is protein identity. It replaced a threshold
+on each protein's correlation with the per-sample haemoglobin index, whose published
+justification did not reproduce and whose null turned out to depend on how many samples a
+protein was seen in — 0.71 at 15–25 observations against 0.47 at 41–48, so no single cut
+served both ends. `blood_cor` is still computed and reported; it no longer removes
+anything.
+
+The second is the HPA annotation rule, which is a transcript prior and can be overturned:
+a protein is removed when HPA marks it blood-derived (secreted-to-blood, immunoglobulin,
+or a strong erythrocyte marker) **and** it fails the muscle rescue. High
+skeletal-myonuclei expression keeps it, unless its measured plasma concentration marks it
+as a genuine plasma protein. The rescue matters because HPA tags *any* plasma-detectable
+protein as "Secreted to blood" — which is precisely why creatine kinase and myoglobin are
+clinical muscle-damage markers. Without it, GPI (a core glycolytic enzyme) is deleted.
 
 Absence from HPA means **unknown**, never *remove*. The earlier version of this stage
 dropped 127 measured proteins for failing to match a partial, muscle-biased export —
@@ -335,11 +348,11 @@ The **measured** concentration does the work. The transcript floor only decides 
 second hearing, and it over-deletes: C1QBP (mitochondrial), HMGB2 (nuclear), PPIB, LGALS1 and
 CTSB (an exercise myokine) all clear `blood_max` and fail on myonuclei alone.
 
-**The null does not rest on this rule.** Refitting the nine contrasts with all 136
+**The null does not rest on this rule.** Refitting the nine contrasts with all 120
 blood-tagged proteins readmitted returns **zero** BH hits in every HR-vs-LR and interaction
 contrast (`03_DEP/a_non_imputed/b_reports/blood_filter_sensitivity.csv`). The same run shows
-why the rule is kept: readmitting them takes `Acute_LR` from 19 hits to 97, **57 of them the
-readmitted blood proteins** — the 2×-bloodier T3 biopsy arriving exactly where it was
+why the rule is kept: readmitting them takes `Acute_LR` from 0 hits to 53 at BH < .10, **40 of
+them the readmitted blood proteins** — the 2×-bloodier T3 biopsy arriving exactly where it was
 predicted to.
 
 ## Result {#sec-recap}
@@ -400,7 +413,7 @@ pragmatic threshold from dropping a good sample by itself.
 
 - Stage 01 turns the raw spreadsheet into a filtered `DAList`: remove blood
   contamination and curated handling contaminants, drop consensus-outlier samples,
-  then drop sparsely-detected proteins. 2,400 × 48 becomes 1,902 × 45.
+  then drop sparsely-detected proteins. 2,400 × 48 becomes 1,900 × 45.
 - **45 samples is 48 minus three QC failures**, not a collection roster. `S29_T1`,
   `S28_T2` and `S28_T3` were taken and measured; they failed the 3-of-4 consensus.
 - DIA zeros become `NA` because the gaps are mostly MNAR — "below detection", not
