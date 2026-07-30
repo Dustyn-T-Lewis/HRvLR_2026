@@ -65,10 +65,12 @@ association_panel <- function() {
     ) +
     labs(
       title = "Association: the nine contrasts at three feature levels",
-      subtitle = paste(
-        "Smallest BH q each contrast reached. Protein and module levels clear",
-        "nothing; the pathway points left of .05 are within-arm contrasts or",
-        "sets scored on under 15 detected members."
+      subtitle = str_wrap(
+        paste(
+          "Smallest BH q each contrast reached. Protein and module levels",
+          "clear nothing; the pathway points left of .05 are within-arm",
+          "contrasts or sets scored on under 15 detected members."
+        ), 108
       ),
       x = "smallest BH q in the contrast", y = NULL
     ) +
@@ -119,6 +121,10 @@ keeper_rows <- function(spec) {
       null_hi = .data$null_mean + 2 * .data$null_sd,
       baseline = LEAD_BASELINE[[spec$kind]],
       lead = is_lead(.data$metric, .data$perm_p, spec$kind),
+      # The same model and config wins at more than one feature level, so the
+      # key has to carry the level or the factor levels collide. The label the
+      # reader sees stays clean; the facet already names the level.
+      row_key = sprintf("%s|%s|%s", .data$level, .data$model, .data$config),
       row_label = sprintf("%s  (%s)", .data$model, .data$config)
     ) |>
     arrange(.data$level, dplyr::desc(.data$metric))
@@ -126,39 +132,57 @@ keeper_rows <- function(spec) {
 
 keeper_panel <- function(spec) {
   rows <- keeper_rows(spec)
-  rows$row_label <- factor(rows$row_label, levels = rev(rows$row_label))
-  n_lead <- sum(rows$lead, na.rm = TRUE)
-  subtitle <- paste(
-    "Best cell per model and feature level against its own permutation null",
-    sprintf(
-      "(grey, mean +/- 2 SD) and the cells it was picked from. %d of %d clear",
-      n_lead, nrow(rows)
-    ),
-    "both the null and the baseline."
-  )
+  rows$row_key <- factor(rows$row_key, levels = rev(rows$row_key))
+  labels <- stats::setNames(rows$row_label, as.character(rows$row_key))
 
-  ggplot(rows, aes(.data$metric, .data$row_label)) +
+  # Without nulls there is nothing for a cell to clear, and printing "0 of 22
+  # clear" would read as a result rather than as an absent test. The panel says
+  # which it is.
+  has_null <- any(!is.na(rows$null_mean))
+  subtitle <- if (has_null) {
+    paste(
+      "Best cell per model and feature level against its own permutation null",
+      sprintf(
+        "(grey, mean +/- 2 SD) and the cells it came from. %d of %d clear",
+        sum(rows$lead, na.rm = TRUE), nrow(rows)
+      ),
+      "both the null and the baseline."
+    )
+  } else {
+    paste(
+      "Best cell per model and feature level, with the cells it was picked",
+      "from. PERMUTATION NULLS NOT YET RUN: no cell can be called a lead, and",
+      "the dashed line is the trivial baseline, not a significance threshold."
+    )
+  }
+
+  ggplot(rows, aes(.data$metric, .data$row_key)) +
     geom_vline(
       xintercept = rows$baseline[1], linetype = "dashed",
       colour = "grey45", linewidth = 0.4
     ) +
     geom_segment(
-      aes(x = .data$null_lo, xend = .data$null_hi, yend = .data$row_label),
+      aes(x = .data$null_lo, xend = .data$null_hi, yend = .data$row_key),
       colour = "grey72", linewidth = 2.6, lineend = "round"
     ) +
     geom_point(aes(fill = .data$lead), shape = 21, size = 2.6, stroke = 0.4) +
     geom_text(
-      aes(x = .data$null_hi, label = sprintf("of %d", .data$n_screened)),
-      hjust = -0.25, size = 2.1, colour = "grey40"
+      aes(x = Inf, label = sprintf("of %d", .data$n_screened)),
+      hjust = 1.1, size = 2.1, colour = "grey40"
     ) +
     facet_grid(rows = vars(.data$level), scales = "free_y", space = "free_y") +
+    scale_y_discrete(labels = labels) +
     scale_fill_manual(
       values = c(`TRUE` = "#B2182B", `FALSE` = "grey92"),
       labels = c(`TRUE` = "clears null and baseline", `FALSE` = "does not"),
-      name = NULL, na.value = "grey92"
+      name = NULL, na.value = "grey92",
+      guide = if (has_null) "legend" else "none"
     ) +
     scale_x_continuous(expand = expansion(mult = c(0.04, 0.16))) +
-    labs(title = spec$label, subtitle = subtitle, x = spec$axis, y = NULL) +
+    labs(
+      title = spec$label, subtitle = str_wrap(subtitle, 108),
+      x = spec$axis, y = NULL
+    ) +
     FIG_THEME +
     theme(
       legend.position = "bottom",
