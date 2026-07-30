@@ -3,7 +3,7 @@ title: "High vs Low Responders (HRvLR) Skeletal-Muscle Proteomics"
 subtitle: "A ground-up walkthrough of the proteoDA-native pipeline: filtering → normalization → differential expression → figures"
 author: "A_HRvLR_2026"
 date: today
-bibliography: 04_Figures/shared/references.bib
+bibliography: 05_Figures/shared/references.bib
 format:
   html:
     toc: true
@@ -172,13 +172,13 @@ the top and follow the chain, or jump to the one you need.
 | `01_Filtering/a_script/01_filtering.qmd` | MAR vs MNAR, the contaminant gate, the outlier consensus, and where the cutoffs came from |
 | `02_Normalization/a_script/02_normalization.qmd` | cycloess, the four imputation arms, and why imputing before testing manufactures significance |
 | `03_DEP/a_non_imputed/a_script/03_dep.qmd` | The cell-means design, `duplicateCorrelation`, eBayes, BH, and the π-score |
-| `04_Figures/F03_pathway/supp/` | Pilot read-outs: HR-vs-LR concordance (training and acute) and the magnitude/concordance summary, before anything is finalised |
-| `04_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
-| `04_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
-| `04_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
-| `04_Figures/shared/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
-| `04_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
-| `04_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
+| `05_Figures/F03_pathway/supp/` | Pilot read-outs: HR-vs-LR concordance (training and acute) and the magnitude/concordance summary, before anything is finalised |
+| `05_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
+| `05_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
+| `05_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
+| `05_Figures/shared/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
+| `05_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
+| `05_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
 
 Known limitations are stated in each stage and figure page where the reader meets
 them, rather than in a separate document: the π gate in @sec-pi-warning; the human-only
@@ -200,7 +200,7 @@ own outputs first.
 03_DEP/
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
-04_Figures/       F03_pathway/supp pilot read-outs; F01-F03 publication composites;
+05_Figures/       F03_pathway/supp pilot read-outs; F01-F03 publication composites;
                   shared/WGCNA module source; F05-F06 per-cell screens
 ```
 

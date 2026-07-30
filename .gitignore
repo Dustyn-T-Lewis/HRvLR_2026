@@ -57,15 +57,15 @@ t0/outputs/session_info.txt
 # original -- that is what makes a killed run resumable via leaf_done().
 # The two shapes differ only by depth, so each model name needs its own rule
 # at the three-deep position. The split leaves (four deep) stay tracked.
-04_Figures/F0*_*/*/*/limma/
-04_Figures/F0*_*/*/*/lm/
-04_Figures/F0*_*/*/*/spearman/
-04_Figures/F0*_*/*/*/wilcoxon/
-04_Figures/F0*_*/*/*/enet/
-04_Figures/F0*_*/*/*/lasso/
-04_Figures/F0*_*/*/*/ridge/
-04_Figures/F0*_*/*/*/spls/
-04_Figures/F0*_*/*/*/pam/
-04_Figures/F0*_*/*/*/rf/
-04_Figures/F0*_*/*/*/svm/
-04_Figures/F0*_*/*/*/plain/
+05_Figures/F0*_*/*/*/limma/
+05_Figures/F0*_*/*/*/lm/
+05_Figures/F0*_*/*/*/spearman/
+05_Figures/F0*_*/*/*/wilcoxon/
+05_Figures/F0*_*/*/*/enet/
+05_Figures/F0*_*/*/*/lasso/
+05_Figures/F0*_*/*/*/ridge/
+05_Figures/F0*_*/*/*/spls/
+05_Figures/F0*_*/*/*/pam/
+05_Figures/F0*_*/*/*/rf/
+05_Figures/F0*_*/*/*/svm/
+05_Figures/F0*_*/*/*/plain/

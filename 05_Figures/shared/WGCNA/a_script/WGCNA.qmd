@@ -1,0 +1,249 @@
+---
+title: "HRvLR F04 — Co-expression Modules"
+subtitle: "Coherent biology, no responder signal — and why the earlier positive was an artifact"
+author: "A_HRvLR_2026"
+date: today
+bibliography: ../../shared/references.bib
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+execute:
+  eval: true
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: load
+#| echo: false
+pacman::p_load(here, openxlsx, dplyr, knitr)
+wb <- here("05_Figures", "shared", "WGCNA", "c_data", "WGCNA_source_data.xlsx")
+atlas <- read.xlsx(wb, "module_atlas")
+fry <- read.xlsx(wb, "module_fry")
+pred <- read.xlsx(wb, "module_prediction")
+lmm <- read.xlsx(wb, "module_phenotype_lmm")
+ora <- read.xlsx(wb, "module_ora")
+membership <- read.xlsx(wb, "module_membership")
+
+responder <- c(
+  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
+  "Training_Interaction", "Acute_Interaction"
+)
+fry_r <- fry[fry$contrast %in% responder, ]
+n_grey <- sum(membership$module == "grey")
+```
+
+## What F04 asks
+
+Proteins do not act alone. If high and low responders differ, the difference might not sit
+in any single protein but in a **co-expressed programme** — a set of proteins that move
+together. F04 builds those programmes without looking at responder status, then asks two
+questions of them:
+
+1. Does any module **move** with responder status?
+2. Does any module's **baseline** state predict how much a subject adapts?
+
+The answer to both is no. This page explains how the modules were built, why an earlier
+version of this analysis appeared to say yes, and why that answer was wrong.
+
+## The trap, and how F04 avoids it
+
+WGCNA correlates proteins **across samples, treating them as independent**. Our 45 samples
+are 16 subjects × 3 timepoints. They are not independent, and subject identity carries a
+large share of the variance — the WGCNA FAQ names exactly this as the *"strong driver that
+makes a subset of the samples globally different from the rest"* that invalidates the
+scale-free assumption and inflates protein–protein correlation.
+
+Build the network on raw abundance and the modules substantially encode **which subject a
+sample came from**, not co-regulation. That is not hypothetical:
+
+| perturbation | adjusted Rand index vs the raw-built network |
+|---|---|
+| change `pamRespectsDendro` | 0.876 |
+| swap the entire WGCNA engine | 0.876 |
+| drop imputation (complete cases only) | 0.506 |
+| **remove subject identity** (centre within subject) | **0.288** |
+
+**Every WGCNA parameter is noise. The design is what moves the modules.** Per-module subject
+ICC reached 0.51 in the raw-built network.
+
+**That artifact is the whole explanation for the earlier result.** A previous version of this
+analysis reported a baseline-prediction q² of **0.713**. If a module is largely a subject
+fingerprint, predicting across subjects in-sample looks excellent and leave-one-subject-out
+destroys it — because LOSO removes precisely the thing the module was tracking. It did: the
+same cell fell to **−0.165** under an honest refit.
+
+**F04's fix: define the modules on within-subject-centred abundance, score them on raw
+abundance.** Centring removes subject identity as a driver, so the modules capture how
+proteins move *together within a subject* — the training and acute response, which is the
+question. Eigengenes are then computed on **raw** abundance, so the between-subject
+HR-versus-LR contrast is still there to be tested. It simply no longer *defines* the modules.
+
+It works. In the centred network the subject ICC has a median of
+`r sprintf("%.3f", median(atlas$icc))` and a maximum of `r sprintf("%.3f", max(atlas$icc))`,
+down from 0.51.
+
+## What the modules are
+
+```{r}
+#| label: atlas
+#| echo: false
+atlas |>
+  arrange(desc(n_proteins)) |>
+  transmute(Module = module, Proteins = n_proteins, `Subject ICC` = round(icc, 3)) |>
+  kable()
+```
+
+`r nrow(atlas)` modules; `r n_grey` proteins left unassigned (grey).
+`r n_distinct(ora$module[!is.na(ora$term)])` of the `r nrow(atlas)` carry a significant
+GO:BP term. **The modules are real, coherent biology.** That is the one positive finding on
+this page, and it is descriptive.
+
+## Do the modules move? (`limma::fry`)
+
+```{r}
+#| label: fry-table
+#| echo: false
+fry |>
+  group_by(contrast) |>
+  summarise(
+    `Min FDR` = round(min(fdr), 3),
+    `Significant modules` = sum(fdr < 0.05), .groups = "drop"
+  ) |>
+  arrange(`Min FDR`) |>
+  kable()
+```
+
+Across `r nrow(fry)` module × contrast tests, **`r sum(fry$fdr < 0.05)` is significant**: the
+`r fry$module[which.min(fry$fdr)]` module in `r fry$contrast[which.min(fry$fdr)]`
+(FDR = `r sprintf("%.4f", min(fry$fdr))`). That is a
+**within-group** response — the acute bout moves the proteome inside the LR arm. It is the
+positive control, and it agrees with F03.
+
+**Across the five contrasts that actually test responder status, nothing.
+`r sum(fry_r$fdr < 0.05)` of `r nrow(fry_r)` cells are significant, and the minimum FDR is
+`r sprintf("%.2f", min(fry_r$fdr))`.**
+
+### Why `fry` and not `fgsea`
+
+The panel this replaces ran **fgsea with the WGCNA modules as the gene sets**, ranked by
+moderated *t* **from the same matrix that defined those modules**. The sets were built to be
+co-expressed, so of course their members rank together: the test was circular. It returned
+**padj = 7 × 10⁻³³**, orders of magnitude below anything the non-circular tests in this study
+produce. That number was the tell.
+
+`limma::fry` [@wu2010] is the correct instrument. It is a **rotation-based, self-contained**
+set test: it asks whether the proteins in a predefined set move together **in a specified
+contrast**, against the same linear model that produced the DEP results, carrying the subject
+block and the `duplicateCorrelation` through. It was already used correctly elsewhere in this
+repo.
+
+## Does a baseline module predict adaptation?
+
+```{r}
+#| label: pred
+#| echo: false
+pred |>
+  arrange(desc(q2)) |>
+  head(5) |>
+  transmute(
+    Module = sub("^ME", "", module), Trait = trait,
+    r = round(r, 2), `q2` = round(q2, 3), `BH q` = round(fdr, 2)
+  ) |>
+  kable(caption = sprintf("The five best cells of %d, ranked by q².", nrow(pred)))
+```
+
+No. The best cell in the entire `r nrow(pred)`-cell grid has
+**q² = `r sprintf("%.3f", max(pred$q2, na.rm = TRUE))`** — and that is the **argmax of
+`r nrow(pred)` cells**, so it is nearly free. Only `r sum(pred$q2 > 0, na.rm = TRUE)` of
+`r nrow(pred)` cells have a positive q² at all, and nothing survives FDR (minimum BH *q* =
+`r sprintf("%.2f", min(pred$fdr, na.rm = TRUE))`).
+
+Read the two columns together. **`r sum(pred$p < 0.05, na.rm = TRUE)` cells have a nominally
+significant in-sample correlation**, and almost none of them predicts a held-out subject.
+That gap — in-sample correlation without out-of-sample prediction — is what overfitting looks
+like, and it is why q² is on the face of the panel rather than *r*.
+
+The mixed-model supplement keeps the repeated-measures structure this panel collapses to T1,
+asking whether a module's whole time-course bends with the size of the response
+(`ME ~ trait * timepoint + (1 | subject)`). Minimum BH *q* =
+`r sprintf("%.2f", min(lmm$fdr_trait_time, na.rm = TRUE))`. Nothing survives there either.
+
+## Methods note
+
+Every DOI was resolved against Crossref.
+
+| Panel | Claim | Statistic | Fit to this design |
+|---|---|---|---|
+| **A** atlas | The modules exist, and subject identity no longer drives them | Module sizes; ICC of each eigengene by subject | The ICC column is the diagnostic that exposed the earlier artifact, so it sits on the face of the figure, not in a supplement. Raw R² would mislead here: 15 subject df on 45 samples gives an expected R² of 0.34 under pure noise, so the **adjusted** R² and the ICC are the honest numbers. |
+| **B** pathways | The modules are coherent biology | GO:BP over-representation, universe = **the measured proteome** | The universe matters. A protein that was never quantified could not have been assigned to a module, so scoring against the whole genome would inflate every term. |
+| **C** fry | No module moves with responder status | `limma::fry` [@wu2010], modules as the index, on the 03_DEP design with the subject block and `duplicateCorrelation` | Correct, and not circular: the contrast comes from the experimental design, not from the matrix that built the sets. A **self-contained** rotation test, not a competitive one. |
+| **D** phenotype | No baseline module predicts adaptation | In-sample *r* and **leave-one-subject-out q²**, BH across the grid | LOSO is the right resampling unit: the dependency is *within subject*, so holding out a sample rather than a subject would leak. q² ≤ 0 means the model predicts a held-out subject worse than the trait's own mean does. The eigengene is unsupervised but built on all subjects; a fully nested per-fold refit of the whole network reproduces the same null (best q² 0.116 vs 0.108), so the transductive feature is not inflating the estimate. |
+| **D** supp | Nor does the module's trajectory bend with it | `ME ~ trait * timepoint + (1 \| subject)`, BH within trait | Keeps the repeated-measures structure. **`r sum(lmm$singular, na.rm = TRUE)` of `r nrow(lmm)` fits are singular** and are flagged, not dropped: a time-invariant trait can drive the random-intercept variance to zero, inflating the trait main effect — so the interaction is the term to trust. |
+
+### The WGCNA parameters, and their sources
+
+Signed network; `bicor` with `maxPOutliers = 0.05`; `deepSplit = 2`; `minModuleSize = 30`;
+`mergeCutHeight = 0.15`; `pamStage = TRUE`; `pamRespectsDendro = TRUE`. WGCNA:
+Langfelder & Horvath [@langfelder2008].
+
+- **Signed and `bicor`** are the *only two* deviations from default the WGCNA FAQ explicitly
+  recommends. `maxPOutliers = 0.05` is its "strongly recommend" — the package default of 1
+  disables the outlier guard entirely, which is a silent and common error.
+- **The soft power is what `pickSoftThreshold` itself returns** at its documented default
+  (`RsquaredCut = 0.85`). The FAQ's sample-size table (signed, n > 40 → 12) is a **fallback
+  for when the scale-free fit never clears the threshold.** Ours clears it, so the table does
+  not apply. The supplement plots the sweep and reports the achieved R² and mean connectivity
+  — neither of which the proteomics literature routinely reports.
+- **`pamRespectsDendro = TRUE` is the package default.** No published source recommends
+  setting it `FALSE`; that convention traces to an unexplained line in the official tutorial
+  *script*. Every WGCNA-on-proteomics paper surveyed uses `TRUE`.
+- `minModuleSize = 30` is the official tutorial's value. Module count is insensitive to
+  `mergeCutHeight` across 0.07–0.25 on this data, so that parameter is not load-bearing.
+
+### Where this sits outside the validated regime
+
+Stated plainly, because it is the real limitation and nothing else covers it:
+
+- **There is no published guidance for WGCNA on repeated-measures designs.** None. The
+  within-subject centring here is a defensible response to a documented failure mode, not a
+  validated method.
+- **The responder contrast is 8 HR vs 8 LR at the subject level, not 45 samples.** Scoring the
+  eigengene on raw abundance recovers the between-subject signal, but the power for it is
+  eight against eight — the `fry` and prediction read-outs carry that ceiling.
+- **1,902 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
+  concedes small feature counts are unlikely to be scale-free, so a mediocre fit is expected
+  rather than a bug.
+- **12.2 % of the matrix was imputed** by missForest, which predicts proteins *from other
+  proteins* — manufacturing co-expression for a method that is entirely about correlation.
+  Dropping imputation changes the module assignment substantially (ARI 0.506). Centring does
+  not fix this. It is a separate exposure, and it is why the modules are presented as
+  descriptive rather than as a discovery.
+
+## Recap
+
+- The modules are real and biologically coherent. That is the positive finding, and it is
+  descriptive.
+- **No module moves with responder status**: 0 of `r nrow(fry_r)` cells, minimum FDR
+  `r sprintf("%.2f", min(fry_r$fdr))`.
+- **No baseline module predicts adaptation**: best q² =
+  `r sprintf("%.3f", max(pred$q2, na.rm = TRUE))`, the argmax of `r nrow(pred)` cells.
+- The earlier q² of 0.713 was an artifact of modules that encoded subject identity. Define
+  them properly and the signal was never there.
+- The one significant module × contrast cell is a **within-group acute response** — the
+  positive control, not a responder difference.
+
+## References
+
+::: {#refs}
+:::
+
+```{r sessioninfo}
+sessionInfo()
+```

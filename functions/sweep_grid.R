@@ -39,7 +39,7 @@ methods_for_level <- function(base_methods, level) {
   if (level == "modules") c(base_methods, PLAIN_METHOD) else base_methods
 }
 
-sweep_root_dir <- function(root) here("04_Figures", root)
+sweep_root_dir <- function(root) here("05_Figures", root)
 
 sweep_leaf_dir <- function(root, level, config, method) {
   d <- file.path(sweep_root_dir(root), level, config, method)

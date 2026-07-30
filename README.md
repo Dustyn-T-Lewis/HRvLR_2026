@@ -70,7 +70,7 @@ Known limitations are stated on the page where the reader meets them: the π gat
 reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
 by the missingness filter that the model then cannot test; the module-prediction circularity
 in `shared/WGCNA` that in-fold refitting exposed (see "What the pipeline found" above); and
-the transductive eigengenes in `shared/WGCNA` and `04_Figures/F03_pathway/supp`.
+the transductive eigengenes in `shared/WGCNA` and `05_Figures/F03_pathway/supp`.
 
 ## Design and Canonical Contrasts
 
@@ -114,7 +114,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; `shared/WGCNA` builds the module eigengenes F05-F06 consume |
+| `04` | `05_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; `shared/WGCNA` builds the module eigengenes F05-F06 consume |
 
 ## Canonical Run Order
 
@@ -127,7 +127,7 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `04_Figures/shared/WGCNA` (see Figures);
+Clustering is computed self-contained inside `05_Figures/shared/WGCNA` (see Figures);
 WGCNA builds the module eigengenes that feed the `modules` level of F05 and F06.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
@@ -161,27 +161,27 @@ to `03` complete cleanly. F03_pathway writes `F03_pathway_source_data.xlsx`,
 which its two `supp` concordance leaves read, so run F03_pathway before the
 `supp` leaves.
 
-- `04_Figures/F01_phenotype`: phenotype atlas
-- `04_Figures/F02_proteome`: global proteome overview and QC
-- `04_Figures/F03_pathway`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
-- `04_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
-- `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
-- `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
-- `04_Figures/shared/WGCNA`: builds the module eigengenes (missForest-imputed
+- `05_Figures/F01_phenotype`: phenotype atlas
+- `05_Figures/F02_proteome`: global proteome overview and QC
+- `05_Figures/F03_pathway`: enrichVolcano ring-volcanoes (and the shared fgsea source data)
+- `05_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
+- `05_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
+- `05_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
+- `05_Figures/shared/WGCNA`: builds the module eigengenes (missForest-imputed
   proteome) that F05 and F06 read at the `modules` level; `loso_refit/` tests
   whether the modules survive leave-one-subject-out re-definition; `preservation/`
   tests whether HR and LR share module architecture; `contrast_networks/` tests
   whether a training- or acute-only network is viable
-- `04_Figures/shared/reference`: 85 worked design references (one per stage x
+- `05_Figures/shared/reference`: 85 worked design references (one per stage x
   level x config, plus per-level heatmaps and raw-observation detail views)
 - `archive/pooled_association_2026-07-29`: the retired pooled-association sweep
   (the old 420-cell F04 and the F07 synthesis heatmaps). Pooled rho partly
   re-expresses the HR-vs-LR contrast — the HR/LR label correlates +0.755 with
   `d_fcsa_I` — so the screen answered a question the study is not asking
-- `04_Figures/F05_classification`: HR/LR classification screen — 153 cells over
+- `05_Figures/F05_classification`: HR/LR classification screen — 153 cells over
   `<level>/<config>/HR_LR/<model>`, nested leave-one-subject-out against a
   permutation null
-- `04_Figures/F06_prediction`: continuous-adaptation prediction screen — 792
+- `05_Figures/F06_prediction`: continuous-adaptation prediction screen — 792
   cells over `<level>/<config>/<phenotype>/<model>`, nested leave-one-subject-out
   against a permutation null
 
@@ -206,37 +206,37 @@ Both runners take `[levels] [max B]`. **Pass `"" 200`.** `bmax` defaults to
 has cost this project two long detours; see `docs/decisions.md` 2026-07-26.
 
 ```sh
-Rscript 04_Figures/F01_phenotype/a_script/01_run_phenotype.R
-Rscript 04_Figures/F02_proteome/a_script/01_run_proteome.R
-Rscript 04_Figures/F03_pathway/a_script/01_run_volcanoes.R
+Rscript 05_Figures/F01_phenotype/a_script/01_run_phenotype.R
+Rscript 05_Figures/F02_proteome/a_script/01_run_proteome.R
+Rscript 05_Figures/F03_pathway/a_script/01_run_volcanoes.R
 
-Rscript 04_Figures/F03_pathway/supp/concordance_training/a_script/01_run_concordance_training.R
-Rscript 04_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordance_acute.R
-Rscript 04_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
+Rscript 05_Figures/F03_pathway/supp/concordance_training/a_script/01_run_concordance_training.R
+Rscript 05_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordance_acute.R
+Rscript 05_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
-Rscript 04_Figures/shared/WGCNA/a_script/01_run_modules.R
-Rscript 04_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
-Rscript 04_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
-Rscript 04_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
+Rscript 05_Figures/shared/WGCNA/a_script/01_run_modules.R
+Rscript 05_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
+Rscript 05_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
+Rscript 05_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
 
 # F05 classification: run, split, roll up (spec curve + manifest), composite
-Rscript 04_Figures/F05_classification/a_script/run_F05_classification.R
-Rscript 04_Figures/F05_classification/a_script/split_F05_classification.R
-Rscript 04_Figures/F05_classification/a_script/rollup_F05_classification.R
-Rscript 04_Figures/F05_classification/a_script/composite_F05_classification.R
+Rscript 05_Figures/F05_classification/a_script/run_F05_classification.R
+Rscript 05_Figures/F05_classification/a_script/split_F05_classification.R
+Rscript 05_Figures/F05_classification/a_script/rollup_F05_classification.R
+Rscript 05_Figures/F05_classification/a_script/composite_F05_classification.R
 
 # F06 prediction: run, split, roll up (spec curve + manifest), composite
-Rscript 04_Figures/F06_prediction/a_script/run_F06_prediction.R
-Rscript 04_Figures/F06_prediction/a_script/split_F06_prediction.R
-Rscript 04_Figures/F06_prediction/a_script/rollup_F06_prediction.R
-Rscript 04_Figures/F06_prediction/a_script/composite_F06_prediction.R
+Rscript 05_Figures/F06_prediction/a_script/run_F06_prediction.R
+Rscript 05_Figures/F06_prediction/a_script/split_F06_prediction.R
+Rscript 05_Figures/F06_prediction/a_script/rollup_F06_prediction.R
+Rscript 05_Figures/F06_prediction/a_script/composite_F06_prediction.R
 
 # Module validation last: the refit reads the F05 and F06 manifests, so it must
 # follow both.
-Rscript 04_Figures/shared/WGCNA/loso_refit/a_script/01_run_loso_refit.R
-Rscript 04_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
-Rscript 04_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
-Rscript 04_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
+Rscript 05_Figures/shared/WGCNA/loso_refit/a_script/01_run_loso_refit.R
+Rscript 05_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
+Rscript 05_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
+Rscript 05_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
 ```
 
 ## Repository Conventions
@@ -249,8 +249,8 @@ Shared helpers live by scope:
 | Path | Contents |
 | --- | --- |
 | `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
-| `04_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F03_pathway/supp driver) and `f00_concordance_panels.R` (its panel builders). |
-| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F05-F06; `reference/` — the worked design references. |
+| `05_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F03_pathway/supp driver) and `f00_concordance_panels.R` (its panel builders). |
+| `05_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F05-F06; `reference/` — the worked design references. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
 ## Figures

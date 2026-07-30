@@ -11,7 +11,7 @@ format:
     theme: cosmo
     embed-resources: true
     df-print: paged
-bibliography: ../../04_Figures/shared/references.bib
+bibliography: ../../05_Figures/shared/references.bib
 execute:
   eval: true
   echo: true
