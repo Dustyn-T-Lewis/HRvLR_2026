@@ -57,25 +57,6 @@ pred_row <- function(f, kind) {
   )
 }
 
-# assoc_score()'s $stat is a display string; the manifest reports the
-# snake_case variant instead.
-ASSOC_METRIC_NAME <- c("moderated t" = "top_abs_t", "effect" = "top_abs_effect")
-
-assoc_row <- function(f) {
-  cell <- openxlsx::read.xlsx(f, "cell")
-  summ <- openxlsx::read.xlsx(f, "cell_summary")
-  sc <- assoc_score(cell)
-  data.frame(
-    n = cell$n[[1]], n_features = summ$n_feature[[1]],
-    metric_name = ASSOC_METRIC_NAME[[sc$axis]],
-    metric_b200 = max(abs(sc$value), na.rm = TRUE),
-    metric_b0 = NA_real_,
-    perm_p = min(cell$p, na.rm = TRUE),
-    null_mean = NA_real_, null_sd = NA_real_,
-    stringsAsFactors = FALSE
-  )
-}
-
 lead_flag <- function(kind, metric, p) {
   is_lead(metric, p, kind)
 }
@@ -89,7 +70,7 @@ build_manifest <- function(root, kind, screen_size, root_name) {
     parts <- strsplit(f, .Platform$file.sep)[[1]]
     n <- length(parts)
     level <- parts[[n - 5]]
-    metrics <- if (kind == "assoc") assoc_row(f) else pred_row(f, kind)
+    metrics <- pred_row(f, kind)
     dr <- manifest_drivers(f)
 
     cbind(

@@ -65,7 +65,7 @@ test_that("is_lead needs both the null and the baseline", {
   expect_false(is_lead(0.41, 0.9, "cont"))
   expect_true(is_lead(0.78, 0.01, "class"))
   expect_false(is_lead(0.30, 0.01, "class"))
-  expect_true(is.na(is_lead(1, 0.01, "assoc")))
+  expect_true(is.na(is_lead(1, 0.01, "unknown")))
 })
 
 test_that("is_lead is vectorised and NA-safe on p", {
