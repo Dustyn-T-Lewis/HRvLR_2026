@@ -12,6 +12,7 @@ pacman::p_load(here, dplyr, openxlsx)
 source(here("functions", "feature_contrasts.R"))
 source(here("functions", "shared_singscore.R"))
 source(here("functions", "shared_pathway_utils.R"))
+source(here("functions", "pred_features.R"))
 
 out_dir <- here("04_Features", "pathways", "c_data")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -32,7 +33,32 @@ coverage <- pathway_coverage(gene_sets, detected_genes()) |>
 
 results <- fit_feature_contrasts(scores) |>
   left_join(coverage, by = "feature") |>
-  mutate(database = classify_database(.data$feature))
+  mutate(
+    database = classify_database(.data$feature),
+    pi = pi_score(.data$p, .data$logFC)
+  )
+
+# The same sets tested a second way. singscore collapses a set to one score per
+# sample and then tests that score; fry tests the member proteins directly,
+# rotating residuals so inter-gene correlation is carried rather than assumed
+# away. fgsea (F03) assumes it away, which is what makes the three-way
+# comparison worth having. Complete data is required, so this runs on the
+# missForest arm.
+expr <- pred_gene_expression(readRDS(pred_paths()$dalist))
+parts <- feature_design(expr)
+fry_res <- pathway_fry(
+  expr, gene_sets, parts$design, parts$contrasts,
+  block = parts$block, correlation = parts$correlation
+)
+
+fry_summary <- fry_res |>
+  group_by(.data$contrast) |>
+  summarise(
+    n_tested = dplyr::n(), n_nominal = sum(.data$p < 0.05),
+    n_fdr = sum(.data$fdr < 0.05), min_fdr = min(.data$fdr), .groups = "drop"
+  )
+cat("\nfry (rotation test, subject-blocked) over the same sets:\n")
+print(as.data.frame(fry_summary))
 
 summary_tbl <- results |>
   group_by(.data$contrast) |>
@@ -57,6 +83,9 @@ print(as.data.frame(
 ))
 
 write.xlsx(
-  list(contrasts = results, summary = summary_tbl, coverage = coverage),
+  list(
+    contrasts = results, summary = summary_tbl, coverage = coverage,
+    fry = fry_res, fry_summary = fry_summary
+  ),
   file.path(out_dir, "pathway_contrasts.xlsx")
 )

@@ -30,8 +30,10 @@ PI_THRESH <- 0.05
 # both gated arms return NA; the final case_when branch is what lands them on 0L rather
 # than NA. Untested and tested-but-unselected are deliberately indistinguishable here --
 # 03_untested_proteins.R is what separates them.
+pi_score <- function(p, logfc) p^abs(logfc)
+
 add_pi_score <- function(res, pi_thresh = PI_THRESH) {
-  res$pi_score <- res$P.Value^abs(res$logFC)
+  res$pi_score <- pi_score(res$P.Value, res$logFC)
   res$sig_pi <- dplyr::case_when(
     res$pi_score < pi_thresh & res$logFC > 0 ~ 1L,
     res$pi_score < pi_thresh & res$logFC < 0 ~ -1L,
