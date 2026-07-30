@@ -198,6 +198,10 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
   whether the modules survive leave-one-subject-out re-definition; `preservation/`
   tests whether HR and LR share module architecture; `contrast_networks/` tests
   whether a training- or acute-only network is viable
+- `05_Figures/F07_keepers`: the three results figures consolidated — how close
+  each of the nine contrasts came to a BH survivor, and the best cell every model
+  reached in F05 and F06 against its own permutation null and the number of cells
+  it was drawn from
 - `05_Figures/shared/reference`: 85 worked design references (one per stage x
   level x config, plus per-level heatmaps and raw-observation detail views)
 - `archive/pooled_association_2026-07-29`: the retired pooled-association sweep
@@ -274,6 +278,9 @@ Rscript 05_Figures/F06_prediction/a_script/composite_F06_prediction.R
 # Module validation last: the refit reads the F05 and F06 manifests, so it must
 # follow both.
 Rscript 04_Features/modules/loso_refit/a_script/01_run_loso_refit.R
+
+# F07 consolidates F04, F05 and F06 onto one sheet. Reads their workbooks only.
+Rscript 05_Figures/F07_keepers/a_script/01_run_keepers.R
 Rscript 04_Features/modules/preservation/a_script/01_run_preservation.R
 Rscript 04_Features/modules/preservation/a_script/02_run_preservation_balanced.R
 Rscript 04_Features/modules/contrast_networks/a_script/01_run_contrast_stability.R
