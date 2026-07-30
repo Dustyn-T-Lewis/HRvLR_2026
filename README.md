@@ -356,6 +356,13 @@ them. At n = 16 the null is the finding.
 - packages are pinned in `renv.lock` and load from `renv/library`, not the system
   library; `.Rprofile` activates this on its own. `renv::restore()` rebuilds the
   library from the lockfile, `renv::status()` reports drift
+- **PDF figures need cairo, which needs XQuartz** (`brew install --cask
+  xquartz`). `get_pdf_device()` in `functions/shared_style.R` tries `cairo_pdf`
+  and falls back to the base PDF device when it is unavailable. The fallback
+  neither embeds fonts nor renders non-ASCII, so em-dashes silently become
+  hyphens in the tracked reference-tree PDFs. PNGs are unaffected either way.
+  This is a genuine machine dependency: without XQuartz the PDFs still build,
+  they just build slightly wrong
 
 ## Working on enrichVolcano Without Disturbing This Pipeline
 
