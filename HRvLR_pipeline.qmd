@@ -114,12 +114,21 @@ architecture (preservation strong both directions, using cohort-defined labels,
 so not itself free of circularity), and training- and acute-only contrast networks were tested and are
 not viable at this cohort size (`04_Features/modules`).
 
-**F04 puts the nine contrasts at three feature levels, and nothing survives.**
-All nine contrasts return zero at BH q < .05, at protein, pathway and module level.
-The smallest q anywhere is 0.0715, in `Acute_HR`. Earlier runs had eight survivors in
-`Acute_LR`; six were red-cell proteins (SPTB, ANK1, STOM, CAT, BLVRB, SYNE2) and a
-seventh, LCP1, is a leukocyte protein. All are now removed as blood by
-`00_input/blood_contaminants.csv`.
+**No protein and no module survives BH in any of the nine contrasts.** The
+smallest q at those two levels is 0.0715, in `Acute_HR`. Earlier runs had eight
+survivors in `Acute_LR`; six were red-cell proteins (SPTB, ANK1, STOM, CAT,
+BLVRB, SYNE2) and a seventh, LCP1, is a leukocyte protein. All are now removed as
+blood by `00_input/blood_contaminants.csv`.
+
+**At the pathway level five singscore cells clear BH, and none of them is an
+HR-vs-LR or interaction result once coverage is applied.** Two score
+HALLMARK_KRAS_SIGNALING_UP on **9 of its 200** annotated members — below the
+15-detected floor that fgsea and fry both apply, and excluded from F04's rows for
+that reason. One of those two is the only interaction survivor anywhere. The
+remaining three sit in the within-arm contrasts: MYC targets in `Acute_HR`, heme
+metabolism and telomere organisation in `Acute_LR`. `limma::fry` over the same
+sets confirms exactly one of the three, MYC targets in `Acute_HR` at FDR 0.026,
+and returns nothing in any HR-vs-LR or interaction contrast.
 
 **The T3 blood confound does not cancel in the interaction.** T3 biopsies carry roughly
 twice the blood of T1 and T2, and the rise is arm-dependent: on the log2 haemoglobin
@@ -197,7 +206,7 @@ the top and follow the chain, or jump to the one you need.
 | `05_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `05_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Features/modules/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
-| `05_Figures/F04_association/` | The nine contrasts at protein, pathway and module level: HR-LR by timepoint, both interactions, and the four within-arm changes. Zero BH survivors in all nine contrasts at every level; smallest q anywhere is 0.0715 |
+| `05_Figures/F04_association/` | The nine contrasts at protein, pathway and module level: HR-LR by timepoint, both interactions, and the four within-arm changes. Zero BH survivors at protein and module level; the five pathway cells are coverage artifacts or within-arm |
 | `05_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
 | `05_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
 
