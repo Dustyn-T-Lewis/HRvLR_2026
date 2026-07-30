@@ -30,6 +30,17 @@ p ≥ 0.38; CAP fails to classify). HR and LR responses are only weakly concorda
 The one genuinely FDR-controlled signal is pathway-level: 691 significant pathway ×
 contrast tests, with HR's acute response enriching 217 pathways against LR's 33 (F03).
 
+**The only BH survivors in the nine contrasts are blood, and they are not in an
+HR-vs-LR contrast.** F04 fits all nine contrasts at three feature levels. Every
+HR−LR contrast and both interactions return zero at q < .05, at every level. The
+one contrast that does survive is `Acute_LR`, with 8 proteins — and 6 of the 8 sit
+in the top 5% of correlation with per-sample haemoglobin (SPTB, ANK1, STOM, CAT,
+BLVRB, SYNE2; mean blood correlation 0.44 against a cohort median of 0.03). The
+pathway level agrees: its strongest `Acute_LR` hit is heme metabolism. T3 biopsies
+carry twice the blood of T1 and T2, so `Acute_LR` is measuring blood content, and
+the confound cancels in the interaction. Module eigengenes return zero BH survivors
+in all nine.
+
 **F05-F06 report a screen, not a discovery set.** Each of their 945 cells
 (F05 = 153, F06 = 792) reports a metric, a permutation p over B = 200, the
 screen size, and a leakage label — no BH q anywhere in these two, unlike
@@ -225,6 +236,10 @@ Rscript 04_Features/modules/contrast_networks/a_script/01_run_contrast_stability
 Rscript 04_Features/proteins/a_script/01_run_proteins.R
 Rscript 04_Features/pathways/a_script/01_run_pathways.R
 Rscript 04_Features/modules/a_script/02_run_module_contrasts.R
+
+# F04 contrast heatmaps: one per level, then the stacked all-levels sheet.
+# The composite re-runs each level, so running it alone is enough.
+Rscript 05_Figures/F04_association/a_script/composite_F04_association.R
 
 # F05 classification: run, split, roll up (spec curve + manifest), composite
 Rscript 05_Figures/F05_classification/a_script/run_F05_classification.R
