@@ -28,10 +28,10 @@
 # The floor is therefore imperfect, and it is known to over-delete: C1QBP (mitochondrial,
 # blood 1.5e6), HMGB2 (nuclear, 8.3e5), PPIB, LGALS1 and CTSB (an exercise myokine) all clear
 # blood_max and fail only on myonuclei. 03_DEP/a_non_imputed/a_script/02_blood_filter_sensitivity.R
-# refits the nine contrasts with all 136 blood-tagged proteins readmitted: zero BH hits in every
+# refits the nine contrasts with all 120 blood-tagged proteins readmitted: zero BH hits in every
 # HR-vs-LR and interaction contrast, so the null does not depend on this rule. The same run shows
-# why the rule is kept - readmitting them floods Acute_LR from 19 to 97 hits, 57 of them the
-# readmitted blood proteins, which is the 2x-bloodier T3 biopsy confound arriving on cue.
+# why the rule is kept - readmitting them floods Acute_LR from 0 to 53 hits at BH < 0.10, 40 of
+# them the readmitted blood proteins, which is the 2x-bloodier T3 biopsy confound arriving on cue.
 
 # blood_cor is a reported diagnostic, not a gate. The index is the per-sample
 # mean log2 intensity of the haemoglobin anchor, measured before removal, and

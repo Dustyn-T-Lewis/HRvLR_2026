@@ -27,19 +27,26 @@ does not separate them.** Every global test in F02 is null (PERMANOVA p = 0.62; 
 p ≥ 0.38; CAP fails to classify). HR and LR responses are only weakly concordant
 (ρ = 0.20 training, 0.15 acute) and every fry rotation test is null.
 
-The one genuinely FDR-controlled signal is pathway-level: 691 significant pathway ×
-contrast tests, with HR's acute response enriching 217 pathways against LR's 33 (F03).
+fgsea reports 1,004 significant pathway × contrast tests of 14,330, concentrated in
+the acute contrasts (F03). `limma::fry` over the same Hallmark and GO Slim sets, which
+rotates residuals and so carries inter-gene correlation instead of assuming it away,
+returns **zero** in every HR-vs-LR and interaction contrast. Where the two disagree the
+rotation test is the one whose null holds.
 
-**The only BH survivors in the nine contrasts are blood, and they are not in an
-HR-vs-LR contrast.** F04 fits all nine contrasts at three feature levels. Every
-HR−LR contrast and both interactions return zero at q < .05, at every level. The
-one contrast that does survive is `Acute_LR`, with 8 proteins — and 6 of the 8 sit
-in the top 5% of correlation with per-sample haemoglobin (SPTB, ANK1, STOM, CAT,
-BLVRB, SYNE2; mean blood correlation 0.44 against a cohort median of 0.03). The
-pathway level agrees: its strongest `Acute_LR` hit is heme metabolism. T3 biopsies
-carry twice the blood of T1 and T2, so `Acute_LR` is measuring blood content, and
-the confound cancels in the interaction. Module eigengenes return zero BH survivors
-in all nine.
+**No protein, pathway or module survives BH in any of the nine contrasts.** F04 fits
+all nine at three feature levels and every cell is empty at q < .05. The smallest q
+anywhere in the study is 0.0715, in `Acute_HR`. Earlier runs had eight survivors in
+`Acute_LR`; six of them (SPTB, ANK1, STOM, CAT, BLVRB, SYNE2) were red-cell proteins
+and the seventh, LCP1, is a leukocyte protein. All seven are now removed as blood by
+`00_input/blood_contaminants.csv`.
+
+**The T3 blood confound does not cancel in the interaction.** T3 biopsies carry
+roughly twice the blood of T1 and T2, and the rise is not equal in the two arms: on
+the log2 haemoglobin index the arm × T3 term is b = −1.21, p = 0.032, and p = 0.017 by
+subject-label permutation, with LR rising 2.14 against HR's 0.57. A difference of
+differences removes a constant offset, not a differential one.
+`03_DEP/a_non_imputed/a_script/05_blood_adjusted.R` refits every contrast with the
+index as a covariate.
 
 **F05-F06 report a screen, not a discovery set.** Each of their 945 cells
 (F05 = 153, F06 = 792) reports a metric, a permutation p over B = 200, the
@@ -68,13 +75,20 @@ or acute contrast alone) were tested and are not viable at this cohort size.
 
 **Read the protein-level counts with care.** Most of them come from the π gate
 (`p^|logFC| < 0.05`), which controls no error rate and admits proteins with raw p up to
-0.270. There are 506 π-calls against 15 proteins at BH < 0.05 (21 at BH < 0.10), and 70 of
-the π-calls have raw p ≥ 0.05. Treat π counts as a ranking, not as discoveries.
+0.269. There are 464 π-calls against 0 proteins at BH < 0.05 (2 at BH < 0.10), and 68 of
+the π-calls have raw p ≥ 0.05.
+
+π is no longer the selection criterion, because it does not select. Shuffling the arm
+label across subjects produces **more** π hits than the real labels do: 235 observed
+against a permuted median of 274 across the five HR-vs-LR and interaction contrasts, and
+no contrast reaches empirical p = 0.22
+(`03_DEP/a_non_imputed/a_script/04_pi_permutation.R`). Never quote a π count without that
+null beside it.
 
 The null is robust to imputation. On BH, missForest (MAR), MsCoreUtils (hybrid) and Perseus
 (MNAR) each return zero significant proteins in all five HR-vs-LR and interaction contrasts,
-matching the non-imputed arm. It is also robust to the blood filter: readmitting all 136
-blood-tagged proteins leaves every one of those contrasts at zero.
+matching the non-imputed arm. It is also robust to the blood filter: readmitting every
+blood-tagged protein leaves each of those contrasts at zero.
 
 Known limitations are stated on the page where the reader meets them: the π gate in
 `HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
@@ -89,8 +103,8 @@ DEP fits the means model `~ 0 + group` (one mean per `Group_Time` cell) with
 `duplicateCorrelation` blocking on `Subject_ID`, and computes all 9 contrasts
 below. Each is a linear combination of the six cell means, and is estimable only
 for proteins observed in every cell it touches. 34 proteins reach the model with
-at least one empty cell, so the true tested-N is 1,882–1,897 per contrast, never
-1,905 (`03_DEP/a_non_imputed/b_reports/bh_denominators.csv`).
+at least one empty cell, so the true tested-N is 1,877–1,892 per contrast, never
+1,900 (`03_DEP/a_non_imputed/b_reports/bh_denominators.csv`).
 
 HR (within-responder):
 
@@ -122,11 +136,11 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | Stage | Directory | Canonical logic |
 | --- | --- | --- |
 | `00` | `00_input/` | Raw intensity matrix, metadata, phenotype table, HPA annotations |
-| `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
+| `01` | `01_Filtering/` | curated blood + handling contaminant list, blood-concentration-gated myonuclei-rescue HPA removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
 | `04` | `04_Features/` | The derived-feature layer. `proteins/` carries stage 03's tested protein matrix forward; `pathways/` scores singscore pathway sets; `modules/` builds the signed WGCNA modules and tests whether they generalize (`loso_refit/`, `preservation/`, `contrast_networks/`). Each arm fits the same nine contrasts stage 03 fits, so all three feature levels share one estimator, and each writes its own QC report and results table |
-| `05` | `05_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association the HR-vs-LR contrast heatmaps; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen |
+| `05` | `05_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association the HR-vs-LR contrast heatmaps; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; F07_keepers the best cell each model reached against its own null |
 
 ## Canonical Run Order
 
@@ -293,7 +307,7 @@ every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `04_Features/modules/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
-| `F04_association/` | How do high responders differ from low responders, per feature level? | The nine stage 03 contrasts read from `04_Features`; logFC fill with one scale per contrast family, stars for nominal p, black box for BH q < .05 within a contrast. Zero survivors in every HR-LR and interaction contrast at all three levels; `Acute_LR`'s 8 protein survivors track haemoglobin. |
+| `F04_association/` | How do high responders differ from low responders, per feature level? | The nine stage 03 contrasts read from `04_Features`; logFC fill with one scale per contrast family, stars for nominal p, black box for BH q < .05 within a contrast. Zero survivors in all nine contrasts at all three levels; smallest q anywhere is 0.0715. |
 | `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
 | `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads fall below zero once restricted to the two reproducible modules; in-fold refitting adds nothing. |
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 # Does the null depend on having deleted the blood-tagged proteins?
 #
-# The primary arm removes 136 proteins on HPA's "Secreted to blood" tag unless they clear a
-# muscle rescue (myonuclei >= 20 AND blood_conc < 1e9). That rule deletes 8.4% of the proteome,
+# The primary arm removes 120 proteins on HPA's "Secreted to blood" tag unless they clear a
+# muscle rescue (myonuclei >= 20 AND blood_conc < 1e9). That rule deletes 5% of the proteome,
 # and the deleted set is enriched BY CONSTRUCTION for the secreted / ECM / myokine compartment.
 # So "no HR-vs-LR difference in the muscle secretome" is currently an untested claim rather than
 # a null result. This tests it.
@@ -13,9 +13,9 @@
 # and CTSB (an exercise myokine) are all deleted despite plasma levels 4-5 orders of magnitude
 # below the genuine plasma proteins.
 #
-# Sensitivity arm: add the 136 back, change nothing else, refit the same nine contrasts.
-# The curated handling contaminants (keratins, globins, immunoglobulins, complement) stay
-# removed; those are not muscle under any reading.
+# Sensitivity arm: add the 120 back, change nothing else, refit the same nine contrasts.
+# The curated list stays removed - keratins, globins and the 95 blood proteins matched by
+# accession in 00_input/blood_contaminants.csv, none of which is muscle under any reading.
 #
 # NOTE: the protein count drives the normalization. limma's adaptive.span sets the loess span
 # from nrow, so a larger matrix normalizes on a different span (0.5075 -> reported below). That

@@ -217,7 +217,7 @@ Stated plainly, because it is the real limitation and nothing else covers it:
 - **The responder contrast is 8 HR vs 8 LR at the subject level, not 45 samples.** Scoring the
   eigengene on raw abundance recovers the between-subject signal, but the power for it is
   eight against eight — the `fry` and prediction read-outs carry that ceiling.
-- **1,902 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
+- **1,900 proteins is far below the ~20,000 features WGCNA was built around.** Langfelder
   concedes small feature counts are unlikely to be scale-free, so a mediocre fit is expected
   rather than a bug.
 - **12.2 % of the matrix was imputed** by missForest, which predicts proteins *from other

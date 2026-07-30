@@ -2,7 +2,7 @@
 # Is a contrast-specific co-expression network usable at this cohort size?
 #
 # The main network is built on 45 within-subject-centred samples and only 2 of
-# its 11 modules survive leave-one-subject-out rebuilding. A training or acute
+# its 12 modules survive leave-one-subject-out rebuilding. A training or acute
 # network carries one value per subject instead, so it has roughly a third of
 # the observations. This measures what that costs, using the same subsampling
 # test, so the question is closed with a number rather than an argument.
