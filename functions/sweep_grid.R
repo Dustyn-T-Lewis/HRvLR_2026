@@ -39,6 +39,11 @@ methods_for_level <- function(base_methods, level) {
 
 sweep_root_dir <- function(root) here("05_Figures", root)
 
+# Where a leaf is WRITTEN: root/level/config/method. The split step later
+# materialises per-phenotype views one directory deeper
+# (root/level/config/phenotype/method), and the roll-up and composites read
+# those, not these. Two conventions, both live; read_leaf_sheet() in
+# sweep_composites.R is the other one.
 sweep_leaf_dir <- function(root, level, config, method) {
   d <- file.path(sweep_root_dir(root), level, config, method)
   for (sub in c("b_reports", "c_data")) {

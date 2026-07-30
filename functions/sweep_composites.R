@@ -17,6 +17,10 @@ source(here("functions", "sweep_speccurve.R"))
 # sweeps one outcome and its roll-up has no outcome column, so it resolves to
 # the single HR_LR leaf.
 leaf_sheet <- function(root, level, config, phenotype, method, sheet) {
+  # One directory deeper than sweep_leaf_dir() writes: the split step
+  # materialises a per-phenotype view of each leaf, and this reads those.
+  # Globbing the leaves directly here returns the pre-split files and silently
+  # predates whatever the last split produced.
   openxlsx::read.xlsx(
     file.path(
       sweep_root_dir(root), level, config, phenotype, method,
