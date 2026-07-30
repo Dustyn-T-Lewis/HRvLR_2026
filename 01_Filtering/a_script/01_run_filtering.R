@@ -4,15 +4,15 @@
 # for every protein, and per-sample contamination indices.
 #
 # Removal is decided once, in protein_calls$verdict. Everything else is a view
-# of that table. Blood logic follows CvH: remove iff blood-derived AND NOT
-# rescued as muscle, with one exception. The transcript terms (secreted-to-blood
-# | immunoglobulin | erythrocyte-high) are priors and the muscle rescue can
-# overturn them. The blood-index term is measured on this matrix and catches the
-# enucleate red-cell membrane skeleton the RNA cutoffs miss, so it is final: a
-# myonuclei transcript prior does not outrank a protein's own correlation with
-# these samples' haemoglobin (see filter_config.R). Absence from HPA is UNKNOWN,
-# never a reason to remove. Contaminants go before Stage 02 because cycloess
-# estimates its reference from each sample's own intensity distribution.
+# of that table. Two mechanisms feed it: a curated list, matched by accession and
+# final, and the HPA annotation rules (secreted-to-blood | immunoglobulin |
+# erythrocyte-high), which are transcript priors the muscle rescue can overturn.
+# The curated list now carries the blood proteins, chosen by protein identity
+# rather than by covariation with the haemoglobin index; blood_cor is still
+# computed and reported, it just no longer removes anything (see
+# filter_config.R). Absence from HPA is UNKNOWN, never a reason to remove.
+# Contaminants go before Stage 02 because cycloess estimates its reference from
+# each sample's own intensity distribution.
 
 pacman::p_load(
   proteoDA, here, readxl, readr, dplyr, tidyr, tibble, stringr, purrr, openxlsx
@@ -89,8 +89,9 @@ hpa <- read_tsv(here("00_input", cfg$hpa_file), show_col_types = FALSE) |>
 
 # Published mature-red-cell proteome (five sources, built in stage 00). Erythrocytes are enucleate,
 # so their membrane skeleton is invisible to transcriptomics; this list is the only annotation that
-# recognises it. Two-thirds of any muscle proteome also appears here, so RBC membership never removes
-# on its own - it only confirms the in-sample blood_cor call.
+# recognises it, and the erythrocyte members of the curated blood list were drawn from it. Two-thirds
+# of any muscle proteome also appears here, so membership has never removed on its own: in_rbc is a
+# reported column, not a rule.
 rbc <- read_tsv(here("00_input", cfg$rbc_file), show_col_types = FALSE)
 rbc_acc <- rbc$acc[!is.na(rbc$acc)]
 rbc_gene <- rbc$gene[!is.na(rbc$gene)]
@@ -107,13 +108,12 @@ protein_calls <- annotation |>
     is_ig = str_detect(coalesce(protein_class, ""), "Immunoglobulin genes"),
     is_plasma = !is.na(secretome) & secretome == "Secreted to blood",
     in_rbc = acc %in% rbc_acc | gene %in% rbc_gene,
-    is_red_cell = !is.na(blood_cor) & blood_cor > cfg$blood_cor_max & in_rbc,
     rescued = !is.na(myo) & myo >= cfg$myo_cut & (is.na(blood_conc) | blood_conc < cfg$blood_max),
-    is_blood = is_ery | is_ig | is_plasma | is_red_cell,
-    contaminant = is_curated | is_red_cell | (is_blood & !rescued),
+    is_blood = is_ery | is_ig | is_plasma,
+    contaminant = is_curated | (is_blood & !rescued),
+    # Every branch has to agree with `contaminant` above or the stopifnot fires.
     verdict = case_when(
       is_curated ~ paste0("remove: ", contam_class),
-      is_red_cell ~ "remove: red-cell (blood-tracking + RBC proteome)",
       is_blood & rescued ~ "keep: rescued (muscle-expressed)",
       is_plasma ~ "remove: plasma",
       is_ig ~ "remove: immunoglobulin",

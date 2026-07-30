@@ -25,13 +25,24 @@ feature_metadata <- function() {
 # nine contrasts, and the subject blocking with its consensus correlation.
 # Exposed because a set-level test has to be fitted against the same model as
 # the feature-level contrasts, not a second one that merely resembles it.
-feature_design <- function(mat, meta = feature_metadata()) {
+# `adjust` is a named per-sample covariate. It enters the design as one extra
+# column carrying zero weight in every contrast, so the nine estimands are
+# unchanged and only the residual they are estimated against moves. The blood
+# index is the intended caller: T3 biopsies are bloodier in LR than HR
+# (arm x T3 p = 0.032), so the acute contrasts need a fit that has seen that.
+feature_design <- function(mat, meta = feature_metadata(), adjust = NULL) {
   meta <- meta[match(colnames(mat), meta$sample_id), ]
   if (anyNA(meta$sample_id)) {
     stop("feature matrix has samples absent from the normalisation metadata")
   }
   design <- stats::model.matrix(~ 0 + group, meta)
   colnames(design) <- levels(meta$group)
+  if (!is.null(adjust)) {
+    if (!all(colnames(mat) %in% names(adjust))) {
+      stop("adjust is missing samples present in the feature matrix")
+    }
+    design <- cbind(design, adjust = unname(adjust[colnames(mat)]))
+  }
   cm <- limma::makeContrasts(contrasts = HRVLR_CONTRASTS, levels = design)
   colnames(cm) <- trimws(sub("=.*$", "", HRVLR_CONTRASTS))
   list(
@@ -46,8 +57,9 @@ feature_design <- function(mat, meta = feature_metadata()) {
 # BH is applied within each contrast, matching extract_DA_results()'s per-coef
 # topTable call. Pooling the nine would imply an independence that the shared
 # subjects and overlapping contrasts do not have.
-fit_feature_contrasts <- function(mat, meta = feature_metadata()) {
-  parts <- feature_design(mat, meta)
+fit_feature_contrasts <- function(mat, meta = feature_metadata(),
+                                  adjust = NULL) {
+  parts <- feature_design(mat, meta, adjust = adjust)
   cm <- parts$contrasts
   fit <- limma::lmFit(mat, parts$design,
     block = parts$block, correlation = parts$correlation

@@ -20,7 +20,7 @@ N_SHOW <- c(modules = Inf, pathways = 18, proteins = 18)
 
 # fgsea admits a set only when 15 of its members are measured. Nothing filters
 # the singscore sets that way, so the floor is applied at row selection instead:
-# HALLMARK_KRAS_SIGNALING_UP scored a BH survivor on 11 of 200 members detected.
+# HALLMARK_KRAS_SIGNALING_UP scored a BH survivor on 9 of 200 members detected.
 MIN_DETECTED <- 15L
 
 CONTRAST_FAMILIES <- list(
@@ -59,12 +59,26 @@ contrast_grid <- function(level) {
   if (level != "pathways") {
     d$n_detected <- NA_integer_
     d$n_annotated <- NA_integer_
+    d$fry_fdr <- NA_real_
+  } else {
+    # singscore collapses a set to one score per sample and tests that; fry
+    # tests the member proteins directly and rotates residuals, so inter-gene
+    # correlation is carried rather than assumed away. Where the two disagree
+    # the rotation test is the one whose null holds, which is why it is marked
+    # on the tile rather than filed in a workbook.
+    fry <- read.xlsx(
+      here("04_Features", "pathways", "c_data", LEVEL_BOOK[["pathways"]]), "fry"
+    )
+    d <- left_join(
+      d, select(fry, feature = "pathway", "contrast", fry_fdr = "fdr"),
+      by = c("feature", "contrast")
+    )
   }
   d |>
     filter(!is.na(.data$label_key), .data$label_key != "") |>
     select(
       "feature", "label_key", "contrast", "logFC", "p", "bh",
-      "n_detected", "n_annotated"
+      "n_detected", "n_annotated", "fry_fdr"
     )
 }
 
@@ -333,6 +347,10 @@ family_tile_panel <- function(d, rows, family, show_legend = TRUE) {
       data = filter(fd, !is.na(.data$bh), .data$bh < BH_CUT),
       fill = NA, colour = "black", linewidth = 0.8
     ) +
+    geom_tile(
+      data = filter(fd, !is.na(.data$fry_fdr), .data$fry_fdr < BH_CUT),
+      fill = NA, colour = "#1B7837", linewidth = 0.8, linetype = "22"
+    ) +
     geom_text(
       aes(
         label = paste0(.data$shown, .data$star),
@@ -402,9 +420,13 @@ SHARED_FOOTNOTES <- paste(
   "# The interaction columns are the contrasts that answer the responder",
   "question: a difference at one timepoint can reflect a baseline difference,",
   "while a difference of differences cannot.",
-  "\n# T3 biopsies carry roughly twice the blood of T1 and T2 (p = 0.0006).",
-  "That confound cancels in the interaction but not in the two acute",
-  "within-arm columns, so Acute_HR and Acute_LR are read with it in mind.",
+  "\n# T3 biopsies carry roughly twice the blood of T1 and T2, and the rise",
+  "is not equal in the two arms: on the log2 haemoglobin index the arm x T3",
+  "term is b = -1.21, p = 0.032, and p = 0.017 by subject-label permutation,",
+  "with LR rising 2.14 against HR's 0.57. A difference of differences removes",
+  "a constant offset, not a differential one, so the interaction columns do",
+  "not cancel it either. 03_DEP/.../05_blood_adjusted.R refits each contrast",
+  "the index as a covariate.",
   "\n# At 7 HR and 8 LR a nominal p < .05 needs a large effect; these columns",
   "are a declared screen, not a discovery engine.",
   "\n# A grey cell marked - is inestimable, not null: the contrast touches a",
@@ -414,10 +436,12 @@ SHARED_FOOTNOTES <- paste(
 
 contrast_caption <- function(level, rows) {
   extra <- switch(level,
-    modules = paste0(
-      "",
+    modules = paste(
       "Module detection is unsupervised and never saw the HR/LR labels, but it",
-      "did see all 45 samples, and eBayes has 11 features to borrow variance",
+      sprintf(
+        "did see all 45 samples, and eBayes has %d features to borrow variance",
+        nrow(rows)
+      ),
       "across, which is close to no moderation at all. Eigengenes come from",
       "the missForest-imputed matrix, unlike the protein panel.",
       "\n* ME_blue's top ORA term is RNA splicing, but its highest-membership",
@@ -427,11 +451,17 @@ contrast_caption <- function(level, rows) {
     pathways = paste(
       "Rows are restricted to sets with at least 15 members detected, the same",
       "floor fgsea applies; HALLMARK_KRAS_SIGNALING_UP is excluded on that",
-      "rule having scored a BH survivor on 11 of 200 annotated members. Bar",
+      "rule having scored a BH survivor on 9 of 200 annotated members. Bar",
       "length is members detected, so a short bar is a thin readout of the",
       "set.",
       "Scores",
-      "come from the missForest-imputed matrix, unlike the protein panel."
+      "come from the missForest-imputed matrix, unlike the protein panel.",
+      "\n* A dashed green outline marks limma::fry FDR < .05 over the same",
+      "set, a rotation test on the member proteins that carries inter-gene",
+      "correlation instead of assuming it away. It is not a stricter version",
+      "of the singscore call but a different one, and the two disagree both",
+      "ways: fry marks rows whose singscore BH runs to .19, and it clears",
+      "every set in both interaction columns."
     ),
     proteins = paste(
       "Read directly from stage 03: limma with duplicateCorrelation blocking",
@@ -451,7 +481,10 @@ contrast_caption <- function(level, rows) {
   paste(extra, SHARED_FOOTNOTES)
 }
 
-build_contrast_level <- function(level) {
+# The per-level figures carry the full caveat block; the composite does not.
+# Three of those blocks stacked on one sheet buries the panels they belong to,
+# and the caveats are identical across levels anyway. The subtitle stays.
+build_contrast_level <- function(level, caption = TRUE) {
   d <- contrast_grid(level)
   rows <- contrast_rows(d, level)
   shown <- filter(d, .data$feature %in% levels(rows$feature))
@@ -470,7 +503,7 @@ build_contrast_level <- function(level) {
         str_to_sentence(level)
       ),
       subtitle = str_wrap(contrast_subtitle(d, rows, level), 118),
-      caption = str_wrap(contrast_caption(level, rows), 132),
+      caption = if (caption) str_wrap(contrast_caption(level, rows), 132),
       theme = theme(
         plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
         plot.subtitle = element_text(

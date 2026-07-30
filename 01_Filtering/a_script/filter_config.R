@@ -33,27 +33,23 @@
 # why the rule is kept - readmitting them floods Acute_LR from 19 to 97 hits, 57 of them the
 # readmitted blood proteins, which is the 2x-bloodier T3 biopsy confound arriving on cue.
 
-# The blood-index rule is the data-driven counterpart to the annotation rules above. HPA's
-# ery_cut keys on single-cell erythrocyte RNA, which undercounts the red-cell membrane skeleton
-# (mature erythrocytes are enucleate and RNA-poor), so band 3, alpha-spectrin, protein 4.2 and
-# CA1 escape it. The index is the per-sample mean log2 intensity of the haemoglobin anchor,
-# measured before removal; each protein's Spearman correlation with it (blood_cor) measures how
-# far its abundance tracks contamination in THIS dataset, no transcriptomic prior. blood_cor_max
-# is 0.45: a 300x permutation null of the index puts the 99.9th percentile |rho| at 0.43.
+# blood_cor is a reported diagnostic, not a gate. The index is the per-sample
+# mean log2 intensity of the haemoglobin anchor, measured before removal, and
+# each protein's Spearman correlation with it says how far that protein tracks
+# carryover in THIS dataset. It travels in protein_calls.csv and F04 flags rows
+# by it.
 #
-# The blood_cor call is confirmed against the mature-RBC proteome (rbc_file). A red-cell removal
-# now needs two independent hits: it tracks the haemoglobin index in-sample AND appears in a
-# published erythrocyte proteome. Membership cannot remove on its own - a deep RBC proteome shares
-# ~70% of any muscle proteome (glycolysis, tubulins, ferritins), so it only corroborates. The gate
-# drops three blood_cor-only proteins that no RBC proteome lists (H1-5 nuclear, AKR1C2 muscle-
-# expressed, ARHGAP19 lymphocyte); they are leukocyte or spurious, not red-cell.
+# It stopped gating removal on 2026-07-30. The cut was 0.45, justified as a
+# rounding above a permutation null recorded as 0.43; recomputing that null gave
+# 0.59, and stratifying it showed the quantile depends on how many samples a
+# protein was seen in - 0.71 at 15-25 observations against 0.47 at 41-48. One
+# flat cut cannot serve both ends of that range. Removal moved to the curated
+# blood list below, whose membership is protein identity.
 #
-# Those two hits are the whole decision: the muscle rescue does not reach a
-# red-cell call. Muscle-isoform-ambiguous proteins (ANK1, SPTB, EPB41, SYNE2)
-# carry real myonuclei RNA and are removed anyway, because a transcript prior
-# cannot outrank a protein's own correlation with these samples' haemoglobin.
-# Letting the rescue win here is what kept the only proteins that survived BH in
-# any contrast; corrected 2026-07-30.
+# rbc_file still corroborates: it is what makes the enucleate red-cell membrane
+# skeleton visible at all, since band 3, spectrin, protein 4.2 and CA1 are
+# RNA-poor and escape ery_cut. It never removes on its own, because a deep RBC
+# proteome shares roughly 70% of any muscle proteome.
 filter_cfg <- list(
   hpa_file        = "HPA_annotations_full.tsv",
   rbc_file        = "RBC_proteome_reference.tsv", # five-source mature-RBC proteome, built in stage 00
@@ -65,8 +61,7 @@ filter_cfg <- list(
   ery_cut         = 5000, # erythrocyte nCPM at/above = red-cell protein
   myo_cut         = 20, # myonuclei nCPM at/above = candidate for muscle rescue
   blood_max       = 1e9, # rescue only below this blood conc (pg/L); above = true plasma
-  blood_anchor    = c("HBB", "HBA1", "HBD", "HBG1", "HBG2"), # haemoglobins define the index
-  blood_cor_max   = 0.45 # Spearman with the blood index at/above = contamination-tracking
+  blood_anchor    = c("HBB", "HBA1", "HBD", "HBG1", "HBG2") # haemoglobins define the index
 )
 
 # Handling contaminants no annotation rule can catch. Matched by ACCESSION only: cRAP
@@ -107,6 +102,27 @@ contaminants <- tibble::tribble(
   "P01880",    "IGHD",   "immunoglobulin", "absent from HPA; constant region",
   "P02746",    "C1QB",   "complement",     "absent from HPA",
   "P00736",    "C1R",    "complement",     "absent from HPA"
+)
+
+# The blood list is curated by protein identity, not by covariation. Every member
+# is an immunoglobulin, a complement component, a secreted plasma protein, a
+# mature red-cell protein or a leukocyte protein, and carries that reason in the
+# file. It replaces the blood_cor > 0.45 removal rule, whose 0.43 justification
+# did not reproduce and whose null turned out to depend on how many samples a
+# protein was seen in (0.71 at 15-25 observations against 0.47 at 41-48), so one
+# flat cut over-removed sparse proteins and under-removed dense ones.
+#
+# What that rule caught and this list does not: 16 nuclear and cytoskeletal
+# proteins with real myonuclei expression, RBMX at 358 nCPM and SYNE2 at 303
+# among them, where covariation with haemoglobin was the only evidence. They are
+# back in the matrix. See 00_input/PROVENANCE.md.
+contaminants <- dplyr::bind_rows(
+  contaminants,
+  readr::read_csv(
+    here::here("00_input", "blood_contaminants.csv"),
+    col_types = readr::cols(.default = readr::col_character())
+  ) |>
+    dplyr::select("uniprot_id", "gene", "class", "reason")
 )
 
 # Reported per sample as % of summed intensity, measured BEFORE removal. These are
