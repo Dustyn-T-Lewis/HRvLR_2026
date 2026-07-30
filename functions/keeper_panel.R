@@ -60,14 +60,15 @@ association_panel <- function() {
     facet_grid(cols = vars(.data$level)) +
     scale_shape_manual(values = c(21, 22, 23), name = NULL) +
     scale_x_log10(
-      limits = c(0.01, 1), breaks = c(0.01, 0.05, 0.1, 0.5, 1),
-      labels = c(".01", ".05", ".1", ".5", "1")
+      limits = c(0.001, 1), breaks = c(0.001, 0.01, 0.05, 0.1, 0.5, 1),
+      labels = c(".001", ".01", ".05", ".1", ".5", "1")
     ) +
     labs(
       title = "Association: the nine contrasts at three feature levels",
       subtitle = paste(
-        "Smallest BH q each contrast reached. Every point sits right of .05,",
-        "so nothing survives anywhere. Closest is Acute_HR at q = 0.0715."
+        "Smallest BH q each contrast reached. Protein and module levels clear",
+        "nothing; the pathway points left of .05 are within-arm contrasts or",
+        "sets scored on under 15 detected members."
       ),
       x = "smallest BH q in the contrast", y = NULL
     ) +

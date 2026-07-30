@@ -301,12 +301,49 @@ purrr::imap_dfr(levels_book, function(book, lv) {
   )
 ```
 
-Zero proteins, pathways or modules survive BH in any of the nine contrasts. The
-smallest $q$ anywhere in the study is 0.0715, in `Acute_HR`. The nominal counts
-sit close to what chance predicts at $\alpha = .05$.
+Zero proteins and zero modules survive BH in any of the nine contrasts; the
+smallest $q$ at those levels is 0.0715, in `Acute_HR`. The nominal counts sit
+close to what chance predicts at $\alpha = .05$.
 
-This is the study's result. It is not a failure to find the analysis that works;
-it is the answer at this sample size.
+The pathway level has five singscore cells below q = .05, and reading them needs
+the coverage column:
+
+```{r}
+#| label: pathway-survivors
+#| echo: false
+pw <- read.xlsx(
+  here("04_Features", "pathways", "c_data", "pathway_contrasts.xlsx"),
+  "contrasts"
+)
+fry <- read.xlsx(
+  here("04_Features", "pathways", "c_data", "pathway_contrasts.xlsx"), "fry"
+)
+pw |>
+  filter(.data$bh < 0.05) |>
+  left_join(
+    select(fry, feature = "pathway", "contrast", fry_fdr = "fdr"),
+    by = c("feature", "contrast")
+  ) |>
+  transmute(
+    .data$contrast, .data$feature,
+    detected = sprintf("%d / %d", .data$n_detected, .data$n_annotated),
+    q = signif(.data$bh, 3), fry = signif(.data$fry_fdr, 3)
+  ) |>
+  arrange(.data$q)
+```
+
+Two of the five score HALLMARK_KRAS_SIGNALING_UP on **9 of its 200** annotated
+members. A set measured that thinly is not a readout of that pathway; it is nine
+proteins wearing its name. Both fgsea and fry require 15 detected members, so
+neither test even admits it, and F04 excludes it from the rows for the same
+reason. One of those two is the only interaction survivor in the study.
+
+The remaining three sit in within-arm contrasts, and fry confirms one of them:
+MYC targets in `Acute_HR` at FDR 0.026.
+
+So no HR-vs-LR or interaction contrast has a defensible survivor at any of the
+three levels. That is the study's result. It is not a failure to find the
+analysis that works; it is the answer at this sample size.
 
 ## Two things that will mislead you
 

@@ -33,12 +33,21 @@ rotates residuals and so carries inter-gene correlation instead of assuming it a
 returns **zero** in every HR-vs-LR and interaction contrast. Where the two disagree the
 rotation test is the one whose null holds.
 
-**No protein, pathway or module survives BH in any of the nine contrasts.** F04 fits
-all nine at three feature levels and every cell is empty at q < .05. The smallest q
-anywhere in the study is 0.0715, in `Acute_HR`. Earlier runs had eight survivors in
-`Acute_LR`; six of them (SPTB, ANK1, STOM, CAT, BLVRB, SYNE2) were red-cell proteins
-and the seventh, LCP1, is a leukocyte protein. All seven are now removed as blood by
-`00_input/blood_contaminants.csv`.
+**No protein and no module survives BH in any of the nine contrasts.** The
+smallest q at those two levels is 0.0715, in `Acute_HR`. Earlier runs had eight
+survivors in `Acute_LR`; six were red-cell proteins (SPTB, ANK1, STOM, CAT,
+BLVRB, SYNE2) and a seventh, LCP1, is a leukocyte protein. All are now removed as
+blood by `00_input/blood_contaminants.csv`.
+
+**At the pathway level five singscore cells clear BH, and none of them is an
+HR-vs-LR or interaction result once coverage is applied.** Two score
+HALLMARK_KRAS_SIGNALING_UP on **9 of its 200** annotated members — below the
+15-detected floor that fgsea and fry both apply, and excluded from F04's rows for
+that reason. One of those two is the only interaction survivor anywhere. The
+remaining three sit in the within-arm contrasts: MYC targets in `Acute_HR`, heme
+metabolism and telomere organisation in `Acute_LR`. `limma::fry` over the same
+sets confirms exactly one of the three, MYC targets in `Acute_HR` at FDR 0.026,
+and returns nothing in any HR-vs-LR or interaction contrast.
 
 **The T3 blood confound does not cancel in the interaction.** T3 biopsies carry
 roughly twice the blood of T1 and T2, and the rise is not equal in the two arms: on
@@ -208,6 +217,11 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
   (the old 420-cell F04 and the F07 synthesis heatmaps). Pooled rho partly
   re-expresses the HR-vs-LR contrast — the HR/LR label correlates +0.755 with
   `d_fcsa_I` — so the screen answered a question the study is not asking
+- `archive/t0_targets_2026-07-30`: a second implementation of this analysis in
+  `targets` + tidymodels, committed 2026-07-23 and never run — every `outputs/`
+  directory held only a `.gitkeep`. Set aside because a parallel implementation
+  nobody executes drifts from the one that ships. Preserved in git; not part of
+  any run order
 - `05_Figures/F04_association`: the nine stage 03 contrasts at protein, pathway
   and module level, in three column families (HR-LR by timepoint, the two
   interactions, the four within-arm changes). One panel per level plus a stacked
@@ -314,7 +328,7 @@ every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `04_Features/modules/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
-| `F04_association/` | How do high responders differ from low responders, per feature level? | The nine stage 03 contrasts read from `04_Features`; logFC fill with one scale per contrast family, stars for nominal p, black box for BH q < .05 within a contrast. Zero survivors in all nine contrasts at all three levels; smallest q anywhere is 0.0715. |
+| `F04_association/` | How do high responders differ from low responders, per feature level? | The nine stage 03 contrasts read from `04_Features`; logFC fill with one scale per contrast family, stars for nominal p, black box for BH q < .05 within a contrast. Zero survivors at protein and module level; the five pathway cells are coverage artifacts or within-arm. |
 | `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
 | `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads fall below zero once restricted to the two reproducible modules; in-fold refitting adds nothing. |
 
