@@ -42,28 +42,6 @@ row_labels <- function(features, level) {
   stats::setNames(make.unique(out), features)
 }
 
-# Association: the moderated t per feature x config x outcome, limma throughout
-# so the grid reflects one model rather than a mixture. A split leaf holds one
-# outcome, named by its phenotype directory, in a single `cell` sheet.
-assoc_matrix <- function(level) {
-  bind_rows(lapply(
-    cell_files("F04_association", level, model = "limma"),
-    function(f) {
-      config <- basename(dirname(dirname(dirname(dirname(f)))))
-      outcome <- basename(dirname(dirname(dirname(f))))
-      read.xlsx(f, "cell") |>
-        transmute(
-          feature_id = .data$feature, feature = strip_tp(.data$feature),
-          value = .data$t, p = .data$p,
-          outcome = outcome, config = config
-        )
-    }
-  )) |>
-    group_by(.data$feature, .data$outcome, .data$config) |>
-    slice_min(.data$p, n = 1, with_ties = FALSE) |>
-    ungroup()
-}
-
 # Prediction and classification: how often each feature is selected, pooled over
 # the sparse models. Frequency is unsigned, so the scale runs 0 to 1.
 select_matrix <- function(stage, level) {
@@ -86,7 +64,7 @@ select_matrix <- function(stage, level) {
 }
 
 stage_matrix <- function(stage, level) {
-  if (stage == "F04_association") assoc_matrix(level) else select_matrix(stage, level)
+  select_matrix(stage, level)
 }
 
 stage_heatmap <- function(stage, level) {
@@ -94,18 +72,10 @@ stage_heatmap <- function(stage, level) {
   if (!nrow(d)) {
     return(NULL)
   }
-  is_assoc <- stage == "F04_association"
-  rank_by <- if (is_assoc) {
-    d |>
-      group_by(.data$feature) |>
-      summarise(s = min(.data$p, na.rm = TRUE), .groups = "drop") |>
-      arrange(.data$s)
-  } else {
-    d |>
-      group_by(.data$feature) |>
-      summarise(s = -max(.data$value, na.rm = TRUE), .groups = "drop") |>
-      arrange(.data$s)
-  }
+  rank_by <- d |>
+    group_by(.data$feature) |>
+    summarise(s = -max(.data$value, na.rm = TRUE), .groups = "drop") |>
+    arrange(.data$s)
   keep <- head(rank_by$feature, N_SHOW[[level]])
   labs_map <- row_labels(keep, level)
 
@@ -121,25 +91,14 @@ stage_heatmap <- function(stage, level) {
         is.na(.data$p) ~ "", .data$p < 0.001 ~ "***",
         .data$p < 0.01 ~ "**", .data$p < 0.05 ~ "*", TRUE ~ ""
       ),
-      disp = if (is_assoc) pmin(pmax(.data$value, -5), 5) else .data$value
+      disp = .data$value
     )
 
-  fill_scale <- if (is_assoc) {
-    scale_fill_gradient2(
-      low = "#2166AC", mid = "grey96", high = "#B2182B", midpoint = 0,
-      name = "signed t", limits = c(-5, 5)
-    )
-  } else {
-    scale_fill_gradient(
-      low = "grey96", high = SPEC_LEVEL_COLORS[[level]], name = "sel. freq.",
-      limits = c(0, 1)
-    )
-  }
-  sub <- if (is_assoc) {
-    "limma moderated t. Stars = nominal p."
-  } else {
-    "Mean fold-selection frequency across the sparse models."
-  }
+  fill_scale <- scale_fill_gradient(
+    low = "grey96", high = SPEC_LEVEL_COLORS[[level]], name = "sel. freq.",
+    limits = c(0, 1)
+  )
+  sub <- "Mean fold-selection frequency across the sparse models."
 
   ggplot(d, aes(.data$outcome, .data$row, fill = .data$disp)) +
     geom_tile(colour = "white", linewidth = 0.35) +
@@ -168,48 +127,12 @@ stage_heatmap <- function(stage, level) {
 }
 
 STAGE_LABEL <- c(
-  F04_association = "association", F05_classification = "classification",
-  F06_prediction = "prediction"
+  F05_classification = "classification", F06_prediction = "prediction"
 )
 
 # The F07 detail view: the strongest cells drawn from raw observations. Each
 # stage shows what its claim rests on -- the feature against the phenotype, the
 # held-out score against the true arm, the prediction against the truth.
-assoc_detail <- function(level, n = 6) {
-  d <- assoc_matrix(level) |>
-    filter(.data$outcome != "group_diff") |>
-    slice_min(.data$p, n = n, with_ties = FALSE)
-  bundle <- pred_load()
-  labs_map <- row_labels(unique(d$feature), level)
-  panels <- lapply(seq_len(nrow(d)), function(i) {
-    r <- d[i, ]
-    x <- pred_contrast_matrix(
-      bundle$feature_sets[[SWEEP_LEVEL_KEY[[level]]]], bundle$meta, r$config
-    )
-    col <- r$feature_id
-    y <- pred_outcome(bundle, r$outcome)
-    keep <- intersect(rownames(x), names(y)[!is.na(y)])
-    df <- data.frame(
-      x = x[keep, col], y = as.numeric(y[keep]),
-      arm = ifelse(grepl("^HR", keep), "HR", "LR")
-    )
-    ggplot(df, aes(.data$x, .data$y)) +
-      geom_smooth(method = "lm", se = TRUE, colour = "grey30", linewidth = 0.5) +
-      geom_point(aes(colour = .data$arm), size = 1.8) +
-      scale_colour_manual(values = GROUP_COLORS, guide = "none") +
-      labs(
-        x = str_trunc(labs_map[[r$feature]], 28), y = r$outcome,
-        title = sprintf("%s -- t=%.1f p=%.3f", r$config, r$value, r$p)
-      ) +
-      FIG_THEME +
-      theme(
-        plot.title = element_text(size = 7, face = "bold"),
-        axis.title = element_text(size = 6.5)
-      )
-  })
-  wrap_plots(panels, ncol = 3)
-}
-
 pred_detail <- function(stage, level, n = 6) {
   cells <- root_cells(stage) |> filter(.data$level == !!level)
   is_class <- stage == "F05_classification"
@@ -278,11 +201,7 @@ for (stage in names(STAGE_LABEL)) {
       save_panel(hm, file.path(out, "reference_heatmap"), 300, h)
     }
 
-    detail <- if (stage == "F04_association") {
-      assoc_detail(level)
-    } else {
-      pred_detail(stage, level)
-    }
+    detail <- pred_detail(stage, level)
     detail <- detail +
       plot_annotation(
         title = sprintf(
