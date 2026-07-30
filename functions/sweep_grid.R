@@ -56,8 +56,13 @@ sweep_leaf_dir <- function(root, level, config, method) {
 # The permutation grid is part of the input. A leaf swept at B = 0 carries only
 # point estimates, and without b_grid here the later B = 200 pass would take it
 # as done and the sweep would finish with no nulls at all.
+# Any analysis that caches a result needs to record what it was computed from.
+input_fingerprint <- function(...) {
+  substr(digest::digest(list(...)), 1, 12)
+}
+
 sweep_fingerprint <- function(bundle, b_grid) {
-  substr(digest::digest(list(bundle$feature_sets, as.integer(b_grid))), 1, 12)
+  input_fingerprint(bundle$feature_sets, as.integer(b_grid))
 }
 
 leaf_done <- function(root, level, config, method, fingerprint,

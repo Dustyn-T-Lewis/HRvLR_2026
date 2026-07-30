@@ -153,6 +153,53 @@ returns nearly the same AUC — so a small $p$ can arrive attached to an AUC
 every count, panel and curve reads, so the manifest, the roll-up and the
 composite cannot disagree.
 
+### Why so many cells score AUC exactly 0
+
+Half the cells in this screen report an AUC of exactly 0.000, and that number
+means the opposite of what it looks like.
+
+When a penalised model finds no signal it shrinks to the intercept, and its
+prediction becomes the training set's class proportion. Under leave-one-subject-
+out, removing a subject shifts that proportion **against** them. In a cell with
+7 HR and 8 LR: hold out an HR subject and the model trains on 6 HR of 14, so it
+predicts 0.4286; hold out an LR subject and it trains on 7 of 14, predicting
+0.500 or more.
+
+Every HR is therefore scored lower than every LR, and the ranking is perfectly
+inverted:
+
+```{r}
+#| label: loso-inversion
+#| echo: false
+read.xlsx(
+  here(
+    "05_Figures", "F05_classification", "modules", "acute", "HR_LR", "ridge",
+    "c_data", "results.xlsx"
+  ),
+  "predictions"
+) |>
+  mutate(arm = ifelse(.data$y == 1, "HR", "LR")) |>
+  summarise(
+    n = dplyr::n(), distinct_predictions = dplyr::n_distinct(round(.data$pred, 6)),
+    min = round(min(.data$pred), 4), max = round(max(.data$pred), 4),
+    .by = "arm"
+  )
+```
+
+Three distinct predicted values across fifteen subjects. The model is a constant
+plus the arithmetic of its own cross-validation.
+
+**AUC = 0 means no signal, not inverted signal.** It follows that the median AUC
+across this screen — well below 0.5 — is not evidence that the proteome predicts
+worse than chance. It is evidence that most cells found nothing.
+
+Two things in the design already handle it. The permutation null suffers the
+identical pathology, since shuffled labels also produce intercept-only fits, so
+the null is centred near zero too and the comparison stays valid. And the
+baseline condition (AUC > 0.5) is exactly the guard that stops an intercept-only
+cell being promoted by a small $p$. This is the clearest argument in the pipeline
+for why neither the null nor the baseline is optional.
+
 ## The screen
 
 The pipeline does not fit one classifier. It fits every combination of:
