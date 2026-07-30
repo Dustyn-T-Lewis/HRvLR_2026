@@ -8,4 +8,4 @@ suppressWarnings(suppressMessages({
   ))
 }))
 
-run_fig1_level("pathways")
+invisible(run_fig1_level("pathways"))

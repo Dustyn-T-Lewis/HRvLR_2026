@@ -1,10 +1,9 @@
 # Figure 1 of the synthesis stage: one feature x trait heatmap per level in the
-# YvO F06-A idiom. Rows are named by biology and carry a colour block whose
-# width counts the cells where that feature reached nominal p. Columns are the
-# six adaptation outcomes nested in the seven timepoint configs, each config
-# labelled with its own n. Fill is Spearman rho, the value is printed in the
-# tile, stars mark nominal p and a black outline marks BH q < .05 applied within
-# the cell.
+# YvO F06-A idiom. Rows are named by biology and carry a colour block sized by
+# the feature set it stands for. Columns are the six adaptation outcomes nested
+# in the timepoint configs, each labelled with its own n. Fill is Spearman rho,
+# the value is printed in the tile, stars mark nominal p and a black outline
+# marks BH q < .05 applied within the cell.
 #
 # One method only. Spearman is fixed on design grounds -- rank-based at n =
 # 13-15, no linearity or normality assumption, and the one method whose effect
@@ -15,11 +14,28 @@ pacman::p_load(here, dplyr, ggplot2, patchwork, scales, stringr)
 source(here("functions", "shared_style.R"))
 source(here("functions", "sweep_drivers.R"))
 source(here("functions", "sweep_assoc_heatmap.R"))
+source(here("functions", "shared_pathway_utils.R"))
 
 SYNTH_METHOD <- "spearman"
 SYNTH_OUTCOMES <- ADAPT_OUTCOMES
 SYNTH_LEVELS <- c("modules", "pathways", "proteins")
 RHO_LIMIT <- 0.9
+
+# comp_hypertrophy is the composite the HR/LR groups were cut from, so it is
+# marked wherever it appears. README.md:289 bars it from any model carrying the
+# HR/LR term.
+CIRCULAR_OUTCOME <- "comp_hypertrophy"
+SYNTH_OUTCOME_SHORT <- replace(
+  OUTCOME_SHORT, CIRCULAR_OUTCOME,
+  paste0(OUTCOME_SHORT[[CIRCULAR_OUTCOME]], "#")
+)
+
+# trajectory holds each feature three times, so it gets one column family per
+# timepoint rather than a single tile hiding a best-of-three.
+SYNTH_PANEL_CONFIGS <- c(
+  "T1", "T2", "T3", "training", "acute", "total",
+  "trajectory@T1", "trajectory@T2", "trajectory@T3"
+)
 
 MODULE_NAMES <- c(
   greenyellow = "Electron Transport Chain",
@@ -45,6 +61,37 @@ module_sizes <- function() {
   stats::setNames(atlas$n_proteins, atlas$module)
 }
 
+measured_proteome <- function() {
+  unique(openxlsx::read.xlsx(
+    here("04_Figures", "shared", "WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+    "module_membership"
+  )$gene)
+}
+
+# Full annotated set size against the part of it this proteome actually
+# measured. A strong pathway rho resting on a handful of measured members is a
+# different claim from one resting on most of the set.
+pathway_sizes <- function(features) {
+  sets <- build_pathway_collection()
+  sets <- sets[classify_database(names(sets)) %in% c("Hallmark", "GO Slim")]
+  universe <- measured_proteome()
+  i <- match(features, names(sets))
+  data.frame(
+    feature = features,
+    full = lengths(sets)[i],
+    measured = vapply(
+      i, function(k) {
+        if (is.na(k)) {
+          NA_integer_
+        } else {
+          sum(sets[[k]] %in% universe)
+        }
+      },
+      integer(1)
+    )
+  )
+}
+
 # Row identity per level: the colour block, the biology line, and the count that
 # sets the block width. driver_keys already knows how each level names itself.
 synthesis_rows <- function(d, level) {
@@ -65,16 +112,24 @@ synthesis_rows <- function(d, level) {
   ) |>
     left_join(hits, by = "feature")
 
-  # Modules carry a member count, so their block width is that count and the
-  # rows sort by it, as in the YvO reference. Pathways and proteins have no
-  # comparable size, so they get a fixed identity chip and sort by evidence.
+  # Modules and pathways both carry a set size, so their block width is that
+  # size; pathways stack the fraction we actually measured inside it. Proteins
+  # have no size, so they get a uniform identity block sorted by evidence.
   if (level == "modules") {
     out <- out |>
-      mutate(bar = sizes[.data$key]) |>
+      mutate(bar = sizes[.data$key], bar_inner = NA_real_) |>
+      arrange(dplyr::desc(.data$bar))
+  } else if (level == "pathways") {
+    pw <- pathway_sizes(keep)
+    out <- out |>
+      mutate(
+        bar = pw$full[match(.data$feature, pw$feature)],
+        bar_inner = pw$measured[match(.data$feature, pw$feature)]
+      ) |>
       arrange(dplyr::desc(.data$bar))
   } else {
     out <- out |>
-      mutate(bar = 1) |>
+      mutate(bar = 1, bar_inner = NA_real_) |>
       arrange(dplyr::desc(.data$n_bh), .data$best_p)
   }
   out$label <- synthesis_row_label(out, level, sizes)
@@ -96,20 +151,27 @@ synthesis_row_label <- function(rows, level, sizes) {
   }
 }
 
+BLOCK_AXIS_TITLE <- c(
+  modules = "proteins per module",
+  pathways = "annotated set size (pale) vs members measured (solid)"
+)
+
 # The coloured block sits left of the grid on a reversed axis, as in the YvO
-# reference. Its width is the module's member count where that exists; the row
-# name is the y-axis text so ggplot handles alignment and nothing clips.
+# reference. Where the feature stands for a set, the block width is that set's
+# size and the name sits on the y axis so nothing clips. Proteins have no size,
+# so the block is uniform and carries the name inside it.
 row_block_panel <- function(rows, level) {
-  sized <- level == "modules"
+  sized <- level %in% c("modules", "pathways")
   p <- ggplot(rows, aes(.data$bar, .data$feature)) +
     geom_col(
-      fill = rows$fill, width = 0.82, colour = "grey40", linewidth = 0.15
+      fill = rows$fill, width = 0.82, colour = "grey40", linewidth = 0.15,
+      alpha = if (level == "pathways") 0.42 else 1
     ) +
     scale_x_reverse(
       expand = expansion(mult = if (sized) c(0.02, 0) else c(0.01, 0.03)),
       breaks = if (sized) scales::breaks_pretty(3) else NULL
     ) +
-    labs(x = if (sized) "proteins per module" else NULL, y = NULL) +
+    labs(x = if (sized) BLOCK_AXIS_TITLE[[level]] else NULL, y = NULL) +
     FIG_THEME +
     theme(
       axis.ticks.y = element_blank(),
@@ -119,9 +181,13 @@ row_block_panel <- function(rows, level) {
       panel.grid = element_blank(),
       panel.border = element_blank()
     )
-  # Modules encode their member count in the block width, so the name sits
-  # outside on the axis. The other levels have a uniform block, so the name goes
-  # inside it as in the YvO reference and no dead space opens up.
+  if (level == "pathways") {
+    p <- p + geom_col(
+      aes(x = .data$bar_inner),
+      fill = rows$fill, width = 0.82,
+      colour = "grey40", linewidth = 0.15
+    )
+  }
   if (sized) {
     p +
       scale_y_discrete(
@@ -142,12 +208,13 @@ row_block_panel <- function(rows, level) {
 # outcomes are not all measured on the same subjects.
 config_strip <- function(d) {
   d |>
-    group_by(.data$config) |>
+    group_by(.data$panel_config) |>
     summarise(lo = min(.data$n), hi = max(.data$n), .groups = "drop") |>
     mutate(
       strip = ifelse(
-        .data$lo == .data$hi, sprintf("%s\n(n=%d)", .data$config, .data$lo),
-        sprintf("%s\n(n=%d-%d)", .data$config, .data$lo, .data$hi)
+        .data$lo == .data$hi,
+        sprintf("%s\n(n=%d)", .data$panel_config, .data$lo),
+        sprintf("%s\n(n=%d-%d)", .data$panel_config, .data$lo, .data$hi)
       )
     )
 }
@@ -159,12 +226,14 @@ tile_grid_panel <- function(d, rows) {
     mutate(
       feature = factor(.data$feature, levels = levels(rows$feature)),
       outcome = factor(
-        OUTCOME_SHORT[.data$outcome],
-        levels = unname(OUTCOME_SHORT[SYNTH_OUTCOMES])
+        SYNTH_OUTCOME_SHORT[.data$outcome],
+        levels = unname(SYNTH_OUTCOME_SHORT[SYNTH_OUTCOMES])
       ),
       strip = factor(
-        strips$strip[match(.data$config, strips$config)],
-        levels = strips$strip[match(SWEEP_CONFIGS, strips$config)]
+        strips$strip[match(.data$panel_config, strips$panel_config)],
+        levels = strips$strip[
+          match(SYNTH_PANEL_CONFIGS, strips$panel_config)
+        ]
       ),
       star = case_when(
         .data$p < 0.001 ~ "***", .data$p < 0.01 ~ "**",
@@ -228,7 +297,10 @@ synthesis_subtitle <- function(d, rows, level) {
   }
   paste0(
     sprintf(
-      "Spearman rho; %s. Screen = %d cells (%d configs x %d outcomes). ",
+      paste(
+        "Spearman rho; %s. Screen = %d cells (%d configs x %d outcomes);",
+        "trajectory is one cell drawn as its three timepoint copies. "
+      ),
       selected, n_screen, length(unique(d$config)), length(unique(d$outcome))
     ),
     sprintf(
@@ -240,42 +312,51 @@ synthesis_subtitle <- function(d, rows, level) {
       sum(d$bh < BH_CUT, na.rm = TRUE)
     ),
     "BH is applied within each cell over that cell's own feature list, ",
-    "never across the screen. Trajectory tiles keep the strongest of each ",
-    "feature's three timepoint copies, which is a selection."
+    "never across the screen."
   )
 }
 
-# ME_blue's ORA term and its highest-membership proteins disagree, so the row
-# name is flagged rather than quietly trusted or quietly dropped.
+# Caveats that belong on the page rather than in a methods file: the circular
+# outcome, the redundant config, the omitted contrast, and the one row whose
+# name its own annotation does not support.
+SYNTH_FOOTNOTES <- paste(
+  "# comp_hypertrophy is the composite the HR/LR groups were defined from, so",
+  "its column is circular with the grouping (README.md:289).",
+  "\ntrajectory@T1/@T2/@T3 are not a fourth design: the config concatenates",
+  "the three timepoint vectors into one cell, so @T1 repeats the T1 column on",
+  "complete cases only (rho r = 0.96) and the three copies share a BH family.",
+  "\ngroup_diff is not shown: Spearman runs the six continuous outcomes only,",
+  "and the HR-vs-LR contrast is fitted in 03_DEP with subject blocking on the",
+  "non-imputed matrix."
+)
+
 SYNTH_CAPTION <- c(
   modules = paste(
     "* ME_blue's top ORA term is RNA splicing, but its highest-membership",
     "proteins are pentose-phosphate enzymes (TKT, TALDO1) and leukocyte",
     "markers (LCP1, CLIC1, IFITM1). Unnamed rows returned no enriched term.",
-    "\ngroup_diff is not shown: Spearman runs the six continuous outcomes",
-    "only, and the HR-vs-LR contrast is fitted properly in 03_DEP with",
-    "subject blocking on the non-imputed matrix."
+    SYNTH_FOOTNOTES
   ),
-  pathways = paste(
-    "group_diff is not shown: Spearman runs the six continuous outcomes only,",
-    "and the HR-vs-LR contrast is fitted in 03_DEP."
-  ),
+  pathways = SYNTH_FOOTNOTES,
   proteins = paste(
-    "Row label gives the protein's WGCNA module. group_diff is not shown:",
-    "Spearman runs the six continuous outcomes only, and the HR-vs-LR",
-    "contrast is fitted in 03_DEP."
+    "Row label gives the protein's WGCNA module.", SYNTH_FOOTNOTES
   )
 )
 
 build_fig1_level <- function(level) {
-  d <- assoc_grid(level, SYNTH_METHOD) |>
-    filter(.data$outcome %in% SYNTH_OUTCOMES)
+  d <- assoc_grid(level, SYNTH_METHOD, collapse_tp = FALSE) |>
+    filter(.data$outcome %in% SYNTH_OUTCOMES) |>
+    mutate(
+      panel_config = ifelse(
+        is.na(.data$tp), .data$config, paste0(.data$config, "@", .data$tp)
+      )
+    )
   rows <- synthesis_rows(d, level)
   panel <- row_block_panel(rows, level) + tile_grid_panel(d, rows) +
     plot_layout(widths = c(1, 3.4)) +
     plot_annotation(
       title = sprintf(
-        "%s x adaptation associations across the seven timepoint configs",
+        "%s x adaptation associations across the timepoint configs",
         str_to_sentence(level)
       ),
       subtitle = str_wrap(synthesis_subtitle(d, rows, level), 150),

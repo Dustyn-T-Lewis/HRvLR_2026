@@ -8,4 +8,4 @@ suppressWarnings(suppressMessages({
   ))
 }))
 
-run_fig1_level("proteins")
+invisible(run_fig1_level("proteins"))

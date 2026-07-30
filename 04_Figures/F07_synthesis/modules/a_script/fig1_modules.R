@@ -9,4 +9,4 @@ suppressWarnings(suppressMessages({
   ))
 }))
 
-run_fig1_level("modules")
+invisible(run_fig1_level("modules"))
