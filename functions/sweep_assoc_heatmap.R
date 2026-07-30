@@ -16,9 +16,10 @@ OUTCOME_SHORT <- c(
 )
 
 # One row per feature x outcome x config. The trajectory config stores each
-# feature three times as feature@T1/@T2/@T3, so collapsing to one tile keeps
-# the best of three; `tp` records which copy won and the caller states the rule.
-assoc_grid <- function(level, method) {
+# feature three times as feature@T1/@T2/@T3. Collapsing keeps the best of the
+# three, which is a maximum, so `collapse_tp = FALSE` returns all three copies
+# and lets a caller give each timepoint its own column instead.
+assoc_grid <- function(level, method, collapse_tp = TRUE) {
   files <- Sys.glob(file.path(
     sweep_root_dir("F04_association"), level, "*", "*", method,
     "c_data", "results.xlsx"
@@ -36,6 +37,11 @@ assoc_grid <- function(level, method) {
         config = basename(dirname(dirname(dirname(dirname(f)))))
       )
   })) |>
+    (\(d) if (collapse_tp) collapse_timepoints(d) else d)()
+}
+
+collapse_timepoints <- function(d) {
+  d |>
     group_by(.data$feature, .data$outcome, .data$config) |>
     slice_min(.data$p, n = 1, with_ties = FALSE) |>
     ungroup()
