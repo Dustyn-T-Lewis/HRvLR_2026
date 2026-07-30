@@ -17,7 +17,7 @@ REF_DIR <- here("05_Figures", "shared", "reference", "b_reports")
 dir.create(REF_DIR, recursive = TRUE, showWarnings = FALSE)
 
 wgcna_book <- here(
-  "05_Figures", "shared", "WGCNA", "c_data",
+  "04_Features", "modules", "c_data",
   "WGCNA_source_data.xlsx"
 )
 

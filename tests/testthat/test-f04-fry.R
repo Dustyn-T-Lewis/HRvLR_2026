@@ -1,5 +1,5 @@
 pacman::p_load(here, testthat, limma, dplyr)
-source(here("05_Figures", "shared", "WGCNA", "a_script", "enrichment.R"))
+source(here("04_Features", "modules", "a_script", "enrichment.R"))
 
 # A two-group design with one module planted to move and one planted flat. fry must find
 # the first and not the second.

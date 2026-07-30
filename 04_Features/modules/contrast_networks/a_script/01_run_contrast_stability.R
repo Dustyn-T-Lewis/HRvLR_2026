@@ -110,7 +110,7 @@ results <- list(
 summary_tbl <- bind_rows(lapply(results, `[[`, "summary"))
 stability_tbl <- bind_rows(lapply(results, `[[`, "stability"))
 
-out <- here("05_Figures", "shared", "WGCNA", "contrast_networks", "c_data")
+out <- here("04_Features", "modules", "contrast_networks", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 wb <- createWorkbook()
 addWorksheet(wb, "summary")

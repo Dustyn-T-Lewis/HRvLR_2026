@@ -254,7 +254,7 @@ consequential decision in the stage. The canonical stage-03 arm
 Be precise about the scope of that claim, because it is easy to overstate. The imputed
 matrices **do** feed a differential-expression test: the four-arm comparison in
 `03_DEP/b_imputed/` fits limma to every one of them. `DAList_imputed_missforest.rds` also
-feeds the WGCNA modules, F02, `shared/WGCNA`, the concordance figures and the module engine. What the
+feeds the WGCNA modules, F02, `04_Features/modules`, the concordance figures and the module engine. What the
 imputed arms never do is produce the reported result.
 
 That comparison is not decoration. π-hit counts across the five arms run

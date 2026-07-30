@@ -4,7 +4,7 @@
 # duplicateCorrelation carried through. This replaces a panel that ran fgsea with the modules
 # as gene sets, ranked by moderated t from the matrix that defined them - circular, and it
 # returned padj = 7e-33 in a study whose minimum q elsewhere is 0.36.
-if (!exists("mods")) source(here::here("05_Figures", "shared", "WGCNA", "a_script", "setup.R"))
+if (!exists("mods")) source(here::here("04_Features", "modules", "a_script", "setup.R"))
 pacman::p_load(ggplot2, dplyr, forcats, scales)
 
 fry_res <- module_fry(

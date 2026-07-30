@@ -6,7 +6,7 @@ pacman::p_load(here, patchwork, ggplot2, openxlsx, dplyr, tibble)
 F04_PANELS <- list()
 F04_AUDIT <- list()
 
-a_script <- here("05_Figures", "shared", "WGCNA", "a_script")
+a_script <- here("04_Features", "modules", "a_script")
 source(file.path(a_script, "setup.R"))
 source(here("functions", "shared_utils.R"))
 
