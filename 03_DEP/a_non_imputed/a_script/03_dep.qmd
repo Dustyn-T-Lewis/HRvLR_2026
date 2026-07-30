@@ -241,6 +241,13 @@ p-value, not the BH-adjusted one, so it is an effect-size-weighted filter and is
 deliberately not FDR-controlled. It complements the BH counts above and is read
 alongside them, not in place of them.
 
+Selection is by BH, not by Pi. Shuffling the arm label across the sixteen
+subjects and refitting produces *more* Pi hits than the real labels do: 235
+observed against a permuted median of 274 across the five HR-vs-LR and
+interaction contrasts, no contrast reaching an empirical p below 0.22
+(`04_pi_permutation.R`, B = 200). A Pi count carries that null or it is not
+interpretable.
+
 ```{r}
 #| label: pi-score
 #| eval: false
