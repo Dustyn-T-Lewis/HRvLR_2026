@@ -1,0 +1,384 @@
+---
+title: "HRvLR F04 — Association"
+subtitle: "Nine contrasts, three feature levels, and what a difference of differences can and cannot tell you"
+author: "A_HRvLR_2026"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+bibliography: ../../shared/references.bib
+execute:
+  eval: true
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+pacman::p_load(here)
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+```{r}
+#| label: libs
+#| include: false
+pacman::p_load(
+  here, dplyr, tidyr, ggplot2, openxlsx, readr, stringr, limma, purrr
+)
+source(here("functions", "feature_contrasts.R"))
+source(here("functions", "shared_style.R"))
+```
+
+## The question
+
+Sixteen subjects trained. Eight gained a lot of muscle, eight gained little. We
+call them high and low responders, and we want to know whether their muscle
+proteomes differ.
+
+That sentence hides three different questions, and this figure answers all of
+them separately because they have different answers.
+
+1. Do the two groups differ **at a given timepoint**? Compare HR and LR at
+   baseline, after training, or after the acute bout.
+2. Do the two groups **change differently**? Compare HR's change to LR's change.
+   This is the responder question proper.
+3. Does **either group change at all**? Look inside one arm at a time.
+
+Question 2 is the one the study is named after, and it is the one a reader is
+most likely to answer with evidence from question 1 or 3 by mistake.
+
+## The design
+
+### The idea
+
+Every subject gave a biopsy at three timepoints: T1 before training, T2 after
+training, T3 after a single acute bout. Crossing arm with timepoint gives six
+groups, and every protein gets an average abundance in each.
+
+```{r}
+#| label: cells
+#| echo: false
+tibble::tibble(
+  arm = c("HR", "LR"),
+  T1 = c("HR_T1 (untrained)", "LR_T1 (untrained)"),
+  T2 = c("HR_T2 (trained)", "LR_T2 (trained)"),
+  T3 = c("HR_T3 (acute bout)", "LR_T3 (acute bout)")
+)
+```
+
+Every question above is a weighted sum of those six numbers. That is all a
+contrast is.
+
+### Formally
+
+For protein $j$, sample $i$ in cell $g \in \{1,\dots,6\}$ from subject $s(i)$:
+
+$$
+y_{ij} = \mu_{gj} + b_{s(i)j} + \varepsilon_{ij},
+\qquad
+b_{sj} \sim N(0,\ \sigma^2_{bj}),
+\qquad
+\varepsilon_{ij} \sim N(0,\ \sigma^2_j)
+$$
+
+This is the **means model**: `~ 0 + group`, one intercept per cell, no reference
+level. A contrast is a vector $c \in \mathbb{R}^6$ with the estimate
+
+$$
+\hat\theta_j = c^\top \hat\mu_j,
+\qquad
+t_j = \frac{c^\top\hat\mu_j}{\tilde{s}_j \sqrt{c^\top (X^\top V^{-1} X)^{-1} c}}
+$$
+
+where $\tilde{s}_j$ is the empirical-Bayes moderated standard deviation
+[@ritchie2015]. Moderation matters at $n = 16$: it shrinks each protein's
+variance toward a fitted trend, so a protein that happens to look quiet in these
+samples cannot manufacture a large $t$ on its own.
+
+## The nine contrasts
+
+Read the weights, not the names. Each row below is one $c$ vector.
+
+```{r}
+#| label: contrast-matrix
+#| fig-height: 4.2
+#| fig-width: 8
+#| fig-cap: "The nine contrasts as weights on the six cell means. Red adds, blue subtracts, white ignores. The interaction rows are the only ones with two positive and two negative weights, which is what makes them a difference of differences."
+design <- diag(6)
+colnames(design) <- GROUP_LEVELS
+cm <- makeContrasts(contrasts = HRVLR_CONTRASTS, levels = design)
+colnames(cm) <- trimws(sub("=.*$", "", HRVLR_CONTRASTS))
+
+family <- c(
+  Training_HR = "within-arm", Training_LR = "within-arm",
+  Acute_HR = "within-arm", Acute_LR = "within-arm",
+  Baseline_HRvLR = "HR - LR", Trained_HRvLR = "HR - LR",
+  Acute_HRvLR = "HR - LR",
+  Training_Interaction = "interaction", Acute_Interaction = "interaction"
+)
+
+as.data.frame(cm) |>
+  tibble::rownames_to_column("cell") |>
+  pivot_longer(-"cell", names_to = "contrast", values_to = "w") |>
+  mutate(
+    cell = factor(cell, levels = GROUP_LEVELS),
+    contrast = factor(contrast, levels = rev(names(family))),
+    family = factor(family[as.character(contrast)],
+      levels = c("HR - LR", "interaction", "within-arm")
+    )
+  ) |>
+  ggplot(aes(cell, contrast, fill = w)) +
+  geom_tile(colour = "grey60", linewidth = 0.3) +
+  geom_text(aes(label = ifelse(w == 0, "", sprintf("%+d", w))), size = 3) +
+  facet_grid(rows = vars(family), scales = "free_y", space = "free_y") +
+  scale_fill_gradient2(
+    low = "#2166AC", mid = "white", high = "#B2182B", midpoint = 0,
+    guide = "none"
+  ) +
+  labs(x = NULL, y = NULL) +
+  FIG_THEME +
+  theme(panel.grid = element_blank())
+```
+
+**Within-arm** rows have one $+1$ and one $-1$ inside a single arm: does this
+group change?
+
+**HR − LR** rows have one $+1$ and one $-1$ at a single timepoint: do the groups
+differ here?
+
+**Interaction** rows have two of each. `Training_Interaction` is
+
+$$
+(\mu_{\text{HR},T2} - \mu_{\text{HR},T1}) - (\mu_{\text{LR},T2} - \mu_{\text{LR},T1})
+$$
+
+Each arm is compared to *itself* first, then the two changes are compared. Any
+protein that simply sits higher in HR at every timepoint cancels out completely.
+That is why the interaction, not the timepoint comparison, is the responder
+test.
+
+### Why "significant in HR, not in LR" is not an answer
+
+A reader looking at the within-arm columns will find proteins that reach $p<.05$
+in one arm and not the other, and will be tempted to call that a group
+difference. It is not. Two estimates can fall on opposite sides of a threshold
+while being statistically indistinguishable from each other [@ritchie2015]. The
+interaction is the test of the difference, and it is the column to read.
+
+## Repeated measures
+
+### The idea
+
+Each subject appears up to three times. Three biopsies from one person are more
+alike than three biopsies from three people, and pretending otherwise inflates
+the evidence: the model would count 45 independent observations when it has
+closer to 16 independent subjects.
+
+### Formally
+
+`duplicateCorrelation` estimates one consensus within-subject correlation
+$\rho$ across all proteins and folds it into the working covariance
+[@smyth2005]:
+
+$$
+V = (1-\rho) I + \rho\, ZZ^\top
+$$
+
+with $Z$ the subject indicator. Every contrast is then a generalised least
+squares estimate under $V$. The consensus is reported in the stage 03 log; it
+runs near $\rho \approx 0.14$ here.
+
+Two subjects are incomplete: S28 gave only T1, S29 only T2 and T3. The mixed
+model uses whatever each subject provided rather than dropping them, which is
+the practical reason for this parameterisation over a paired $t$-test.
+
+## Multiplicity
+
+### The idea
+
+Testing 1,900 proteins at $p<.05$ yields about 95 false positives before any
+biology. The Benjamini–Hochberg procedure fixes the expected proportion of false
+positives *among the calls you make* at 5%.
+
+### Formally
+
+Sort the $m$ p-values within one contrast, $p_{(1)} \le \dots \le p_{(m)}$, and
+reject up to the largest $k$ with
+
+$$
+p_{(k)} \le \frac{k}{m}\,\alpha
+$$
+
+which controls FDR at $\alpha$ under independence or positive dependence
+[@benjamini1995].
+
+**BH is applied within each contrast, never across the nine.** Pooling would
+assume the nine are independent tests. They are not: they share subjects, share
+cell means, and two of them are arithmetic combinations of the other four. The
+denominator $m$ is each contrast's own non-NA count, which runs 1,877–1,892 of
+1,900 — a protein never observed in some cell that its contrast touches is
+inestimable, and limma returns `NA` rather than a number.
+
+### One thing BH does not do
+
+BH is monotone in $p$: it cannot change the ranking, only the cut. A figure that
+shows BH survivors in one panel and $\pi$-score calls in another is showing two
+cuts on one ordering, not two analyses.
+
+## The three feature levels
+
+The same nine contrasts are fitted three times, on three descriptions of the
+same samples.
+
+```{r}
+#| label: levels
+#| echo: false
+tibble::tibble(
+  level = c("proteins", "pathways", "modules"),
+  what = c(
+    "one row per protein, as measured",
+    "singscore rank score per Hallmark / GO Slim set, per sample",
+    "WGCNA module eigengene (first PC of a co-expression cluster)"
+  ),
+  n = c("1,900", "57 with >= 15 members detected", "12"),
+  matrix = c("non-imputed", "missForest-imputed", "missForest-imputed")
+)
+```
+
+Levels trade resolution for power. A protein is the finest unit and the noisiest.
+A pathway score averages many proteins, so it is quieter but only interpretable
+if enough members were actually measured — a 200-member set scored on 9 of them
+is not a readout of that pathway, which is why the figure applies a 15-detected
+floor. Module eigengenes are defined by co-expression *in this cohort*, so they
+are the most cohort-specific of the three.
+
+The estimator is identical across levels: `functions/feature_contrasts.R` fits
+the same means model with the same blocking, and
+`verify_protein_equivalence()` checks it reproduces the stage 03 proteoDA fit to
+$5\times10^{-15}$ in logFC. A logFC read off a module row and one read off a
+protein row mean the same thing.
+
+## The figure
+
+![F04 association, all three levels](../b_reports/MAIN_F04_association.png)
+
+Each panel is rows × nine columns in three families, one fill scale per family
+because a difference of differences is not the same quantity as a simple
+difference. Fill is logFC, the value is printed, stars mark nominal $p$, a black
+outline marks BH $q<.05$, and on the pathway panel a dashed green outline marks
+`limma::fry` FDR $<.05$.
+
+## The result
+
+```{r}
+#| label: result
+#| echo: false
+levels_book <- c(
+  proteins = "protein_contrasts.xlsx", pathways = "pathway_contrasts.xlsx",
+  modules = "module_contrasts.xlsx"
+)
+purrr::imap_dfr(levels_book, function(book, lv) {
+  read.xlsx(here("04_Features", lv, "c_data", book), "contrasts") |>
+    group_by(contrast) |>
+    summarise(
+      nominal = sum(p < 0.05, na.rm = TRUE),
+      bh = sum(bh < 0.05, na.rm = TRUE),
+      min_q = signif(min(bh, na.rm = TRUE), 3),
+      .groups = "drop"
+    ) |>
+    mutate(level = lv, .before = 1)
+}) |>
+  pivot_wider(
+    id_cols = "contrast", names_from = "level",
+    values_from = c("nominal", "bh")
+  )
+```
+
+Zero proteins, pathways or modules survive BH in any of the nine contrasts. The
+smallest $q$ anywhere in the study is 0.0715, in `Acute_HR`. The nominal counts
+sit close to what chance predicts at $\alpha = .05$.
+
+This is the study's result. It is not a failure to find the analysis that works;
+it is the answer at this sample size.
+
+## Two things that will mislead you
+
+### The T3 blood confound does not cancel
+
+T3 biopsies carry roughly twice the blood of T1 and T2 (post-exercise
+hyperaemia). The obvious defence is that a difference of differences removes it.
+That defence only holds if both arms got bloodier by the same amount, and they
+did not:
+
+$$
+\text{blood index} \sim \text{arm} \times \text{timepoint} + (1\,|\,\text{subject})
+$$
+
+gives an arm × T3 term of $b = -1.21$, $\mathrm{SE} = 0.54$, $p = 0.032$, and
+$p = 0.017$ by shuffling the arm label across the 16 subjects. LR rose 2.14 on
+the log2 haemoglobin index against HR's 0.57.
+
+A difference of differences removes a **constant** offset, not a differential
+one. `03_DEP/a_non_imputed/a_script/05_blood_adjusted.R` refits all nine
+contrasts with the index as a covariate; the five HR-vs-LR and interaction
+contrasts are unchanged at zero.
+
+### fgsea and fry disagree, and fry is right
+
+fgsea builds its null by permuting **gene labels**, which assumes proteins vary
+independently [@korotkevich2021; @subramanian2005]. In a repeated-measures
+biopsy study they do not: pathway members are co-regulated by definition, and a
+shared subject effect correlates everything measured on one biopsy.
+
+`limma::fry` is a rotation test [@wu2010]. It rotates residuals under the fitted
+model, so inter-gene correlation and the subject blocking are carried rather than
+assumed away. On the same 57 sets, BH within each contrast:
+
+```{r}
+#| label: fry-vs-fgsea
+#| echo: false
+fry <- read.xlsx(
+  here("04_Features", "pathways", "c_data", "pathway_contrasts.xlsx"), "fry"
+)
+fg <- read.xlsx(
+  here("05_Figures", "F03_pathway", "c_data", "F03_pathway_source_data.xlsx"),
+  "fgsea_all"
+)
+fg |>
+  filter(pathway %in% unique(fry$pathway)) |>
+  group_by(contrast) |>
+  summarise(fgsea = sum(p.adjust(pval, "BH") < 0.05), .groups = "drop") |>
+  left_join(
+    fry |> group_by(contrast) |> summarise(fry = sum(fdr < 0.05), .groups = "drop"),
+    by = "contrast"
+  ) |>
+  arrange(desc(fgsea))
+```
+
+Every HR-vs-LR and interaction contrast goes to zero under fry. Its only calls
+are four within-arm sets in `Acute_HR`. Where the two disagree, the rotation test
+is the one whose null holds.
+
+## Recap
+
+- A contrast is a weighted sum of six cell means; the weights are the analysis.
+- The interaction rows are the responder test, because they cancel any constant
+  group offset.
+- "Significant in one arm, not the other" is not a group difference.
+- BH runs within each contrast on that contrast's own denominator.
+- Nothing survives BH at any of the three feature levels.
+- The acute contrasts carry an arm-dependent blood confound that the interaction
+  does not remove.
+- fgsea's pathway counts do not survive a correlation-corrected test.
+
+## References
+
+::: {#refs}
+:::

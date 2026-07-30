@@ -414,8 +414,17 @@ sweep_class_cell <- function(x, y, model, b_grid = B_GRID, cores = PERM_CORES) {
       null_sd = if (b > 0) stats::sd(nb) else NA_real_
     )
   }))
+  # At B = 0 the null is empty, and data.frame() recycles a length-1 model
+  # against it rather than returning no rows. The continuous cell already
+  # guards this; without the same guard here the metrics-only pass dies on
+  # every leaf it writes.
+  null_df <- if (length(null)) {
+    data.frame(model = model, auc = null)
+  } else {
+    data.frame(model = character(0), auc = numeric(0))
+  }
   list(
-    summary = summ, null = data.frame(model = model, auc = null),
+    summary = summ, null = null_df,
     preds = data.frame(
       model = model, subject = rownames(x), y = y, pred = preds
     ),
@@ -445,7 +454,9 @@ sweep_cont_cell <- function(x, y, model, outcome, b_grid = B_GRID,
     )
   }))
   null_df <- if (is.null(null)) {
-    data.frame(outcome = outcome, model = model, q2 = numeric(0))
+    data.frame(
+      outcome = character(0), model = character(0), q2 = numeric(0)
+    )
   } else {
     data.frame(outcome = outcome, model = model, q2 = null[, "q2"])
   }

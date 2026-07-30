@@ -9,22 +9,52 @@ fake_bundle <- function(n_prot = 20, seed = 5) {
   list(feature_sets = list(proteins = m, singscore = m[1:5, ]))
 }
 
+B0 <- c(0L, 0L)
+
 test_that("the fingerprint is stable for identical input", {
   expect_identical(
-    sweep_fingerprint(fake_bundle()), sweep_fingerprint(fake_bundle())
+    sweep_fingerprint(fake_bundle(), B0), sweep_fingerprint(fake_bundle(), B0)
   )
 })
 
 test_that("the fingerprint moves when the feature set changes", {
-  a <- sweep_fingerprint(fake_bundle(n_prot = 20))
-  b <- sweep_fingerprint(fake_bundle(n_prot = 19))
+  a <- sweep_fingerprint(fake_bundle(n_prot = 20), B0)
+  b <- sweep_fingerprint(fake_bundle(n_prot = 19), B0)
   expect_false(identical(a, b))
 })
 
 test_that("the fingerprint moves when values change but shape does not", {
-  a <- sweep_fingerprint(fake_bundle(seed = 1))
-  b <- sweep_fingerprint(fake_bundle(seed = 2))
+  a <- sweep_fingerprint(fake_bundle(seed = 1), B0)
+  b <- sweep_fingerprint(fake_bundle(seed = 2), B0)
   expect_false(identical(a, b))
+})
+
+test_that("the fingerprint moves with the permutation grid", {
+  b <- fake_bundle()
+  expect_false(identical(
+    sweep_fingerprint(b, b_grid = c(0L, 0L)),
+    sweep_fingerprint(b, b_grid = c(0L, 200L))
+  ))
+  expect_identical(
+    sweep_fingerprint(b, b_grid = c(0L, 200L)),
+    sweep_fingerprint(b, b_grid = c(0L, 200L))
+  )
+})
+
+test_that("a B = 0 leaf never satisfies a B = 200 run", {
+  root <- withr::local_tempdir()
+  d <- file.path(root, "proteins", "total", "rf", "c_data")
+  dir.create(d, recursive = TRUE)
+  b <- fake_bundle()
+  fast <- sweep_fingerprint(b, b_grid = c(0L, 0L))
+  full <- sweep_fingerprint(b, b_grid = c(0L, 200L))
+  write_sweep_workbook(
+    file.path(d, "results.xlsx"), list(metrics = data.frame(q2 = 1)),
+    fingerprint = fast
+  )
+
+  expect_true(leaf_done("X", "proteins", "total", "rf", fast, root_dir = root))
+  expect_false(leaf_done("X", "proteins", "total", "rf", full, root_dir = root))
 })
 
 test_that("a leaf with no workbook is not done", {

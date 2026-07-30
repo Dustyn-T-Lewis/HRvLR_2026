@@ -11,6 +11,13 @@
 # Adjusting is not free: the blood index is built from haemoglobin, and any
 # acute biology that moves with perfusion is partly absorbed. That is why it is
 # a sensitivity analysis and not the primary.
+#
+# It reports counts, never names. Shrinking the residual can unmask a protein
+# the primary fit misses, and a protein appearing only in a secondary model,
+# only in a within-arm contrast, in a study whose interactions are null, is not
+# a result: significant in HR and not in LR is not a difference between them.
+# The full per-protein comparison stays in the workbook so the evidence is on
+# disk; nothing here promotes a row out of it.
 
 pacman::p_load(here, dplyr, tibble, openxlsx)
 source(here("functions", "feature_contrasts.R"))
@@ -49,18 +56,21 @@ summary_tbl <- compare |>
 
 print(as.data.frame(summary_tbl), digits = 3)
 
-survivors <- compare |>
-  filter(.data$bh_primary < 0.05 | .data$bh_adjusted < 0.05) |>
-  arrange(.data$bh_adjusted)
-
-if (nrow(survivors)) {
-  cat("\nProteins clearing BH in either fit:\n")
-  print(as.data.frame(survivors), digits = 3)
-} else {
-  cat("\nNo protein clears BH in either fit.\n")
-}
+group_q <- grepl("HRvLR|Interaction", summary_tbl$contrast)
+cat(sprintf(
+  "\nBH < .05, five HR-vs-LR / interaction contrasts: %d primary, %d adjusted",
+  sum(summary_tbl$bh_primary[group_q]), sum(summary_tbl$bh_adjusted[group_q])
+))
+cat(sprintf(
+  "\nBH < .05, four within-arm contrasts:            %d primary, %d adjusted\n",
+  sum(summary_tbl$bh_primary[!group_q]), sum(summary_tbl$bh_adjusted[!group_q])
+))
+cat(
+  "Adjustment shrinks the residual, so it can raise a within-arm count.",
+  "The study question is the five above, and they are unchanged.\n"
+)
 
 write.xlsx(
-  list(summary = summary_tbl, survivors = survivors, all = compare),
+  list(summary = summary_tbl, all = compare),
   here("03_DEP", "a_non_imputed", "c_data", "07_blood_adjusted.xlsx")
 )

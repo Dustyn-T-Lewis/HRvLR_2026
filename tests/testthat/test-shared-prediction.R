@@ -76,3 +76,55 @@ test_that("perm_p respects the 1/(B+1) floor and side", {
   expect_equal(perm_p(0, rep(1, 9), "less"), 1 / 10)
   expect_equal(perm_p(0.5, c(1, 1, 0, 0), "greater"), 3 / 5)
 })
+
+# B = 0 is the metrics-only pass: run every cell for its point estimate, then
+# come back later for the permutation nulls. Without it the fast pass has to be
+# faked with a tiny B, which is slower and reports a p nobody should read.
+test_that("a cell at B = 0 returns metrics and no null", {
+  source(here::here("functions", "shared_prediction.R"))
+
+  set.seed(11)
+  y <- rep(c(0, 1), each = 8)
+  x <- matrix(rnorm(16 * 5),
+    nrow = 16, dimnames = list(paste0("s", 1:16), paste0("f", 1:5))
+  )
+  x[, 1] <- x[, 1] + 2 * y
+
+  cls <- suppressWarnings(
+    sweep_class_cell(x, y, "glmnet", b_grid = c(0L, 0L), cores = 1L)
+  )
+  expect_identical(unique(cls$summary$B), 0L)
+  expect_true(is.na(cls$summary$perm_p[1]))
+  expect_true(is.na(cls$summary$null_mean[1]))
+  expect_false(is.na(cls$summary$estimate[1]))
+  expect_identical(nrow(cls$null), 0L)
+  expect_named(cls$null, c("model", "auc"))
+
+  cont <- suppressWarnings(
+    sweep_cont_cell(x, as.numeric(x[, 1]), "glmnet", "d_test",
+      b_grid = c(0L, 0L), cores = 1L
+    )
+  )
+  expect_identical(unique(cont$summary$B), 0L)
+  expect_true(is.na(cont$summary$perm_p_q2[1]))
+  expect_false(is.na(cont$summary$q2[1]))
+  expect_identical(nrow(cont$null), 0L)
+})
+
+test_that("a B = 0 cell still carries its predictions and selections", {
+  source(here::here("functions", "shared_prediction.R"))
+
+  set.seed(12)
+  y <- rep(c(0, 1), each = 8)
+  x <- matrix(rnorm(16 * 5),
+    nrow = 16, dimnames = list(paste0("s", 1:16), paste0("f", 1:5))
+  )
+  x[, 1] <- x[, 1] + 2 * y
+  cls <- suppressWarnings(
+    sweep_class_cell(x, y, "glmnet", b_grid = c(0L, 0L), cores = 1L)
+  )
+
+  expect_identical(nrow(cls$preds), 16L)
+  expect_true(all(cls$preds$subject %in% rownames(x)))
+  expect_gt(nrow(cls$selection), 0L)
+})

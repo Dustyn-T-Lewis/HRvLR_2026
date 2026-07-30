@@ -13,6 +13,74 @@ pacman::p_load(here, dplyr, tidyr, ggplot2, openxlsx, stringr)
 source(here("functions", "shared_style.R"))
 source(here("functions", "sweep_grid.R"))
 
+LEVEL_BOOKS <- c(
+  proteins = "protein_contrasts.xlsx", pathways = "pathway_contrasts.xlsx",
+  modules = "module_contrasts.xlsx"
+)
+
+CONTRAST_FAMILY <- c(
+  Baseline_HRvLR = "HR - LR", Trained_HRvLR = "HR - LR",
+  Acute_HRvLR = "HR - LR",
+  Training_Interaction = "interaction", Acute_Interaction = "interaction",
+  Training_HR = "within-arm", Training_LR = "within-arm",
+  Acute_HR = "within-arm", Acute_LR = "within-arm"
+)
+
+# The association half of the story. F05 and F06 answer "can it predict"; F04
+# answers "is anything different at all", and the honest summary of that is the
+# smallest q each contrast reached, not a count of zeroes.
+association_rows <- function() {
+  purrr::imap_dfr(LEVEL_BOOKS, function(book, lv) {
+    read.xlsx(here("04_Features", lv, "c_data", book), "contrasts") |>
+      summarise(
+        min_q = min(.data$bh, na.rm = TRUE),
+        n_bh = sum(.data$bh < 0.05, na.rm = TRUE),
+        .by = "contrast"
+      ) |>
+      mutate(level = lv)
+  }) |>
+    mutate(
+      level = factor(.data$level, levels = SWEEP_LEVELS),
+      family = factor(
+        CONTRAST_FAMILY[.data$contrast],
+        levels = c("HR - LR", "interaction", "within-arm")
+      ),
+      contrast = factor(.data$contrast, levels = rev(names(CONTRAST_FAMILY)))
+    )
+}
+
+association_panel <- function() {
+  rows <- association_rows()
+  ggplot(rows, aes(.data$min_q, .data$contrast)) +
+    geom_vline(
+      xintercept = 0.05, linetype = "dashed", colour = "#B2182B",
+      linewidth = 0.4
+    ) +
+    geom_point(aes(shape = .data$family), size = 2.2, fill = "grey92") +
+    facet_grid(cols = vars(.data$level)) +
+    scale_shape_manual(values = c(21, 22, 23), name = NULL) +
+    scale_x_log10(
+      limits = c(0.01, 1), breaks = c(0.01, 0.05, 0.1, 0.5, 1),
+      labels = c(".01", ".05", ".1", ".5", "1")
+    ) +
+    labs(
+      title = "Association: the nine contrasts at three feature levels",
+      subtitle = paste(
+        "Smallest BH q each contrast reached. Every point sits right of .05,",
+        "so nothing survives anywhere. Closest is Acute_HR at q = 0.0715."
+      ),
+      x = "smallest BH q in the contrast", y = NULL
+    ) +
+    FIG_THEME +
+    theme(
+      legend.position = "bottom",
+      panel.grid.major.y = element_blank(),
+      plot.subtitle = element_text(
+        face = "italic", size = FIG_SUBTITLE_SIZE - 1, colour = "grey30"
+      )
+    )
+}
+
 KEEPER_ROOTS <- list(
   list(
     root = "F05_classification", kind = "class", metric = "estimate",

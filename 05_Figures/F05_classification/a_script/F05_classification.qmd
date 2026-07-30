@@ -1,33 +1,254 @@
 ---
-title: "F05 -- Classification screen"
-format: html
+title: "HRvLR F05 — Classification"
+subtitle: "Can the proteome tell a high responder from a low one, out of sample?"
+author: "A_HRvLR_2026"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+bibliography: ../../shared/references.bib
+execute:
+  eval: true
+  echo: true
+  warning: false
+  message: false
 ---
 
-## What this figure is
+```{r}
+#| label: setup
+#| include: false
+pacman::p_load(here)
+knitr::opts_knit$set(root.dir = here::here())
+```
 
-An out-of-sample test of whether the proteome can assign a new subject to the
-high- or low-responder arm. Every feature level x timepoint config x method
-(elastic net, lasso, ridge, sparse PLS-DA, nearest shrunken centroids, random
-forest, linear SVM; plain logistic on modules only) runs as one nested
-leave-one-subject-out cell: scaling, feature selection, and tuning happen on the
-training subjects only, the held-out subject is predicted once, and the whole
-loop re-runs under a permutation null (B = 200). No timepoints are pooled.
+```{r}
+#| label: libs
+#| include: false
+pacman::p_load(here, dplyr, tidyr, ggplot2, openxlsx, stringr)
+source(here("functions", "sweep_grid.R"))
+source(here("functions", "shared_style.R"))
+```
+
+## The question
+
+F04 asked whether HR and LR *differ*. This asks something stricter: given a
+subject the model has never seen, can it say which arm they belong to?
+
+The two questions come apart. A difference can be real and still useless for
+assignment if the groups overlap. And a classifier that separates the sixteen
+subjects it was fitted on tells you nothing, because with 1,900 features and 16
+subjects a perfect boundary always exists. Only the out-of-sample number counts.
+
+## Out of sample
+
+### The idea
+
+Hold one subject out. Fit everything — scaling, feature selection, tuning — on
+the other fifteen. Predict the held-out subject once. Put them back and repeat
+for all sixteen. Each subject is predicted exactly once, by a model that never
+saw them.
+
+The subject, not the sample, is the unit. Holding out a *sample* would leave that
+person's other two biopsies in the training set, and the model could learn to
+recognise the person rather than the arm.
+
+### Formally
+
+Leave-one-subject-out cross-validation. For subjects $s = 1,\dots,n$ with
+features $x_s$ and label $y_s \in \{0,1\}$:
+
+$$
+\hat{y}_s = f_{-s}(x_s),
+\qquad
+f_{-s} = \arg\min_{f} \sum_{k \neq s} L\big(y_k, f(x_k)\big) + \lambda\,\Omega(f)
+$$
+
+The subscript $-s$ carries the whole point: every transform and every
+hyperparameter is estimated from the other $n-1$ subjects.
+
+### Nested, not flat
+
+Each model has a tuning parameter — the penalty $\lambda$ in elastic net, the
+number of components in sparse PLS-DA, the shrinkage in nearest shrunken
+centroids. Choosing it by looking at all sixteen subjects and then reporting LOSO
+accuracy leaks the held-out subject into the model that predicts them.
+
+So tuning runs in an **inner** cross-validation over the fifteen training
+subjects, inside each of the sixteen outer folds. That is what nested means, and
+it is the difference between an honest estimate and a flattering one.
+
+### The three leakage traps
+
+| Trap | Why it leaks | What is done |
+|---|---|---|
+| Scaling on the full matrix | The held-out subject shapes the centre and scale | Scaling fitted on training subjects, applied to the held-out one |
+| Feature selection before the loop | Features chosen because they separate all sixteen | Selection inside each fold |
+| WGCNA modules defined cohort-wide | Module membership saw every subject | Flagged on the figure as an optimistic upper bound; `04_Features/modules/loso_refit` measures what in-fold redefinition costs |
+
+The module level is the honest weak point. Eigengenes are defined once across the
+whole cohort, so that arm is an upper bound rather than a clean out-of-sample
+number.
+
+## Scoring
+
+### The idea
+
+Each subject comes out with a predicted probability of being HR. AUC asks: pick
+one real HR and one real LR at random; how often does the model give the HR the
+higher score? Chance is 0.5, perfect is 1.
+
+AUC rather than accuracy, because it does not depend on where the threshold is
+put.
+
+### Formally
+
+$$
+\mathrm{AUC} = \frac{1}{n_1 n_0}\sum_{i:\,y_i=1}\ \sum_{j:\,y_j=0}
+\Big[ \mathbf{1}(\hat{p}_i > \hat{p}_j) + \tfrac{1}{2}\mathbf{1}(\hat{p}_i = \hat{p}_j) \Big]
+$$
+
+the Mann–Whitney U statistic scaled to $[0,1]$.
+
+## The null
+
+### The idea
+
+At sixteen subjects an AUC of 0.70 sounds good and means very little. To find
+out, destroy the labels and see what the same machinery produces from noise:
+shuffle the HR/LR assignment across subjects, rerun the entire nested loop,
+record the AUC. Two hundred times gives the distribution of AUCs this design
+yields when there is nothing to find.
+
+The whole loop reruns each time, not just the final fit. Permuting after feature
+selection would pit a tuned model against an untuned null.
+
+### Formally
+
+With observed statistic $T$ and replicates $T^{(1)},\dots,T^{(B)}$,
+
+$$
+\hat{p} = \frac{1 + \#\{b : T^{(b)} \ge T\}}{B + 1}
+$$
+
+The $+1$ in both places is not cosmetic: it stops $\hat p$ ever being exactly
+zero, which would claim more resolution than $B$ replicates support. At
+$B = 200$ the smallest reportable $p$ is $1/201 \approx 0.005$.
+
+### A lead is two conditions
+
+```{r}
+#| label: lead-def
+LEAD_BASELINE
+```
+
+A cell is a **lead** only when `perm_p < .05` **and** its AUC beats 0.5. Both are
+needed. Ridge and the unpenalised model collapse their nulls — every shuffle
+returns nearly the same AUC — so a small $p$ can arrive attached to an AUC
+*below* chance. `is_lead()` in `functions/sweep_grid.R` is the one definition
+every count, panel and curve reads, so the manifest, the roll-up and the
+composite cannot disagree.
+
+## The screen
+
+The pipeline does not fit one classifier. It fits every combination of:
+
+```{r}
+#| label: grid
+#| echo: false
+tibble::tibble(
+  axis = c("feature level", "timepoint config", "model"),
+  values = c(
+    paste(SWEEP_LEVELS, collapse = ", "),
+    paste(SWEEP_CONFIGS, collapse = ", "),
+    paste(c(CLASS_METHODS, PLAIN_METHOD), collapse = ", ")
+  )
+)
+```
+
+That is 153 cells. Reporting the best without saying how many were tried is the
+garden of forking paths [@phillips2013]: with 153 draws the maximum is large
+even when every cell is noise.
+
+### Why there is no BH q here
+
+BH controls the false discovery rate over a family of tests. These 153 are not a
+family in the sense BH needs — they share subjects, they nest inside each other
+(`total` contains `training` and `acute`), and they reuse overlapping feature
+spaces. A q across them would assert an independence structure that is absent.
+
+The honest alternative is what the figure does: report the raw permutation $p$,
+report the screen size beside it, and show the whole distribution of cells rather
+than the winner alone.
+
+## The figure
 
 ![F05 classification composite](../b_reports/F05_classification_composite.png)
 
-## Panels
+- **A** The twelve cells with the smallest permutation $p$, each a filled ROC
+  curve keyed to feature level, with AUC, its interval and the permutation $p$.
+  A bold border marks nominal $p<.05$.
+- **B** The specification curve: all 153 cells sorted by AUC against their own
+  permutation-null bands, with a strip below reading off level, config and
+  method.
 
-- **A** The 12 cells with the smallest permutation p, each as a filled ROC keyed
-  to feature level, with AUC, its interval, and the permutation p. A bold border
-  marks nominal p < .05.
-- **B** The whole specification curve: all 153 cells sorted by AUC against their
-  own permutation-null bands, with a strip reading off level, config, and method.
+Panel B is the one that matters. A real effect appears as a cluster of cells
+lifting above their null bands together, robust to which analytical choice you
+make. Noise appears as a smooth sweep crossing its band about as often as chance
+predicts.
 
-## Reading it honestly
+## The result
 
-The screen is a null. Across 153 cells only one clears nominal p < .05
-(`modules | total | plain`, AUC 0.90, p = .045) -- at the chance rate for a
-screen this size, and it is the plain model on cohort-relative eigengenes, the
-most optimistic cell in the grid. Every observed AUC sits inside its null band.
-HR/LR classification does not generalize here, consistent with the small-n
-signature-instability literature (Michiels 2005; Ein-Dor 2006).
+```{r}
+#| label: result
+#| echo: false
+read.xlsx(
+  here("05_Figures", "F05_classification", "c_data", "results.xlsx"),
+  "all_cells"
+) |>
+  best_b_per_cell() |>
+  summarise(
+    cells = dplyr::n(),
+    median_auc = round(median(.data$estimate, na.rm = TRUE), 3),
+    max_auc = round(max(.data$estimate, na.rm = TRUE), 3),
+    leads = sum(is_lead(.data$estimate, .data$perm_p, "class"), na.rm = TRUE),
+    .by = "level"
+  )
+```
+
+Zero leads of 153. At a 5% chance rate a screen this size would be expected to
+throw up roughly eight cells clearing $p<.05$ by luck alone. It produced fewer
+than chance.
+
+The proteome does not classify responder status out of sample at this cohort
+size, under any feature level, timepoint encoding or algorithm tried.
+
+## How to read this honestly
+
+A null classification at $n = 16$ has two possible causes and this design cannot
+separate them: there is no signal, or there is signal too small for sixteen
+subjects to reveal. What the screen does establish is that the answer does not
+turn on the analytical choice — no combination of level, config and model
+rescues it, which is a stronger statement than any single model failing.
+
+The complementary caution: a lead, had one appeared, would still need replication
+in an independent cohort before being called a classifier. A screen maximum is a
+hypothesis, not a result.
+
+## Recap
+
+- The subject is the unit of cross-validation, never the sample.
+- Tuning happens inside each fold, or the estimate flatters itself.
+- The permutation null reruns the whole loop, not just the final fit.
+- A lead needs a small $p$ **and** a metric above the trivial baseline.
+- 153 cells, no BH q, because they are not an independent family.
+- 0 of 153 qualify.
+
+## References
+
+::: {#refs}
+:::
