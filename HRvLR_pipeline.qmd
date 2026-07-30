@@ -110,6 +110,15 @@ architecture (preservation strong both directions, using cohort-defined labels,
 so not itself free of circularity), and training- and acute-only contrast networks were tested and are
 not viable at this cohort size (`04_Features/modules`).
 
+**F04 puts the nine contrasts at three feature levels, and only blood survives.**
+Every HR-LR contrast and both interactions return zero at BH q < .05, at protein,
+pathway and module level. The single surviving contrast is `Acute_LR` with 8
+proteins, and 6 of the 8 sit in the top 5% of correlation with per-sample
+haemoglobin (SPTB, ANK1, STOM, CAT, BLVRB, SYNE2; mean 0.44 against a cohort
+median of 0.03). The pathway level agrees, its strongest `Acute_LR` hit being heme
+metabolism. T3 biopsies carry twice the blood of T1 and T2, so `Acute_LR` reports
+blood content rather than adaptation, and the confound cancels in the interaction.
+
 **So: the proteome does not separate high from low responders at this sample size.**
 It is a null study with a strong phenotype and a pathway-level lead. Saying that
 plainly is more defensible than any of the individual panels.
@@ -177,6 +186,7 @@ the top and follow the chain, or jump to the one you need.
 | `05_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `05_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
 | `04_Features/modules/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
+| `05_Figures/F04_association/` | The nine contrasts at protein, pathway and module level: HR-LR by timepoint, both interactions, and the four within-arm changes. Zero BH survivors in every HR-LR and interaction contrast at every level; the only survivors are `Acute_LR`'s 8 proteins, 6 of which track per-sample haemoglobin |
 | `05_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
 | `05_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
 
@@ -340,7 +350,9 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F02 | Proteome overview and QC: PCA, DEP counts, effect sizes, set overlaps, eta-squared |
 | F03_pathway | enrichVolcano ring-volcanoes per contrast |
 | F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
+| 04_Features | The derived-feature layer: `proteins` carries stage 03's fit forward, `pathways` scores singscore sets, `modules` builds the signed WGCNA network. All three are fitted on the same nine contrasts with the same estimator |
 | 04_Features/modules | WGCNA modules on the missForest-imputed proteome, linked to phenotype; the eigengene source for the `modules` level of F05-F06; `loso_refit`, `preservation`, `contrast_networks` test generalization |
+| F04_association | The nine contrasts at all three feature levels, logFC fill with a scale per contrast family, BH within each contrast |
 | F05_classification | HR/LR classification screen over `<level>/<config>/HR_LR/<model>`: 153 cells, nested LOSO against a permutation null; 0 leads |
 | F06_prediction | Continuous-adaptation prediction screen over `<level>/<config>/<phenotype>/<model>`: 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, module leads fall below zero on the two reproducible modules |
 
