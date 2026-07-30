@@ -265,8 +265,8 @@ Shared helpers live by scope:
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
 ship a narrative `.qmd`; F03_pathway/supp/summary does not. F04, F05 and F06 are
 organized `<level>/<config>/<phenotype-or-HR_LR>/<method>`, with `run_*` computing
-every cell, `split_*`/`rollup_*` pooling them, and `composite_*` assembling the
-figure and writing `MANIFEST.xlsx`.
+every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
+`composite_*` assembling the figure.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
