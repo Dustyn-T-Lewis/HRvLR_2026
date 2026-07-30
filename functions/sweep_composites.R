@@ -176,9 +176,18 @@ build_class_composite <- function(root = "F05_classification") {
       ),
       theme = section_theme()
     )
+  n_lead <- sum(is_lead(cells$estimate, cells$perm_p, "class"), na.rm = TRUE)
   b <- spec_curve_class(
     cells, "B   Specification curve -- every cell vs its null band",
-    "Chance = 0.5. One nominal lead at the chance rate: an honest null."
+    sprintf(
+      paste(
+        "%d of %d cells lead; smallest permutation p = %.3f. A feature-free",
+        "model under LOSO scores 0, not 0.5, so the 0.5 line is the wrong",
+        "baseline for the %d cells at AUC 0."
+      ),
+      n_lead, nrow(cells), min(cells$perm_p, na.rm = TRUE),
+      sum(cells$estimate == 0, na.rm = TRUE)
+    )
   )
   wrap_elements(a) / wrap_elements(b) +
     plot_layout(heights = c(1.7, 1.1)) +
