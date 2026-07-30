@@ -30,9 +30,9 @@ p ≥ 0.38; CAP fails to classify). HR and LR responses are only weakly concorda
 The one genuinely FDR-controlled signal is pathway-level: 691 significant pathway ×
 contrast tests, with HR's acute response enriching 217 pathways against LR's 33 (F03).
 
-**F04-F06 report a screen, not a discovery set.** Each of their 1,365 cells
-(F04 = 420, F05 = 153, F06 = 792) reports a metric, a raw permutation p, the
-screen size, and a leakage label — no BH q anywhere in these three, unlike
+**F05-F06 report a screen, not a discovery set.** Each of their 945 cells
+(F05 = 153, F06 = 792) reports a metric, a permutation p over B = 200, the
+screen size, and a leakage label — no BH q anywhere in these two, unlike
 F01-F03's limma BH FDR. A screen this size and this correlated (shared subjects,
 overlapping feature spaces, nested timepoint configs) has no defensible multiple-
 comparison correction; a raw p plus a screen-size denominator is the honest
@@ -114,7 +114,7 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association per-cell association screen; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; `shared/WGCNA` builds the module eigengenes F04-F06 consume |
+| `04` | `04_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; `shared/WGCNA` builds the module eigengenes F05-F06 consume |
 
 ## Canonical Run Order
 
@@ -128,7 +128,7 @@ Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
 Clustering is computed self-contained inside `04_Figures/shared/WGCNA` (see Figures);
-WGCNA builds the module eigengenes that feed the `modules` level of F04, F05 and F06.
+WGCNA builds the module eigengenes that feed the `modules` level of F05 and F06.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
 exploratory and feeds only QC and figure/WGCNA inputs. Each arm is independent
@@ -168,16 +168,16 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
 - `04_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
 - `04_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
 - `04_Figures/shared/WGCNA`: builds the module eigengenes (missForest-imputed
-  proteome) that F04, F05 and F06 read at the `modules` level; `loso_refit/` tests
+  proteome) that F05 and F06 read at the `modules` level; `loso_refit/` tests
   whether the modules survive leave-one-subject-out re-definition; `preservation/`
   tests whether HR and LR share module architecture; `contrast_networks/` tests
   whether a training- or acute-only network is viable
 - `04_Figures/shared/reference`: 85 worked design references (one per stage x
   level x config, plus per-level heatmaps and raw-observation detail views)
-- `04_Figures/F04_association`: per-cell association screen — 420 cells over
-  `<level>/<config>/<phenotype>/<method>`, three levels (proteins, pathways,
-  modules) x seven configs (T1, T2, T3, training, acute, total, trajectory) x
-  the six adaptation deltas plus `group_diff`
+- `archive/pooled_association_2026-07-29`: the retired pooled-association sweep
+  (the old 420-cell F04 and the F07 synthesis heatmaps). Pooled rho partly
+  re-expresses the HR-vs-LR contrast — the HR/LR label correlates +0.755 with
+  `d_fcsa_I` — so the screen answered a question the study is not asking
 - `04_Figures/F05_classification`: HR/LR classification screen — 153 cells over
   `<level>/<config>/HR_LR/<model>`, nested leave-one-subject-out against a
   permutation null
@@ -219,13 +219,6 @@ Rscript 04_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
 Rscript 04_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
 Rscript 04_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
 
-# F04 association: run every cell, split into per-phenotype panels, manifest,
-# composite
-Rscript 04_Figures/F04_association/a_script/run_F04_association.R
-Rscript 04_Figures/F04_association/a_script/split_F04_association.R
-Rscript 04_Figures/F04_association/a_script/rollup_F04_association.R
-Rscript 04_Figures/F04_association/a_script/composite_F04_association.R
-
 # F05 classification: run, split, roll up (spec curve + manifest), composite
 Rscript 04_Figures/F05_classification/a_script/run_F05_classification.R
 Rscript 04_Figures/F05_classification/a_script/split_F05_classification.R
@@ -255,15 +248,15 @@ Shared helpers live by scope:
 
 | Path | Contents |
 | --- | --- |
-| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `sweep_*` helpers run the F04-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_assoc.R`/`sweep_assoc_leaf.R` (F04), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
+| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
 | `04_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F03_pathway/supp driver) and `f00_concordance_panels.R` (its panel builders). |
-| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F04-F06; `reference/` — the 85 worked design references. |
+| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F05-F06; `reference/` — the worked design references. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
 ## Figures
 
 Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F03_pathway/supp/summary does not. F04, F05 and F06 are
+ship a narrative `.qmd`; F03_pathway/supp/summary does not. F05 and F06 are
 organized `<level>/<config>/<phenotype-or-HR_LR>/<method>`, with `run_*` computing
 every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 `composite_*` assembling the figure.
@@ -275,12 +268,11 @@ every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `shared/WGCNA/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
-| `F04_association/` | Where do features associate with HR/LR or with continuous adaptation, per level and config? | `limma`/`lm`/Spearman/Wilcoxon per `<level>/<config>/<phenotype>/<method>` cell; 420 cells, raw permutation p, no BH across the screen. |
 | `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
 | `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads fall below zero once restricted to the two reproducible modules; in-fold refitting adds nothing. |
 
-A cell in F04-F06 reports a metric, a raw permutation p, the screen size, and a
-leakage label; there is no BH q anywhere in these three, because a screen this
+A cell in F05-F06 reports a metric, a permutation p, the screen size, and a
+leakage label; there is no BH q anywhere in these two, because a screen this
 correlated (shared subjects, overlapping feature spaces, nested configs) has no
 defensible multiple-comparison correction, unlike F01-F03's per-contrast limma
 BH-FDR. A **lead** requires both `perm_p < .05` and the metric beating the
