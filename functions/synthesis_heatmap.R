@@ -149,6 +149,10 @@ synthesis_row_label <- function(rows, level, sizes) {
   }
 }
 
+# Pathway rows need more room than the other two: their names are the longest,
+# and a name too long for its bar is drawn beside it rather than inside.
+BLOCK_WIDTH <- c(modules = 1, pathways = 1.5, proteins = 1)
+
 block_theme <- function() {
   FIG_THEME +
     theme(
@@ -192,20 +196,20 @@ pathway_block_panel <- function(rows) {
       fill = rows$fill, width = 0.82, colour = "grey40", linewidth = 0.15
     ) +
     geom_text(
-      aes(x = ifelse(inside, 0, .data$bar), label = .data$label),
-      hjust = -0.04, size = 1.95, fontface = "bold", lineheight = 0.85,
+      aes(x = .data$bar, label = .data$label),
+      hjust = ifelse(inside, -0.04, 1.04), size = 1.95, fontface = "bold",
+      lineheight = 0.85,
       colour = ifelse(inside, readable_on(rows$fill), "grey10")
-    ) +
-    geom_text(
-      aes(x = max(.data$bar) * 1.32, label = .data$bar),
-      hjust = 0, size = 1.9, fontface = "bold", colour = "grey25"
     ) +
     scale_y_discrete(
       labels = stats::setNames(rows$key, as.character(rows$feature))
     ) +
-    scale_x_continuous(
-      expand = expansion(mult = c(0, 0.42)),
-      breaks = scales::breaks_pretty(3)
+    scale_x_reverse(
+      expand = expansion(mult = c(0, 0.85)),
+      breaks = function(lim) {
+        b <- scales::breaks_pretty(3)(c(0, max(rows$bar, na.rm = TRUE)))
+        b[b >= 0]
+      }
     ) +
     labs(x = "member proteins detected", y = NULL) +
     block_theme() +
@@ -389,7 +393,7 @@ build_fig1_level <- function(level) {
     mutate(panel_config = .data$config)
   rows <- synthesis_rows(d, level)
   panel <- row_block_panel(rows, level) + tile_grid_panel(d, rows) +
-    plot_layout(widths = c(1, 3.4)) +
+    plot_layout(widths = c(BLOCK_WIDTH[[level]], 3.4)) +
     plot_annotation(
       title = sprintf(
         "%s x adaptation associations across the timepoint configs",
