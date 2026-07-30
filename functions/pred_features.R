@@ -26,7 +26,7 @@ pred_paths <- function() {
       "04_Features", "modules", "c_data", "wgcna_eigengene.csv"
     ),
     cache = here(
-      "05_Figures", "shared", "c_data", "singscore_scores.rds"
+      "04_Features", "pathways", "c_data", "singscore_scores.rds"
     )
   )
 }

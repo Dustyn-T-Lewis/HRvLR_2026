@@ -7,6 +7,7 @@
 
 pacman::p_load(here, dplyr, tibble, readr, limma, openxlsx)
 source(here("03_DEP", "contrasts.R"))
+source(here("functions", "feature_levels.R"))
 
 GROUP_LEVELS <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
 
@@ -49,16 +50,6 @@ fit_feature_contrasts <- function(mat, meta = feature_metadata()) {
   }))
   attr(res, "within_cor") <- within_cor$consensus
   res
-}
-
-protein_matrix <- function() {
-  df <- read_csv(here("02_Normalization", "c_data", "normalized.csv"),
-    show_col_types = FALSE
-  )
-  ann_cols <- c("uniprot_id", "protein", "gene", "description")
-  mat <- as.matrix(df[, setdiff(names(df), ann_cols)])
-  rownames(mat) <- df$uniprot_id
-  mat
 }
 
 verify_protein_equivalence <- function(tol = 1e-6) {

@@ -220,6 +220,12 @@ Rscript 04_Features/modules/preservation/a_script/01_run_preservation.R
 Rscript 04_Features/modules/preservation/a_script/02_run_preservation_balanced.R
 Rscript 04_Features/modules/contrast_networks/a_script/01_run_contrast_stability.R
 
+# The nine contrasts on each feature level. Proteins reshape stage 03's fit and
+# assert a refit reproduces it; modules and pathways are fitted here.
+Rscript 04_Features/proteins/a_script/01_run_proteins.R
+Rscript 04_Features/pathways/a_script/01_run_pathways.R
+Rscript 04_Features/modules/a_script/02_run_module_contrasts.R
+
 # F05 classification: run, split, roll up (spec curve + manifest), composite
 Rscript 05_Figures/F05_classification/a_script/run_F05_classification.R
 Rscript 05_Figures/F05_classification/a_script/split_F05_classification.R
