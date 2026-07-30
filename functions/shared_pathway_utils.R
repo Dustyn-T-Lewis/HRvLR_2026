@@ -6,6 +6,7 @@
 # Exports:
 #   build_pathway_collection()  assemble the multi-database collection
 #   run_fgsea()                 preranked fgsea for one contrast, raw (no dedup)
+#   pathway_fry()               rotation test over the same sets
 #   run_ora_deduplicated()      over-representation analysis (Jaccard dedup)
 #   dedup_em() / dedup_report() EnrichmentMap combined-coefficient collapse
 #   classify_database()         database label for plotting
@@ -334,6 +335,48 @@ run_fgsea <- function(ranks, pathways, nperm = 10000, min_size = 15,
     "fgsea: %d sets, %d significant at padj < 0.05", nrow(res), n_sig
   ))
   res
+}
+
+
+# The correlation-corrected counterpart to run_fgsea, over the same sets.
+#
+# fgsea permutes gene labels, so its null assumes proteins vary independently.
+# They do not: a pathway is defined by co-regulation, and a shared subject effect
+# correlates everything measured on the same biopsy. fry is a rotation test - it
+# rotates residuals under the fitted linear model, keeps the inter-gene
+# correlation intact, and carries the same duplicateCorrelation blocking that
+# produced the DEP results. Where the two disagree, fgsea is the one whose null
+# is wrong.
+#
+# min_detected counts members present in the matrix, matching fgsea's minSize and
+# the floor F04 applies at row selection. Annotated size is not the same number
+# (see pathway_coverage): a 200-member set with 11 measured is not a readout of
+# that pathway under either test.
+pathway_fry <- function(expr, gene_sets, design, contrasts, block = NULL,
+                        correlation = NULL, min_detected = 15L) {
+  index <- limma::ids2indices(gene_sets, rownames(expr), remove.empty = FALSE)
+  index <- index[lengths(index) >= min_detected]
+
+  empty <- tibble::tibble(
+    contrast = character(), pathway = character(), n = integer(),
+    direction = character(), p = numeric(), fdr = numeric()
+  )
+  if (!length(index)) {
+    return(empty)
+  }
+
+  purrr::map_dfr(colnames(contrasts), function(ct) {
+    limma::fry(expr,
+      index = index, design = design, contrast = contrasts[, ct],
+      block = block, correlation = correlation
+    ) |>
+      tibble::rownames_to_column("pathway") |>
+      dplyr::transmute(
+        contrast = ct, pathway = .data$pathway, n = .data$NGenes,
+        direction = .data$Direction, p = .data$PValue, fdr = .data$FDR
+      ) |>
+      tibble::as_tibble()
+  })
 }
 
 

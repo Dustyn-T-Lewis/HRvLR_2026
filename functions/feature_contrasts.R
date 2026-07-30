@@ -21,22 +21,37 @@ feature_metadata <- function() {
   )
 }
 
-# BH is applied within each contrast, matching extract_DA_results()'s per-coef
-# topTable call. Pooling the nine would imply an independence that the shared
-# subjects and overlapping contrasts do not have.
-fit_feature_contrasts <- function(mat, meta = feature_metadata()) {
+# The model spec on its own: means design over the six Group_Time cells, the
+# nine contrasts, and the subject blocking with its consensus correlation.
+# Exposed because a set-level test has to be fitted against the same model as
+# the feature-level contrasts, not a second one that merely resembles it.
+feature_design <- function(mat, meta = feature_metadata()) {
   meta <- meta[match(colnames(mat), meta$sample_id), ]
   if (anyNA(meta$sample_id)) {
     stop("feature matrix has samples absent from the normalisation metadata")
   }
   design <- stats::model.matrix(~ 0 + group, meta)
   colnames(design) <- levels(meta$group)
-  within_cor <- limma::duplicateCorrelation(mat, design, block = meta$subject)
-  fit <- limma::lmFit(mat, design,
-    block = meta$subject, correlation = within_cor$consensus
-  )
   cm <- limma::makeContrasts(contrasts = HRVLR_CONTRASTS, levels = design)
   colnames(cm) <- trimws(sub("=.*$", "", HRVLR_CONTRASTS))
+  list(
+    design = design, contrasts = cm, block = meta$subject,
+    correlation = limma::duplicateCorrelation(
+      mat, design,
+      block = meta$subject
+    )$consensus
+  )
+}
+
+# BH is applied within each contrast, matching extract_DA_results()'s per-coef
+# topTable call. Pooling the nine would imply an independence that the shared
+# subjects and overlapping contrasts do not have.
+fit_feature_contrasts <- function(mat, meta = feature_metadata()) {
+  parts <- feature_design(mat, meta)
+  cm <- parts$contrasts
+  fit <- limma::lmFit(mat, parts$design,
+    block = parts$block, correlation = parts$correlation
+  )
   fit2 <- limma::eBayes(limma::contrasts.fit(fit, cm))
   res <- bind_rows(lapply(colnames(cm), function(ct) {
     limma::topTable(fit2,
@@ -48,7 +63,7 @@ fit_feature_contrasts <- function(mat, meta = feature_metadata()) {
         t = .data$t, p = .data$P.Value, bh = .data$adj.P.Val
       )
   }))
-  attr(res, "within_cor") <- within_cor$consensus
+  attr(res, "within_cor") <- parts$correlation
   res
 }
 
