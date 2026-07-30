@@ -110,24 +110,25 @@ synthesis_rows <- function(d, level) {
   ) |>
     left_join(hits, by = "feature")
 
-  # Modules and pathways both carry a set size, so their block width is that
-  # size; pathways stack the fraction we actually measured inside it. Proteins
-  # have no size, so they get a uniform identity block sorted by evidence.
+  # Modules size their block by member count; pathways by how many members this
+  # proteome detected, keeping the annotated size alongside so the c_data table
+  # records the coverage. Proteins have no set size, so their block is uniform
+  # and the rows sort by evidence.
   if (level == "modules") {
     out <- out |>
-      mutate(bar = sizes[.data$key], bar_inner = NA_real_) |>
+      mutate(bar = sizes[.data$key], n_annotated = NA_real_) |>
       arrange(dplyr::desc(.data$bar))
   } else if (level == "pathways") {
     pw <- pathway_sizes(keep)
     out <- out |>
       mutate(
         bar = pw$measured[match(.data$feature, pw$feature)],
-        bar_inner = pw$full[match(.data$feature, pw$feature)]
+        n_annotated = pw$full[match(.data$feature, pw$feature)]
       ) |>
       arrange(dplyr::desc(.data$bar))
   } else {
     out <- out |>
-      mutate(bar = 1, bar_inner = NA_real_) |>
+      mutate(bar = 1, n_annotated = NA_real_) |>
       arrange(dplyr::desc(.data$n_bh), .data$best_p)
   }
   out$label <- synthesis_row_label(out, level, sizes)
@@ -186,9 +187,8 @@ module_block_panel <- function(rows) {
 
 # Pathways follow the ORA-bar idiom of the Mito F03 WGCNA figure: bar length is
 # how many members this proteome detected, the source database sits outside on
-# the axis in its own colour, the pathway name goes inside the bar, and the
-# count prints past the bar end. A short bar cannot hold its name in contrast
-# text, so those names sit outside the bar instead.
+# the axis in its own colour, and the pathway name goes inside the bar. A short
+# bar cannot hold its name in contrast text, so those names sit beside it.
 pathway_block_panel <- function(rows) {
   inside <- rows$bar >= 0.45 * max(rows$bar, na.rm = TRUE)
   ggplot(rows, aes(.data$bar, .data$feature)) +
@@ -252,13 +252,13 @@ row_block_panel <- function(rows, level) {
 # outcomes are not all measured on the same subjects.
 config_strip <- function(d) {
   d |>
-    group_by(.data$panel_config) |>
+    group_by(.data$config) |>
     summarise(lo = min(.data$n), hi = max(.data$n), .groups = "drop") |>
     mutate(
       strip = ifelse(
         .data$lo == .data$hi,
-        sprintf("%s\n(n=%d)", .data$panel_config, .data$lo),
-        sprintf("%s\n(n=%d-%d)", .data$panel_config, .data$lo, .data$hi)
+        sprintf("%s\n(n=%d)", .data$config, .data$lo),
+        sprintf("%s\n(n=%d-%d)", .data$config, .data$lo, .data$hi)
       )
     )
 }
@@ -274,9 +274,9 @@ tile_grid_panel <- function(d, rows) {
         levels = unname(SYNTH_OUTCOME_SHORT[SYNTH_OUTCOMES])
       ),
       strip = factor(
-        strips$strip[match(.data$panel_config, strips$panel_config)],
+        strips$strip[match(.data$config, strips$config)],
         levels = strips$strip[
-          match(SYNTH_PANEL_CONFIGS, strips$panel_config)
+          match(SYNTH_PANEL_CONFIGS, strips$config)
         ]
       ),
       star = case_when(
@@ -389,8 +389,7 @@ build_fig1_level <- function(level) {
     filter(
       .data$outcome %in% SYNTH_OUTCOMES,
       .data$config %in% SYNTH_PANEL_CONFIGS
-    ) |>
-    mutate(panel_config = .data$config)
+    )
   rows <- synthesis_rows(d, level)
   panel <- row_block_panel(rows, level) + tile_grid_panel(d, rows) +
     plot_layout(widths = c(BLOCK_WIDTH[[level]], 3.4)) +
