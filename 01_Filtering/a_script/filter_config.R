@@ -46,9 +46,14 @@
 # published erythrocyte proteome. Membership cannot remove on its own - a deep RBC proteome shares
 # ~70% of any muscle proteome (glycolysis, tubulins, ferritins), so it only corroborates. The gate
 # drops three blood_cor-only proteins that no RBC proteome lists (H1-5 nuclear, AKR1C2 muscle-
-# expressed, ARHGAP19 lymphocyte); they are leukocyte or spurious, not red-cell. Removal is still
-# gated by the muscle rescue, so muscle-isoform-ambiguous proteins (ANK1, SPTB, EPB41, SYNE2,
-# THBS4) with real myonuclei RNA are kept.
+# expressed, ARHGAP19 lymphocyte); they are leukocyte or spurious, not red-cell.
+#
+# Those two hits are the whole decision: the muscle rescue does not reach a
+# red-cell call. Muscle-isoform-ambiguous proteins (ANK1, SPTB, EPB41, SYNE2)
+# carry real myonuclei RNA and are removed anyway, because a transcript prior
+# cannot outrank a protein's own correlation with these samples' haemoglobin.
+# Letting the rescue win here is what kept the only proteins that survived BH in
+# any contrast; corrected 2026-07-30.
 filter_cfg <- list(
   hpa_file        = "HPA_annotations_full.tsv",
   rbc_file        = "RBC_proteome_reference.tsv", # five-source mature-RBC proteome, built in stage 00
