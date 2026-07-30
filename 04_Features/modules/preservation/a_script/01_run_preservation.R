@@ -6,6 +6,7 @@
 
 pacman::p_load(here, dplyr, tibble, openxlsx, WGCNA, ggplot2, patchwork)
 source(here("functions", "shared_wgcna.R"))
+source(here("functions", "sweep_grid.R"))
 source(here("functions", "sweep_drivers.R"))
 source(here("functions", "shared_style.R"))
 
@@ -126,14 +127,17 @@ out_reports <- here(
 dir.create(out_data, recursive = TRUE, showWarnings = FALSE)
 dir.create(out_reports, recursive = TRUE, showWarnings = FALSE)
 
-wb <- createWorkbook()
-addWorksheet(wb, "preservation")
-writeData(wb, "preservation", preservation)
-addWorksheet(wb, "arm_native")
-writeData(wb, "arm_native", arm_native)
-addWorksheet(wb, "arm_sizes")
-writeData(wb, "arm_sizes", arm_sizes)
-saveWorkbook(wb, file.path(out_data, "preservation.xlsx"), overwrite = TRUE)
+# The fingerprint of the matrix and module assignment this was computed from.
+# Nothing here reruns automatically, so without it a result fitted on a retired
+# protein set survives an upstream change with nothing to say it is stale.
+write_sweep_workbook(
+  file.path(out_data, "preservation.xlsx"),
+  list(
+    preservation = preservation, arm_native = arm_native,
+    arm_sizes = arm_sizes
+  ),
+  fingerprint = input_fingerprint(imputed$data, mm)
+)
 
 threshold <- data.frame(z = c(2, 10), label = c("none", "strong"))
 

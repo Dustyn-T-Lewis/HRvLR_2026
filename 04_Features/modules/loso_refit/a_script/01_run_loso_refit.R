@@ -97,6 +97,19 @@ leads <- bind_rows(
 
 message(sprintf("rescoring %d module leads", nrow(leads)))
 
+# This analysis rescores the module leads F05 and F06 report, so with no leads
+# there is nothing to rescore. That happens legitimately whenever the sweep has
+# been run at B = 0: no permutation null means no lead can be called. Stopping
+# with a message beats dying inside a mutate on a zero-row frame, which is how
+# it failed the first time the metrics-only pass ran.
+if (!nrow(leads)) {
+  message(
+    "No module leads to rescore. Either the sweep found none, or it ran at ",
+    "B = 0 and no cell can be called a lead yet. Nothing written."
+  )
+  quit(save = "no", status = 0)
+}
+
 bundle <- pred_load()
 me_matrix <- me_refit |>
   tibble::column_to_rownames("sample_id") |>
@@ -154,7 +167,8 @@ out <- here("04_Features", "modules", "loso_refit", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 write_sweep_workbook(
   file.path(out, "loso_refit.xlsx"),
-  list(refit_summary = refit_summary, module_stability = stability)
+  list(refit_summary = refit_summary, module_stability = stability),
+  fingerprint = input_fingerprint(bundle$feature_sets, imputed$data)
 )
 
 message(sprintf(
