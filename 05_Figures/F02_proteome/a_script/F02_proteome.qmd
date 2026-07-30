@@ -48,6 +48,29 @@ measures must be respected. So timepoint permutes *within* subject, and the grou
 test collapses each subject to their mean and treats subjects as the unit, so the
 partial subjects cannot act as unequal blocks.
 
+### Formally
+
+PERMANOVA partitions a distance matrix rather than the raw variables, so it needs
+no multivariate normality and works when features outnumber samples — the usual
+state of a proteome. With $n$ samples in $g$ groups and pairwise distances
+$d_{ij}$, the pseudo-$F$ is
+
+$$
+F = \frac{\mathrm{SS}_{\text{between}} / (g-1)}
+{\mathrm{SS}_{\text{within}} / (n-g)},
+\qquad
+\mathrm{SS}_{\text{total}} = \frac{1}{n}\sum_{i<j} d_{ij}^2
+$$
+
+Its null comes from permuting group labels, not from an $F$ distribution. That is
+what makes the permutation scheme part of the hypothesis: shuffling timepoint
+*within* subject tests a different claim than shuffling it freely, and only the
+former respects the repeated measures.
+
+$R^2$ here is $\mathrm{SS}_{\text{between}} / \mathrm{SS}_{\text{total}}$, the
+proportion of total proteome variation the factor explains. Read it beside the
+p-value: a factor can be significant and explain almost nothing.
+
 ```{r panel-a}
 panel("A")
 pA

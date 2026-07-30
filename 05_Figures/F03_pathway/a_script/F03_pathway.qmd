@@ -144,6 +144,37 @@ is what makes the ring's colour scale readable across arcs of very different siz
 Sign is direction, magnitude is strength: positive NES = the pathway is shifted up the
 ranking (up-regulated in that contrast), negative = shifted down.
 
+### Formally
+
+Rank the $N$ proteins by the statistic $r_j$. Walking the list, the running score
+for pathway $S$ at position $i$ is
+
+$$
+\mathrm{ES}(i) = \sum_{\substack{j \le i \\ j \in S}}
+\frac{|r_j|^{p}}{N_R}
+\;-\;
+\sum_{\substack{j \le i \\ j \notin S}} \frac{1}{N - N_S}
+\qquad
+N_R = \sum_{j \in S} |r_j|^{p}
+$$
+
+with $\mathrm{ES} = \mathrm{ES}(i)$ at its largest absolute deviation, and $p = 1$
+weighting each hit by the size of its statistic [@subramanian2005]. The
+normalisation divides by the mean of the null ES over sets of the same size:
+
+$$
+\mathrm{NES} = \frac{\mathrm{ES}}{\mathbb{E}\big[|\mathrm{ES}^{\text{null}}|\big]}
+$$
+
+**The null is built by permuting which gene sits at which rank.** That is the
+assumption the whole statistic rests on, and it is false in a repeated-measures
+biopsy study: pathway members are co-regulated by construction, and a shared
+subject effect correlates everything measured on one sample. `limma::fry` rotates
+residuals under the fitted model instead and carries that correlation
+[@wu2010]. On this dataset the two disagree in every HR-vs-LR and interaction
+contrast, and the rotation test is the one whose null holds
+(`04_Features/pathways/c_data/pathway_contrasts.xlsx`, sheet `fry`).
+
 ## The two colour scales are different things {#sec-pi}
 
 There are two significance signals in this figure and they follow **different rules**.

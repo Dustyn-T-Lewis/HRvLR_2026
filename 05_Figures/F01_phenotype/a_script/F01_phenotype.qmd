@@ -33,6 +33,15 @@ diverges by domain.
 
 ```{r setup}
 source(here::here("05_Figures", "F01_phenotype", "a_script", "setup.R"))
+
+# The panel builders live beside setup.R and source it themselves, so setup.R
+# cannot source them back. 01_run_phenotype.R loads them in a loop; this file
+# needs the same, or every panel chunk dies on a missing build_* function.
+panel_dir <- here::here("05_Figures", "F01_phenotype", "a_script", "panels")
+for (f in c("panel_a_volume", "panel_b_continuum", "panel_c_forest")) {
+  source(file.path(panel_dir, paste0(f, ".R")))
+}
+
 adv <- change_advantage_table(meta)
 ```
 
@@ -42,6 +51,31 @@ Each subject is measured before (T1) and after (T2). The question for every outc
 is whether the before→after *change* differs between HR and LR. With two timepoints
 that is the simplest comparison there is: take each subject's change (post − pre),
 then compare the two groups.
+
+### Formally
+
+For subject $s$ with pre and post measurements $y_{s1}, y_{s2}$, the change is
+$d_s = y_{s2} - y_{s1}$. The group comparison is Welch's two-sample $t$:
+
+$$
+t = \frac{\bar{d}_{\mathrm{HR}} - \bar{d}_{\mathrm{LR}}}
+{\sqrt{s^2_{\mathrm{HR}}/n_{\mathrm{HR}} + s^2_{\mathrm{LR}}/n_{\mathrm{LR}}}}
+$$
+
+with Welch–Satterthwaite degrees of freedom, which does not assume the arms share
+a variance — and here they do not: the LR arm's fibre-area change is markedly more
+dispersed than HR's.
+
+Effect size is Hedges' $g$, Cohen's $d$ with the small-sample correction that
+matters at $n = 8$ per arm:
+
+$$
+g = \frac{\bar{d}_{\mathrm{HR}} - \bar{d}_{\mathrm{LR}}}{s_{\text{pooled}}}
+\times \Big(1 - \frac{3}{4(n_{\mathrm{HR}} + n_{\mathrm{LR}}) - 9}\Big)
+$$
+
+Uncorrected $d$ is biased upward by roughly 7% at this sample size, which is the
+difference between a large effect and a very large one on any conventional scale.
 
 ```{r teach-change}
 # For one outcome (mCSA): each subject's change, then the HR-vs-LR comparison.
