@@ -27,8 +27,6 @@ ADAPT_OUTCOMES <- c(
   "d_1rm_legpress", "d_1rm_ext"
 )
 
-ASSOC_CONT_METHODS <- c("limma", "lm", "spearman")
-ASSOC_GROUP_METHODS <- c("limma", "wilcoxon")
 CLASS_METHODS <- c("enet", "lasso", "ridge", "spls", "pam", "rf", "svm")
 CONT_METHODS <- c("enet", "lasso", "ridge", "spls", "rf", "svm")
 PLAIN_METHOD <- "plain"

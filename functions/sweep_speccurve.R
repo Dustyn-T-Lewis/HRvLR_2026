@@ -118,62 +118,6 @@ spec_curve_cont <- function(cells, title, subtitle) {
 # a moderated t, wilcoxon carries a group effect, and the two are different
 # scales. The nominal hit rate is the one quantity every cell reports on the
 # same scale, and 5% is where it lands when nothing is there.
-spec_curve_assoc <- function(cells, title, subtitle) {
-  d <- cells |>
-    mutate(rate = .data$n_nominal / .data$n_feature) |>
-    arrange(.data$rate) |>
-    mutate(rank = dplyr::row_number())
-
-  p_curve <- ggplot(d, aes(.data$rank, .data$rate)) +
-    geom_hline(yintercept = 0.05, linetype = "dashed", colour = "#B2182B") +
-    geom_point(aes(colour = .data$level), size = 1.4) +
-    scale_colour_manual(values = SPEC_LEVEL_COLORS, name = "level") +
-    scale_y_continuous(labels = scales::percent) +
-    labs(
-      x = NULL, y = "features at nominal p < .05",
-      title = title, subtitle = subtitle
-    ) +
-    FIG_THEME +
-    theme(
-      legend.position = c(0.14, 0.8),
-      plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE),
-      axis.text.x = element_blank(), axis.ticks.x = element_blank()
-    )
-
-  p_curve / spec_strip(d, c("level", "config", "method", "outcome")) +
-    plot_layout(heights = c(1.5, 1.4)) +
-    plot_annotation(theme = theme(plot.margin = margin(4, 4, 4, 4)))
-}
-
-render_assoc_speccurve <- function(root = "F04_association") {
-  cells <- openxlsx::read.xlsx(
-    file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "cell_summary"
-  )
-  panel <- spec_curve_assoc(
-    cells, "Association screen -- specification curve",
-    sprintf(
-      paste(
-        "%d in-sample cells ranked by nominal hit rate.",
-        "Dashed = the 5%% chance rate.\nAssociation has no permutation null,",
-        "so no cell is marked a lead here; F05 and F06 adjudicate",
-        "out of sample."
-      ),
-      nrow(cells)
-    )
-  )
-  dir.create(file.path(sweep_root_dir(root), "b_reports"),
-    recursive = TRUE, showWarnings = FALSE
-  )
-  save_panel(
-    panel, file.path(sweep_root_dir(root), "b_reports", "specification_curve"),
-    width = 300, height = 210
-  )
-  invisible(panel)
-}
-
-# Read a root's raw roll-up and render its specification curve to b_reports.
-# Levels present are read from the data, so a fast-levels-only pass and the full
-# proteins-included pass both render honestly.
 render_root_speccurve <- function(root) {
   cells <- openxlsx::read.xlsx(
     file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "all_cells"

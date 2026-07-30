@@ -8,9 +8,7 @@ source(here("functions", "shared_style.R"))
 source(here("functions", "sweep_drivers.R"))
 source(here("functions", "sweep_pred_leaf.R"))
 
-SCREEN_SIZE <- c(
-  F04_association = 420L, F05_classification = 153L, F06_prediction = 792L
-)
+SCREEN_SIZE <- c(F05_classification = 153L, F06_prediction = 792L)
 
 # `clean_pathway_name` arrives via sweep_drivers.R -> shared_pathway_utils.R.
 # Proteins and modules already name themselves.
@@ -44,71 +42,6 @@ drivers_or_empty <- function(selection, level, method, xlab, title, subtitle,
 # Wilcoxon is rank-based and carries no t, so a cell scores on whatever its
 # method produced: the moderated t where it exists, the group difference
 # otherwise.
-assoc_score <- function(cell) {
-  if (any(is.finite(cell$t))) {
-    list(value = cell$t, axis = "moderated t", stat = "top absolute t")
-  } else {
-    list(value = cell$effect, axis = "effect", stat = "top absolute effect")
-  }
-}
-
-# A volcano earns its space through density, and a leaf is one cell: 1,905
-# features at proteins, 79 at pathways, 11 at modules. At the two small levels
-# the driver bars already name every feature the volcano would draw, so the
-# bars take the full width there instead.
-VOLCANO_LEVELS <- "proteins"
-
-assoc_volcano <- function(cell, level) {
-  df <- cell |>
-    filter(is.finite(.data$p), is.finite(.data$effect)) |>
-    mutate(nlp = -log10(.data$p))
-  labs_df <- df |>
-    slice_min(.data$p, n = 5, with_ties = FALSE) |>
-    mutate(label = cell_feature_label(.data$feature, .env$level))
-
-  ggplot(df, aes(.data$effect, .data$nlp)) +
-    geom_point(size = 0.8, alpha = 0.6, colour = DIR_COLORS[["NS"]]) +
-    ggrepel::geom_text_repel(
-      data = labs_df, aes(label = .data$label), size = 2, max.overlaps = 8,
-      min.segment.length = 0, colour = "grey20"
-    ) +
-    labs(
-      x = "effect", y = expression(-log[10] * " p"),
-      subtitle = "every feature in this cell; strongest five labelled"
-    ) +
-    FIG_THEME +
-    theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
-}
-
-build_assoc_cell_panel <- function(cell, level, config, phenotype, method) {
-  sc <- assoc_score(cell)
-  wide <- !level %in% VOLCANO_LEVELS
-  bars <- drivers_or_empty(
-    cell |> mutate(score = sc$value), level, method,
-    sc$axis, NULL, sprintf("signed %s, strongest features", sc$axis),
-    signed = TRUE, n = if (wide) 15 else 10
-  )
-
-  body <- if (wide) {
-    patchwork::wrap_plots(bars)
-  } else {
-    (assoc_volcano(cell, level) | bars) + plot_layout(widths = c(1.3, 1))
-  }
-
-  body +
-    plot_annotation(
-      title = sprintf(
-        "%s · %s · %s association -- %s", level, config, phenotype,
-        method
-      ),
-      subtitle = cell_footer(
-        sc$stat, max(abs(sc$value), na.rm = TRUE), min(cell$p, na.rm = TRUE),
-        "F04_association", level
-      ),
-      theme = leaf_title_theme()
-    )
-}
-
 null_panel <- function(null_values, observed, chance, xlab, subtitle) {
   ggplot(data.frame(v = null_values), aes(.data$v)) +
     geom_histogram(
