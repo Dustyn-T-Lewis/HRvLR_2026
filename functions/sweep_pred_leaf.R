@@ -186,7 +186,8 @@ run_class_sweep_leaf <- function(bundle, level, config, method, b_grid = B_GRID,
     list(
       summary = res$summary, null = res$null,
       predictions = res$preds, selection = res$selection
-    )
+    ),
+    fingerprint = sweep_fingerprint(bundle)
   )
   panel <- build_class_leaf_panel(res, level, config, method)
   save_panel(panel, file.path(dir, "b_reports", "panel"),
@@ -218,7 +219,8 @@ run_cont_sweep_leaf <- function(bundle, level, config, method, b_grid = B_GRID,
     file.path(dir, "c_data", "results.xlsx"),
     list(
       summary = summ, null = null, predictions = preds, selection = selection
-    )
+    ),
+    fingerprint = sweep_fingerprint(bundle)
   )
   panel <- build_cont_leaf_panel(summ, null, selection, level, config, method)
   save_panel(panel, file.path(dir, "b_reports", "panel"),

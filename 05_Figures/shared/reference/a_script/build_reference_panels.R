@@ -317,7 +317,10 @@ main_ref <-
       "A-C: drivers under their real names; modules renamed by ORA, not",
       "colour. D: named-feature heatmap ordered by phenotype.\nE: the",
       "statistics block every panel carries -- metric, raw permutation p,",
-      "cells screened, null band, leakage flag. No BH q anywhere."
+      "cells screened, null band, leakage flag. The sweep figures carry no BH",
+      "q: a screen of 945 cells is reported against its own permutation null",
+      "and the size it was drawn from, not an FDR. F03 and F04 are the",
+      "FDR-controlled figures and do report BH."
     )
   )
 save_panel(main_ref, file.path(REF_DIR, "REFERENCE_main_idiom"), 330, 200)

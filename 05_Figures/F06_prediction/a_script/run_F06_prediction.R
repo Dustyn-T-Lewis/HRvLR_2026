@@ -16,6 +16,7 @@ bmax <- if (length(args) >= 2) as.integer(args[2]) else 1000L
 b_grid <- if (bmax >= 1000L) c(0L, 200L, 1000L) else c(0L, bmax)
 
 bundle <- pred_load()
+fingerprint <- sweep_fingerprint(bundle)
 grid <- do.call(rbind, lapply(levels_run, function(lv) {
   expand.grid(
     level = lv, config = SWEEP_CONFIGS,
@@ -29,7 +30,7 @@ grid <- grid[!(grid$method == "plain" & grid$config == "trajectory"), ]
 
 for (i in seq_len(nrow(grid))) {
   g <- grid[i, ]
-  if (leaf_done("F06_prediction", g$level, g$config, g$method)) {
+  if (leaf_done("F06_prediction", g$level, g$config, g$method, fingerprint)) {
     message(sprintf(
       "[cont %d/%d] %s | %s | %s  skip (done)",
       i, nrow(grid), g$level, g$config, g$method
