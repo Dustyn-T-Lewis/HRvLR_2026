@@ -274,8 +274,7 @@ Shared helpers live by scope:
 
 | Path | Contents |
 | --- | --- |
-| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
-| `05_Figures/functions/` | `f0N_*` helpers scoped to one figure — `f00_concordance.R` (the F03_pathway/supp driver) and `f00_concordance_panels.R` (its panel builders). |
+| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `f00_concordance.R` and `f00_concordance_panels.R` drive F03_pathway/supp; `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
 | `05_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F05-F06; `reference/` — the worked design references. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 
