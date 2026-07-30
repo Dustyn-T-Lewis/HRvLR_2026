@@ -7,59 +7,13 @@ suppressWarnings(suppressMessages({
   library(here)
   source(here("functions", "sweep_composites.R"))
   source(here("functions", "sweep_drivers.R"))
+  source(here("functions", "sweep_assoc_heatmap.R"))
   pacman::p_load(openxlsx, dplyr, ggplot2, patchwork)
 }))
 
 STAGE <- "F04_association"
 HEATMAP_METHODS <- c("limma", "lm", "spearman")
-BH_CUT <- 0.05
 FILL_LIMIT <- 5
-N_SHOW <- c(modules = Inf, pathways = 18, proteins = 18)
-
-OUTCOME_SHORT <- c(
-  comp_hypertrophy = "comp.hyp", d_fcsa_I = "fCSA I", d_fcsa_II = "fCSA II",
-  d_mcsa = "mCSA", d_1rm_legpress = "1RM leg", d_1rm_ext = "1RM ext",
-  group_diff = "HR-LR"
-)
-
-assoc_grid <- function(level, method) {
-  files <- Sys.glob(file.path(
-    sweep_root_dir(STAGE), level, "*", "*", method, "c_data", "results.xlsx"
-  ))
-  bind_rows(lapply(files, function(f) {
-    read.xlsx(f, "cell") |>
-      transmute(
-        feature = sub("@T[123]$", "", .data$feature),
-        t = .data$t, p = .data$p, bh = .data$bh,
-        outcome = basename(dirname(dirname(dirname(f)))),
-        config = basename(dirname(dirname(dirname(dirname(f)))))
-      )
-  })) |>
-    group_by(.data$feature, .data$outcome, .data$config) |>
-    slice_min(.data$p, n = 1, with_ties = FALSE) |>
-    ungroup()
-}
-
-# Every BH-surviving feature earns a row, then the strongest nominal features
-# fill the rest. Ranking on p alone can drop a survivor, because BH is applied
-# within a cell and the cells hold 11 to 5,711 features.
-heatmap_features <- function(d, level) {
-  n_show <- N_SHOW[[level]]
-  if (is.infinite(n_show)) {
-    return(unique(d$feature))
-  }
-  survivors <- unique(d$feature[d$bh < BH_CUT])
-  ranked <- d |>
-    filter(!.data$feature %in% survivors) |>
-    group_by(.data$feature) |>
-    summarise(best = min(.data$p, na.rm = TRUE), .groups = "drop") |>
-    slice_min(.data$best,
-      n = max(0, n_show - length(survivors)),
-      with_ties = FALSE
-    ) |>
-    pull(.data$feature)
-  c(survivors, ranked)
-}
 
 assoc_heatmap <- function(level, method) {
   d <- assoc_grid(level, method)
