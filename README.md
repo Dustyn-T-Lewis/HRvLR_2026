@@ -69,8 +69,8 @@ Known limitations are stated on the page where the reader meets them: the π gat
 `HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
 reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
 by the missingness filter that the model then cannot test; the module-prediction circularity
-in `shared/WGCNA` that in-fold refitting exposed (see "What the pipeline found" above); and
-the transductive eigengenes in `shared/WGCNA` and `05_Figures/F03_pathway/supp`.
+in `04_Features/modules` that in-fold refitting exposed (see "What the pipeline found" above); and
+the transductive eigengenes in `04_Features/modules` and `05_Figures/F03_pathway/supp`.
 
 ## Design and Canonical Contrasts
 
@@ -114,7 +114,8 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 | `01` | `01_Filtering/` | HPA presence filter, blood-concentration-gated myonuclei-rescue contaminant removal, UniProt deduplication, group-wise missingness filter, consensus outlier detection -> `DAList_filtered.rds` |
 | `02` | `02_Normalization/` | `cycloess` normalization of the filtered matrix; `imputation/` holds the four exploratory arms (`imp4p`, MsCoreUtils hybrid, `missForest`, Perseus MNAR), each writing a method-tagged `DAList_imputed_<method>.rds` |
 | `03` | `03_DEP/` | `a_non_imputed/`: primary `limma + duplicateCorrelation`, 9 HRvLR contrasts, Pi-score summaries. `b_imputed/`: exploratory DEP on the imputed matrices with logFC concordance |
-| `04` | `05_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen; `shared/WGCNA` builds the module eigengenes F05-F06 consume |
+| `04` | `04_Features/` | The derived-feature layer. `proteins/` carries stage 03's tested protein matrix forward; `pathways/` scores singscore pathway sets; `modules/` builds the signed WGCNA modules and tests whether they generalize (`loso_refit/`, `preservation/`, `contrast_networks/`). Each arm fits the same nine contrasts stage 03 fits, so all three feature levels share one estimator, and each writes its own QC report and results table |
+| `05` | `05_Figures/` | The results layer in arc order: F01 phenotype atlas; F02 proteome overview + QC; F03_pathway enrichVolcano ring-volcanoes, which also builds the shared fgsea source data, with HR-vs-LR training/acute concordance as its `supp`; F04_association the HR-vs-LR contrast heatmaps; F05_classification HR/LR classification screen; F06_prediction continuous-adaptation prediction screen |
 
 ## Canonical Run Order
 
@@ -127,7 +128,7 @@ Rscript 02_Normalization/a_script/01_run_normalization.R
 Rscript 03_DEP/a_non_imputed/a_script/01_run_dep.R
 ```
 
-Clustering is computed self-contained inside `05_Figures/shared/WGCNA` (see Figures);
+Clustering is computed self-contained inside `04_Features/modules` (see Figures);
 WGCNA builds the module eigengenes that feed the `modules` level of F05 and F06.
 
 The primary DEP runs on the non-imputed normalized matrix. Imputation is
@@ -167,7 +168,7 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
 - `05_Figures/F03_pathway/supp/concordance_training`: HR-vs-LR training-phase concordance
 - `05_Figures/F03_pathway/supp/concordance_acute`: HR-vs-LR acute-phase concordance
 - `05_Figures/F03_pathway/supp/summary`: magnitude and concordance in one frame
-- `05_Figures/shared/WGCNA`: builds the module eigengenes (missForest-imputed
+- `04_Features/modules`: builds the module eigengenes (missForest-imputed
   proteome) that F05 and F06 read at the `modules` level; `loso_refit/` tests
   whether the modules survive leave-one-subject-out re-definition; `preservation/`
   tests whether HR and LR share module architecture; `contrast_networks/` tests
@@ -214,10 +215,10 @@ Rscript 05_Figures/F03_pathway/supp/concordance_training/a_script/01_run_concord
 Rscript 05_Figures/F03_pathway/supp/concordance_acute/a_script/01_run_concordance_acute.R
 Rscript 05_Figures/F03_pathway/supp/summary/a_script/01_run_summary.R
 
-Rscript 05_Figures/shared/WGCNA/a_script/01_run_modules.R
-Rscript 05_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
-Rscript 05_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
-Rscript 05_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
+Rscript 04_Features/modules/a_script/01_run_modules.R
+Rscript 04_Features/modules/preservation/a_script/01_run_preservation.R
+Rscript 04_Features/modules/preservation/a_script/02_run_preservation_balanced.R
+Rscript 04_Features/modules/contrast_networks/a_script/01_run_contrast_stability.R
 
 # F05 classification: run, split, roll up (spec curve + manifest), composite
 Rscript 05_Figures/F05_classification/a_script/run_F05_classification.R
@@ -233,10 +234,10 @@ Rscript 05_Figures/F06_prediction/a_script/composite_F06_prediction.R
 
 # Module validation last: the refit reads the F05 and F06 manifests, so it must
 # follow both.
-Rscript 05_Figures/shared/WGCNA/loso_refit/a_script/01_run_loso_refit.R
-Rscript 05_Figures/shared/WGCNA/preservation/a_script/01_run_preservation.R
-Rscript 05_Figures/shared/WGCNA/preservation/a_script/02_run_preservation_balanced.R
-Rscript 05_Figures/shared/WGCNA/contrast_networks/a_script/01_run_contrast_stability.R
+Rscript 04_Features/modules/loso_refit/a_script/01_run_loso_refit.R
+Rscript 04_Features/modules/preservation/a_script/01_run_preservation.R
+Rscript 04_Features/modules/preservation/a_script/02_run_preservation_balanced.R
+Rscript 04_Features/modules/contrast_networks/a_script/01_run_contrast_stability.R
 ```
 
 ## Repository Conventions
@@ -267,7 +268,7 @@ every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 | `F01_phenotype/` | The phenotype: matched training, divergent growth and strength. | Phenotype atlas + linear mixed models. |
 | `F02_proteome/` | Global proteome overview and QC. | PCA, DEP counts, effect sizes, set overlaps, η². |
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
-| `shared/WGCNA/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
+| `04_Features/modules/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
 | `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
 | `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads fall below zero once restricted to the two reproducible modules; in-fold refitting adds nothing. |
 

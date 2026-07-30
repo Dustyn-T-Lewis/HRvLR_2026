@@ -49,7 +49,7 @@ base_feature <- function(x) sub("@T[123]$", "", x)
 
 module_ora_label <- function() {
   read.xlsx(
-    here("05_Figures", "shared", "WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+    here("04_Features", "modules", "c_data", "WGCNA_source_data.xlsx"),
     "module_ora"
   ) |>
     group_by(.data$module) |>

@@ -29,7 +29,7 @@ meta <- imputed$metadata |>
   )
 
 mm <- read.xlsx(
-  here("05_Figures", "shared", "WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+  here("04_Features", "modules", "c_data", "WGCNA_source_data.xlsx"),
   "module_membership"
 )
 modules <- setNames(mm$module, mm$gene)[rownames(abund)]
@@ -122,9 +122,9 @@ design <- purrr::map_dfr(seq_len(n_draws), function(draw) {
   )
 })
 
-out_data <- here("05_Figures", "shared", "WGCNA", "preservation", "c_data")
+out_data <- here("04_Features", "modules", "preservation", "c_data")
 out_reports <- here(
-  "05_Figures", "shared", "WGCNA", "preservation", "b_reports"
+  "04_Features", "modules", "preservation", "b_reports"
 )
 dir.create(out_data, recursive = TRUE, showWarnings = FALSE)
 dir.create(out_reports, recursive = TRUE, showWarnings = FALSE)

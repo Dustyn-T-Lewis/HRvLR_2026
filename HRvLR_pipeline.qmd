@@ -108,7 +108,7 @@ restricting the features to the two modules recoverable in every fold, and
 modules that do not reproduce under subsampling. HR and LR share module
 architecture (preservation strong both directions, using cohort-defined labels,
 so not itself free of circularity), and training- and acute-only contrast networks were tested and are
-not viable at this cohort size (`shared/WGCNA`).
+not viable at this cohort size (`04_Features/modules`).
 
 **So: the proteome does not separate high from low responders at this sample size.**
 It is a null study with a strong phenotype and a pathway-level lead. Saying that
@@ -176,7 +176,7 @@ the top and follow the chain, or jump to the one you need.
 | `05_Figures/F01_phenotype/a_script/F01_phenotype.qmd` | The phenotype: matched work, divergent growth |
 | `05_Figures/F02_proteome/a_script/F02_proteome.qmd` | The six global nulls (PERMANOVA, RRPP, PERMDISP, ω², CAP) |
 | `05_Figures/F03_pathway/a_script/F03_pathway.qmd` | Volcano-in-ring, NES, fgsea, and the EnrichmentMap dedup |
-| `05_Figures/shared/WGCNA/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
+| `04_Features/modules/a_script/WGCNA.qmd` | WGCNA modules, `limma::fry`, and why the earlier module-phenotype positive was a subject-identity artifact; `loso_refit/`, `preservation/` and `contrast_networks/` test whether the modules generalize |
 | `05_Figures/F05_classification/` | HR/LR classification screen: `<level>/<config>/HR_LR/<model>`, 153 cells, nested LOSO against a permutation null; 0 leads |
 | `05_Figures/F06_prediction/` | Continuous-adaptation prediction screen: `<level>/<config>/<phenotype>/<model>`, 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, all 8 module leads fall below zero on the two reproducible modules |
 
@@ -185,7 +185,7 @@ them, rather than in a separate document: the π gate in @sec-pi-warning; the hu
 search space, which had no contaminant FASTA and no decoys, so reagent contaminants cannot be
 detected at all (`01_filtering.qmd`); the 34 proteins the missingness filter admits and the
 model then cannot test (`03_dep.qmd`); the module-prediction circularity that in-fold
-refitting exposed in `shared/WGCNA`; and the transductive eigengenes `shared/WGCNA` shares
+refitting exposed in `04_Features/modules`; and the transductive eigengenes `04_Features/modules` shares
 with F05-F06's `modules` level.
 
 Architecture (shared house style): each stage is a numbered folder with
@@ -201,7 +201,7 @@ own outputs first.
   a_non_imputed/  PRIMARY limma DE (NA-tolerant)                 → 03_combined_results.csv
   b_imputed/      imputed DE (concordance check)
 05_Figures/       F03_pathway/supp pilot read-outs; F01-F03 publication composites;
-                  shared/WGCNA module source; F05-F06 per-cell screens
+                  04_Features/modules module source; F05-F06 per-cell screens
 ```
 
 # Stage 00 — Inputs {#sec-inputs}
@@ -340,13 +340,13 @@ high concordance confirms imputation does not reshape the effects [@peng2024].
 | F02 | Proteome overview and QC: PCA, DEP counts, effect sizes, set overlaps, eta-squared |
 | F03_pathway | enrichVolcano ring-volcanoes per contrast |
 | F03_pathway/supp | Pilot read-outs: HR-vs-LR concordance (training and acute — quadrant ORA, NES scatter, fry, RRHO2, bootstrap) and the magnitude/concordance summary |
-| shared/WGCNA | WGCNA modules on the missForest-imputed proteome, linked to phenotype; the eigengene source for the `modules` level of F05-F06; `loso_refit`, `preservation`, `contrast_networks` test generalization |
+| 04_Features/modules | WGCNA modules on the missForest-imputed proteome, linked to phenotype; the eigengene source for the `modules` level of F05-F06; `loso_refit`, `preservation`, `contrast_networks` test generalization |
 | F05_classification | HR/LR classification screen over `<level>/<config>/HR_LR/<model>`: 153 cells, nested LOSO against a permutation null; 0 leads |
 | F06_prediction | Continuous-adaptation prediction screen over `<level>/<config>/<phenotype>/<model>`: 792 cells, nested LOSO against a permutation null; 32 leads, 26 on `d_mcsa`, module leads fall below zero on the two reproducible modules |
 
 The HR-vs-LR response question is first sighted in F03_pathway/supp, where the two groups'
 contrasts are compared directly with rotation tests and rank-rank overlap, then taken
-up module-wise in `shared/WGCNA` and by classification and prediction in
+up module-wise in `04_Features/modules` and by classification and prediction in
 F05_classification and F06_prediction.
 
 # Reproducing {#sec-repro}

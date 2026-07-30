@@ -28,7 +28,7 @@ meta <- imputed$metadata |>
   )
 
 mm <- read.xlsx(
-  here("05_Figures", "shared", "WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+  here("04_Features", "modules", "c_data", "WGCNA_source_data.xlsx"),
   "module_membership"
 )
 modules_full <- setNames(mm$module, mm$gene)
@@ -150,7 +150,7 @@ refit_summary <- bind_rows(lapply(seq_len(nrow(leads)), function(i) {
     drop_from_refit = .data$metric_cohort_reduced - .data$metric_loso_refit
   )
 
-out <- here("05_Figures", "shared", "WGCNA", "loso_refit", "c_data")
+out <- here("04_Features", "modules", "loso_refit", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 write_sweep_workbook(
   file.path(out, "loso_refit.xlsx"),
@@ -247,7 +247,7 @@ p_stab <- ggplot(stability, aes(
 save_panel(
   (p_slope | p_stab) + plot_layout(widths = c(1.6, 1)),
   here(
-    "05_Figures", "shared", "WGCNA", "loso_refit", "b_reports",
+    "04_Features", "modules", "loso_refit", "b_reports",
     "loso_refit"
   ),
   width = 260, height = 130
