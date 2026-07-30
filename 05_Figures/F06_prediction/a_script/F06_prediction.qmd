@@ -1,39 +1,233 @@
 ---
-title: "F06 -- Continuous-prediction screen"
-format: html
+title: "HRvLR F06 — Prediction"
+subtitle: "Can the proteome forecast how much a subject adapts, not just which arm they are in?"
+author: "A_HRvLR_2026"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    embed-resources: true
+    df-print: paged
+bibliography: ../../shared/references.bib
+execute:
+  eval: true
+  echo: true
+  warning: false
+  message: false
 ---
 
-## What this figure is
+```{r}
+#| label: setup
+#| include: false
+pacman::p_load(here)
+knitr::opts_knit$set(root.dir = here::here())
+```
 
-An out-of-sample test of whether the proteome can forecast **how much** a
-subject adapts. Each feature level x timepoint config x method (elastic net,
-lasso, ridge, sparse PLS, random forest, SVM regression; plain linear on modules
-only) runs a nested leave-one-subject-out cell for each of the six adaptation
-deltas, scored by Q² against a permutation null (B = 200). Q² <= 0 means the
-model predicts worse than the outcome's own mean.
+```{r}
+#| label: libs
+#| include: false
+pacman::p_load(here, dplyr, tidyr, ggplot2, openxlsx, stringr)
+source(here("functions", "sweep_grid.R"))
+source(here("functions", "shared_style.R"))
+```
+
+## The question
+
+F05 asked which arm a subject belongs to. That treats adaptation as two boxes,
+which throws away information: a subject just over the HR threshold and one far
+above it are not the same.
+
+This asks the continuous version. Given a subject's proteome, can we forecast
+*how much* muscle they gain? Same cross-validation discipline, different
+outcome and a different score.
+
+## The outcomes
+
+```{r}
+#| label: outcomes
+#| echo: false
+tibble::tibble(
+  outcome = ADAPT_OUTCOMES,
+  what = c(
+    "composite hypertrophy score",
+    "change in type I fibre cross-sectional area",
+    "change in type II fibre cross-sectional area",
+    "change in whole-muscle cross-sectional area",
+    "change in leg-press one-rep max",
+    "change in knee-extension one-rep max"
+  )
+)
+```
+
+Six outcomes rather than one, because "adaptation" is not a single measurement.
+Fibre-level and whole-muscle-level change need not agree, and strength need not
+track size. Each is predicted separately, and the outcome axis is part of the
+screen size.
+
+## Scoring a continuous forecast
+
+### The idea
+
+The obvious score is $R^2$, but $R^2$ computed on the same data a model was
+fitted to always rises when you add features and cannot go below zero. Out of
+sample neither is true.
+
+$Q^2$ is the out-of-sample version. It compares the model's squared error to the
+error you would make by ignoring the proteome entirely and predicting every
+subject's outcome as the group mean. $Q^2 = 1$ is perfect. $Q^2 = 0$ means the
+model is exactly as good as guessing the mean. **$Q^2 < 0$ means it is worse
+than guessing the mean**, which is possible out of sample and common at $n=16$.
+
+### Formally
+
+$$
+Q^2 = 1 - \frac{\mathrm{PRESS}}{\mathrm{TSS}}
+= 1 - \frac{\sum_{s}\big(y_s - \hat{y}_{-s}\big)^2}{\sum_{s}\big(y_s - \bar{y}\big)^2}
+$$
+
+$\hat{y}_{-s}$ is the prediction for subject $s$ from a model fitted without
+them, so PRESS is a genuine prediction error. Nothing here is in-sample.
+
+Spearman correlation between observed and predicted is reported beside it. The
+two can disagree: a model can rank subjects correctly while being badly
+calibrated in magnitude, giving positive $\rho$ and negative $Q^2$. When they
+disagree, $Q^2$ is the one that answers "is this a forecast".
+
+## Everything else carries over from F05
+
+The cross-validation, the nesting, the leakage discipline and the permutation
+null are identical to F05 and are explained there. Two differences:
+
+- The permutation shuffles the **outcome value** across subjects rather than a
+  binary label.
+- The trivial baseline is $Q^2 > 0$, not AUC $> 0.5$.
+
+```{r}
+#| label: lead-def
+LEAD_BASELINE
+```
+
+The below-baseline trap bites harder here. A discrete permutation null can flag
+a $Q^2$ of $-0.02$ as unusual, and without the baseline condition that cell
+would be counted as a lead — a model that predicts worse than the mean, promoted
+for being unusually bad.
+
+## The screen
+
+```{r}
+#| label: grid
+#| echo: false
+tibble::tibble(
+  axis = c("feature level", "timepoint config", "model", "outcome"),
+  n = c(
+    length(SWEEP_LEVELS), length(SWEEP_CONFIGS),
+    length(CONT_METHODS) + 1L, length(ADAPT_OUTCOMES)
+  ),
+  values = c(
+    paste(SWEEP_LEVELS, collapse = ", "),
+    paste(SWEEP_CONFIGS, collapse = ", "),
+    paste(c(CONT_METHODS, PLAIN_METHOD), collapse = ", "),
+    paste(ADAPT_OUTCOMES, collapse = ", ")
+  )
+)
+```
+
+792 cells. The outcome axis multiplies the screen by six relative to F05, which
+is exactly why the screen size has to travel with every number reported from it.
+
+## The figure
 
 ![F06 prediction composite](../b_reports/F06_prediction_composite.png)
 
-## Panels
+- **A** The twelve cells with the smallest permutation $p$, each observed against
+  predicted, points coloured by responder arm, fit line keyed to feature level,
+  $Q^2$ and its permutation $p$ printed per cell.
+- **B** The specification curve: all cells sorted by $Q^2$ against their null
+  bands, with a strip reading off level, config, method and outcome.
 
-- **A** The 12 cells with the smallest permutation p, each as observed vs
-  predicted with points coloured by responder arm and a fit line keyed to
-  feature level; Q² and its permutation p are printed per cell.
-- **B** The whole specification curve: all cells sorted by Q² against their
-  null bands, with a strip reading off level, config, method, and outcome.
+In panel A, look at the spread of the points before the line. A high $Q^2$
+driven by two extreme subjects at opposite corners is not a forecast; it is a
+two-point fit with fourteen subjects in a cloud between them.
 
-## Reading it honestly
+## The result
 
-Of 48 nominal leads, 35 land on `d_mcsa` (muscle cross-sectional area change),
-spanning all three feature levels, several configs (T2, trajectory, acute), and
-several methods -- a consistency well beyond a single lucky cell. The strongest
-leakage-free evidence is `pathways | T2 | sPLS`, Q² = 0.41, p = .015.
+```{r}
+#| label: result
+#| echo: false
+cells <- read.xlsx(
+  here("05_Figures", "F06_prediction", "c_data", "results.xlsx"), "all_cells"
+) |>
+  best_b_per_cell()
 
-Two cautions travel with it. First, every cell rides on the cohort-imputed
-(missForest) proteome, so the signal inherits the optimism an earlier
-in-fold-refit experiment exposed for the module -> ΔmCSA q²; the clean test
-refits imputation inside each fold. Second, some "significant" cells carry Q² < 0
-(e.g. `proteins | trajectory | ridge`, Q² = -0.02, p = .010) -- the discrete
-permutation null flagging a below-chance value as unusual, not a real forecast.
-`d_mcsa` is the lead to validate in-fold and in an external cohort, not a
-confirmed predictor.
+has_null <- any(!is.na(cells$perm_p_q2))
+
+cells |>
+  summarise(
+    cells = dplyr::n(),
+    median_q2 = round(median(.data$q2, na.rm = TRUE), 3),
+    max_q2 = round(max(.data$q2, na.rm = TRUE), 3),
+    above_zero = sum(.data$q2 > 0, na.rm = TRUE),
+    leads = if (has_null) {
+      sum(is_lead(.data$q2, .data$perm_p_q2, "cont"), na.rm = TRUE)
+    } else {
+      NA_integer_
+    },
+    .by = "level"
+  )
+```
+
+```{r}
+#| label: null-status
+#| echo: false
+#| results: asis
+if (has_null) {
+  cat("Permutation nulls are present, so the lead column is interpretable.\n")
+} else {
+  cat(
+    "**Permutation nulls are not in this run.** The sweep was executed at",
+    "B = 0 to get point estimates quickly; `leads` is therefore undefined and",
+    "no cell can be called significant. The B = 200 pass fills it in.\n"
+  )
+}
+```
+
+The median $Q^2$ is the number to sit with. Across the whole screen it is
+negative — the typical cell predicts worse than the outcome's own mean. Cells
+above zero exist, and the maximum is well above zero, but that is what a maximum
+over hundreds of draws does.
+
+## How to read this honestly
+
+Three cautions travel with any lead from this screen.
+
+**The screen size.** 792 cells at a 5% chance rate yields about 40 cells below
+$p<.05$ with no signal at all. A count of leads only means something against
+that denominator, which is why F07 plots every best cell against its own null
+and prints the number of cells it was drawn from.
+
+**Imputation.** Every cell runs on the missForest-imputed proteome, imputed once
+across the cohort rather than inside each fold. An earlier experiment on this
+project showed a module-to-ΔmCSA result collapsing entirely once imputation and
+module definition moved in-fold. The same optimism applies here in principle.
+
+**Concentration is suggestive, not confirmatory.** If leads cluster on one
+outcome across several levels, configs and methods, that is more interesting
+than a single lucky cell — dependence across cells makes it weaker evidence than
+it looks, but it is the pattern worth taking to a validation cohort.
+
+## Recap
+
+- $Q^2$ is out-of-sample $R^2$; below zero means worse than predicting the mean.
+- Spearman and $Q^2$ can disagree; $Q^2$ answers "is this a forecast".
+- The baseline condition stops a below-chance cell being promoted by a discrete
+  null.
+- 792 cells, so roughly 40 would clear $p<.05$ by luck alone.
+- Any lead is a hypothesis for a validation cohort, not a predictor.
+
+## References
+
+::: {#refs}
+:::

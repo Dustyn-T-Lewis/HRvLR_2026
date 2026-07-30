@@ -16,7 +16,7 @@ bmax <- if (length(args) >= 2) as.integer(args[2]) else 1000L
 b_grid <- if (bmax >= 1000L) c(0L, 200L, 1000L) else c(0L, bmax)
 
 bundle <- pred_load()
-fingerprint <- sweep_fingerprint(bundle)
+fingerprint <- sweep_fingerprint(bundle, b_grid)
 grid <- do.call(rbind, lapply(levels_run, function(lv) {
   expand.grid(
     level = lv, config = SWEEP_CONFIGS,
