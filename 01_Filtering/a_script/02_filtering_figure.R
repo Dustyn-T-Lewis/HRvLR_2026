@@ -56,9 +56,22 @@ panel_b <- ggplot(qc, aes(Timepoint, pct_signal, fill = Timepoint)) +
   labs(
     title = "B  Contamination per sample, measured before removal",
     subtitle = paste(
-      "Blood rises at T3 (hyperaemia): +15.3 pp from T2, 14/16 subjects, paired p = 0.0006, and leukocytes rise with it",
-      "(post-exercise infiltration). Both rises are shared by the arms (group x timepoint p = 0.25), so they cancel in the",
-      "interaction contrast but confound the per-arm acute contrasts. Keratin and adipose are negligible throughout.",
+      paste(
+        "Blood rises at T3 (hyperaemia) and leukocytes rise with it",
+        "(post-exercise infiltration). The rise is NOT equal in the two arms: on"
+      ),
+      paste(
+        "the log2 haemoglobin index, arm x T3 gives b = -1.21, p = 0.032, and",
+        "p = 0.017 by subject-label permutation, LR rising 2.14 against HR's 0.57."
+      ),
+      paste(
+        "On this percent-of-signal scale the same term is p = 0.26 - a bounded",
+        "proportion with far larger relative residual variance, so it fails to"
+      ),
+      paste(
+        "detect what the index measures. The confound does not cancel in the",
+        "interaction. Keratin and adipose are negligible throughout."
+      ),
       sep = "\n"
     ),
     x = NULL, y = "% of sample signal"
@@ -111,27 +124,39 @@ ggsave(file.path(report_dir, "filtering_qc.pdf"), fig, width = 10, height = 11)
 ggsave(file.path(report_dir, "filtering_qc.png"), fig, width = 10, height = 11, dpi = 200)
 cat("wrote", file.path(report_dir, "filtering_qc.png"), "\n")
 
-# Supplement: why the data-driven blood-index cut beats the erythrocyte-RNA cut. Each protein's
-# correlation with the per-sample blood index (x) against HPA's erythrocyte/myonuclei RNA ratio
-# (y). The blood cut cleanly separates red-cell from muscle where the RNA ratio traps ribosomes.
+# Supplement: the curated blood list against both lines of evidence. Each protein's correlation
+# with the per-sample blood index (x) against HPA's erythrocyte/myonuclei RNA ratio (y), which on
+# its own would trap the ribosomal proteins and miss the enucleate red-cell membrane skeleton.
 muscle_markers <- c(
   "MB", "CKM", "ACTA1", "MYH1", "MYH2", "MYH7", "ALDOA", "CASQ1", "PYGM",
   "ATP2A1", "DES", "TNNT3", "TNNI2", "MYBPC1", "TNNC2", "MYL1"
+)
+# The panel now checks the curated blood list against the in-sample evidence
+# instead of drawing the threshold that used to make the call. A curated protein
+# sitting at blood_cor near zero would mean the list is wrong; a kept protein
+# sitting high means covariation alone was never enough to remove it.
+blood_list <- readr::read_csv(
+  here("00_input", "blood_contaminants.csv"),
+  show_col_types = FALSE
 )
 bi_df <- fx$protein_calls |>
   filter(!is.na(blood_cor)) |>
   mutate(
     class = case_when(
-      str_starts(verdict, "remove: red-cell") ~ "removed: blood-tracking",
+      gene %in% blood_list$gene ~ "removed: curated blood",
       gene %in% muscle_markers ~ "muscle marker",
       str_detect(gene, "^RP[LS]") ~ "ribosomal",
       TRUE ~ "other"
     ),
     ratio = log2((ery + 1) / (myo + 1))
   )
-bi_thr <- fx$cfg$blood_cor_max
-lab_bi <- filter(bi_df, class %in% c("removed: blood-tracking", "muscle marker"))
-pal_bi <- c("removed: blood-tracking" = "#B2182B", "muscle marker" = "#2166AC", "ribosomal" = "#F1A340", "other" = "grey80")
+
+# 99.9th percentile of a 300x permutation of the index, restricted to proteins
+# with enough observations to be callable (00_blood_cor_null.R). Drawn as
+# context, not as a gate: nothing is removed for crossing it.
+bi_thr <- 0.59
+lab_bi <- filter(bi_df, class %in% c("removed: curated blood", "muscle marker"))
+pal_bi <- c("removed: curated blood" = "#B2182B", "muscle marker" = "#2166AC", "ribosomal" = "#F1A340", "other" = "grey80")
 
 blood_index_fig <- ggplot(bi_df, aes(blood_cor, ratio)) +
   annotate("rect", xmin = bi_thr, xmax = Inf, ymin = -Inf, ymax = Inf, fill = "#B2182B", alpha = 0.06) +
@@ -144,9 +169,9 @@ blood_index_fig <- ggplot(bi_df, aes(blood_cor, ratio)) +
   ) +
   scale_colour_manual(values = pal_bi, name = NULL) +
   labs(
-    title = "Data-driven blood filter vs the erythrocyte-RNA ratio",
+    title = "The curated blood list against the in-sample blood index",
     subtitle = sprintf(
-      "Blood-index correlation (x, cut at %.2f) removes red-cell without touching muscle; HPA's RNA ratio (y) would trap ribosomes",
+      "Curated blood proteins track the haemoglobin index; muscle markers do not. Dashed line is the permutation null (%.2f), context only \u2014 removal is by protein identity",
       bi_thr
     ),
     x = "Spearman correlation with the per-sample blood index",

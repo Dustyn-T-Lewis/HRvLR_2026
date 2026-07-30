@@ -11,7 +11,8 @@
 #   Smyth 2004, Stat Appl Genet Mol Biol 3:1 — empirical Bayes moderation (the eBayes engine)
 #   Phipson et al. 2016, Ann Appl Stat 10(2):946 — robust empirical Bayes
 #   Xiao et al. 2014, Bioinformatics 30(6):801-807 — Pi-score
-#     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3
+#     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3. A transformed raw p,
+#     bounded in [0,1], controlling no error rate. See 04_pi_permutation.R.
 #
 # On running limma without imputing: Karpievitch et al. 2012, BMC Bioinform 13(S16):S5 is the
 # source of the known COST of this choice, not a licence for it — it warns that complete-case
@@ -106,10 +107,16 @@ within_cor <- dal$eBayes_fit$correlation %||%
   dal$tags$duplicate_correlation %||% NA_real_
 if (!is.na(within_cor)) cat(sprintf("Within-subject correlation: %.3f\n", within_cor))
 
-# Selection is by Pi-score (Pi < 0.05); FDR < 0.10 and raw p < 0.05 are reported beside it.
+# Selection is by BH. Pi and raw p are reported beside it; neither selects.
 # BH at 0.10 is our threshold for exploratory n=16 proteomics, not a literature-mandated one.
 # BH is applied WITHIN each contrast (topTable is called per coef, and decideTests defaults to
 # method = "separate"), never across the nine.
+#
+# Pi used to be the selection criterion. 04_pi_permutation.R retired it:
+# shuffling the arm label across subjects produces MORE Pi hits than the real
+# labels do (235 observed against a permuted median of 274 across the five
+# HR-vs-LR and interaction contrasts, no contrast below emp p = 0.22). Never
+# quote a sig.Pi count without that null beside it.
 dal <- extract_DA_results(dal,
   pval_thresh = cfg$pval_thresh,
   lfc_thresh  = cfg$lfc_thresh,

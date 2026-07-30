@@ -1,0 +1,96 @@
+uniprot_id,gene,class,reason,blood_cor,ery,myo
+P02747,C1QC,complement,complement cascade; plasma-derived,0.765,2.1,0.1
+P01024,C3,complement,complement cascade; plasma-derived,0.666,0,0.7
+P0C0L5,C4B,complement,complement cascade; plasma-derived,0.59,0,0
+P01031,C5,complement,complement cascade; plasma-derived,0.658,0.2,1.2
+P07358,C8B,complement,complement cascade; plasma-derived,0.456,0,0
+P07360,C8G,complement,complement cascade; plasma-derived,0.491,0,1.4
+P02748,C9,complement,complement cascade; plasma-derived,0.517,0,0
+P00751,CFB,complement,complement cascade; plasma-derived,0.664,0,0
+P08603,CFH,complement,complement cascade; plasma-derived,0.618,0,0.1
+P05155,SERPING1,complement,complement cascade; plasma-derived,0.501,0,0.7
+P13716,ALAD,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.625,39.6,7.2
+P16157,ANK1,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.633,183.4,311.2
+P30043,BLVRB,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.553,921.8,80.5
+P07738,BPGM,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.633,313,9.9
+P00915,CA1,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.666,3490.6,4.6
+P00918,CA2,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.565,498.3,20.2
+P04040,CAT,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.687,155,158.9
+P11171,EPB41,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.486,447.9,294.9
+P16452,EPB42,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.656,82.1,0
+P52209,PGD,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.475,10,18
+P00491,PNP,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.65,105.6,0.2
+P32119,PRDX2,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.552,361.3,1.9
+P11166,SLC2A1,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.48,196.8,0.1
+P02730,SLC4A1,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.678,670,0.2
+P37840,SNCA,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.581,920.7,0.1
+P02549,SPTA1,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.592,113.9,0
+P11277,SPTB,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.642,69.9,310.1
+P27105,STOM,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.559,152.8,44.1
+P37837,TALDO1,erythrocyte,"mature red-cell proteome; enucleate, invisible to transcriptomics",0.479,163.9,21.3
+P01876,IGHA1,immunoglobulin,immunoglobulin chain; plasma-derived,0.512,0,0
+P01857,IGHG1,immunoglobulin,immunoglobulin chain; plasma-derived,0.677,2.4,0
+P01859,IGHG2,immunoglobulin,immunoglobulin chain; plasma-derived,0.785,7.4,0
+P01861,IGHG4,immunoglobulin,immunoglobulin chain; plasma-derived,0.546,0,0
+P01871,IGHM,immunoglobulin,immunoglobulin chain; plasma-derived,0.664,0.2,0
+P01768,IGHV3-30,immunoglobulin,immunoglobulin chain; plasma-derived,0.606,0,0
+P01780,IGHV3-7,immunoglobulin,immunoglobulin chain; plasma-derived,0.706,0,0
+A0A0B4J1Y9,IGHV3-72,immunoglobulin,immunoglobulin chain; plasma-derived,0.728,0,0
+A0A0B4J1X5,IGHV3-74,immunoglobulin,immunoglobulin chain; plasma-derived,0.752,0,0
+P06331,IGHV4-34,immunoglobulin,immunoglobulin chain; plasma-derived,0.512,0,0
+A0A087WW87,IGKV2-40,immunoglobulin,immunoglobulin chain; plasma-derived,0.686,0,0
+P04433,IGKV3-11,immunoglobulin,immunoglobulin chain; plasma-derived,0.685,0,0
+P01624,IGKV3-15,immunoglobulin,immunoglobulin chain; plasma-derived,0.704,0,0
+P01619,IGKV3-20,immunoglobulin,immunoglobulin chain; plasma-derived,0.474,0,0
+P06312,IGKV4-1,immunoglobulin,immunoglobulin chain; plasma-derived,0.604,0.5,0
+P0DOY2,IGLC2,immunoglobulin,immunoglobulin chain; plasma-derived,0.619,2864.8,0
+B9A064,IGLL5,immunoglobulin,immunoglobulin chain; plasma-derived,0.479,2.3,0
+P01700,IGLV1-47,immunoglobulin,immunoglobulin chain; plasma-derived,0.471,0,0
+P80748,IGLV3-21,immunoglobulin,immunoglobulin chain; plasma-derived,0.579,3,0
+P01591,JCHAIN,immunoglobulin,immunoglobulin chain; plasma-derived,0.518,7.7,1.7
+P59666,DEFA3,leukocyte,leukocyte protein; myonuclei RNA below 2 nCPM,0.545,21.3,0
+P13796,LCP1,leukocyte,leukocyte protein; myonuclei RNA below 2 nCPM,0.433,19.4,0.6
+P61626,LYZ,leukocyte,leukocyte protein; myonuclei RNA below 2 nCPM,0.663,41.3,1.7
+P05109,S100A8,leukocyte,leukocyte protein; myonuclei RNA below 2 nCPM,0.593,237.2,0.1
+P06702,S100A9,leukocyte,leukocyte protein; myonuclei RNA below 2 nCPM,0.58,283.3,0.1
+P04217,A1BG,plasma,secreted plasma protein,0.593,0,0
+P01023,A2M,plasma,secreted plasma protein,0.647,0.3,105.1
+P01019,AGT,plasma,secreted plasma protein,0.472,0,6
+P02765,AHSG,plasma,secreted plasma protein,0.497,0,0
+P02768,ALB,plasma,secreted plasma protein,0.634,0,0
+P02760,AMBP,plasma,secreted plasma protein,0.702,0,0.4
+P02743,APCS,plasma,secreted plasma protein,0.618,0,0
+P02647,APOA1,plasma,secreted plasma protein,0.637,0.2,0.1
+P02652,APOA2,plasma,secreted plasma protein,0.557,0,0
+P04114,APOB,plasma,secreted plasma protein,0.674,0,3.9
+P02656,APOC3,plasma,secreted plasma protein,0.635,0,0
+P05090,APOD,plasma,secreted plasma protein,0.588,0,2
+P02749,APOH,plasma,secreted plasma protein,0.466,0,0.1
+P10909,CLU,plasma,secreted plasma protein,0.66,7.4,1.5
+P00450,CP,plasma,secreted plasma protein,0.581,0,2.3
+P00734,F2,plasma,secreted plasma protein,0.464,0,0.2
+P02675,FGB,plasma,secreted plasma protein,0.495,0,0
+P02679,FGG,plasma,secreted plasma protein,0.488,0,0
+P02774,GC,plasma,secreted plasma protein,0.505,0,0.2
+P00738,HP,plasma,secreted plasma protein,0.532,1.6,0.1
+P02790,HPX,plasma,secreted plasma protein,0.53,0,0.3
+P19827,ITIH1,plasma,secreted plasma protein,0.568,0,0.2
+P19823,ITIH2,plasma,secreted plasma protein,0.574,0,44
+Q14624,ITIH4,plasma,secreted plasma protein,0.565,0,21.4
+P03952,KLKB1,plasma,secreted plasma protein,0.618,0,0.3
+P01042,KNG1,plasma,secreted plasma protein,0.528,0,0.1
+P02750,LRG1,plasma,secreted plasma protein,0.488,0,0
+P02763,ORM1,plasma,secreted plasma protein,0.647,0.1,0
+P19652,ORM2,plasma,secreted plasma protein,0.46,0.1,0
+P00747,PLG,plasma,secreted plasma protein,0.506,0,0.3
+P27169,PON1,plasma,secreted plasma protein,0.579,0,1.1
+P01009,SERPINA1,plasma,secreted plasma protein,0.632,0.8,0
+P01011,SERPINA3,plasma,secreted plasma protein,0.525,0,0
+P08185,SERPINA6,plasma,secreted plasma protein,0.454,0,0
+P01008,SERPINC1,plasma,secreted plasma protein,0.556,0,0.7
+P05546,SERPIND1,plasma,secreted plasma protein,0.502,0,3.5
+P36955,SERPINF1,plasma,secreted plasma protein,0.462,0,28.3
+P08697,SERPINF2,plasma,secreted plasma protein,0.544,0,0.3
+P02787,TF,plasma,secreted plasma protein,0.649,0,0.3
+P02766,TTR,plasma,secreted plasma protein,0.493,0,0
+P04004,VTN,plasma,secreted plasma protein,0.592,0,0.4

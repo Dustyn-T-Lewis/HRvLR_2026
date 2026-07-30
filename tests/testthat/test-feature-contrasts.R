@@ -1,16 +1,16 @@
 test_that("fit_feature_contrasts reproduces the stage 03 proteoDA fit", {
   source(here::here("functions", "feature_contrasts.R"))
 
-  # The 33 proteins the missingness filter admits but the model cannot test are
+  # The 34 proteins the missingness filter admits but the model cannot test are
   # documented in 03_DEP/contrasts.R; limma warns about them by design.
   expect_warning(
     got <- verify_protein_equivalence(),
-    "Partial NA coefficients for 33 probe"
+    "Partial NA coefficients for 34 probe"
   )
 
   expect_equal(nrow(got), 9L)
   expect_true(all(got$equivalent))
-  expect_true(all(got$n == 1885L))
+  expect_true(all(got$n == 1900L))
   expect_lt(max(got$max_d_logFC), 1e-10)
   expect_lt(max(got$max_d_p), 1e-10)
   expect_lt(max(got$max_d_bh), 1e-10)
