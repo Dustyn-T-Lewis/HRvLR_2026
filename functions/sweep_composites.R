@@ -79,11 +79,11 @@ roc_panel <- function(root, cell) {
         "AUC %.2f\n[%.2f, %.2f]\np = %.3f", cell$estimate, cell$ci_lo,
         cell$ci_hi, cell$perm_p
       ),
-      size = 2.2, label.size = 0, fill = alpha("white", 0.85), lineheight = 0.9
+      size = 2.2, linewidth = 0, fill = alpha("white", 0.85), lineheight = 0.9
     ) +
     annotate("label",
       x = 0.5, y = 0.05, label = cell_tag(cell$level, cell$config, cell$model),
-      size = 2, label.size = 0, fill = alpha("white", 0.8), lineheight = 0.85,
+      size = 2, linewidth = 0, fill = alpha("white", 0.8), lineheight = 0.85,
       fontface = "bold"
     ) +
     scale_x_continuous(limits = c(0, 1), breaks = c(0, 1)) +
@@ -128,7 +128,7 @@ obs_pred_panel <- function(root, cell) {
         "Q2 %.2f  p %.3f\n%s · %s · %s", cell$q2, cell$perm_p_q2,
         cell$level, cell$config, cell$model
       ),
-      size = 2, label.size = 0, fill = alpha("white", 0.85), lineheight = 0.9,
+      size = 2, linewidth = 0, fill = alpha("white", 0.85), lineheight = 0.9,
       fontface = "bold"
     ) +
     labs(x = sprintf("observed %s", cell$outcome), y = "predicted") +
