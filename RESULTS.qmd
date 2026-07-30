@@ -34,15 +34,15 @@ source(here("functions", "sweep_grid.R"))
 ```
 
 ::: {.callout-note}
-Every number on this page is computed from the committed outputs at render time.
-None is typed. This project spent months quoting a π count that had moved
-underneath it, and the fix was to stop writing numbers into prose.
+Every quantity reported here is computed from the committed pipeline outputs at
+render time rather than transcribed, so no figure in the text can drift from the
+analysis that produced it.
 :::
 
-## The phenotype is real and large
+## Hypertrophic response separates the arms by four standard deviations
 
-Sixteen resistance-trained subjects, split eight and eight on hypertrophic
-response.
+In sixteen resistance-trained subjects, hypertrophic response was used to define
+two arms of eight.
 
 ```{r}
 #| label: phenotype
@@ -64,16 +64,13 @@ ph |>
   )
 ```
 
-The two arms are not marginally different. Composite hypertrophy separates them
-by roughly four standard deviations, and mean type I fibre area moves in opposite
-directions. Whatever distinguishes these subjects, it is not subtle at the tissue
-level.
+The separation is not marginal. Composite hypertrophy differs by approximately
+four standard deviations, and mean type I fibre cross-sectional area changes in
+opposite directions in the two arms. A null proteomic result carries weight only
+against a phenotype of this size; in a cohort without one it would be
+uninformative.
 
-That is the premise of everything below. A null proteomic result in a cohort with
-no phenotype would be uninformative. Here the phenotype is emphatic, and the
-proteome still does not follow it.
-
-## The proteome
+## Blood is removed by protein identity, before normalisation
 
 ```{r}
 #| label: proteome
@@ -97,7 +94,7 @@ That list replaced a correlation threshold whose published justification did not
 reproduce and whose null turned out to depend on how many samples a protein was
 seen in.
 
-## Do high and low responders differ?
+## No feature level separates the two arms
 
 Nine contrasts, fitted once on a means model over the six arm-by-timepoint cells
 with `duplicateCorrelation` blocking on subject [@ritchie2015; @smyth2005]. BH is
@@ -128,7 +125,7 @@ assoc |>
 
 **No protein and no module survives BH in any of the nine contrasts.** The
 smallest q at those two levels is `r sprintf("%.3f", min(read.xlsx(here("04_Features", "proteins", "c_data", "protein_contrasts.xlsx"), "contrasts")$bh, na.rm = TRUE))`,
-in `Acute_HR` — a within-arm contrast, not a group comparison.
+in `Acute_HR`, a within-arm contrast rather than a group comparison.
 
 The pathway level returns
 `r sum(assoc$bh[assoc$level == "pathways"])` cells below q = .05, and the coverage
@@ -228,17 +225,18 @@ A difference of differences removes a **constant** offset, not a differential on
 the index as a covariate; the five HR-vs-LR and interaction contrasts are
 unchanged at zero.
 
-## The π-score selects nothing here
+## π-selected counts do not track the group labels
 
 Counts selected by π = p^|log2FC| [@xiao2014] appear throughout the figure set.
 π is a transformed raw p-value and controls no error rate, and in this dataset it
 does not even track the group labels: shuffling the arm across subjects and
-refitting produces **more** π hits than the real labels do — 235 observed against
+refitting produces **more** π hits than the real labels do: 235 observed against
 a permuted median of 274 across the five HR-vs-LR and interaction contrasts, with
 no contrast reaching an empirical p below 0.22
 (`03_DEP/a_non_imputed/a_script/04_pi_permutation.R`, B = 200).
 
-Selection is by BH. π is reported beside it and never quoted without that null.
+Selection is by BH throughout. π is reported alongside it and is not quoted
+without the accompanying permutation result.
 
 ## Classification and prediction
 
@@ -271,8 +269,8 @@ screens
 Both screens fit every combination of feature level, timepoint encoding and
 algorithm as an independent nested leave-one-subject-out cell, with the whole
 loop rerun under a permutation null. A cell counts as a lead only when its
-permutation p falls below .05 **and** its metric beats the trivial baseline —
-AUC > 0.5 for classification, Q² > 0 for prediction. Both conditions are needed:
+permutation p falls below .05 **and** its metric beats the trivial baseline
+(AUC > 0.5 for classification, Q² > 0 for prediction). Both conditions are needed:
 a discrete null will flag a below-chance value as unusual, and this run has
 already produced a cell at Q² = −0.12 with p = 0.030.
 
@@ -281,25 +279,31 @@ already produced a cell at Q² = −0.12 with p = 0.030.
 majority of leads, spans at least two feature levels, and every counted cell
 clears Q² > 0. Short of all three it is a screen maximum over 792 cells.
 
-## What this study can and cannot conclude
+## Summary
 
-**Can.** The skeletal muscle proteome, measured at three timepoints in sixteen
-subjects with a large and well-characterised divergence in hypertrophic response,
-does not distinguish high from low responders at any of three feature
-resolutions, under an FDR-controlled test, at any timepoint, and in neither
-difference-in-differences contrast. The one pathway-level result that survives a
-correlation-corrected test sits inside a single arm and is not a group
-comparison.
+Collectively, these analyses place a bound on what the skeletal muscle proteome
+reports about hypertrophic responder status in this cohort. Measured at three
+timepoints in sixteen subjects whose tissue-level response diverges by
+approximately four standard deviations, the proteome does not distinguish the two
+arms at protein, pathway or module resolution, under FDR control, at any
+timepoint, or in either difference-in-differences contrast. The single
+pathway-level result surviving a correlation-corrected test falls within one arm
+and is therefore not a group comparison.
 
-**Cannot.** A null at n = 16 cannot separate "no effect" from "an effect too
-small for sixteen subjects". What the screens add is that the answer does not turn
-on the analytical choice: no feature level, timepoint encoding or algorithm
-rescues it, which is a stronger statement than any single model failing.
+The evidence does not license a stronger claim in either direction. A null at
+n = 16 cannot distinguish an absent effect from one too small to detect in
+sixteen subjects, and no design of this size can. What the specification screens
+add is that the result does not turn on analytical choice: no feature level,
+timepoint encoding or algorithm recovers a signal, which constrains the space of
+explanations more tightly than any single model failing would.
 
-**Should not.** The acute within-arm contrasts are confounded by an arm-dependent
-blood difference and must not be read as adaptation. π counts are not discoveries.
-And a maximum drawn from a 945-cell screen is a hypothesis for a validation
-cohort, never a result on its own.
+Three results reported above should not be carried forward as adaptation. The
+acute within-arm contrasts are confounded by a blood difference that is itself
+arm-dependent, so the interaction does not remove it. π-selected counts control
+no error rate and, in this dataset, do not track the group labels at all. And a
+maximum drawn from a 945-cell screen is a hypothesis for an independent cohort
+rather than a result, whatever its permutation p, since the screen size is part
+of the statistic.
 
 ## References
 
