@@ -206,22 +206,31 @@ assoc_hit_bars <- function(hits, key, title, subtitle) {
   d <- hits |>
     count(.data[[key]], .data$level, name = "n") |>
     mutate(level = level_factor(.data$level))
-  ord <- d |>
+  ord <- hits |>
     group_by(.data[[key]]) |>
-    summarise(tot = sum(.data$n), .groups = "drop") |>
-    arrange(.data$tot)
+    summarise(
+      tot = dplyr::n(), n_bh = sum(.data$bh < 0.05), .groups = "drop"
+    ) |>
+    arrange(.data$tot) |>
+    mutate(
+      lab = ifelse(
+        .data$n_bh > 0, sprintf("%d (%d)", .data$tot, .data$n_bh),
+        as.character(.data$tot)
+      )
+    )
   d[[key]] <- factor(d[[key]], levels = ord[[key]])
   ggplot(d, aes(.data$n, .data[[key]], fill = .data$level)) +
     geom_col(width = 0.7, colour = "white", linewidth = 0.2) +
     geom_text(
-      data = ord, aes(.data$tot, .data[[key]], label = .data$tot),
+      data = ord, aes(.data$tot, .data[[key]], label = .data$lab),
       inherit.aes = FALSE, hjust = -0.3, size = 2.5, fontface = "bold",
       colour = "grey20"
     ) +
     scale_fill_manual(values = SPEC_LEVEL_COLORS, name = "level") +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.28))) +
     labs(
-      x = "p < .05 associations", y = NULL, title = title, subtitle = subtitle
+      x = "associations at p < .05  (parentheses: within-cell BH q < .05)",
+      y = NULL, title = title, subtitle = subtitle
     ) +
     FIG_THEME +
     theme(
@@ -338,10 +347,14 @@ build_assoc_composite <- function(root = "F04_association", lead = "d_mcsa") {
   (a | b | cc) / (d | e | f) +
     plot_annotation(
       title = "F04 Association -- in-sample description across the multiverse",
-      subtitle = paste(
-        "Every level x config x method x outcome; raw p against a screen of",
-        "420 cells, no correction anywhere. A hit is a lead, not a result:",
-        "F05/F06 adjudicate out of sample."
+      subtitle = sprintf(
+        paste(
+          "Every level x config x method x outcome; %d cells. Bars count",
+          "nominal p < .05; parentheses count survivors of BH applied within",
+          "each cell over that cell's own feature list. A hit is a lead, not a",
+          "result: F05/F06 adjudicate out of sample."
+        ),
+        nrow(cs)
       ),
       tag_levels = "A",
       theme = theme(
