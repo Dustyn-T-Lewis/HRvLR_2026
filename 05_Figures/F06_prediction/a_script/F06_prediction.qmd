@@ -199,6 +199,24 @@ negative — the typical cell predicts worse than the outcome's own mean. Cells
 above zero exist, and the maximum is well above zero, but that is what a maximum
 over hundreds of draws does.
 
+## The `d_mcsa` criterion, fixed in advance
+
+An earlier run of this screen — on a matrix that still contained the blood
+proteins since removed — reported 32 leads with 26 of them on `d_mcsa`. That
+result shaped expectations, so the current run is a re-test, and the standard it
+has to meet was written down before it finished (`docs/decisions.md`,
+2026-07-30).
+
+**`d_mcsa` counts as replicated only if all three hold:**
+
+1. it again holds the **majority** of leads,
+2. across **at least two** feature levels,
+3. with every counted cell clearing the $Q^2 > 0$ baseline.
+
+Anything short of all three is reported as a screen maximum over 792 cells, not
+as a predictor. An unstated criterion gets applied either way; fixing it before
+looking is what stops both outcomes being rationalisable after the fact.
+
 ## How to read this honestly
 
 Three cautions travel with any lead from this screen.
