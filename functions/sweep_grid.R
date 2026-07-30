@@ -2,7 +2,7 @@
 # defines the feature levels, timepoint configs, and method sets so every root
 # orchestrator and composite reads the same grid.
 
-pacman::p_load(here, dplyr, openxlsx)
+pacman::p_load(here, dplyr, openxlsx, digest)
 
 SWEEP_LEVELS <- c("pathways", "modules", "proteins")
 SWEEP_LEVEL_KEY <- c(
@@ -47,15 +47,29 @@ sweep_leaf_dir <- function(root, level, config, method) {
   d
 }
 
-# A leaf is done when its workbook exists, so a killed run resumes by skipping
-# the leaves on disk.
-leaf_done <- function(root, level, config, method) {
-  file.exists(file.path(
-    sweep_root_dir(root), level, config, method, "c_data", "results.xlsx"
-  ))
+# A leaf is done when its workbook exists AND carries the fingerprint of the
+# feature bundle it was fitted on, so a killed run still resumes from disk while
+# an upstream change forces a refit. Existence alone was not enough: when the
+# protein set moved on 2026-07-30 every one of the 945 leaves reported
+# "skip (done)" against results fitted on a matrix that no longer existed, and
+# nothing in the output said so.
+sweep_fingerprint <- function(bundle) {
+  substr(digest::digest(bundle$feature_sets), 1, 12)
 }
 
-write_sweep_workbook <- function(path, sheets) {
+leaf_done <- function(root, level, config, method, fingerprint,
+                      root_dir = sweep_root_dir(root)) {
+  path <- file.path(root_dir, level, config, method, "c_data", "results.xlsx")
+  if (!file.exists(path) || !"provenance" %in% getSheetNames(path)) {
+    return(FALSE)
+  }
+  identical(read.xlsx(path, "provenance")$fingerprint[1], fingerprint)
+}
+
+write_sweep_workbook <- function(path, sheets, fingerprint = NULL) {
+  if (!is.null(fingerprint)) {
+    sheets$provenance <- data.frame(fingerprint = fingerprint)
+  }
   wb <- createWorkbook()
   for (nm in names(sheets)) {
     addWorksheet(wb, nm)
