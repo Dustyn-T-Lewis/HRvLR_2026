@@ -69,18 +69,33 @@ baseline (`q2 > 0` for prediction, `auc > 0.5` for classification) — collapsed
 permutation nulls otherwise manufacture significance on their own.
 
 F05 classification is a complete null: 0 leads of 153. F06 prediction clears
-32 leads of 792 (4.0%, under the 5% chance rate), yet 26 of the 32 concentrate
-on `d_mcsa`. The module arm does not predict: all 8 module leads fall below
-zero, median drop 0.461. That drop decomposes as 0.428 from restricting the
-feature space to the two modules reproducible in every fold, and 0.000 from
-rebuilding the network in-fold. The leads therefore rested on the nine modules
-that do not survive subsampling, not on circular network construction, which
-contributes nothing measurable here. HR and LR share module architecture
+37 leads of 792 (4.7%, under the 5% chance rate), yet 32 of the 37 concentrate
+on `d_mcsa`. The module arm does not predict: all 13 module leads fall below
+zero, median drop 0.577. That drop decomposes as 0.577 from restricting the
+feature space to the two modules reproducible in every fold (`pink` and
+`turquoise`, the only two failing no folds), and 0.000 from rebuilding the network
+in-fold. The leads therefore rested on the ten modules that do not survive
+subsampling, not on circular network construction, which contributes nothing
+measurable here. HR and LR share module architecture
 (preservation strong in both directions, though the test uses cohort-defined
 labels and so is not free of the same circularity), so the WGCNA modules
 describe this cohort without
 distinguishing the two arms. Contrast-specific networks (built on the training
 or acute contrast alone) were tested and are not viable at this cohort size.
+
+The 24 non-module leads were rescored on the 931 proteins observed in every
+sample, with nothing imputed, closing the remaining leak that every cell in the
+screen shares. Thirteen survive, twelve of them on `d_mcsa`, and the protein level
+holds up (9 of 10) where the pathway level does not (4 of 14): singscore leaks
+nothing across subjects, but a set score averages its imputed members, whereas a
+complete-case protein was never filled. `d_mcsa` therefore meets the criterion
+fixed before the result was read (`docs/decisions.md`, 2026-07-30). What the
+criterion did not ask is which timepoints the surviving cells draw on, and the
+answer decides how to read them: **no cell built on the baseline (T1) proteome is
+a lead or a survivor.** All 32 leads and all 12 survivors use T2, T3, acute, total
+or trajectory, each of which contains measurements taken after training began, and
+`d_mcsa` is the change in cross-sectional area over the period ending at T2. The
+result is a concurrent correlate of hypertrophy, not a baseline forecast of it.
 
 **Read the protein-level counts with care.** Most of them come from the π gate
 (`p^|logFC| < 0.05`), which controls no error rate and admits proteins with raw p up to
@@ -330,7 +345,7 @@ every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 | `04_Features/modules/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
 | `F04_association/` | How do high responders differ from low responders, per feature level? | The nine stage 03 contrasts read from `04_Features`; logFC fill with one scale per contrast family, stars for nominal p, black box for BH q < .05 within a contrast. Zero survivors at protein and module level; the five pathway cells are coverage artifacts or within-arm. |
 | `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
-| `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 32 leads (4.0%), 26 of them on `d_mcsa`; all 8 module leads fall below zero once restricted to the two reproducible modules; in-fold refitting adds nothing. |
+| `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 37 leads (4.7%), 32 of them on `d_mcsa`; all 13 module leads fall below zero once restricted to the two reproducible modules, and in-fold refitting adds nothing; 13 of the 24 non-module leads survive a rescore with no imputation; no `d_mcsa` cell built on the baseline (T1) proteome is a lead or a survivor. |
 
 A cell in F05-F06 reports a metric, a permutation p, the screen size, and a
 leakage label; there is no BH q anywhere in these two, because a screen this

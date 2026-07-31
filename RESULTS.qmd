@@ -240,11 +240,6 @@ without the accompanying permutation result.
 
 ## Classification and prediction
 
-::: {.callout-important}
-This section is provisional. The permutation pass is running; until it lands, no
-cell in either screen has a null and none can be called a lead.
-:::
-
 ```{r}
 #| label: screens
 screens <- map_dfr(
@@ -274,10 +269,89 @@ permutation p falls below .05 **and** its metric beats the trivial baseline
 a discrete null will flag a below-chance value as unusual, and this run has
 already produced a cell at Q² = −0.12 with p = 0.030.
 
-`d_mcsa` is judged against a criterion fixed before the result existed
-(`docs/decisions.md`, 2026-07-30): it counts as replicated only if it holds the
-majority of leads, spans at least two feature levels, and every counted cell
-clears Q² > 0. Short of all three it is a screen maximum over 792 cells.
+Classification returns no lead in any of its 153 cells. Prediction returns 37 of
+792, which is 4.7%, below the 5% a screen of this size yields under a true null by
+construction. The leads concentrate on one outcome:
+
+```{r}
+#| label: leads-by-outcome
+f06 <- read.xlsx(
+  here("05_Figures", "F06_prediction", "c_data", "results.xlsx"), "all_cells"
+) |>
+  best_b_per_cell()
+leads <- filter(f06, is_lead(.data$q2, .data$perm_p_q2, "cont"))
+count(leads, outcome, sort = TRUE)
+```
+
+Change in whole muscle cross-sectional area, `d_mcsa`, holds
+`r sum(leads$outcome == "d_mcsa")` of the `r nrow(leads)` leads across all three
+feature levels. It is judged against a criterion fixed before the result existed
+(`docs/decisions.md`, 2026-07-30, amended 2026-07-30): it counts as replicated
+only if it holds the majority of leads, spans at least two feature levels, every
+counted cell clears Q² > 0, and the leads survive a rescore with no imputation.
+
+### The imputation-free rescore
+
+Every cell in the screen was fitted on a matrix imputed once across all 45
+samples, so a held-out subject's filled values were informed by the subjects
+training the model that predicts them. The rescore refits each non-module lead on
+the proteins observed in every sample, with nothing filled. Modules cannot be
+tested this way, since an
+eigengene requires the cohort-defined network that is itself the separate leak.
+
+```{r}
+#| label: imputation-sensitivity
+sens <- read.xlsx(
+  here("05_Figures", "F06_prediction", "c_data", "imputation_sensitivity.xlsx"),
+  "rescored"
+)
+sens |>
+  summarise(
+    leads = dplyr::n(), survive = sum(.data$survives),
+    `median Q² drop` = round(median(.data$drop), 3),
+    .by = "level"
+  )
+```
+
+`r sum(sens$survives)` of `r nrow(sens)` survive, and
+`r sum(sens$survives & sens$outcome == "d_mcsa")` of those carry `d_mcsa`. The
+protein level holds up better than the pathway level, which is the reverse of
+what a per-sample rank score predicts: singscore leaks nothing across subjects,
+but a set score averages its imputed members, whereas a complete-case protein was
+never filled at all.
+
+All four conditions are therefore met, and by the bar fixed before the data was
+read, `d_mcsa` replicates.
+
+### No surviving cell uses the baseline proteome
+
+The criterion asked where the leads fall and whether they survive. It did not ask
+which timepoints they draw on, and that is what changes the claim.
+
+```{r}
+#| label: baseline-check
+configs <- tibble::tibble(config = c("T1", "T2", "T3", "acute", "total", "trajectory"))
+configs |>
+  left_join(count(filter(leads, .data$outcome == "d_mcsa"), .data$config,
+    name = "leads"
+  ), by = "config") |>
+  left_join(count(filter(sens, .data$survives, .data$outcome == "d_mcsa"),
+    .data$config,
+    name = "survive"
+  ), by = "config") |>
+  mutate(across(c("leads", "survive"), \(x) tidyr::replace_na(x, 0L)))
+```
+
+No cell built on the baseline (T1) proteome is a lead, and none survives. Every
+surviving cell reads T2, T3, acute, total or trajectory, and each of those
+encodings contains measurements taken after training began. Since `d_mcsa` is the
+change in cross-sectional area over the training period ending at T2, a T2
+proteome is contemporaneous with the endpoint it is being scored against.
+
+The result therefore describes the proteome of a muscle that has already grown
+rather than forecasting which muscle will grow. Both readings clear the same
+permutation null, and only the second would be of use in selecting subjects, so
+the distinction belongs in the claim and not in a limitation paragraph.
 
 ## Summary
 
@@ -300,10 +374,15 @@ explanations more tightly than any single model failing would.
 Three results reported above should not be carried forward as adaptation. The
 acute within-arm contrasts are confounded by a blood difference that is itself
 arm-dependent, so the interaction does not remove it. π-selected counts control
-no error rate and, in this dataset, do not track the group labels at all. And a
-maximum drawn from a 945-cell screen is a hypothesis for an independent cohort
-rather than a result, whatever its permutation p, since the screen size is part
-of the statistic.
+no error rate and, in this dataset, do not track the group labels at all. And the
+`d_mcsa` prediction result, which meets a criterion fixed before it was read,
+draws entirely on proteomes measured at or after the endpoint it predicts. It is
+a concurrent correlate of hypertrophy, not a baseline forecast of it, and no
+selection of subjects could be built on it.
+
+A maximum drawn from a 945-cell screen also remains a hypothesis for an
+independent cohort rather than a result, whatever its permutation p, since the
+screen size is part of the statistic.
 
 ## References
 
