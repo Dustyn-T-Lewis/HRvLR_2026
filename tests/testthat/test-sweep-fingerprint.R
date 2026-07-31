@@ -41,23 +41,27 @@ test_that("the fingerprint moves with the permutation grid", {
   )
 })
 
+seed_cell <- function(root, fingerprint, level = "proteins",
+                      config = "total", phenotype = "d_mcsa", model = "rf") {
+  write_sweep_cell(
+    "X", level, config, phenotype, model,
+    list(summary = data.frame(q2 = 1)),
+    fingerprint = fingerprint, root_dir = root
+  )
+}
+
 test_that("a B = 0 leaf never satisfies a B = 200 run", {
   root <- withr::local_tempdir()
-  d <- file.path(root, "proteins", "total", "rf", "c_data")
-  dir.create(d, recursive = TRUE)
   b <- fake_bundle()
   fast <- sweep_fingerprint(b, b_grid = c(0L, 0L))
   full <- sweep_fingerprint(b, b_grid = c(0L, 200L))
-  write_sweep_workbook(
-    file.path(d, "results.xlsx"), list(metrics = data.frame(q2 = 1)),
-    fingerprint = fast
-  )
+  seed_cell(root, fast)
 
   expect_true(leaf_done("X", "proteins", "total", "rf", fast, root_dir = root))
   expect_false(leaf_done("X", "proteins", "total", "rf", full, root_dir = root))
 })
 
-test_that("a leaf with no workbook is not done", {
+test_that("a leaf absent from the store is not done", {
   root <- withr::local_tempdir()
   expect_false(
     leaf_done("X", "proteins", "total", "rf", "abc", root_dir = root)
@@ -66,12 +70,7 @@ test_that("a leaf with no workbook is not done", {
 
 test_that("a leaf is done only when its fingerprint matches", {
   root <- withr::local_tempdir()
-  d <- file.path(root, "proteins", "total", "rf", "c_data")
-  dir.create(d, recursive = TRUE)
-  write_sweep_workbook(
-    file.path(d, "results.xlsx"), list(metrics = data.frame(q2 = 1)),
-    fingerprint = "abc"
-  )
+  seed_cell(root, "abc")
 
   expect_true(
     leaf_done("X", "proteins", "total", "rf", "abc", root_dir = root)
@@ -81,11 +80,13 @@ test_that("a leaf is done only when its fingerprint matches", {
   )
 })
 
-test_that("a workbook written without a fingerprint is never treated as done", {
+# A continuous leaf writes one cell per outcome, all from the same fit. If any
+# of them predates the current input the whole leaf has to be refitted, so
+# leaf_done() requires every phenotype to agree rather than the first it finds.
+test_that("a leaf is not done when one of its phenotypes is stale", {
   root <- withr::local_tempdir()
-  d <- file.path(root, "proteins", "total", "rf", "c_data")
-  dir.create(d, recursive = TRUE)
-  write.xlsx(list(metrics = data.frame(q2 = 1)), file.path(d, "results.xlsx"))
+  seed_cell(root, "abc", phenotype = "d_mcsa")
+  seed_cell(root, "stale", phenotype = "d_fcsa_I")
 
   expect_false(
     leaf_done("X", "proteins", "total", "rf", "abc", root_dir = root)
@@ -116,5 +117,104 @@ test_that("sweep_fingerprint is input_fingerprint over the bundle and grid", {
   expect_identical(
     sweep_fingerprint(b, c(0L, 200L)),
     input_fingerprint(b$feature_sets, c(0L, 200L))
+  )
+})
+
+test_that("write_sweep_cell round-trips a cell through the store", {
+  root <- withr::local_tempdir()
+  sheets <- list(
+    summary = data.frame(
+      level = "proteins", config = "total", outcome = "d_mcsa", model = "rf",
+      n = 16L, B = 200L, q2 = 0.41, perm_p_q2 = 0.015
+    ),
+    null = data.frame(outcome = "d_mcsa", model = "rf", q2 = c(0.1, 0.2))
+  )
+  write_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "rf", sheets,
+    fingerprint = "abc123456789", root_dir = root
+  )
+
+  got <- read_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "rf", "summary",
+    root_dir = root
+  )
+  expect_equal(nrow(got), 1L)
+  expect_equal(got$q2, 0.41)
+  expect_equal(
+    nrow(read_sweep_cell(
+      "X", "proteins", "total", "d_mcsa", "rf", "null",
+      root_dir = root
+    )),
+    2L
+  )
+})
+
+test_that("read_sweep_cell returns the sheet without the store's own columns", {
+  root <- withr::local_tempdir()
+  write_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "rf",
+    list(null = data.frame(outcome = "d_mcsa", model = "rf", q2 = 0.1)),
+    fingerprint = "abc", root_dir = root
+  )
+  got <- read_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "rf", "null",
+    root_dir = root
+  )
+  expect_named(got, c("outcome", "model", "q2"))
+})
+
+test_that("rewriting a cell replaces its rows instead of stacking them", {
+  root <- withr::local_tempdir()
+  for (q in c(0.1, 0.9)) {
+    write_sweep_cell(
+      "X", "proteins", "total", "d_mcsa", "rf",
+      list(summary = data.frame(q2 = q)),
+      fingerprint = "abc", root_dir = root
+    )
+  }
+  got <- read_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "rf", "summary",
+    root_dir = root
+  )
+  expect_equal(nrow(got), 1L)
+  expect_equal(got$q2, 0.9)
+})
+
+test_that("cells of one root do not read each other", {
+  root <- withr::local_tempdir()
+  write_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "rf",
+    list(summary = data.frame(q2 = 0.4)),
+    fingerprint = "abc", root_dir = root
+  )
+  write_sweep_cell(
+    "X", "proteins", "total", "d_mcsa", "svm",
+    list(summary = data.frame(q2 = 0.8)),
+    fingerprint = "abc", root_dir = root
+  )
+  expect_equal(
+    read_sweep_cell("X", "proteins", "total", "d_mcsa", "rf", "summary",
+      root_dir = root
+    )$q2,
+    0.4
+  )
+  expect_equal(nrow(read_sweep_store("X", "summary", root_dir = root)), 2L)
+})
+
+# The composites rank cells and keep the top 12, so a tie is broken by table
+# order. Sorting on write keeps that from depending on the order the sweep
+# happened to run in.
+test_that("the store is ordered by its key, not by write order", {
+  root <- withr::local_tempdir()
+  for (cfg in c("total", "T1", "acute")) {
+    write_sweep_cell(
+      "X", "proteins", cfg, "d_mcsa", "rf",
+      list(summary = data.frame(q2 = 0.4)),
+      fingerprint = "abc", root_dir = root
+    )
+  }
+  expect_equal(
+    read_sweep_store("X", "summary", root_dir = root)$config,
+    sort(c("total", "T1", "acute"))
   )
 })

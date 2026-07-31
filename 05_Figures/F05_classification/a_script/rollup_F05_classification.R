@@ -7,6 +7,4 @@ suppressWarnings(suppressMessages({
 
 rollup_root("F05_classification", "perm_p")
 render_root_speccurve("F05_classification")
-build_manifest(
-  sweep_root_dir("F05_classification"), "class", 153L, "F05_classification"
-)
+build_manifest("F05_classification", "class", 153L, "F05_classification")

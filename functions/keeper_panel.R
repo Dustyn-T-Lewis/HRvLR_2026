@@ -112,16 +112,12 @@ KEEPER_ROOTS <- list(
 # sits inside its own null while being coloured as clearing it, which is the
 # figure contradicting its own statistic. Quantiles match what perm_p measures.
 keeper_null_band <- function(root, row) {
-  path <- file.path(
-    sweep_leaf_dir(root, row$level, row$config, row$model),
-    "c_data", "results.xlsx"
+  phenotype <- if (is.null(row$outcome)) "HR_LR" else row$outcome
+  nulls <- read_sweep_cell(
+    root, row$level, row$config, phenotype, row$model, "null"
   )
-  if (!file.exists(path) || !"null" %in% getSheetNames(path)) {
+  if (is.null(nulls) || !nrow(nulls)) {
     return(c(lo = NA_real_, hi = NA_real_))
-  }
-  nulls <- read.xlsx(path, "null")
-  if (!is.null(row$outcome) && "outcome" %in% names(nulls)) {
-    nulls <- nulls[nulls$outcome == row$outcome, ]
   }
   draws <- nulls[[setdiff(names(nulls), c("outcome", "model"))[1]]]
   if (!length(draws)) {
@@ -136,10 +132,7 @@ keeper_null_band <- function(root, row) {
 # Best is the highest metric, not the lowest p. A reader cherry-picking this
 # screen takes the biggest number, so that is the number the null must answer.
 keeper_rows <- function(spec) {
-  rows <- read.xlsx(
-    file.path(sweep_root_dir(spec$root), "c_data", "results.xlsx"), "all_cells"
-  ) |>
-    best_b_per_cell() |>
+  rows <- root_cells(spec$root) |>
     mutate(
       metric = .data[[spec$metric]],
       perm_p = .data[[spec$p]],

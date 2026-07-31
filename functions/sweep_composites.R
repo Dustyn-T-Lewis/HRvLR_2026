@@ -13,38 +13,14 @@ source(here("functions", "shared_style.R"))
 source(here("functions", "sweep_grid.R"))
 source(here("functions", "sweep_speccurve.R"))
 
-# Leaves carry a phenotype directory between config and model. Classification
-# sweeps one outcome and its roll-up has no outcome column, so it resolves to
-# the single HR_LR leaf.
+# Classification sweeps one outcome and its summary has no outcome column, so
+# it resolves to the single HR_LR phenotype.
 leaf_sheet <- function(root, level, config, phenotype, method, sheet) {
-  # One directory deeper than sweep_leaf_dir() writes: the split step
-  # materialises a per-phenotype view of each leaf, and this reads those.
-  # Globbing the leaves directly here returns the pre-split files and silently
-  # predates whatever the last split produced.
-  openxlsx::read.xlsx(
-    file.path(
-      sweep_root_dir(root), level, config, phenotype, method,
-      "c_data", "results.xlsx"
-    ),
-    sheet
-  )
+  read_sweep_cell(root, level, config, phenotype, method, sheet)
 }
 
 cell_phenotype <- function(cell) {
   if (is.null(cell$outcome)) "HR_LR" else cell$outcome
-}
-
-# Each cell reports at its own best B. Filtering on max(B) over the pooled
-# table instead would silently drop every cell swept at a lower B -- the
-# documented split runs the fast levels at 0/200/1000 and proteins at 0/200,
-# so that filter deletes the entire protein level from the figure with no gap
-# and no warning. sweep_rollup.R already solved this; the composites now use
-# the same helper.
-root_cells <- function(root) {
-  openxlsx::read.xlsx(
-    file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "all_cells"
-  ) |>
-    best_b_per_cell()
 }
 
 cell_tag <- function(level, config, method) {

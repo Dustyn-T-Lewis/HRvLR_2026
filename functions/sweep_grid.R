@@ -2,7 +2,7 @@
 # defines the feature levels, timepoint configs, and method sets so every root
 # orchestrator and composite reads the same grid.
 
-pacman::p_load(here, dplyr, openxlsx, digest)
+pacman::p_load(here, dplyr, readr, openxlsx, digest)
 
 SWEEP_LEVELS <- c("pathways", "modules", "proteins")
 SWEEP_LEVEL_KEY <- c(
@@ -39,24 +39,113 @@ methods_for_level <- function(base_methods, level) {
 
 sweep_root_dir <- function(root) here("05_Figures", root)
 
-# Where a leaf is WRITTEN: root/level/config/method. The split step later
-# materialises per-phenotype views one directory deeper
-# (root/level/config/phenotype/method), and the roll-up and composites read
-# those, not these. Two conventions, both live; read_leaf_sheet() in
-# sweep_composites.R is the other one.
-sweep_leaf_dir <- function(root, level, config, method) {
-  d <- file.path(sweep_root_dir(root), level, config, method)
-  for (sub in c("b_reports", "c_data")) {
-    dir.create(file.path(d, sub), recursive = TRUE, showWarnings = FALSE)
-  }
-  d
+# Every cell in a root lives in four tables under <root>/c_data, one per sheet,
+# each keyed by (level, config, phenotype, model). This replaces the directory
+# per cell and the second copy the split step used to make.
+#
+# One table per sheet rather than one table for the root, because the four
+# sheets are four different grains: a summary row per B, a null row per
+# permutation draw, a prediction row per subject, a selection row per feature.
+# Unioning them pads every row with the other three sheets' columns and puts
+# the observed Q2 and its permutation draws in one `q2` column separated only
+# by a discriminator. Four dense tables need no padding and no discriminator.
+SWEEP_SHEETS <- c("summary", "null", "predictions", "selection")
+
+# Added on write and stripped on read, so a cell reads back as the sheet it was
+# written from. `model` is not here: all four sheets carry it already.
+SWEEP_STORE_COLS <- c("level", "config", "phenotype", "fingerprint")
+
+sweep_store_path <- function(root, sheet, root_dir = sweep_root_dir(root)) {
+  file.path(root_dir, "c_data", paste0("cells_", sheet, ".csv"))
 }
 
-# A leaf is done when its workbook exists AND carries the fingerprint of the
-# input it was fitted on, so a killed run still resumes from disk while a change
-# upstream forces a refit. Existence alone was not enough: when the protein set
-# moved on 2026-07-30 every one of the 945 leaves reported "skip (done)" against
-# results fitted on a matrix that no longer existed, and nothing said so.
+read_sweep_store <- function(root, sheet, root_dir = sweep_root_dir(root)) {
+  path <- sweep_store_path(root, sheet, root_dir)
+  if (!file.exists(path)) {
+    return(NULL)
+  }
+  readr::read_csv(path, show_col_types = FALSE, progress = FALSE)
+}
+
+# A sheet is filtered only when it carries the outcome key; the classification
+# null, predictions and selection sheets do not, so they copy across whole.
+filter_to_outcome <- function(df, outcome) {
+  if (is.null(df) || !"outcome" %in% names(df)) {
+    return(df)
+  }
+  df[df$outcome == outcome, , drop = FALSE]
+}
+
+# Cell order is load-bearing: the composites rank cells and take the top 12, so
+# ties are broken by whatever order the table arrives in. Sorting on write makes
+# that independent of the order the sweep computed cells in.
+#
+# `order()` in the session locale is used deliberately, because it is what
+# Sys.glob() over the leaf directories returned and reproducing those figures
+# byte for byte requires the same collation -- en_US sorts `acute` ahead of
+# `T1`, the C locale does the reverse. That makes the tie-break locale-dependent
+# here exactly as it was locale-dependent on the filesystem before. Worth
+# retiring on purpose one day; not worth changing silently inside a move.
+# The row index is the last key, so rows within a cell keep their order.
+sort_sweep_store <- function(rows) {
+  rows[
+    order(
+      rows$level, rows$config, rows$phenotype, rows$model,
+      seq_len(nrow(rows))
+    ), ,
+    drop = FALSE
+  ]
+}
+
+# TRUE for the store rows belonging to one cell.
+cell_rows_of <- function(store, level, config, phenotype, model) {
+  store$level == level & store$config == config &
+    store$phenotype == phenotype & store$model == model
+}
+
+# Rewriting the cell's rows rather than appending keeps a refit from stacking a
+# second copy on top of the first.
+write_sweep_cell <- function(root, level, config, phenotype, model, sheets,
+                             fingerprint, root_dir = sweep_root_dir(root)) {
+  dir.create(file.path(root_dir, "c_data"),
+    recursive = TRUE, showWarnings = FALSE
+  )
+  for (nm in names(sheets)) {
+    rows <- as.data.frame(sheets[[nm]]) |>
+      dplyr::mutate(
+        level = level, config = config, phenotype = phenotype,
+        model = model, fingerprint = fingerprint
+      )
+    store <- read_sweep_store(root, nm, root_dir)
+    if (!is.null(store)) {
+      keep <- !cell_rows_of(store, level, config, phenotype, model)
+      rows <- dplyr::bind_rows(store[keep, , drop = FALSE], rows)
+    }
+    readr::write_csv(
+      sort_sweep_store(rows), sweep_store_path(root, nm, root_dir)
+    )
+  }
+  invisible(TRUE)
+}
+
+read_sweep_cell <- function(root, level, config, phenotype, model, sheet,
+                            root_dir = sweep_root_dir(root)) {
+  store <- read_sweep_store(root, sheet, root_dir)
+  if (is.null(store)) {
+    return(NULL)
+  }
+  hit <- store[cell_rows_of(store, level, config, phenotype, model), ,
+    drop = FALSE
+  ]
+  dplyr::select(hit, -dplyr::any_of(SWEEP_STORE_COLS))
+}
+
+# A leaf is done when the store holds its rows AND they carry the fingerprint
+# of the input it was fitted on, so a killed run still resumes from disk while
+# a change upstream forces a refit. Presence alone was not enough: when the
+# protein set moved on 2026-07-30 every one of the 945 leaves reported
+# "skip (done)" against results fitted on a matrix that no longer existed, and
+# nothing said so.
 #
 # The permutation grid is part of the input. A leaf swept at B = 0 carries only
 # point estimates, and without b_grid here the later B = 200 pass would take it
@@ -72,11 +161,16 @@ sweep_fingerprint <- function(bundle, b_grid) {
 
 leaf_done <- function(root, level, config, method, fingerprint,
                       root_dir = sweep_root_dir(root)) {
-  path <- file.path(root_dir, level, config, method, "c_data", "results.xlsx")
-  if (!file.exists(path) || !"provenance" %in% getSheetNames(path)) {
+  store <- read_sweep_store(root, "summary", root_dir)
+  if (is.null(store)) {
     return(FALSE)
   }
-  identical(read.xlsx(path, "provenance")$fingerprint[1], fingerprint)
+  hit <- dplyr::filter(
+    store,
+    .data$level == !!level, .data$config == !!config,
+    .data$model == !!method
+  )
+  nrow(hit) > 0L && all(hit$fingerprint == fingerprint)
 }
 
 write_sweep_workbook <- function(path, sheets, fingerprint = NULL) {
@@ -117,6 +211,15 @@ cell_key <- function(df) {
 # silently dropping every cell swept at a lower B.
 best_b_per_cell <- function(df) {
   slice_max(df, .data$B, by = all_of(cell_key(df)), with_ties = FALSE)
+}
+
+# Each cell reports at its own best B. Filtering on max(B) over the pooled
+# table instead would silently drop every cell swept at a lower B -- the
+# documented split runs the fast levels at 0/200/1000 and proteins at 0/200,
+# so that filter deletes the entire protein level from the figure with no gap
+# and no warning.
+root_cells <- function(root) {
+  best_b_per_cell(read_sweep_store(root, "summary"))
 }
 
 is_lead_at <- function(metric, p, baseline) {

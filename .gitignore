@@ -52,21 +52,3 @@ t0/outputs/figures/*.png
 t0/outputs/qc/*.csv
 t0/outputs/results/*.csv
 t0/outputs/session_info.txt
-
-# Pre-split sweep leaves. run_* writes <level>/<config>/<model>/, split_*
-# copies it to <level>/<config>/<phenotype>/<model>/ and never deletes the
-# original -- that is what makes a killed run resumable via leaf_done().
-# The two shapes differ only by depth, so each model name needs its own rule
-# at the three-deep position. The split leaves (four deep) stay tracked.
-05_Figures/F0*_*/*/*/limma/
-05_Figures/F0*_*/*/*/lm/
-05_Figures/F0*_*/*/*/spearman/
-05_Figures/F0*_*/*/*/wilcoxon/
-05_Figures/F0*_*/*/*/enet/
-05_Figures/F0*_*/*/*/lasso/
-05_Figures/F0*_*/*/*/ridge/
-05_Figures/F0*_*/*/*/spls/
-05_Figures/F0*_*/*/*/pam/
-05_Figures/F0*_*/*/*/rf/
-05_Figures/F0*_*/*/*/svm/
-05_Figures/F0*_*/*/*/plain/

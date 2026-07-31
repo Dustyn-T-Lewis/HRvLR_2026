@@ -62,19 +62,11 @@ SPARSE_MODELS <- c("lasso", "enet", "spls", "pam")
 # Cross-cell selection frequency for one outcome at one feature level: how often
 # each named feature is picked, pooled over every sparse cell in the root.
 selection_across_cells <- function(root, level, outcome_id, n = 10) {
-  files <- Sys.glob(file.path(
-    sweep_root_dir(root), level, "*", "*", "*", "c_data", "results.xlsx"
-  ))
-  rows <- lapply(files, function(f) {
-    sel <- read.xlsx(f, "selection")
-    if (!nrow(sel) || !"outcome" %in% names(sel)) {
-      return(NULL)
-    }
-    sel |>
-      filter(.data$outcome == outcome_id, .data$model %in% SPARSE_MODELS) |>
-      mutate(cell = basename(dirname(dirname(f))))
-  })
-  bind_rows(rows) |>
+  read_sweep_store(root, "selection") |>
+    filter(
+      .data$level == !!level, .data$outcome == outcome_id,
+      .data$model %in% SPARSE_MODELS
+    ) |>
     mutate(feature = base_feature(.data$feature)) |>
     group_by(.data$feature) |>
     summarise(
@@ -113,12 +105,8 @@ ref_named_drivers <- function(root, level, outcome_id, title) {
 ref_stats_cell <- function(root = "F06_prediction") {
   cells <- root_cells(root)
   top <- cells |> slice_min(.data$perm_p_q2, n = 1, with_ties = FALSE)
-  null <- read.xlsx(
-    file.path(
-      sweep_root_dir(root), top$level, top$config, top$outcome, top$model,
-      "c_data", "results.xlsx"
-    ),
-    "null"
+  null <- read_sweep_cell(
+    root, top$level, top$config, top$outcome, top$model, "null"
   ) |>
     filter(.data$outcome == top$outcome)
 
@@ -197,12 +185,8 @@ ref_named_heatmap <- function(root = "F06_prediction", level = "pathways",
 ref_calibration <- function(root = "F06_prediction") {
   cells <- root_cells(root)
   top <- cells |> slice_max(.data$q2, n = 1, with_ties = FALSE)
-  pr <- read.xlsx(
-    file.path(
-      sweep_root_dir(root), top$level, top$config, top$outcome, top$model,
-      "c_data", "results.xlsx"
-    ),
-    "predictions"
+  pr <- read_sweep_cell(
+    root, top$level, top$config, top$outcome, top$model, "predictions"
   ) |>
     filter(.data$outcome == top$outcome) |>
     mutate(group = ifelse(grepl("^HR", .data$subject), "HR", "LR"))

@@ -292,15 +292,13 @@ Rscript 04_Features/modules/a_script/02_run_module_contrasts.R
 # The composite re-runs each level, so running it alone is enough.
 Rscript 05_Figures/F04_association/a_script/composite_F04_association.R
 
-# F05 classification: run, split, roll up (spec curve + manifest), composite
+# F05 classification: run, roll up (spec curve + manifest), composite
 Rscript 05_Figures/F05_classification/a_script/run_F05_classification.R
-Rscript 05_Figures/F05_classification/a_script/split_F05_classification.R
 Rscript 05_Figures/F05_classification/a_script/rollup_F05_classification.R
 Rscript 05_Figures/F05_classification/a_script/composite_F05_classification.R
 
-# F06 prediction: run, split, roll up (spec curve + manifest), composite
+# F06 prediction: run, roll up (spec curve + manifest), composite
 Rscript 05_Figures/F06_prediction/a_script/run_F06_prediction.R
-Rscript 05_Figures/F06_prediction/a_script/split_F06_prediction.R
 Rscript 05_Figures/F06_prediction/a_script/rollup_F06_prediction.R
 Rscript 05_Figures/F06_prediction/a_script/composite_F06_prediction.R
 
@@ -324,7 +322,7 @@ Shared helpers live by scope:
 
 | Path | Contents |
 | --- | --- |
-| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `f00_concordance.R` and `f00_concordance_panels.R` drive F03_pathway/supp; `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (leaf paths, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_split.R`, `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
+| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `f00_concordance.R` and `f00_concordance_panels.R` drive F03_pathway/supp; `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (the cell store, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
 | `05_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F05-F06; `reference/` — the worked design references. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
 

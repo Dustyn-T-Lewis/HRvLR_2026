@@ -119,9 +119,9 @@ spec_curve_cont <- function(cells, title, subtitle) {
 # scales. The nominal hit rate is the one quantity every cell reports on the
 # same scale, and 5% is where it lands when nothing is there.
 render_root_speccurve <- function(root) {
-  cells <- openxlsx::read.xlsx(
-    file.path(sweep_root_dir(root), "c_data", "results.xlsx"), "all_cells"
-  )
+  # Every cell at every B, not root_cells(): this curve draws the whole screen,
+  # and collapsing to each cell's best B would drop the lower-B rows it shows.
+  cells <- read_sweep_store(root, "summary")
   levels_txt <- paste(sort(unique(cells$level)), collapse = ", ")
   is_class <- root == "F05_classification"
   panel <- if (is_class) {

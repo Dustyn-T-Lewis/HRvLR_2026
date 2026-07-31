@@ -18,10 +18,7 @@ source(here("functions", "sweep_grid.R"))
 
 B <- 200L
 
-cells <- read.xlsx(
-  here("05_Figures", "F06_prediction", "c_data", "results.xlsx"), "all_cells"
-) |>
-  best_b_per_cell() |>
+cells <- root_cells("F06_prediction") |>
   filter(
     is_lead(.data$q2, .data$perm_p_q2, "cont"),
     .data$level %in% c("pathways", "proteins")

@@ -76,35 +76,25 @@ feature_label <- function(features, level) {
   }
 }
 
-cell_files <- function(stage, level, config) {
-  Sys.glob(file.path(
-    sweep_root_dir(stage), level, config, "*", "*", "c_data", "results.xlsx"
-  ))
-}
-
-# A leaf's phenotype directory sits two levels above its method directory, so
-# a file already matched by `cell_files()` can be filtered down to one outcome
-# without re-globbing.
-file_phenotype <- function(files) {
-  vapply(
-    files, function(f) basename(dirname(dirname(dirname(f)))), character(1)
-  )
+cell_rows <- function(stage, level, config, sheet) {
+  store <- read_sweep_store(stage, sheet)
+  if (is.null(store)) {
+    return(NULL)
+  }
+  filter(store, .data$level == !!level, .data$config == !!config)
 }
 
 # Prediction / classification drivers: fold-selection frequency pooled over the
 # sparse models only, since ridge and the dense learners carry no signature.
 pred_drivers <- function(stage, level, config, n = 10) {
-  rows <- lapply(cell_files(stage, level, config), function(f) {
-    sel <- read.xlsx(f, "selection")
-    if (!nrow(sel)) {
-      return(NULL)
-    }
-    if ("outcome" %in% names(sel)) {
-      sel <- filter(sel, .data$outcome == LEAD_OUTCOME)
-    }
-    filter(sel, .data$model %in% SPARSE_MODELS)
-  })
-  out <- bind_rows(rows)
+  out <- cell_rows(stage, level, config, "selection")
+  if (is.null(out) || !nrow(out)) {
+    return(data.frame())
+  }
+  if ("outcome" %in% names(out)) {
+    out <- filter(out, .data$outcome == LEAD_OUTCOME)
+  }
+  out <- filter(out, .data$model %in% SPARSE_MODELS)
   if (!nrow(out)) {
     return(out)
   }
@@ -135,13 +125,12 @@ driver_panel <- function(d, level, xlab, subtitle, signed = FALSE) {
 # subject received, split by the arm they actually belong to. Overlap is the
 # null; a gap is the signal.
 arm_separation_panel <- function(stage, level, config) {
-  files <- cell_files(stage, level, config)
-  summ <- bind_rows(lapply(files, function(f) {
-    cbind(file = f, read.xlsx(f, "summary"))
-  })) |>
-    best_b_per_cell()
-  top <- summ |> slice_min(.data$perm_p, n = 1, with_ties = FALSE)
-  pr <- read.xlsx(top$file, "predictions") |>
+  top <- cell_rows(stage, level, config, "summary") |>
+    best_b_per_cell() |>
+    slice_min(.data$perm_p, n = 1, with_ties = FALSE)
+  pr <- read_sweep_cell(
+    stage, top$level, top$config, top$phenotype, top$model, "predictions"
+  ) |>
     mutate(arm = ifelse(.data$y == 1, "HR", "LR"))
 
   ggplot(pr, aes(.data$arm, .data$pred, fill = .data$arm)) +
@@ -169,23 +158,22 @@ arm_separation_panel <- function(stage, level, config) {
 # The statistics block: the stage's metric against its null, with the raw
 # permutation p taken within the cell.
 stat_panel <- function(stage, level, config) {
-  files <- cell_files(stage, level, config)
   if (stage == "F05_classification") {
     return(arm_separation_panel(stage, level, config))
   }
 
   is_class <- FALSE
-  summ <- bind_rows(lapply(files, function(f) read.xlsx(f, "summary"))) |>
+  summ <- cell_rows(stage, level, config, "summary") |>
     best_b_per_cell()
   if (!is_class) summ <- filter(summ, .data$outcome == LEAD_OUTCOME)
   metric <- if (is_class) "estimate" else "q2"
   pcol <- if (is_class) "perm_p" else "perm_p_q2"
   top <- summ |> slice_min(.data[[pcol]], n = 1, with_ties = FALSE)
 
-  null <- bind_rows(lapply(files, function(f) {
-    nl <- read.xlsx(f, "null")
-    if ("outcome" %in% names(nl)) filter(nl, .data$outcome == LEAD_OUTCOME) else nl
-  }))
+  null <- cell_rows(stage, level, config, "null")
+  if ("outcome" %in% names(null)) {
+    null <- filter(null, .data$outcome == LEAD_OUTCOME)
+  }
   null <- filter(null, .data$model == top$model)
   vcol <- if (is_class) "auc" else "q2"
 
@@ -216,7 +204,7 @@ stat_panel <- function(stage, level, config) {
 }
 
 build_reference <- function(stage, level, config) {
-  if (!length(cell_files(stage, level, config))) {
+  if (!NROW(cell_rows(stage, level, config, "summary"))) {
     return(invisible(NULL))
   }
   d <- pred_drivers(stage, level, config)

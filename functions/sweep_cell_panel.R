@@ -54,9 +54,23 @@ null_panel <- function(null_values, observed, chance, xlab, subtitle) {
     theme(plot.subtitle = element_text(size = FIG_SUBTITLE_SIZE))
 }
 
+# Panels are drawn on demand instead of written per cell: the store holds every
+# number one displays, and 945 leaf PNGs had exactly one machine consumer.
+render_cell <- function(root, level, config, phenotype, model) {
+  sheets <- lapply(SWEEP_SHEETS, function(s) {
+    read_sweep_cell(root, level, config, phenotype, model, s)
+  })
+  names(sheets) <- SWEEP_SHEETS
+  if (root_kind(root) == "class") {
+    build_class_cell_panel(sheets, level, config, model)
+  } else {
+    build_cont_cell_panel(sheets, level, config, phenotype, model)
+  }
+}
+
 build_class_cell_panel <- function(sheets, level, config, method) {
-  # sheets$summary is pre-filtered to one phenotype by sweep_split.R, so the
-  # max-B row is a single row and `[[1]]` is safe here and below.
+  # sheets$summary holds one phenotype, so the max-B row is a single row and
+  # `[[1]]` is safe here and below.
   s <- sheets$summary |> filter(.data$B == max(.data$B))
   obs <- s$estimate[[1]]
 
@@ -84,8 +98,8 @@ build_class_cell_panel <- function(sheets, level, config, method) {
 }
 
 build_cont_cell_panel <- function(sheets, level, config, phenotype, method) {
-  # sheets$summary is pre-filtered to one phenotype by sweep_split.R, so the
-  # max-B row is a single row and `[[1]]` is safe here and below.
+  # sheets$summary holds one phenotype, so the max-B row is a single row and
+  # `[[1]]` is safe here and below.
   s <- sheets$summary |> filter(.data$B == max(.data$B))
   obs <- s$q2[[1]]
 

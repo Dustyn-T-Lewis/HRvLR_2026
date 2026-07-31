@@ -9,6 +9,7 @@ source(here("functions", "loso_wgcna_refit.R"))
 source(here("functions", "shared_prediction.R"))
 source(here("functions", "pred_features.R"))
 source(here("functions", "sweep_grid.R"))
+source(here("functions", "sweep_manifest.R"))
 
 set.seed(54321)
 
@@ -84,14 +85,10 @@ me_refit <- bind_rows(lapply(subjects, function(s) {
 stopifnot(!anyNA(me_refit))
 
 leads <- bind_rows(
-  read.xlsx(
-    here("05_Figures", "F06_prediction", "MANIFEST.xlsx"),
-    "manifest"
-  ) |> mutate(stage = "F06_prediction"),
-  read.xlsx(
-    here("05_Figures", "F05_classification", "MANIFEST.xlsx"),
-    "manifest"
-  ) |> mutate(stage = "F05_classification")
+  build_manifest("F06_prediction", "cont", 792L, "F06_prediction") |>
+    mutate(stage = "F06_prediction"),
+  build_manifest("F05_classification", "class", 153L, "F05_classification") |>
+    mutate(stage = "F05_classification")
 ) |>
   filter(.data$level == "modules", .data$is_lead)
 

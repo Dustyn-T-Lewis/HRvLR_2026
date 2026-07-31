@@ -26,10 +26,12 @@ N_SHOW <- c(modules = 13, pathways = 22, proteins = 40)
 
 strip_tp <- function(x) sub("@T[123]$", "", x)
 
-cell_files <- function(stage, level, config = "*", model = "*") {
-  Sys.glob(file.path(
-    sweep_root_dir(stage), level, config, "*", model, "c_data", "results.xlsx"
-  ))
+cell_rows <- function(stage, level, sheet) {
+  store <- read_sweep_store(stage, sheet)
+  if (is.null(store)) {
+    return(NULL)
+  }
+  filter(store, .data$level == !!level)
 }
 
 row_labels <- function(features, level) {
@@ -45,19 +47,14 @@ row_labels <- function(features, level) {
 # Prediction and classification: how often each feature is selected, pooled over
 # the sparse models. Frequency is unsigned, so the scale runs 0 to 1.
 select_matrix <- function(stage, level) {
-  bind_rows(lapply(cell_files(stage, level), function(f) {
-    sel <- read.xlsx(f, "selection")
-    if (!nrow(sel)) {
-      return(NULL)
-    }
-    if (!"outcome" %in% names(sel)) sel$outcome <- "group_diff"
-    sel |>
-      filter(.data$model %in% SPARSE_MODELS) |>
-      mutate(
-        feature = strip_tp(.data$feature),
-        config = basename(dirname(dirname(dirname(dirname(f)))))
-      )
-  })) |>
+  sel <- cell_rows(stage, level, "selection")
+  if (is.null(sel) || !nrow(sel)) {
+    return(data.frame())
+  }
+  if (!"outcome" %in% names(sel)) sel$outcome <- "group_diff"
+  sel |>
+    filter(.data$model %in% SPARSE_MODELS) |>
+    mutate(feature = strip_tp(.data$feature)) |>
     group_by(.data$feature, .data$outcome, .data$config) |>
     summarise(value = mean(.data$freq), .groups = "drop") |>
     mutate(p = NA_real_)
@@ -141,12 +138,8 @@ pred_detail <- function(stage, level, n = 6) {
   panels <- lapply(seq_len(nrow(cells)), function(i) {
     r <- cells[i, ]
     phenotype <- if (is_class) "HR_LR" else r$outcome
-    pr <- read.xlsx(
-      file.path(
-        sweep_root_dir(stage), level, r$config, phenotype, r$model,
-        "c_data", "results.xlsx"
-      ),
-      "predictions"
+    pr <- read_sweep_cell(
+      stage, level, r$config, phenotype, r$model, "predictions"
     )
     if (!is_class) pr <- filter(pr, .data$outcome == r$outcome)
     pr$arm <- ifelse(grepl("^HR", pr$subject), "HR", "LR")
