@@ -103,10 +103,40 @@ KEEPER_ROOTS <- list(
   )
 )
 
+# The null band is an empirical quantile interval, not mean +/- 2 SD.
+#
+# Q2 is unbounded below, so a permuted fit can reach -300 and one such draw
+# inflates the SD past any use: for pathways|T1|svm the null runs -5.4 to 0.54,
+# mean + 2 SD puts the upper edge at 1.18, and the empirical 95th percentile is
+# 0.258. The observed 0.621 beats all 200 draws. Drawn as an SD band that cell
+# sits inside its own null while being coloured as clearing it, which is the
+# figure contradicting its own statistic. Quantiles match what perm_p measures.
+keeper_null_band <- function(root, row) {
+  path <- file.path(
+    sweep_leaf_dir(root, row$level, row$config, row$model),
+    "c_data", "results.xlsx"
+  )
+  if (!file.exists(path) || !"null" %in% getSheetNames(path)) {
+    return(c(lo = NA_real_, hi = NA_real_))
+  }
+  nulls <- read.xlsx(path, "null")
+  if (!is.null(row$outcome) && "outcome" %in% names(nulls)) {
+    nulls <- nulls[nulls$outcome == row$outcome, ]
+  }
+  draws <- nulls[[setdiff(names(nulls), c("outcome", "model"))[1]]]
+  if (!length(draws)) {
+    return(c(lo = NA_real_, hi = NA_real_))
+  }
+  stats::setNames(
+    stats::quantile(draws, c(0.05, 0.95), na.rm = TRUE, names = FALSE),
+    c("lo", "hi")
+  )
+}
+
 # Best is the highest metric, not the lowest p. A reader cherry-picking this
 # screen takes the biggest number, so that is the number the null must answer.
 keeper_rows <- function(spec) {
-  read.xlsx(
+  rows <- read.xlsx(
     file.path(sweep_root_dir(spec$root), "c_data", "results.xlsx"), "all_cells"
   ) |>
     best_b_per_cell() |>
@@ -123,8 +153,7 @@ keeper_rows <- function(spec) {
     ) |>
     mutate(
       level = factor(.data$level, levels = SWEEP_LEVELS),
-      null_lo = .data$null_mean - 2 * .data$null_sd,
-      null_hi = .data$null_mean + 2 * .data$null_sd,
+      null_lo = NA_real_, null_hi = NA_real_,
       baseline = LEAD_BASELINE[[spec$kind]],
       lead = is_lead(.data$metric, .data$perm_p, spec$kind),
       # The same model and config wins at more than one feature level, so the
@@ -134,6 +163,14 @@ keeper_rows <- function(spec) {
       row_label = sprintf("%s  (%s)", .data$model, .data$config)
     ) |>
     arrange(.data$level, dplyr::desc(.data$metric))
+
+  band <- vapply(
+    seq_len(nrow(rows)), function(i) keeper_null_band(spec$root, rows[i, ]),
+    numeric(2)
+  )
+  rows$null_lo <- band["lo", ]
+  rows$null_hi <- band["hi", ]
+  rows
 }
 
 keeper_panel <- function(spec) {
@@ -145,14 +182,32 @@ keeper_panel <- function(spec) {
   # clear" would read as a result rather than as an absent test. The panel says
   # which it is.
   has_null <- any(!is.na(rows$null_mean))
+
+  # Hold the view to the points and their nearer band edge.
+  span <- range(c(rows$metric, rows$baseline[1]), na.rm = TRUE)
+  pad <- max(diff(span), 0.2) * 0.35
+  x_limits <- c(span[1] - pad, span[2] + pad)
+  n_clipped <- sum(
+    rows$null_lo < x_limits[1] | rows$null_hi > x_limits[2],
+    na.rm = TRUE
+  )
+
   subtitle <- if (has_null) {
     paste(
       "Best cell per model and feature level against its own permutation null",
       sprintf(
-        "(grey, mean +/- 2 SD) and the cells it came from. %d of %d clear",
+        "(grey, 5th-95th percentile) and the cells it came from. %d of %d",
         sum(rows$lead, na.rm = TRUE), nrow(rows)
       ),
-      "both the null and the baseline."
+      "clear both the null and the baseline.",
+      if (n_clipped) {
+        sprintf(
+          "%d null band(s) extend past the axis and are clipped, not dropped.",
+          n_clipped
+        )
+      } else {
+        ""
+      }
     )
   } else {
     paste(
@@ -187,6 +242,11 @@ keeper_panel <- function(spec) {
       guide = if (has_null) "legend" else "none"
     ) +
     scale_x_continuous(expand = expansion(mult = c(0.04, 0.16))) +
+    # An unpenalised model on a permuted outcome can reach Q2 = -300, and one
+    # such band flattens every real point onto a line at zero. Clip rather than
+    # drop: coord_cartesian keeps the data and truncates the view, and the
+    # subtitle reports how many bands run past the edge.
+    coord_cartesian(xlim = x_limits) +
     labs(
       title = spec$label, subtitle = str_wrap(subtitle, 108),
       x = spec$axis, y = NULL
