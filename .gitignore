@@ -15,7 +15,8 @@
 *.key
 
 .here
-Archive/
+# Untracked leftovers only: 156 MB of renders and an archived targets store that
+# git never held. Delete the directory to retire this rule.
 archive/
 ~$*
 *.tmp
@@ -23,10 +24,12 @@ archive/
 Rplots.pdf
 docs/
 
-# Quarto render artifacts (source .qmd is tracked, html/cache are regenerated)
-*_files/
-*_cache/
-**/*.html
+# proteoDA writes one boilerplate HTML report per contrast, 21 MB in all, and
+# nothing reads them. The blanket *.html rule this replaces existed to hide
+# rendered .qmd output, which no longer exists.
+**/*_DA_report.html
+**/*_files/
+**/*_cache/
 
 # Figure and QC renders are regenerated from the scripts; the data intermediates
 # in c_data/ stay tracked so a clone builds figures without re-running upstream.
