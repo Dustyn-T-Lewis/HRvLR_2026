@@ -80,21 +80,18 @@ filter_to_outcome <- function(df, outcome) {
 # ties are broken by whatever order the table arrives in. Sorting on write makes
 # that independent of the order the sweep computed cells in.
 #
-# `order()` in the session locale is used deliberately, because it is what
-# Sys.glob() over the leaf directories returned and reproducing those figures
-# byte for byte requires the same collation -- en_US sorts `acute` ahead of
-# `T1`, the C locale does the reverse. That makes the tie-break locale-dependent
-# here exactly as it was locale-dependent on the filesystem before. Worth
-# retiring on purpose one day; not worth changing silently inside a move.
-# The row index is the last key, so rows within a cell keep their order.
+# `method = "radix"` sorts in the C locale, which is the whole point. The order
+# used to come from Sys.glob() over the leaf directories, so it inherited the
+# session's collation -- en_US puts `acute` ahead of `T1`, the C locale does the
+# reverse -- and the same code on a Linux box could therefore pick a different
+# top 12. Radix is also stable, so rows within a cell keep the order they were
+# computed in.
 sort_sweep_store <- function(rows) {
-  rows[
-    order(
-      rows$level, rows$config, rows$phenotype, rows$model,
-      seq_len(nrow(rows))
-    ), ,
-    drop = FALSE
-  ]
+  ord <- order(
+    rows$level, rows$config, rows$phenotype, rows$model,
+    method = "radix"
+  )
+  rows[ord, , drop = FALSE]
 }
 
 # TRUE for the store rows belonging to one cell.

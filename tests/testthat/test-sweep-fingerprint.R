@@ -204,6 +204,11 @@ test_that("cells of one root do not read each other", {
 # The composites rank cells and keep the top 12, so a tie is broken by table
 # order. Sorting on write keeps that from depending on the order the sweep
 # happened to run in.
+#
+# The expected order is written out rather than taken from sort(), which
+# collates in the session locale: en_US returns acute, T1, total and would make
+# this test pass or fail according to the machine it runs on. Byte order puts
+# `T1` first, and byte order is what the store promises.
 test_that("the store is ordered by its key, not by write order", {
   root <- withr::local_tempdir()
   for (cfg in c("total", "T1", "acute")) {
@@ -215,6 +220,6 @@ test_that("the store is ordered by its key, not by write order", {
   }
   expect_equal(
     read_sweep_store("X", "summary", root_dir = root)$config,
-    sort(c("total", "T1", "acute"))
+    c("T1", "acute", "total")
   )
 })
