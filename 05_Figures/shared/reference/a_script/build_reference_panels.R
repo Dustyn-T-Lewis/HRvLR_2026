@@ -220,7 +220,7 @@ ref_stability <- function(root = "F06_prediction", level = "modules",
     geom_point(size = 2.2, colour = SPEC_LEVEL_COLORS[[level]]) +
     ggrepel::geom_text_repel(aes(label = .data$label),
       size = 2.1,
-      max.overlaps = 12, min.segment.length = 0, colour = "grey25"
+      max.overlaps = 12, min.segment.length = 0, colour = "grey25", seed = 42
     ) +
     scale_y_continuous(limits = c(0, 1), labels = percent) +
     labs(

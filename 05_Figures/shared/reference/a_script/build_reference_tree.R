@@ -138,7 +138,10 @@ arm_separation_panel <- function(stage, level, config) {
       width = 0.5, alpha = 0.35, outlier.shape = NA,
       colour = "grey30"
     ) +
-    geom_jitter(aes(colour = .data$arm), width = 0.12, size = 2, alpha = 0.9) +
+    geom_point(aes(colour = .data$arm),
+      position = position_jitter(width = 0.12, seed = 42),
+      size = 2, alpha = 0.9
+    ) +
     scale_fill_manual(values = GROUP_COLORS, guide = "none") +
     scale_colour_manual(values = GROUP_COLORS, guide = "none") +
     annotate("label",

@@ -146,7 +146,9 @@ pred_detail <- function(stage, level, n = 6) {
     if (is_class) {
       ggplot(pr, aes(.data$arm, .data$pred, fill = .data$arm)) +
         geom_boxplot(width = 0.5, alpha = 0.3, outlier.shape = NA) +
-        geom_jitter(aes(colour = .data$arm), width = 0.12, size = 1.6) +
+        geom_point(aes(colour = .data$arm),
+          position = position_jitter(width = 0.12, seed = 42), size = 1.6
+        ) +
         scale_fill_manual(values = GROUP_COLORS, guide = "none") +
         scale_colour_manual(values = GROUP_COLORS, guide = "none") +
         labs(
