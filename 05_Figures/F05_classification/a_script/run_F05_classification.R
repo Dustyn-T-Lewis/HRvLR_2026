@@ -3,16 +3,17 @@ suppressWarnings(suppressMessages({
   source(here("functions", "sweep_pred_leaf.R"))
 }))
 
-# args: [1] comma-separated levels (default all), [2] max B (default 1000).
-# The B grid is 0/200/1000 for the fast levels and 0/200 for proteins, set by
-# the caller so the long protein pole runs in the background at B = 200.
+# args: [1] comma-separated levels (default all), [2] max B (default 200).
+# 200 is the default because it is what the committed store holds. B is part of
+# the fingerprint, so a larger bmax marks every cell stale and refits the whole
+# sweep -- which is what happened whenever this ran bare.
 args <- commandArgs(trailingOnly = TRUE)
 levels_run <- if (length(args) >= 1 && nzchar(args[1])) {
   strsplit(args[1], ",")[[1]]
 } else {
   SWEEP_LEVELS
 }
-bmax <- if (length(args) >= 2) as.integer(args[2]) else 1000L
+bmax <- if (length(args) >= 2) as.integer(args[2]) else 200L
 b_grid <- if (bmax >= 1000L) c(0L, 200L, 1000L) else c(0L, bmax)
 
 bundle <- pred_load()

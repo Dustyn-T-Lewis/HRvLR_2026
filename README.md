@@ -256,17 +256,17 @@ specification-curve figure), then `composite_*` (assemble the figure and write
 three-level path (`<level>/<config>/<method>/c_data/results.xlsx`) because the
 runners write that shape and `split_*` converts it afterward.
 
-Each runner writes a leaf as soon as it finishes it, so a killed `run_*`
-**resumes** — relaunch it and `leaf_done()` skips every completed leaf, costing
-at most the one cell that was in flight. `split_*` copies the pre-split tree
-and never deletes it, so resume keeps working until that tree is removed by
-hand. Verified 2026-07-28: a killed F05 run resumed at leaf 119 of 153.
+Each runner writes a cell to the store as soon as it finishes it, so a killed
+`run_*` **resumes** — relaunch it and `leaf_done()` skips every completed cell,
+costing at most the one that was in flight. Verified 2026-07-28: a killed F05
+run resumed at leaf 119 of 153.
 
-Both runners take `[levels] [max B]`. **Pass `"" 200`.** `bmax` defaults to
-`1000`, which expands the grid to `c(0, 200, 1000)` and computes a
-1,000-permutation null instead of 200 — five times the work for p resolution
-(1/1001 vs 1/201) that nothing in this screen uses. Launching without arguments
-has cost this project two long detours; see `docs/decisions.md` 2026-07-26.
+Both runners take `[levels] [max B]`, and `bmax` defaults to `200`, which is
+what the committed store holds. B is part of the input fingerprint, so raising
+it marks every cell stale and refits the whole sweep — `c(0, 200, 1000)` is a
+1,000-permutation null for p resolution (1/1001 vs 1/201) that nothing in this
+screen uses. Launching bare cost this project three long detours before 200
+became the default; see `docs/decisions.md` 2026-07-26 and 2026-07-31.
 
 ```sh
 Rscript 05_Figures/F01_phenotype/a_script/01_run_phenotype.R

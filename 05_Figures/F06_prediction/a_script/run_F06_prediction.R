@@ -3,16 +3,18 @@ suppressWarnings(suppressMessages({
   source(here("functions", "sweep_pred_leaf.R"))
 }))
 
-# args: [1] comma-separated levels (default all), [2] max B (default 1000).
-# Fast levels sweep 0/200/1000; proteins run in the background at 0/200. Each
-# leaf sweeps the six adaptation deltas internally.
+# args: [1] comma-separated levels (default all), [2] max B (default 200).
+# 200 is the default because it is what the committed store holds. B is part of
+# the fingerprint, so a larger bmax marks every cell stale and refits the whole
+# sweep -- which is what happened whenever this ran bare. Each leaf sweeps the
+# six adaptation deltas internally.
 args <- commandArgs(trailingOnly = TRUE)
 levels_run <- if (length(args) >= 1 && nzchar(args[1])) {
   strsplit(args[1], ",")[[1]]
 } else {
   SWEEP_LEVELS
 }
-bmax <- if (length(args) >= 2) as.integer(args[2]) else 1000L
+bmax <- if (length(args) >= 2) as.integer(args[2]) else 200L
 b_grid <- if (bmax >= 1000L) c(0L, 200L, 1000L) else c(0L, bmax)
 
 bundle <- pred_load()
