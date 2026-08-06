@@ -65,15 +65,13 @@ runs <- imap(methods, function(rds, m) {
 # what imputation distorts. Perseus is the proof — the MOST Pi-hits of any arm yet zero BH<0.10 in
 # the null contrasts, like the non-imputed fit.
 
-ni_dir <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results")
-ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), function(f) {
-  read_csv(f, show_col_types = FALSE) |>
-    add_pi_score() |>
-    transmute(uniprot_id,
-      contrast = tools::file_path_sans_ext(basename(f)),
-      logFC_ni = logFC, adj_ni = adj.P.Val, sig_ni = sig_pi
-    )
-})
+ni <- read_csv(
+  here("03_DEP", "a_non_imputed", "c_data", "dep_contrasts.csv"),
+  show_col_types = FALSE
+) |>
+  transmute(uniprot_id, contrast,
+    logFC_ni = logFC, adj_ni = adj.P.Val, sig_ni = sig_pi
+  )
 
 arm_counts <- function(d, m) {
   d |>

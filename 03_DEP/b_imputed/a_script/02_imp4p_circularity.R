@@ -76,11 +76,11 @@ write_csv(out, file.path(report_dir, "imp4p_circularity.csv"))
 
 print(as.data.frame(out), row.names = FALSE)
 
-ni_dir <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results")
-ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), function(f) {
-  read_csv(f, show_col_types = FALSE) |>
-    transmute(contrast = tools::file_path_sans_ext(basename(f)), adj.P.Val)
-})
+ni <- read_csv(
+  here("03_DEP", "a_non_imputed", "c_data", "dep_contrasts.csv"),
+  show_col_types = FALSE
+) |>
+  transmute(contrast, adj.P.Val)
 ni_total <- sum(ni$adj.P.Val < 0.10, na.rm = TRUE)
 ni_null <- sum(ni$adj.P.Val < 0.10 & ni$contrast %in% RESPONDER_CONTRASTS, na.rm = TRUE)
 
