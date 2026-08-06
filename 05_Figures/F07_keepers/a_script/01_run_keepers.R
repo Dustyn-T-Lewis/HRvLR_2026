@@ -7,7 +7,7 @@
 # their own stages wrote.
 
 pacman::p_load(here, patchwork, ggplot2, openxlsx, dplyr)
-source(here("functions", "keeper_panel.R"))
+source(here("05_Figures", "F07_keepers", "a_script", "keeper_panel.R"))
 
 stem <- here("05_Figures", "F07_keepers")
 for (sub in c("b_reports", "c_data")) {
