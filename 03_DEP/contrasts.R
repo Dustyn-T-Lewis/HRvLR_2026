@@ -20,6 +20,33 @@ HRVLR_CONTRASTS <- c(
   "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 )
 
+CONTRAST_NAMES <- trimws(sub("=.*$", "", HRVLR_CONTRASTS))
+
+# proteoDA writes the fit wide, one column per statistic per contrast. The
+# feature layer and the imputed arms read it long, so the pivot lives here
+# instead of in each caller. Contrast names contain underscores and Acute_HR is
+# a prefix of Acute_HRvLR, so the longest name has to be offered first.
+dep_contrasts_long <- function(
+  path = here::here(
+    "03_DEP", "a_non_imputed", "c_data", "03_combined_results.csv"
+  )
+) {
+  ordered <- CONTRAST_NAMES[order(nchar(CONTRAST_NAMES), decreasing = TRUE)]
+  pattern <- paste0("^(.*)_(", paste(ordered, collapse = "|"), ")$")
+  readr::read_csv(path, show_col_types = FALSE) |>
+    tidyr::pivot_longer(
+      cols = tidyr::matches(pattern),
+      names_pattern = pattern,
+      names_to = c(".value", "contrast")
+    ) |>
+    dplyr::select(
+      contrast, uniprot_id, gene, protein, description,
+      logFC, CI.L, CI.R, average_intensity, t, B,
+      P.Value, adj.P.Val, sig.PVal, sig.FDR, pi_score, sig_pi
+    ) |>
+    dplyr::arrange(match(contrast, CONTRAST_NAMES))
+}
+
 # The cell order the design matrix inherits. Pinned here because every arm has
 # to place its columns identically for the contrast strings above to mean
 # anything.

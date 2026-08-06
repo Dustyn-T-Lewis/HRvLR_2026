@@ -76,10 +76,7 @@ write_csv(out, file.path(report_dir, "imp4p_circularity.csv"))
 
 print(as.data.frame(out), row.names = FALSE)
 
-ni <- read_csv(
-  here("03_DEP", "a_non_imputed", "c_data", "dep_contrasts.csv"),
-  show_col_types = FALSE
-) |>
+ni <- dep_contrasts_long() |>
   transmute(contrast, adj.P.Val)
 ni_total <- sum(ni$adj.P.Val < 0.10, na.rm = TRUE)
 ni_null <- sum(ni$adj.P.Val < 0.10 & ni$contrast %in% RESPONDER_CONTRASTS, na.rm = TRUE)
