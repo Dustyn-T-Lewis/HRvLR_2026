@@ -35,15 +35,17 @@ ring_enrich <- function(fg, ct, pw, ring_n = RING_N) {
   list(enrich = enrich, report = as_tibble(report))
 }
 
-# The `padj` slot is enrichVolcano's significance channel; we feed it the Xiao
-# Eq.2 transformed P-value Pi = p^|log2FC| (not an adjusted p, not FDR). Display
-# it as Pi, never as adjusted p.
+# The volcano gates on the Xiao Eq.2 transformed P-value Pi = p^|log2FC|, which
+# is neither an adjusted p nor an FDR, so the column is named for what it holds
+# and passed as volc_sig_col. It cannot be called padj: volcano_ring() resolves
+# padj_col against enrich_df as well, where padj really is the fgsea BH q.
+# Display it as Pi, never as adjusted p.
 ring_volc <- function(dep, ct) {
   tibble(
     gene = dep$gene,
     logFC = dep[[paste0("logFC_", ct)]],
     P.Value = dep[[paste0("P.Value_", ct)]],
-    padj = dep[[paste0("pi_score_", ct)]]
+    pi_score = dep[[paste0("pi_score_", ct)]]
   ) |>
     filter(!is.na(logFC), !is.na(P.Value))
 }
@@ -71,6 +73,7 @@ ring_plot <- function(fg, dep, pw, ct, palette, tag = NULL, title = ct, bg = NUL
   }
   p <- suppressMessages(volcano_ring(
     ring_volc(dep, ct), prep$enrich,
+    volc_sig_col = "pi_score",
     title = title, subtitle = subtitle, tag = tag, genes_sep = ";", p_threshold = PI_THRESH,
     label_size = 2.3, label_headroom = 0.85,
     theme = volcano_ring_theme(
