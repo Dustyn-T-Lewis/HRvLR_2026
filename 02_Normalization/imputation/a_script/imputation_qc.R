@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # Imputation QC: the four arms compared against the reported non-imputed fit.
 #
-# This lives with the imputation it documents, but it reads 03_DEP/b_imputed, because the only
+# This lives with the imputation it documents, but it reads 03_Features/01_Proteins/imputed, because the only
 # honest way to compare imputers is by what they do to the test downstream. Run it after stage 03.
 #
 # On BH the null holds under every imputer that does not impute inside the tested factor:
@@ -51,7 +51,7 @@ relabel <- function(d) {
 # imputation distorts: Perseus carries the most Pi-hits of any arm and the same BH count as the
 # non-imputed fit.
 sens <- relabel(read_csv(
-  here("03_DEP", "b_imputed", "c_data", "sensitivity_bh_vs_pi.csv"),
+  here("03_Features", "01_Proteins", "imputed", "c_data", "sensitivity_bh_vs_pi.csv"),
   show_col_types = FALSE
 ))
 
@@ -81,7 +81,7 @@ p_pi <- ggplot(sens, aes(contrast, n_pi, fill = method)) +
 # worthless: the ~944 fully observed proteins are a no-op for every imputer and force rho to 1,
 # which is why it once ranked imp4p second best while imp4p was destroying the null.
 conc <- read_csv(
-  here("03_DEP", "b_imputed", "c_data", "logfc_concordance.csv"),
+  here("03_Features", "01_Proteins", "imputed", "c_data", "logfc_concordance.csv"),
   show_col_types = FALSE
 ) |>
   relabel() |>

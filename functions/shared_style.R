@@ -1,4 +1,4 @@
-# 05_Figures - HRvLR Unified Style
+# 04_Figures - HRvLR Unified Style
 # Single source of truth: palettes, themes, sizing constants, helpers.
 
 pacman::p_load(ggplot2, scales, grid)

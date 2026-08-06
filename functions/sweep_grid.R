@@ -12,6 +12,12 @@ SWEEP_LEVEL_LABEL <- c(
   pathways = "pathways (singscore)", modules = "modules (ME)*",
   proteins = "proteins*"
 )
+# The level names are the vocabulary of the screen; the directories they answer
+# in are not. Figures that read a level's results table need the mapping, and
+# renaming the levels themselves would change factor levels that reach the plots.
+SWEEP_LEVEL_DIR <- c(
+  pathways = "02_Pathways", modules = "03_WGCNA", proteins = "01_Proteins"
+)
 
 SWEEP_CONFIGS <- c(
   "T1", "T2", "T3", "training", "acute", "total", "trajectory"
@@ -37,7 +43,7 @@ methods_for_level <- function(base_methods, level) {
   if (level == "modules") c(base_methods, PLAIN_METHOD) else base_methods
 }
 
-sweep_root_dir <- function(root) here("05_Figures", root)
+sweep_root_dir <- function(root) here("04_Figures", root)
 
 # Every cell in a root lives in four tables under <root>/c_data, one per sheet,
 # each keyed by (level, config, phenotype, model). This replaces the directory

@@ -6,7 +6,7 @@
 # through this path and checks it against the committed stage 03 workbook.
 
 pacman::p_load(here, dplyr, tibble, readr, limma, openxlsx)
-source(here("03_DEP", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 source(here("functions", "feature_levels.R"))
 
 feature_metadata <- function() {
@@ -85,7 +85,7 @@ fit_feature_contrasts <- function(mat, meta = feature_metadata(),
 
 verify_protein_equivalence <- function(tol = 1e-6) {
   fitted <- fit_feature_contrasts(protein_matrix(), robust = TRUE)
-  book <- here("03_DEP", "a_non_imputed", "c_data", "05_results.xlsx")
+  book <- here("03_Features", "01_Proteins", "c_data", "05_results.xlsx")
   bind_rows(lapply(unique(fitted$contrast), function(ct) {
     ref <- openxlsx::read.xlsx(book, ct)
     j <- inner_join(

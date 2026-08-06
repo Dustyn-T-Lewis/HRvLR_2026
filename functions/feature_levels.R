@@ -6,7 +6,7 @@
 pacman::p_load(here, dplyr, tidyr, readr)
 
 SINGSCORE_CACHE <- c(
-  "04_Features", "pathways", "c_data", "singscore_scores.rds"
+  "03_Features", "02_Pathways", "c_data", "singscore_scores.rds"
 )
 
 protein_matrix <- function() {
@@ -21,7 +21,7 @@ protein_matrix <- function() {
 
 module_matrix <- function() {
   eigen_csv <- here(
-    "04_Features", "modules", "c_data", "wgcna_eigengene.csv"
+    "03_Features", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
   )
   wide <- read_csv(eigen_csv, show_col_types = FALSE) |>
     pivot_wider(names_from = "sample_id", values_from = "ME") |>
