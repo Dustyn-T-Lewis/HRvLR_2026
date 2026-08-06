@@ -1,5 +1,5 @@
 pacman::p_load(here, testthat)
-source(here("functions", "blood_cor_null.R"))
+source(here("01_Filtering", "a_script", "blood_cor_null.R"))
 
 # A matrix where nothing tracks the index, plus two planted trackers. The null
 # quantile has to sit above the noise and below the plants.

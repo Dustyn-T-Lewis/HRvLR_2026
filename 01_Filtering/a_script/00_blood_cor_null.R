@@ -9,7 +9,7 @@
 # changes.
 
 pacman::p_load(here, readxl, readr, dplyr, tibble)
-source(here("functions", "blood_cor_null.R"))
+source(here("01_Filtering", "a_script", "blood_cor_null.R"))
 source(here("01_Filtering", "a_script", "filter_config.R"))
 cfg <- filter_cfg
 
