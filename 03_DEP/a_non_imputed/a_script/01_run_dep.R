@@ -126,6 +126,22 @@ for (cname in contrast_names) {
   dal$results[[cname]] <- add_pi_score(dal$results[[cname]], cfg$pi_thresh)
 }
 
+# One row per protein per contrast. The wide combined CSV, the nine per-contrast
+# slices and the workbook are all filters or pivots of this shape; sample
+# intensities are not per-contrast and stay in normalized.csv.
+dep_contrasts <- imap_dfr(dal$results, function(res, cname) {
+  res |>
+    rownames_to_column("uniprot_id") |>
+    mutate(contrast = cname, .before = 1)
+}) |>
+  left_join(
+    select(dal$annotation, uniprot_id, gene, protein, description),
+    by = "uniprot_id"
+  ) |>
+  relocate(gene, protein, description, .after = uniprot_id)
+
+write_csv(dep_contrasts, file.path(cfg$data_dir, "dep_contrasts.csv"))
+
 # proteoDA Excel formatting expects gene_symbol column
 dal$annotation$gene_symbol <- dal$annotation$gene
 
