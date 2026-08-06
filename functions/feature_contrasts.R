@@ -55,14 +55,20 @@ feature_design <- function(mat, meta = feature_metadata(), adjust = NULL) {
 # BH is applied within each contrast, matching extract_DA_results()'s per-coef
 # topTable call. Pooling the nine would imply an independence that the shared
 # subjects and overlapping contrasts do not have.
+# `robust` is FALSE by default and TRUE only in verify_protein_equivalence(),
+# where it has to match proteoDA's own eBayes call. Over 1900 proteins the two
+# priors agree to exactly 0, but 12 modules and 79 pathways are far too few for
+# that to hold: turning it on moves module BH by up to 0.019 and pathway BH by
+# 0.008. So the default stays FALSE and the committed module and pathway numbers
+# stand.
 fit_feature_contrasts <- function(mat, meta = feature_metadata(),
-                                  adjust = NULL) {
+                                  adjust = NULL, robust = FALSE) {
   parts <- feature_design(mat, meta, adjust = adjust)
   cm <- parts$contrasts
   fit <- limma::lmFit(mat, parts$design,
     block = parts$block, correlation = parts$correlation
   )
-  fit2 <- limma::eBayes(limma::contrasts.fit(fit, cm))
+  fit2 <- limma::eBayes(limma::contrasts.fit(fit, cm), robust = robust)
   res <- bind_rows(lapply(colnames(cm), function(ct) {
     limma::topTable(fit2,
       coef = ct, number = Inf, adjust.method = "BH", sort.by = "none"
@@ -78,7 +84,7 @@ fit_feature_contrasts <- function(mat, meta = feature_metadata(),
 }
 
 verify_protein_equivalence <- function(tol = 1e-6) {
-  fitted <- fit_feature_contrasts(protein_matrix())
+  fitted <- fit_feature_contrasts(protein_matrix(), robust = TRUE)
   book <- here("03_DEP", "a_non_imputed", "c_data", "05_results.xlsx")
   bind_rows(lapply(unique(fitted$contrast), function(ct) {
     ref <- openxlsx::read.xlsx(book, ct)
