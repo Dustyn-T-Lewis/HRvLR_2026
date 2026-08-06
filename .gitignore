@@ -45,6 +45,12 @@ docs/
 03_DEP/b_imputed/c_data/mscoreutils/combined_results_pi.csv
 03_DEP/b_imputed/c_data/perseus/combined_results_pi.csv
 
+# proteoDA's write_limma_tables always writes the nine per-contrast slices and
+# has no switch to skip them. Nothing reads them any more -- dep_contrasts.csv
+# carries the same numbers in one table, and every former reader now takes them
+# from there -- so they are 13 MB of derivative no clone needs.
+03_DEP/a_non_imputed/c_data/04_per_contrast_results/
+
 # t0: experimental targets prediction pipeline (WIP). Track the source and the
 # outputs/ skeleton; the store and materialized outputs regenerate from tar_make().
 t0/_targets/
