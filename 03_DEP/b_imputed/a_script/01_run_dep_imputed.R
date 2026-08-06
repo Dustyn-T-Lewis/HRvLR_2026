@@ -18,7 +18,6 @@ source(here("functions", "shared_utils.R"))
 
 CANONICAL <- "missforest"
 clear_dir(here("03_DEP", "b_imputed", "c_data"))
-clear_dir(here("03_DEP", "b_imputed", "b_reports"))
 
 nd <- here("02_Normalization", "imputation", "c_data")
 methods <- c(
