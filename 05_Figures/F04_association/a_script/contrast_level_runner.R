@@ -3,7 +3,7 @@
 # from the same three panels.
 
 pacman::p_load(here, dplyr, openxlsx)
-source(here("functions", "contrast_heatmap.R"))
+source(here("05_Figures", "F04_association", "a_script", "contrast_heatmap.R"))
 
 CONTRAST_PANEL_HEIGHT <- c(modules = 132, pathways = 148, proteins = 148)
 
