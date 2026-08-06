@@ -4,7 +4,7 @@ pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr)
 
 source(here("functions", "shared_style.R"))
 source(here("functions", "shared_pathway_utils.R"))
-source(here("functions", "shared_wgcna.R"))
+source(here("03_Features", "03_WGCNA", "a_script", "shared_wgcna.R"))
 source(here("03_Features", "03_WGCNA", "a_script", "enrichment.R"))
 source(here("03_Features", "contrasts.R"))
 

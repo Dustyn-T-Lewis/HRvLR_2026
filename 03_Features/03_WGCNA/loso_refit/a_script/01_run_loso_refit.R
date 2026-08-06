@@ -5,7 +5,7 @@
 # module-definition circularity.
 
 pacman::p_load(here, dplyr, tidyr, readr, openxlsx)
-source(here("functions", "loso_wgcna_refit.R"))
+source(here("03_Features", "03_WGCNA", "a_script", "loso_wgcna_refit.R"))
 source(here("functions", "shared_prediction.R"))
 source(here("functions", "pred_features.R"))
 source(here("functions", "sweep_grid.R"))

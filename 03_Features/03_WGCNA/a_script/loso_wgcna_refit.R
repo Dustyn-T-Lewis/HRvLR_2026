@@ -9,7 +9,7 @@
 # WGCNA::moduleEigengenes over the full matrix would see the held-out rows.
 
 pacman::p_load(here, dplyr, tibble)
-source(here("functions", "shared_wgcna.R"))
+source(here("03_Features", "03_WGCNA", "a_script", "shared_wgcna.R"))
 
 MIN_JACCARD <- 0.5
 
