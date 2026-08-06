@@ -7,7 +7,7 @@
 # how many Pi hits the design produces when there is nothing to find.
 
 pacman::p_load(here, dplyr, openxlsx)
-source(here("functions", "pi_permutation.R"))
+source(here("03_Features", "01_Proteins", "a_script", "pi_permutation.R"))
 source(here("functions", "feature_levels.R"))
 
 N_PERM <- 200
