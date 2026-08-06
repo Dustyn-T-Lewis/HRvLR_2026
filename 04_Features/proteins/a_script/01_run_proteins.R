@@ -6,7 +6,7 @@
 # Ritchie et al. 2015, Nucleic Acids Res 43(7):e47 -- limma
 # Smyth, Michaud & Scott 2005, Bioinformatics 21(9):2067 -- duplicateCorrelation
 
-pacman::p_load(here, dplyr, purrr, openxlsx)
+pacman::p_load(here, dplyr, readr, openxlsx)
 source(here("functions", "feature_contrasts.R"))
 
 out_dir <- here("04_Features", "proteins", "c_data")
@@ -14,16 +14,14 @@ report_dir <- here("04_Features", "proteins", "b_reports")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 
-book <- here("03_DEP", "a_non_imputed", "c_data", "05_results.xlsx")
-contrast_names <- trimws(sub("=.*$", "", HRVLR_CONTRASTS))
-
-results <- map_dfr(contrast_names, function(ct) {
-  read.xlsx(book, ct) |>
-    transmute(
-      contrast = ct, feature = .data$uniprot_id, gene = .data$gene,
-      logFC = .data$logFC, p = .data$P.Value, bh = .data$adj.P.Val
-    )
-})
+results <- read_csv(
+  here("03_DEP", "a_non_imputed", "c_data", "dep_contrasts.csv"),
+  show_col_types = FALSE
+) |>
+  transmute(
+    contrast = .data$contrast, feature = .data$uniprot_id, gene = .data$gene,
+    logFC = .data$logFC, p = .data$P.Value, bh = .data$adj.P.Val
+  )
 
 equivalence <- verify_protein_equivalence()
 if (!all(equivalence$equivalent)) {
