@@ -39,10 +39,7 @@ runs <- imap(methods, function(rds, m) {
   ))
   out_dir <- here("03_DEP", "b_imputed", "c_data", m)
 
-  dal$metadata$group <- factor(
-    dal$metadata$Group_Time,
-    levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-  )
+  dal$metadata$group <- factor(dal$metadata$Group_Time, levels = GROUP_LEVELS)
   dal$metadata$subject <- dal$metadata$Subject_ID
   dal <- add_design(dal, "~ 0 + group + (1 | subject)")
   dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
@@ -67,11 +64,6 @@ runs <- imap(methods, function(rds, m) {
 # cross-arm robustness claim: Pi = p^|log2FC| exponentiates the fold change, which is precisely
 # what imputation distorts. Perseus is the proof — the MOST Pi-hits of any arm yet zero BH<0.10 in
 # the null contrasts, like the non-imputed fit.
-
-NULL_CONTRASTS <- c(
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
 
 ni_dir <- here("03_DEP", "a_non_imputed", "c_data", "04_per_contrast_results")
 ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), function(f) {
@@ -102,7 +94,7 @@ sens <- bind_rows(
   ),
   imap_dfr(runs, \(res, m) arm_counts(bind_rows(res), m))
 ) |>
-  mutate(is_null_contrast = contrast %in% NULL_CONTRASTS) |>
+  mutate(is_null_contrast = contrast %in% RESPONDER_CONTRASTS) |>
   arrange(method, contrast)
 
 write_csv(sens, here("03_DEP", "b_imputed", "c_data", "sensitivity_bh_vs_pi.csv"))

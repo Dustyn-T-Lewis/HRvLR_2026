@@ -20,6 +20,18 @@ HRVLR_CONTRASTS <- c(
   "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 )
 
+# The cell order the design matrix inherits. Pinned here because every arm has
+# to place its columns identically for the contrast strings above to mean
+# anything.
+GROUP_LEVELS <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+
+# The five contrasts that carry the HR-vs-LR question: three group differences
+# and the two interactions. The four within-arm changes are the other half.
+RESPONDER_CONTRASTS <- c(
+  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
+  "Training_Interaction", "Acute_Interaction"
+)
+
 PI_THRESH <- 0.05
 
 # Xiao et al. 2014 Eq. 2: Pi = p^|log2FC|, bounded in [0,1], lower = more significant.

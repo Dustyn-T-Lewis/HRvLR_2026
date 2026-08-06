@@ -20,10 +20,6 @@ pacman::p_load(proteoDA, imp4p, here, readr, dplyr, tibble, purrr)
 source(here("03_DEP", "contrasts.R"))
 
 N_PERM <- 3
-NULL_CONTRASTS <- c(
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
 
 dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
 mat <- as.matrix(dal$data)
@@ -58,7 +54,7 @@ summarise_arm <- function(res, label) {
   tibble(
     imputed_within = label,
     BH_10_total = sum(res$adj.P.Val < 0.10, na.rm = TRUE),
-    BH_10_null_contrasts = sum(res$adj.P.Val < 0.10 & res$contrast %in% NULL_CONTRASTS, na.rm = TRUE),
+    BH_10_null_contrasts = sum(res$adj.P.Val < 0.10 & res$contrast %in% RESPONDER_CONTRASTS, na.rm = TRUE),
     BH_10_baseline = sum(res$adj.P.Val < 0.10 & res$contrast == "Baseline_HRvLR", na.rm = TRUE)
   )
 }
@@ -86,7 +82,7 @@ ni <- map_dfr(list.files(ni_dir, pattern = "\\.csv$", full.names = TRUE), functi
     transmute(contrast = tools::file_path_sans_ext(basename(f)), adj.P.Val)
 })
 ni_total <- sum(ni$adj.P.Val < 0.10, na.rm = TRUE)
-ni_null <- sum(ni$adj.P.Val < 0.10 & ni$contrast %in% NULL_CONTRASTS, na.rm = TRUE)
+ni_null <- sum(ni$adj.P.Val < 0.10 & ni$contrast %in% RESPONDER_CONTRASTS, na.rm = TRUE)
 
 cat(sprintf(
   "\nnon-imputed primary arm: %d BH<0.10 total, %d in the null contrasts.\n",

@@ -8,11 +8,6 @@
 # contrasts, so the rings' parsimony can be checked against the full ranked enrichment.
 if (!exists("fg")) source(here::here("05_Figures", "F03_pathway", "a_script", "setup.R"))
 
-RESPONDER_CONTRASTS <- c(
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
-
 panel_responders <- function(fg, dep, pw) {
   diff <- RING_PALETTES$differential
   intr <- RING_PALETTES$interaction

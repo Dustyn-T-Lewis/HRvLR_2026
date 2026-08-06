@@ -75,12 +75,7 @@ meta <- tibble(
 )
 meta$responder <- factor(meta$responder, levels = c("HR", "LR"))
 meta$time <- factor(meta$time, levels = c("T1", "T2", "T3"))
-meta$group <- factor(meta$group,
-  levels = c(
-    "HR_T1", "HR_T2", "HR_T3",
-    "LR_T1", "LR_T2", "LR_T3"
-  )
-)
+meta$group <- factor(meta$group, levels = GROUP_LEVELS)
 
 if (any(is.na(meta$subject)) || any(meta$subject == "")) {
   stop("Subject_ID must be present for duplicateCorrelation blocking.")

@@ -9,8 +9,6 @@ pacman::p_load(here, dplyr, tibble, readr, limma, openxlsx)
 source(here("03_DEP", "contrasts.R"))
 source(here("functions", "feature_levels.R"))
 
-GROUP_LEVELS <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-
 feature_metadata <- function() {
   dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
   m <- as.data.frame(dal$metadata)

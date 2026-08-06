@@ -25,11 +25,6 @@ pacman::p_load(proteoDA, here, readxl, readr, dplyr, stringr, tibble, purrr)
 source(here("03_DEP", "contrasts.R"))
 source(here("01_Filtering", "a_script", "filter_config.R"))
 
-NULL_CONTRASTS <- c(
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
-
 calls <- read_csv(here("01_Filtering", "c_data", "protein_calls.csv"), show_col_types = FALSE)
 primary <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
 kept_samples <- colnames(primary$data)
@@ -65,10 +60,7 @@ cat(sprintf(
   limma::chooseLowessSpan(nrow(dal$data))
 ))
 
-dal$metadata$group <- factor(
-  dal$metadata$Group_Time,
-  levels = c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-)
+dal$metadata$group <- factor(dal$metadata$Group_Time, levels = GROUP_LEVELS)
 dal$metadata$subject <- dal$metadata$Subject_ID
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
@@ -89,14 +81,14 @@ summary_tbl <- res |>
     BH_10_readmitted = sum(adj.P.Val < 0.10 & readmitted, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  mutate(is_null_contrast = contrast %in% NULL_CONTRASTS)
+  mutate(is_null_contrast = contrast %in% RESPONDER_CONTRASTS)
 
 report_dir <- here("03_DEP", "a_non_imputed", "b_reports")
 dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 write_csv(summary_tbl, file.path(report_dir, "blood_filter_sensitivity.csv"))
 
 hits <- res |>
-  filter(adj.P.Val < 0.10, contrast %in% NULL_CONTRASTS) |>
+  filter(adj.P.Val < 0.10, contrast %in% RESPONDER_CONTRASTS) |>
   arrange(adj.P.Val) |>
   select(contrast, gene, uniprot_id, logFC, adj.P.Val, readmitted)
 write_csv(hits, file.path(report_dir, "blood_filter_sensitivity_hits.csv"))

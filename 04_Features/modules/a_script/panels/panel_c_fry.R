@@ -11,11 +11,6 @@ fry_res <- module_fry(
   mods, abund_dep, DESIGN, CONTRAST_MATRIX, BLOCK, CORRELATION
 )
 
-RESPONDER_CONTRASTS <- c(
-  "Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR",
-  "Training_Interaction", "Acute_Interaction"
-)
-
 fry_plot <- fry_res |>
   mutate(
     family = if_else(contrast %in% RESPONDER_CONTRASTS, "Responder", "Within-group"),
