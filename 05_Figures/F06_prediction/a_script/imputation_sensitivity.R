@@ -12,7 +12,7 @@
 # and that network is the separate leak loso_refit measures.
 
 pacman::p_load(here, dplyr, tibble, openxlsx)
-source(here("functions", "pred_complete_case.R"))
+source(here("05_Figures", "F06_prediction", "a_script", "pred_complete_case.R"))
 source(here("functions", "shared_prediction.R"))
 source(here("functions", "sweep_grid.R"))
 

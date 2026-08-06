@@ -1,5 +1,5 @@
 pacman::p_load(here, testthat, dplyr)
-source(here("functions", "pred_complete_case.R"))
+source(here("05_Figures", "F06_prediction", "a_script", "pred_complete_case.R"))
 
 test_that("the complete-case matrix contains no missing value", {
   cc <- complete_case_matrix()
