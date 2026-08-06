@@ -145,8 +145,10 @@ tryCatch(
 )
 
 # Per-contrast CSVs, combined results (wide), and formatted Excel workbook
-# with conditional formatting & UniProt hyperlinks — all handled by proteoDA.
-# Pi-score columns pass through because they were injected into dal$results above.
+# with conditional formatting and UniProt hyperlinks, all handled by proteoDA.
+# Only the wide combined CSV carries the pi columns injected into dal$results
+# above. The per-contrast CSVs and the workbook sheets are built from a fixed
+# column list, so they stop at sig.FDR. Read pi from 03_combined_results.csv.
 
 write_limma_tables(dal,
   output_dir        = cfg$data_dir,
