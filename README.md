@@ -13,12 +13,10 @@ forward.
 
 ## Start here
 
-`HRvLR_pipeline.qmd` is the ground-up walkthrough and the map into everything else.
-Most stages and figures also ship their own tutorial (`00_inputs.qmd`,
-`01_filtering.qmd`, `02_normalization.qmd`, `03_dep.qmd`, and the figure narratives
-`F01_phenotype.qmd`, `F02_proteome.qmd`, `F03_pathway.qmd`, `WGCNA.qmd`),
-written to be read on its own: what it does, how, why that method and not another, and
-how to read the output — including what a null looks like.
+Read "What the pipeline found" below for the results, then the stage table for
+the layout and "Canonical Run Order" for how to reproduce it. Every script
+carries a header saying what it does, why that method and not another, and how
+to read its output, including what a null looks like there.
 
 ## What the pipeline found
 
@@ -114,9 +112,10 @@ The null is robust to imputation. On BH, missForest (MAR), MsCoreUtils (hybrid) 
 matching the non-imputed arm. It is also robust to the blood filter: readmitting every
 blood-tagged protein leaves each of those contrasts at zero.
 
-Known limitations are stated on the page where the reader meets them: the π gate in
-`HRvLR_pipeline.qmd`; the human-only search space with no contaminant FASTA and no decoys, so
-reagent contaminants cannot be detected at all (`01_filtering.qmd`); the 34 proteins admitted
+Known limitations are stated in the script where the reader meets them: the π gate in
+`03_Features/01_Proteins/a_script/01_run_dep.R`; the human-only search space with no
+contaminant FASTA and no decoys, so reagent contaminants cannot be detected at all
+(`01_Filtering/a_script/01_run_filtering.R`); the 34 proteins admitted
 by the missingness filter that the model then cannot test; the module-prediction circularity
 in `03_Features/03_WGCNA` that in-fold refitting exposed (see "What the pipeline found" above); and
 the transductive eigengenes in `03_Features/03_WGCNA` and `04_Figures/F03_pathway/supp`.
@@ -170,10 +169,21 @@ drops `Trained_HRvLR` and `Acute_HRvLR`.
 ### Core Stages
 
 ```sh
+# Inputs. Both read the raw workbooks and write what stage 01 consumes.
+Rscript 00_input/a_script/01_build_phenotype.R
+Rscript 00_input/a_script/02_build_blood_list.R
+
+# The blood-correlation permutation null reads the raw matrix directly, so it
+# runs before the filter whose threshold it retired.
+Rscript 01_Filtering/a_script/00_blood_cor_null.R
 Rscript 01_Filtering/a_script/01_run_filtering.R
+Rscript 01_Filtering/a_script/02_filtering_figure.R
+
 Rscript 02_Normalization/a_script/01_run_normalization.R
 
 Rscript 03_Features/01_Proteins/a_script/01_run_dep.R
+Rscript 03_Features/01_Proteins/a_script/02_blood_filter_sensitivity.R
+Rscript 03_Features/01_Proteins/a_script/03_untested_proteins.R
 ```
 
 Clustering is computed self-contained inside `03_Features/03_WGCNA` (see Figures);
@@ -247,13 +257,13 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
   cells over `<level>/<config>/<phenotype>/<model>`, nested leave-one-subject-out
   against a permutation null
 
-Each screen runs `run_*` (compute every leaf cell), then `split_*` (fan the
-pre-split `<level>/<config>/<method>` leaf into per-phenotype panels), then
-`rollup_*` (all three — pool the leaves into one workbook, write MANIFEST.xlsx, and render the
-specification-curve figure), then `composite_*` (assemble the figure and write
-`MANIFEST.xlsx`). `functions/sweep_grid.R`'s `leaf_done()` checks the pre-split
-three-level path (`<level>/<config>/<method>/c_data/results.xlsx`) because the
-runners write that shape and `split_*` converts it afterward.
+Each screen runs `run_*` (compute every cell and append it to the root store),
+then `rollup_*` (pool the store and render the specification-curve figure), then
+`composite_*` (assemble the figure). The store is four CSVs per root,
+`c_data/cells_{summary,null,predictions,selection}.csv`.
+`functions/sweep_grid.R`'s `leaf_done()` looks a cell up in the summary store by
+level, config and model, and treats it as done only while its fingerprint still
+matches the inputs.
 
 Each runner writes a cell to the store as soon as it finishes it, so a killed
 `run_*` **resumes** — relaunch it and `leaf_done()` skips every completed cell,
@@ -283,7 +293,7 @@ Rscript 03_Features/03_WGCNA/contrast_networks/a_script/01_run_contrast_stabilit
 
 # The nine contrasts on each feature level. Proteins reshape stage 03's fit and
 # assert a refit reproduces it; modules and pathways are fitted here.
-Rscript 03_Features/01_Proteins/a_script/01_run_proteins.R
+Rscript 03_Features/01_Proteins/a_script/06_run_contrasts.R
 Rscript 03_Features/02_Pathways/a_script/01_run_pathways.R
 Rscript 03_Features/03_WGCNA/a_script/02_run_module_contrasts.R
 
@@ -327,11 +337,10 @@ Shared helpers live by scope:
 
 ## Figures
 
-Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script. Most
-ship a narrative `.qmd`; F03_pathway/supp/summary does not. F05 and F06 are
-organized `<level>/<config>/<phenotype-or-HR_LR>/<method>`, with `run_*` computing
-every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
-`composite_*` assembling the figure.
+Each figure is an `a_script/ b_reports/ c_data/` unit with its own run script.
+F05 and F06 are organized `<level>/<config>/<phenotype-or-HR_LR>/<method>`, with
+`run_*` computing every cell, `rollup_*` pooling them into the root store and the
+spec curve, and `composite_*` assembling the figure.
 
 | Directory | Question | Engine |
 | --- | --- | --- |
@@ -341,7 +350,7 @@ every cell, `split_*`/`rollup_*` pooling them and writing `MANIFEST.xlsx`, and
 | `F03_pathway/` | Per-contrast enrichment. | enrichVolcano ring-volcanoes, fgsea, EnrichmentMap dedup. |
 | `03_Features/03_WGCNA/` | Which WGCNA modules track the phenotype, and do they generalize? | Signed WGCNA on the missForest-imputed proteome; `loso_refit/` refits the network with each subject held out; `preservation/` cross-preserves HR- and LR-only networks; `contrast_networks/` builds training- and acute-only networks. |
 | `F04_association/` | How do high responders differ from low responders, per feature level? | The nine stage 03 contrasts read from `03_Features`; logFC fill with one scale per contrast family, stars for nominal p, black box for BH q < .05 within a contrast. Zero survivors at protein and module level; the five pathway cells are coverage artifacts or within-arm. |
-| `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `randomForest`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
+| `F05_classification/` | Can the proteome classify HR vs LR out of sample? | Elastic net, lasso, ridge, sparse PLS-DA, PAM, RF, SVM (`glmnet`, `mixOmics`, `pamr`, `ranger`, `e1071`) per `<level>/<config>/HR_LR/<model>` cell; 153 cells, nested LOSO against a permutation null. 0 leads. |
 | `F06_prediction/` | Can the proteome predict continuous adaptation out of sample? | Elastic net, lasso, ridge, sPLS, RF, SVM per `<level>/<config>/<phenotype>/<model>` cell; 792 cells, nested LOSO against a permutation null. 37 leads (4.7%), 32 of them on `d_mcsa`; all 13 module leads fall below zero once restricted to the two reproducible modules, and in-fold refitting adds nothing; 13 of the 24 non-module leads survive a rescore with no imputation; no `d_mcsa` cell built on the baseline (T1) proteome is a lead or a survivor. |
 
 A cell in F05-F06 reports a metric, a permutation p, the screen size, and a

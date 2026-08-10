@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# HRvLR COMPARISON DEP on the imputed matrices (exploratory; a_non_imputed stays the
+# HRvLR COMPARISON DEP on the imputed matrices (exploratory; 01_Proteins stays the
 # reported analysis). missforest = canonical (figures/WGCNA read it).
 #
 # Read on BH, the null holds under every imputer that does not impute inside the tested factor:
