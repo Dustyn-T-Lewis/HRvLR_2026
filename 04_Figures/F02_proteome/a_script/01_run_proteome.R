@@ -43,7 +43,7 @@ ggsave(file.path(RPT_DIR, "F02_proteome.png"), composite,
   width = 310, height = 175, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(RPT_DIR, "F02_proteome.pdf"), composite,
-  width = 235, height = 175, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = 310, height = 175, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
 cat("F02 rebuilt: panels, supplements, composite, workbook written\n")
