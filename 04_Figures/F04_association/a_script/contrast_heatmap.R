@@ -115,18 +115,6 @@ module_sizes <- function() {
   stats::setNames(atlas$n_proteins, atlas$module)
 }
 
-MODULE_NAMES <- c(
-  greenyellow = "Electron Transport Chain",
-  magenta = "Sarcomere / Myofibril",
-  black = "Aerobic Respiration",
-  pink = "Cytoplasmic Translation",
-  purple = "Translation (secondary)",
-  yellow = "Small-Molecule Metabolism",
-  brown = "Amino Acid Metabolism",
-  blue = "RNA Splicing*",
-  green = "", red = "", turquoise = ""
-)
-
 # 01_Filtering scores every protein's correlation with per-sample haemoglobin.
 # T3 biopsies carry twice the blood of T1 and T2, so an acute within-arm hit on
 # a high-blood-correlation protein is a blood result until shown otherwise. The
@@ -144,10 +132,14 @@ blood_tracking_genes <- function() {
 
 contrast_row_label <- function(rows, level) {
   if (level == "modules") {
-    named <- MODULE_NAMES[rows$key]
+    # driver_keys() already reads the module's own ORA term, or "no enriched
+    # term" where it has none. A hand-kept name list drifts the moment the
+    # network is rebuilt, because WGCNA colours are not stable across runs.
+    # driver_label() pre-wraps for in-bar use; on an axis those newlines run the
+    # label into the row above, so they are flattened and then clipped.
     sprintf(
-      "%s%s", str_to_title(rows$key),
-      ifelse(is.na(named) | named == "", "", paste0(" - ", named))
+      "%s - %s", str_to_title(rows$key),
+      str_trunc(gsub("\n", " ", rows$description), 30)
     )
   } else if (level == "pathways") {
     # One line only. A wrapped name overflows its bar, and the in-bar contrast
@@ -446,9 +438,10 @@ contrast_caption <- function(level, rows) {
       ),
       "across, which is close to no moderation at all. Eigengenes come from",
       "the missForest-imputed matrix, unlike the protein panel.",
-      "\n* ME_blue's top ORA term is RNA splicing, but its highest-membership",
-      "proteins are pentose-phosphate enzymes (TKT, TALDO1) and leukocyte",
-      "markers (LCP1, CLIC1, IFITM1). Unnamed rows returned no enriched term."
+      "\nEach row is named by its own module's top ORA term, read from the",
+      "network's enrichment at draw time rather than from a kept list, because",
+      "WGCNA colours do not survive a rebuild. Rows reading no enriched term",
+      "have none at BH < 0.05."
     ),
     pathways = paste(
       "Rows are restricted to sets with at least 15 members detected, the same",
