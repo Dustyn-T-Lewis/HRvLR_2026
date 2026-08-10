@@ -222,18 +222,22 @@ get_pdf_device <- function() {
 # Cache once at source() time - avoids 12+ temp-file probes
 PDF_DEVICE <- get_pdf_device()
 
+# bg is stated rather than left to the device. The renders are already opaque
+# white, so this changes no PNG; it stops a transparent PDF appearing the day a
+# theme drops plot.background, and matches the hand-rolled ggsave calls.
 save_panel <- function(plot, path_stem, width, height, pdf_device = PDF_DEVICE) {
   ggsave(paste0(path_stem, ".pdf"), plot,
-    width = width, height = height, units = "mm", device = pdf_device
+    width = width, height = height, units = "mm", device = pdf_device,
+    bg = "white"
   )
   ggsave(paste0(path_stem, ".png"), plot,
-    width = width, height = height, units = "mm", dpi = 300
+    width = width, height = height, units = "mm", dpi = 300, bg = "white"
   )
 }
 
 save_png <- function(plot, path_stem, width, height) {
   ggsave(paste0(path_stem, ".png"), plot,
-    width = width, height = height, units = "mm", dpi = 300
+    width = width, height = height, units = "mm", dpi = 300, bg = "white"
   )
 }
 
