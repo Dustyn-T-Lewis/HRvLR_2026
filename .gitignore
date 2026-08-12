@@ -58,3 +58,6 @@ t0/outputs/figures/*.png
 t0/outputs/qc/*.csv
 t0/outputs/results/*.csv
 t0/outputs/session_info.txt
+
+# Saved reading, not part of the pipeline.
+downloads/
