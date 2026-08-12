@@ -235,17 +235,9 @@ which its two `supp` concordance leaves read, so run F03_pathway before the
   each of the nine contrasts came to a BH survivor, and the best cell every model
   reached in F05 and F06 against its own permutation null and the number of cells
   it was drawn from
-- `04_Figures/shared/reference`: 85 worked design references (one per stage x
-  level x config, plus per-level heatmaps and raw-observation detail views)
-- `archive/pooled_association_2026-07-29`: the retired pooled-association sweep
-  (the old 420-cell F04 and the F07 synthesis heatmaps). Pooled rho partly
-  re-expresses the HR-vs-LR contrast — the HR/LR label correlates +0.755 with
-  `d_fcsa_I` — so the screen answered a question the study is not asking
-- `archive/t0_targets_2026-07-30`: a second implementation of this analysis in
-  `targets` + tidymodels, committed 2026-07-23 and never run — every `outputs/`
-  directory held only a `.gitkeep`. Set aside because a parallel implementation
-  nobody executes drifts from the one that ships. Preserved in git; not part of
-  any run order
+- `04_Figures/shared/reference`: worked design references, one per stage x level
+  x config plus per-level heatmaps and detail views. Rebuild them with
+  `build_reference_*.R`; like every other render they are not tracked
 - `04_Figures/F04_association`: the nine stage 03 contrasts at protein, pathway
   and module level, in three column families (HR-LR by timepoint, the two
   interactions, the four within-arm changes). One panel per level plus a stacked
@@ -331,9 +323,12 @@ Shared helpers live by scope:
 
 | Path | Contents |
 | --- | --- |
-| `functions/` | `shared_*` helpers used across stages and figures — `shared_style.R` (palettes, theme, sizing), `shared_pca.R` (sourced by stages 01–02), `shared_utils.R`, `shared_pathway_utils.R` (fgsea/ORA); `f00_concordance.R` and `f00_concordance_panels.R` drive F03_pathway/supp; `sweep_*` helpers run the F05-F06 screen — `sweep_grid.R` (the cell store, `leaf_done()`), `sweep_pred_leaf.R` (F05/F06), `sweep_rollup.R`, `sweep_manifest.R`, `sweep_cell_panel.R`, `sweep_composites.R`, `sweep_speccurve.R`, `sweep_drivers.R`. |
-| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `WGCNA/` — the module source for F05-F06; `reference/` — the worked design references. |
+| `functions/` | The 20 helpers used by more than one stage. `shared_style.R` (palettes, theme, sizing), `shared_utils.R`, `shared_pca.R` (stages 01–02), `shared_pathway_utils.R` (fgsea/ORA), `shared_singscore.R`, `shared_prediction.R`, `shared_hlm.R`, `pred_features.R`, `feature_contrasts.R` (the one estimator all three levels use), `feature_levels.R`, `blood_index_model.R`, and the `sweep_*` set that runs the F05-F06 screen. A helper with one owning stage lives in that stage instead. |
+| `04_Figures/shared/` | `references.bib` — the single bibliography every notebook cites; `reference/` — worked design references, rebuilt by `build_reference_*.R`. |
 | `tests/` | The `testthat` suite. Run with `testthat::test_dir(here("tests", "testthat"))`. |
+| `setup.R` | Restores the library from `renv.lock` and writes `package_versions.txt`. Run once after cloning. |
+| `_dependencies.R` | Declares `ragg`, `lintr` and `styler`, which no script names, so `renv` keeps them. Deleting it lets `ragg` drop out, and every figure then re-renders to different bytes without an error. |
+| `METHOD_RANKING.md` | Why each method was chosen and what it replaced, including why pooled LOSO AUC ranks last and still needs replacing. |
 
 ## Figures
 

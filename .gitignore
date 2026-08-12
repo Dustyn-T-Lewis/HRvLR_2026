@@ -61,3 +61,7 @@ t0/outputs/session_info.txt
 
 # Saved reading, not part of the pipeline.
 downloads/
+
+# Design references regenerate from build_reference_*.R, like every other render.
+04_Figures/shared/reference/**/*.png
+04_Figures/shared/reference/**/*.pdf
