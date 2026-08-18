@@ -6,8 +6,8 @@
 
 pacman::p_load(here, dplyr, tibble, openxlsx, WGCNA, ggplot2, patchwork)
 source(here("03_Features", "03_WGCNA", "a_script", "shared_wgcna.R"))
-source(here("functions", "sweep_grid.R"))
-source(here("functions", "sweep_drivers.R"))
+source(here("functions", "shared_utils.R"))
+source(here("functions", "ora_bars.R"))
 source(here("functions", "shared_style.R"))
 
 set.seed(42)
@@ -130,7 +130,7 @@ dir.create(out_reports, recursive = TRUE, showWarnings = FALSE)
 # The fingerprint of the matrix and module assignment this was computed from.
 # Nothing here reruns automatically, so without it a result fitted on a retired
 # protein set survives an upstream change with nothing to say it is stale.
-write_sweep_workbook(
+write_workbook(
   file.path(out_data, "preservation.xlsx"),
   list(
     preservation = preservation, arm_native = arm_native,

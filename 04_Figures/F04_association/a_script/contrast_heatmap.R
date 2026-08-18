@@ -12,8 +12,9 @@ pacman::p_load(
   here, dplyr, readr, ggplot2, patchwork, scales, stringr, openxlsx
 )
 source(here("functions", "shared_style.R"))
-source(here("functions", "sweep_drivers.R"))
-source(here("functions", "sweep_grid.R"))
+source(here("functions", "ora_bars.R"))
+source(here("functions", "shared_utils.R"))
+source(here("functions", "feature_levels.R"))
 source(here("functions", "shared_pathway_utils.R"))
 
 BH_CUT <- 0.05
@@ -54,7 +55,7 @@ LEVEL_BOOK <- c(
 
 contrast_grid <- function(level) {
   d <- read.xlsx(
-    here("03_Features", SWEEP_LEVEL_DIR[[level]], "c_data", LEVEL_BOOK[[level]]),
+    here("03_Features", LEVEL_DIR[[level]], "c_data", LEVEL_BOOK[[level]]),
     "contrasts"
   )
   d$label_key <- if (level == "proteins") d$gene else d$feature

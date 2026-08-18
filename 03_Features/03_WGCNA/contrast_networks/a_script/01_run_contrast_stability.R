@@ -12,7 +12,7 @@
 
 pacman::p_load(here, dplyr, openxlsx, WGCNA)
 source(here("03_Features", "03_WGCNA", "a_script", "shared_wgcna.R"))
-source(here("functions", "sweep_grid.R"))
+source(here("functions", "shared_utils.R"))
 source(here("03_Features", "03_WGCNA", "a_script", "loso_wgcna_refit.R"))
 
 set.seed(42)
@@ -115,7 +115,7 @@ out <- here("03_Features", "03_WGCNA", "contrast_networks", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 sheets <- list(summary = summary_tbl)
 if (nrow(stability_tbl)) sheets$module_stability <- stability_tbl
-write_sweep_workbook(
+write_workbook(
   file.path(out, "contrast_stability.xlsx"), sheets,
   fingerprint = input_fingerprint(imputed$data)
 )

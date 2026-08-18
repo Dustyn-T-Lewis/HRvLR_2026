@@ -9,6 +9,10 @@ SINGSCORE_CACHE <- c(
   "03_Features", "02_Pathways", "c_data", "singscore_scores.rds"
 )
 
+LEVEL_DIR <- c(
+  pathways = "02_Pathways", modules = "03_WGCNA", proteins = "01_Proteins"
+)
+
 protein_matrix <- function() {
   df <- read_csv(here("02_Normalization", "c_data", "normalized.csv"),
     show_col_types = FALSE
