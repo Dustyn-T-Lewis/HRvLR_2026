@@ -33,9 +33,11 @@ rotation test is the one whose null holds.
 
 **No protein and no module survives BH in any of the nine contrasts.** The
 smallest q at those two levels is 0.0715, in `Acute_HR`. Earlier runs had eight
-survivors in `Acute_LR`; six were red-cell proteins (SPTB, ANK1, STOM, CAT,
-BLVRB, SYNE2) and a seventh, LCP1, is a leukocyte protein. All are now removed as
-blood by `00_input/blood_contaminants.csv`.
+survivors in `Acute_LR`; five were red-cell proteins (SPTB, ANK1, STOM, CAT,
+BLVRB) and a sixth, LCP1, is a leukocyte protein. All six are now removed as
+blood by `00_input/blood_contaminants.csv`. SYNE2 carries the same spectrin
+repeats but is a myonuclear envelope protein, so the myonuclei rescue keeps it;
+it is in the current matrix and is one of the nine `Acute_All` BH survivors.
 
 **At the pathway level five singscore cells clear BH, and none of them is an
 HR-vs-LR or interaction result once coverage is applied.** Two score
