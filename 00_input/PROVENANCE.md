@@ -97,3 +97,39 @@ on `uniprot_id`. To reproduce the null that retired the threshold:
 ```r
 Rscript 01_Filtering/a_script/00_blood_cor_null.R
 ```
+
+---
+
+# GO Slim generic — provenance
+
+`goslim_generic.obo`, the Gene Ontology Consortium's species-neutral slim: a
+curated subset of high-level GO terms meant to summarise an annotation set
+without the full ontology's depth.
+
+## Source
+
+Downloaded 2026-08-19 from
+<https://current.geneontology.org/ontology/subsets/goslim_generic.obo>.
+The file records its own release in the header: `go/releases/2026-07-26`.
+
+140 terms, of which 129 are GO: 72 biological process, 28 cellular component,
+40 molecular function. The remaining 11 sit in the `external` namespace and are
+cross-references to other ontologies, not GO terms; they are dropped on read.
+
+## Why it replaced a typed list
+
+`functions/shared_pathway_utils.R` previously carried 62 BP term IDs typed into
+the source, attributed to a `go_slim_categories.R` that is not in this
+repository. Provenance was therefore unverifiable, the list covered biological
+process only, and a second verbatim copy of the same 62 IDs lived in
+`04_Figures/F03_pathway/a_script/f00_concordance_panels.R`, so any edit had to
+be made twice by hand.
+
+The canonical file fixes all three: it is versioned, it carries cellular
+component and molecular function, and it is read rather than transcribed.
+
+## Regenerating
+
+Re-download from the URL above. The GO Consortium revises the slim with each
+release, so a refresh changes term membership and every enrichment result that
+reads it. Record the new `data-version` here when you do.
