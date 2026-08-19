@@ -63,7 +63,8 @@ metadata <- tibble::tribble(
 
 sheets <- c(
   "module_membership", "module_atlas", "module_ora", "module_fry",
-  "module_prediction", "module_phenotype_lmm", "module_eigengene", "soft_threshold"
+  "module_prediction", "module_phenotype_lmm", "module_eigengene",
+  "soft_threshold"
 )
 overview <- data.frame(
   sheet = sheets,

@@ -70,7 +70,8 @@ contrast_grid <- function(level) {
     # the rotation test is the one whose null holds, which is why it is marked
     # on the tile rather than filed in a workbook.
     fry <- read.xlsx(
-      here("03_Features", "02_Pathways", "c_data", LEVEL_BOOK[["pathways"]]), "fry"
+      here("03_Features", "02_Pathways", "c_data", LEVEL_BOOK[["pathways"]]),
+      "fry"
     )
     d <- left_join(
       d, select(fry, feature = "pathway", "contrast", fry_fdr = "fdr"),

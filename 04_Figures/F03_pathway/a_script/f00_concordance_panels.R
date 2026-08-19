@@ -1,5 +1,6 @@
-# Concordance builders shared by the training and acute concordance leaves. Each figure maps
-# one phase's HR and LR response as a 5-panel composite matching the YvO engine:
+# Concordance builders shared by the training and acute concordance leaves. Each
+# figure maps one phase's HR and LR response as a 5-panel composite matching
+# the YvO engine:
 #   A quadrant ORA scatter, B pattern heatmap + Sankey, C fry rotation test,
 #   D pathway NES scatter, E RRHO2. Both figures are the concordance flavour
 #   (ref_slope = +1, diagonal = concordant); divergence is the modelled
@@ -71,10 +72,13 @@ SLIM_CONSOLIDATED <- c(
   "GO:0003013" = "Circulatory System",
   "GO:0030198" = "ECM & Adhesion", "GO:0007155" = "ECM & Adhesion",
   "GO:0034330" = "ECM & Adhesion", "GO:0042060" = "ECM & Adhesion",
-  "GO:0007010" = "Cytoskeleton & Motility", "GO:0048870" = "Cytoskeleton & Motility",
-  "GO:0007018" = "Cytoskeleton & Motility", "GO:0007163" = "Cytoskeleton & Motility",
+  "GO:0007010" = "Cytoskeleton & Motility",
+  "GO:0048870" = "Cytoskeleton & Motility",
+  "GO:0007018" = "Cytoskeleton & Motility",
+  "GO:0007163" = "Cytoskeleton & Motility",
   "GO:0044782" = "Cytoskeleton & Motility",
-  "GO:0002376" = "Immune & Inflammation", "GO:0006954" = "Immune & Inflammation",
+  "GO:0002376" = "Immune & Inflammation",
+  "GO:0006954" = "Immune & Inflammation",
   "GO:0098542" = "Immune & Inflammation",
   "GO:0006629" = "Lipid Metabolism", "GO:0042180" = "Lipid Metabolism",
   "GO:0005975" = "Carbohydrate & Energy Metabolism",
@@ -86,17 +90,21 @@ SLIM_CONSOLIDATED <- c(
   "GO:0071941" = "Amino Acid & Cofactor Metabolism",
   "GO:0098754" = "Amino Acid & Cofactor Metabolism",
   "GO:0007586" = "Amino Acid & Cofactor Metabolism",
-  "GO:0007005" = "Mitochondria & Energy", "GO:0007031" = "Mitochondria & Energy",
+  "GO:0007005" = "Mitochondria & Energy",
+  "GO:0007031" = "Mitochondria & Energy",
   "GO:0006457" = "Protein Homeostasis", "GO:0030163" = "Protein Homeostasis",
   "GO:0006914" = "Protein Homeostasis", "GO:0051604" = "Protein Homeostasis",
   "GO:0065003" = "Protein Homeostasis", "GO:0009100" = "Protein Homeostasis",
   "GO:0055085" = "Transport", "GO:0016192" = "Transport",
   "GO:0006886" = "Transport", "GO:0006913" = "Transport",
   "GO:0072659" = "Transport", "GO:0061024" = "Transport",
-  "GO:0002181" = "Translation & Ribosome", "GO:0042254" = "Translation & Ribosome",
+  "GO:0002181" = "Translation & Ribosome",
+  "GO:0042254" = "Translation & Ribosome",
   "GO:0006399" = "Translation & Ribosome",
-  "GO:0006351" = "Transcription & Chromatin", "GO:0006355" = "Transcription & Chromatin",
-  "GO:0016071" = "Transcription & Chromatin", "GO:0006325" = "Transcription & Chromatin",
+  "GO:0006351" = "Transcription & Chromatin",
+  "GO:0006355" = "Transcription & Chromatin",
+  "GO:0016071" = "Transcription & Chromatin",
+  "GO:0006325" = "Transcription & Chromatin",
   "GO:0006281" = "DNA & Cell Cycle", "GO:0006260" = "DNA & Cell Cycle",
   "GO:0006310" = "DNA & Cell Cycle", "GO:0032200" = "DNA & Cell Cycle",
   "GO:0000278" = "DNA & Cell Cycle", "GO:0140014" = "DNA & Cell Cycle",
@@ -192,12 +200,17 @@ assign_go_slim_consolidated <- function(fg_genes, all_genes, min_cat_size = 2) {
     pull(consolidated)
   if (length(small_cats)) {
     best_consolidated <- best_consolidated |>
-      mutate(consolidated = ifelse(consolidated %in% small_cats, "Other", consolidated))
+      mutate(consolidated = ifelse(
+        consolidated %in% small_cats, "Other", consolidated
+      ))
   }
 
   best_consolidated |>
     transmute(gene = SYMBOL, slim, consolidated) |>
-    mutate(consolidated = factor(consolidated, levels = CONSOLIDATED_PATHWAY_ORDER))
+    mutate(consolidated = factor(
+      consolidated,
+      levels = CONSOLIDATED_PATHWAY_ORDER
+    ))
 }
 
 # Cosine-blended ribbon polygon between two vertical bands (ported from YvO)
@@ -285,8 +298,8 @@ run_quadrant_ora <- function(quad_tbl, pw, n_show = 5) {
 }
 
 # One quadrant's ORA as a half-bar block flanking its corner. Bars grow outward
-# from the scatter edge; the pathway name sits just above (top) or below (bottom)
-# each bar, anchored at the inner edge and read outward.
+# from the scatter edge; the pathway name sits just above (top) or below
+# (bottom) each bar, anchored at the inner edge and read outward.
 make_half_bars <- function(df, fill_color, side, ylim) {
   if (is.null(df) || nrow(df) == 0) {
     return(ggplot() +
@@ -352,17 +365,22 @@ make_half_bars <- function(df, fill_color, side, ylim) {
     coord_cartesian(clip = "off")
 }
 
-sig_key_A <- function() {
+sig_key_a <- function() {
   kd <- tibble(
     label = c("Divergent", "Sig Both", "Sig HR only", "Sig LR only"),
-    fill = unname(SIG_COLORS_CONC[c("Divergent", "Sig Both", "Sig HR only", "Sig LR only")]),
+    fill = unname(SIG_COLORS_CONC[
+      c("Divergent", "Sig Both", "Sig HR only", "Sig LR only")
+    ]),
     x = c(1, 2, 3.1, 4.2)
   )
   ggplot(kd, aes(x, 0)) +
     geom_point(aes(fill = fill),
       shape = 21, size = 3, color = "grey45", stroke = 0.4
     ) +
-    geom_text(aes(label = label), nudge_x = 0.08, hjust = 0, size = 2.7, color = "grey20") +
+    geom_text(
+      aes(label = label),
+      nudge_x = 0.08, hjust = 0, size = 2.7, color = "grey20"
+    ) +
     scale_fill_identity() +
     scale_x_continuous(limits = c(0.5, 5.6), expand = c(0, 0)) +
     scale_y_continuous(limits = c(-0.2, 0.2), expand = c(0, 0)) +
@@ -373,7 +391,10 @@ sig_key_A <- function() {
 # HR-vs-LR logFC scatter with flanking per-quadrant ORA half-bars; concordant
 # diagonal tinted red, discordant off-diagonal blue; interaction-sig = Divergent.
 panel_quadrant_ora <- function(quad_tbl, ora_df, cfg) {
-  rho <- cor(quad_tbl$lfc_hi, quad_tbl$lfc_lo, method = "spearman", use = "complete.obs")
+  rho <- cor(
+    quad_tbl$lfc_hi, quad_tbl$lfc_lo,
+    method = "spearman", use = "complete.obs"
+  )
   sig_sub <- quad_tbl |> filter(sig_class != "NS")
   r_pear <- if (nrow(sig_sub) >= 3) {
     cor(sig_sub$lfc_hi, sig_sub$lfc_lo, use = "complete.obs")
@@ -454,7 +475,7 @@ panel_quadrant_ora <- function(quad_tbl, ora_df, cfg) {
     patchwork::area(1, 1), patchwork::area(1, 2, 2, 2), patchwork::area(1, 3),
     patchwork::area(2, 1), patchwork::area(2, 3), patchwork::area(3, 1, 3, 3)
   )
-  plot <- nw + scatter + ne + sw + se + sig_key_A() +
+  plot <- nw + scatter + ne + sw + se + sig_key_a() +
     plot_layout(design = design, widths = c(70, 105, 70), heights = c(85, 85, 12))
   list(
     plot = plot, rho = rho, r_pear = r_pear,

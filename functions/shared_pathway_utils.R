@@ -1,7 +1,8 @@
 # Unified pathway enrichment utilities. fgsea/ORA over MSigDB Hallmark, KEGG,
 # Reactome, GO (BP/CC/MF) and a GO Slim axis. fgsea ring redundancy is collapsed
 # with the EnrichmentMap combined coefficient (Merico 2010; Reimand 2019) at
-# display; the cached fgsea results stay raw so downstream figures share one NES.
+# display; the cached fgsea results stay raw so downstream figures share one
+# NES.
 #
 # Exports:
 #   build_pathway_collection()  assemble the multi-database collection
@@ -16,7 +17,8 @@
 # with 3 measured proteins scores like a fully covered one.
 SET_FLOOR <- 15L
 
-deduplicate_enrichment_flat <- function(results, pathways, jaccard_cutoff = 0.5) {
+deduplicate_enrichment_flat <- function(results, pathways,
+                                        jaccard_cutoff = 0.5) {
   if (nrow(results) == 0) {
     return(results)
   }
@@ -140,7 +142,8 @@ dedup_em <- function(results, pathways, cutoff = 0.375, cross_db = TRUE) {
 
 # Audit trail: flag each significant pathway as the retained representative or
 # redundant, and for redundant ones name the kept pathway it overlaps most and
-# the coefficient to it. Reuses dedup_em so the flags cannot drift from the ring.
+# the coefficient to it. Reuses dedup_em so the flags cannot drift from the
+# ring.
 dedup_report <- function(results, pathways, cutoff = 0.375, cross_db = TRUE) {
   results$dedup_status <- "kept"
   results$merged_into <- NA_character_
@@ -199,7 +202,9 @@ build_pathway_collection <- function(species = "Homo sapiens",
     "BACTERIAL|PARASIT"
   )
   kegg <- kegg[!grepl(disease_pat, kegg$gs_name, ignore.case = TRUE), ]
-  reactome <- reactome[!grepl(disease_pat, reactome$gs_name, ignore.case = TRUE), ]
+  reactome <- reactome[
+    !grepl(disease_pat, reactome$gs_name, ignore.case = TRUE),
+  ]
 
   if (exclude_variants) {
     kegg <- kegg[!grepl("_VARIANT_", kegg$gs_name), ]
@@ -271,7 +276,9 @@ build_goslim_gene_sets <- function(species = "Homo sapiens",
       columns = c("SYMBOL", "ONTOLOGY")
     )
   })
-  go_bp_genes <- go_genes[!is.na(go_genes$ONTOLOGY) & go_genes$ONTOLOGY == "BP", ]
+  go_bp_genes <- go_genes[
+    !is.na(go_genes$ONTOLOGY) & go_genes$ONTOLOGY == "BP",
+  ]
   go_to_symbols <- split(go_bp_genes$SYMBOL, go_bp_genes$GO)
 
   # Build gene sets: each slim term + all its descendants
@@ -292,7 +299,8 @@ build_goslim_gene_sets <- function(species = "Homo sapiens",
     desc <- offspring[[go_id]]
     if (!is.null(desc)) all_terms <- c(all_terms, desc)
 
-    genes <- unique(unlist(go_to_symbols[intersect(all_terms, names(go_to_symbols))],
+    genes <- unique(unlist(
+      go_to_symbols[intersect(all_terms, names(go_to_symbols))],
       use.names = FALSE
     ))
     genes <- genes[!is.na(genes)]
@@ -346,14 +354,16 @@ run_fgsea <- function(ranks, pathways, nperm = 10000, min_size = 15,
 # The correlation-corrected counterpart to run_fgsea, over the same sets.
 #
 # fgsea permutes gene labels, so its null assumes proteins vary independently.
-# They do not: a pathway is defined by co-regulation, and a shared subject effect
+# They do not: a pathway is defined by co-regulation, and a shared subject
+# effect
 # correlates everything measured on the same biopsy. fry is a rotation test - it
 # rotates residuals under the fitted linear model, keeps the inter-gene
 # correlation intact, and carries the same duplicateCorrelation blocking that
 # produced the DEP results. Where the two disagree, fgsea is the one whose null
 # is wrong.
 #
-# min_detected counts members present in the matrix, matching fgsea's minSize and
+# min_detected counts members present in the matrix, matching fgsea's minSize
+# and
 # the floor F04 applies at row selection. Annotated size is not the same number
 # (see pathway_coverage): a 200-member set with 11 measured is not a readout of
 # that pathway under either test.

@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
-# WGCNA::modulePreservation on the within-subject-centred proteome, split by
-# arm after centring. The cohort modules were defined on that centred matrix
-# (03_Features/03_WGCNA/a_script/shared_wgcna.R:63), so preservation is tested on the same
-# object a raw-abundance test would not be.
+# WGCNA::modulePreservation on the within-subject-centred proteome, split by arm
+# after centring. The cohort modules were defined on that centred matrix
+# (03_Features/03_WGCNA/a_script/shared_wgcna.R:63), so preservation is tested
+# on the same object a raw-abundance test would not be.
 
 pacman::p_load(here, dplyr, tibble, openxlsx, WGCNA, ggplot2, patchwork)
 source(here("03_Features", "03_WGCNA", "a_script", "shared_wgcna.R"))

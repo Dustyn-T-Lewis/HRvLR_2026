@@ -1,8 +1,12 @@
-# F04 composite: the atlas and what the modules are, then the two null read-outs.
+# F04 composite: the atlas and what the modules are, then the two null
+# read-outs.
 # Assembly only, no statistics.
 pacman::p_load(ggplot2, patchwork)
 
-composite <- (F04_PANELS$atlas / F04_PANELS$pathways / (F04_PANELS$fry | F04_PANELS$phenotype)) +
+composite_top <- F04_PANELS$atlas / F04_PANELS$pathways
+composite_bottom <- F04_PANELS$fry | F04_PANELS$phenotype
+
+composite <- (composite_top / composite_bottom) +
   plot_layout(heights = c(1, 1.5, 1.2)) +
   plot_annotation(
     title = "F04 · Co-expression modules: coherent biology, no responder signal",

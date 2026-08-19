@@ -55,8 +55,8 @@ fit_lmm <- function(meta, col) {
 # The divergence estimate: each subject's T2-T1 change, then the HR-minus-LR
 # standardized difference (Hedges g, >0 = HR gains more) with its 95% CI. At two
 # timepoints this equals the Group x Timepoint mixed-model interaction (Twisk et
-# al. 2018, doi:10.1016/j.conctc.2018.03.008); the hlm supplement shows the mixed
-# model agrees. Fibre, muscle, and strength share the SD axis.
+# al. 2018, doi:10.1016/j.conctc.2018.03.008); the hlm supplement shows the
+# mixed model agrees. Fibre, muscle, and strength share the SD axis.
 change_advantage <- function(meta, col) {
   w <- prepost_long(meta, col) |>
     pivot_wider(names_from = Timepoint, values_from = value) |>
@@ -73,26 +73,38 @@ change_advantage <- function(meta, col) {
 change_advantage_table <- function(meta) {
   purrr::map_dfr(seq_len(nrow(MEASURES)), function(i) {
     change_advantage(meta, MEASURES$col[i]) |>
-      mutate(measure = MEASURES$label[i], domain = MEASURES$domain[i], .before = 1)
+      mutate(
+        measure = MEASURES$label[i], domain = MEASURES$domain[i],
+        .before = 1
+      )
   }) |>
     mutate(p_holm = p.adjust(p, method = "holm"))
 }
 
-# The six raw models, named by outcome, for the easystats report and diagnostics.
+# The six raw models, named by outcome, for the easystats report and
+# diagnostics.
 lmm_models <- function(meta) {
-  setNames(lapply(MEASURES$col, function(col) fit_lmm(meta, col)), MEASURES$label)
+  setNames(
+    lapply(MEASURES$col, function(col) fit_lmm(meta, col)), MEASURES$label
+  )
 }
 
-# Leave-one-subject influence on the divergence coefficient. A balanced 2x2 design
-# gives every observation identical leverage, so check_model's leverage view is
-# uninformative; this refit-based shift is the meaningful influence check.
+# Leave-one-subject influence on the divergence coefficient. A balanced 2x2
+# design gives every observation identical leverage, so check_model's
+# leverage view is uninformative; this refit-based shift is the meaningful
+# influence check.
 lmm_loso_influence <- function(meta) {
   bind_rows(lapply(seq_len(nrow(MEASURES)), function(i) {
     d <- prepost_long(meta, MEASURES$col[i])
     d$z <- as.numeric(scale(d$value))
-    beta <- function(x) lme4::fixef(fit_hlm(x, response = "z"))[["GroupLR:TimepointT2"]]
+    beta <- function(x) {
+      lme4::fixef(fit_hlm(x, response = "z"))[["GroupLR:TimepointT2"]]
+    }
     full <- beta(d)
-    shift <- vapply(unique(d$subject), function(s) full - beta(d[d$subject != s, ]), numeric(1))
+    shift <- vapply(
+      unique(d$subject), function(s) full - beta(d[d$subject != s, ]),
+      numeric(1)
+    )
     tibble(
       measure = MEASURES$label[i],
       max_abs_shift = max(abs(shift)),

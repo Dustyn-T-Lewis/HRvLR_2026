@@ -14,7 +14,10 @@ build_phenotype_table <- function(meta_path) {
 
   comp <- meta |>
     filter(Timepoint == "T2") |>
-    transmute(subject = Subject_ID, comp_hypertrophy = parse_number(COMP.HYPERTROPHY))
+    transmute(
+      subject = Subject_ID,
+      comp_hypertrophy = parse_number(COMP.HYPERTROPHY)
+    )
 
   t1 <- meta |>
     filter(Timepoint == "T1") |>

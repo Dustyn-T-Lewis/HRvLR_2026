@@ -119,7 +119,8 @@ res_w <- report(fit_w, "sample weights", colnames(parts$contrasts))
 # lmFit(method = 'robust') is not available here: limma refuses to combine it
 # with duplicateCorrelation, and the repeated-measures blocking is not optional
 # in a design with three biopsies per subject. Robust weighting would have to
-# replace the blocking, which trades a real dependency for a hypothetical outlier.
+# replace the blocking, which trades a real dependency for a hypothetical
+# outlier.
 
 
 # ANCOVA: trained state adjusted for the same protein's own baseline. limma
@@ -154,7 +155,10 @@ res_a <- tibble(
   bh05 = sum(ancova$bh < 0.05, na.rm = TRUE),
   bh10 = sum(ancova$bh < 0.10, na.rm = TRUE),
   min_bh = min(ancova$bh, na.rm = TRUE),
-  top = paste(utils::head(ancova$uniprot_id[order(ancova$p)], 3), collapse = ", ")
+  top = paste(
+    utils::head(ancova$uniprot_id[order(ancova$p)], 3),
+    collapse = ", "
+  )
 )
 
 all_res <- bind_rows(res_cont, res_w, res_a) |>
@@ -167,7 +171,13 @@ all_res |>
   as.data.frame() |>
   print(row.names = FALSE, digits = 3)
 
-cat(sprintf("\narrayWeights range: %.2f to %.2f (1 = average sample)\n", min(aw), max(aw)))
+cat(sprintf(
+  "\narrayWeights range: %.2f to %.2f (1 = average sample)\n",
+  min(aw), max(aw)
+))
 
-write.xlsx(list(summary = all_res, ancova = ancova), file.path(OUT, "alt_specs.xlsx"))
+write.xlsx(
+  list(summary = all_res, ancova = ancova),
+  file.path(OUT, "alt_specs.xlsx")
+)
 cat(sprintf("wrote %s\n", file.path(OUT, "alt_specs.xlsx")))

@@ -1,10 +1,15 @@
 # Panel C: does any module move in any contrast?
 #
-# limma::fry, with the WGCNA modules as the index and the stage 03 design, subject block and
-# duplicateCorrelation carried through. This replaces a panel that ran fgsea with the modules
-# as gene sets, ranked by moderated t from the matrix that defined them - circular, and it
-# returned padj = 7e-33 in a study whose minimum q elsewhere is 0.36.
-if (!exists("mods")) source(here::here("03_Features", "03_WGCNA", "a_script", "setup.R"))
+# limma::fry, with the WGCNA modules as the index and the stage 03 design,
+# subject block and duplicateCorrelation carried through. This replaces a panel
+# that ran fgsea with the modules as gene sets, ranked by moderated t from the
+# matrix that defined them - circular, and it returned padj = 7e-33 in a study
+# whose minimum q elsewhere is 0.36.
+if (!exists("mods")) {
+  source(here::here(
+    "03_Features", "03_WGCNA", "a_script", "setup.R"
+  ))
+}
 pacman::p_load(ggplot2, dplyr, forcats, scales)
 
 fry_res <- module_fry(
@@ -13,7 +18,9 @@ fry_res <- module_fry(
 
 fry_plot <- fry_res |>
   mutate(
-    family = if_else(contrast %in% RESPONDER_CONTRASTS, "Responder", "Within-group"),
+    family = if_else(
+      contrast %in% RESPONDER_CONTRASTS, "Responder", "Within-group"
+    ),
     contrast = factor(contrast, levels = names(CTR_SHORT)),
     module = fct_reorder(module, fdr, .fun = min, .desc = TRUE),
     sig = fdr < 0.05

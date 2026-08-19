@@ -1,8 +1,12 @@
-# Panel B: what the modules are. GO:BP over-representation of each module against the
-# measured proteome as the universe. This is the one panel in F04 that carries a positive
-# result, and it is a descriptive one: the modules are coherent biology, whatever they do or
-# do not predict.
-if (!exists("mods")) source(here::here("03_Features", "03_WGCNA", "a_script", "setup.R"))
+# Panel B: what the modules are. GO:BP over-representation of each module
+# against the measured proteome as the universe. This is the one panel in F04
+# that carries a positive result, and it is a descriptive one: the modules are
+# coherent biology, whatever they do or do not predict.
+if (!exists("mods")) {
+  source(here::here(
+    "03_Features", "03_WGCNA", "a_script", "setup.R"
+  ))
+}
 pacman::p_load(ggplot2, dplyr, forcats, stringr, shadowtext)
 
 ora <- module_ora(mods, top_n = 3)
@@ -18,14 +22,18 @@ ora_plot <- ora |>
 n_modules <- length(setdiff(unique(mods), "grey"))
 n_with_term <- dplyr::n_distinct(ora_plot$module)
 
-pB <- ggplot(ora_plot, aes(lp, reorder_within(term, lp, module), fill = module)) +
+pB <- ggplot(
+  ora_plot, aes(lp, reorder_within(term, lp, module), fill = module)
+) +
   geom_col(width = 0.75, color = "black", linewidth = 0.25) +
   shadowtext::geom_shadowtext(
     aes(label = term),
     x = 0.05, hjust = 0,
     size = 2.2, fontface = "bold", colour = "white", bg.colour = "grey20"
   ) +
-  scale_fill_manual(values = setNames(levels(ora_plot$module), levels(ora_plot$module))) +
+  scale_fill_manual(
+    values = setNames(levels(ora_plot$module), levels(ora_plot$module))
+  ) +
   scale_y_reordered() +
   facet_wrap(~module, scales = "free_y", ncol = 3) +
   labs(

@@ -2,9 +2,10 @@
 # The nine contrasts refitted through proteoDA with blood in the design.
 #
 # 05_blood_adjusted.R adjusts downstream, inside fit_feature_contrasts(). This
-# one puts the covariate in the proteoDA model itself, so the moderated variance,
-# the duplicateCorrelation consensus and the BH denominators are all estimated
-# against the adjusted residual rather than borrowed from the primary fit.
+# one puts the covariate in the proteoDA model itself, so the moderated
+# variance, the duplicateCorrelation consensus and the BH denominators are all
+# estimated against the adjusted residual rather than borrowed from the primary
+# fit.
 #
 # One covariate, not a panel of blood proteins. At 45 samples the design already
 # spends six degrees of freedom on the group means; a second blood term buys

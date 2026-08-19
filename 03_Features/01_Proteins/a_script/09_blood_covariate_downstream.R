@@ -77,7 +77,10 @@ loso_acc <- function(x, y, subj) {
     if (length(unique(y[tr])) < 2) {
       return(NA_real_)
     }
-    fit <- mixOmics::splsda(x[tr, , drop = FALSE], y[tr], ncomp = 2, keepX = rep(KEEP, 2))
+    fit <- mixOmics::splsda(
+      x[tr, , drop = FALSE], y[tr],
+      ncomp = 2, keepX = rep(KEEP, 2)
+    )
     mean(predict(fit, x[!tr, , drop = FALSE])$class$max.dist[, 2] == y[!tr])
   }, numeric(1))
   mean(ok, na.rm = TRUE)
@@ -92,7 +95,11 @@ permute_arm <- function() {
 screen <- function(x, label) {
   y <- factor(arm)
   obs <- loso_acc(t(x), y, subject)
-  null <- vapply(seq_len(B), function(i) loso_acc(t(x), factor(permute_arm()), subject), numeric(1))
+  null <- vapply(
+    seq_len(B),
+    function(i) loso_acc(t(x), factor(permute_arm()), subject),
+    numeric(1)
+  )
   baseline <- max(table(y)) / length(y)
   cat(sprintf(
     "%-22s LOSO %.3f | null median %.3f [%.3f, %.3f] | baseline %.3f | p = %.3f\n",

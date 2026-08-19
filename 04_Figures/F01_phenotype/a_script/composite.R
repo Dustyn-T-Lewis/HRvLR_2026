@@ -1,5 +1,6 @@
 # F01 composite: the matched-work control and the responder continuum stack on
-# the left, the divergence forest carries the right. Assembly only, no statistics.
+# the left, the divergence forest carries the right. Assembly only, no
+# statistics.
 pacman::p_load(patchwork, ggplot2)
 
 left_col <- (F01_PANELS$volume / F01_PANELS$continuum) +

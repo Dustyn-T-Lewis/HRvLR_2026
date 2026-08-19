@@ -1,5 +1,6 @@
 # F04 setup: read the imputed matrix, the stage-00 phenotype table, and the limma fit from
-# stage 03, then build the modules. Panels and 01_run_modules.R source this first. Writes nothing.
+# stage 03, then build the modules. Panels and 01_run_modules.R source this
+# first. Writes nothing.
 pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr)
 
 source(here("functions", "shared_style.R"))
@@ -29,7 +30,10 @@ meta <- imputed$metadata |>
     timepoint = factor(Timepoint, levels = c("T1", "T2", "T3"))
   )
 
-pheno <- read_csv(here("00_input", "c_data", "phenotype.csv"), show_col_types = FALSE)
+pheno <- read_csv(
+  here("00_input", "c_data", "phenotype.csv"),
+  show_col_types = FALSE
+)
 ADAPTATION_TRAITS <- setdiff(names(pheno), c("subject", "group_arm"))
 
 TRAIT_LABELS <- c(
@@ -39,19 +43,24 @@ TRAIT_LABELS <- c(
 )
 stopifnot(setequal(names(TRAIT_LABELS), ADAPTATION_TRAITS))
 
-# The DEP fit, read not refitted: stage 03 already estimated the design, the contrasts, and
-# the within-subject correlation. fry reuses all three rather than re-deriving them.
-dep_fit <- readRDS(here("03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"))
+# The DEP fit, read not refitted: stage 03 already estimated the design, the
+# contrasts, and the within-subject correlation. fry reuses all three rather
+# than re-deriving them.
+dep_fit <- readRDS(here(
+  "03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"
+))
 DESIGN <- dep_fit$design$design_matrix
 CONTRAST_MATRIX <- dep_fit$design$contrast_matrix
 CORRELATION <- dep_fit$eBayes_fit$correlation
 
-# The block is the random factor stage 03 actually fitted (subject), named on its own metadata.
+# The block is the random factor stage 03 actually fitted (subject), named on
+# its own metadata.
 BLOCK <- dep_fit$metadata[[dep_fit$design$random_factor]]
 
-# fry takes the design rows positionally, so the abundance columns must be in the design's
-# order. They happen to agree today; assert it rather than trust it, because a silent
-# mismatch would pair every sample with another sample's design row.
+# fry takes the design rows positionally, so the abundance columns must be in
+# the design's order. They happen to agree today; assert it rather than trust
+# it, because a silent mismatch would pair every sample with another sample's
+# design row.
 DEP_SAMPLES <- rownames(DESIGN)
 stopifnot(
   setequal(DEP_SAMPLES, colnames(abund)),
