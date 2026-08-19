@@ -94,7 +94,10 @@ draw_pi_panel <- function(p) {
       col = list(`GO Slim` = slim_cols),
       annotation_name_gp = gpar(fontsize = 6),
       simple_anno_size = unit(2.6, "mm"),
-      show_legend = FALSE
+      annotation_legend_param = list(
+        title_gp = gpar(fontsize = 6), labels_gp = gpar(fontsize = 5.2),
+        grid_width = unit(2.5, "mm"), grid_height = unit(2.5, "mm")
+      )
     ),
     heatmap_legend_param = list(
       title_gp = gpar(fontsize = 6), labels_gp = gpar(fontsize = 5.6),
@@ -112,6 +115,7 @@ row_heights <- vapply(seq(1, length(pi_panels), by = 2), function(i) {
 p_pi <- wrap_plots(lapply(pi_panels, draw_pi_panel), ncol = 2) +
   plot_layout(heights = row_heights) +
   plot_annotation(
+    title = "pi-selected proteins, real arm labels beside shuffled ones",
     caption = paste(
       "Left selects proteins by pi < 0.05 on the real arm contrast; right runs the",
       "identical selection on labels shuffled across subjects.\nRows and columns are",
@@ -119,6 +123,7 @@ p_pi <- wrap_plots(lapply(pi_panels, draw_pi_panel), ncol = 2) +
       "selects more proteins than the arm does."
     ),
     theme = theme(
+      plot.title = element_text(face = "bold", size = 9),
       plot.caption = element_text(hjust = 0, size = 6, colour = "grey35")
     )
   )

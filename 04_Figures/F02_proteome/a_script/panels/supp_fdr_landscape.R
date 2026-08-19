@@ -27,6 +27,12 @@ keep <- stats::complete.cases(lfc)
 lfc <- lfc[keep, ]
 min_q <- apply(qval[keep, ], 1, min, na.rm = TRUE)
 
+# Nothing clears BH anywhere, so the q strip is two-level. A continuous ramp put
+# mid-range q values in salmon and read as near-misses that do not exist.
+q_pass <- ifelse(min_q < 0.05, "q < 0.05", "q >= 0.05")
+
+colnames(lfc) <- sub("_", " ", sub("_HRvLR", "", sub("_Interaction", " int", colnames(lfc))))
+
 lim <- stats::quantile(abs(lfc), 0.99)
 ht <- Heatmap(
   lfc,
@@ -38,14 +44,17 @@ ht <- Heatmap(
   ),
   cluster_rows = TRUE, cluster_columns = FALSE,
   show_row_names = FALSE, show_row_dend = FALSE,
-  column_names_gp = gpar(fontsize = 6), column_title_gp = gpar(fontsize = 7, fontface = "bold"),
+  column_names_gp = gpar(fontsize = 6.5), column_names_rot = 45,
+  column_title_gp = gpar(fontsize = 7, fontface = "bold"), column_title_side = "top",
+  row_title = sprintf("%s proteins, clustered on their nine logFC profiles", format(nrow(lfc), big.mark = ",")),
+  row_title_gp = gpar(fontsize = 6.5, col = "grey35"),
   # cairo is absent on this machine, so the default raster device cannot open its
   # temp png; ragg is present and writes the same thing.
   use_raster = TRUE, raster_quality = 3, raster_device = "agg_png",
   width = unit(length(FDR_CONTRASTS) * 7, "mm"), height = unit(105, "mm"),
   right_annotation = rowAnnotation(
-    `min q` = min_q,
-    col = list(`min q` = colorRamp2(c(0, 0.05, 1), c("#B2182B", "#F4A582", "grey92"))),
+    `BH` = q_pass,
+    col = list(BH = c(`q < 0.05` = "#B2182B", `q >= 0.05` = "grey88")),
     annotation_name_gp = gpar(fontsize = 6),
     simple_anno_size = unit(3.5, "mm"),
     annotation_legend_param = list(
@@ -63,17 +72,19 @@ p_fdr <- wrap_elements(grid.grabExpr(draw(ht, merge_legend = TRUE))) +
   plot_annotation(
     caption = sprintf(
       paste(
-        "All %s proteins, no selection, rows clustered on the nine logFC profiles.",
-        "Smallest BH q anywhere is %.3f, in %s;\nnothing crosses 0.05, so the q strip",
-        "stays grey. Colour is capped at the 99th percentile of |logFC|."
+        "Every protein, every contrast, nothing selected on the outcome, so there is",
+        "no selection to control for.\nSmallest BH q anywhere is %.3f, in %s. The BH",
+        "strip has two levels and only the grey one is ever used.",
+        "Colour capped at the 99th percentile of |logFC|. n = %s."
       ),
-      format(nrow(lfc), big.mark = ","), min(min_q),
-      names(FDR_CONTRASTS)[which.min(apply(qval[keep, ], 2, min, na.rm = TRUE))]
+      min(min_q),
+      names(FDR_CONTRASTS)[which.min(apply(qval[keep, ], 2, min, na.rm = TRUE))],
+      format(nrow(lfc), big.mark = ",")
     ),
     theme = theme(plot.caption = element_text(hjust = 0, size = 6, colour = "grey35"))
   )
 
-save_png(p_fdr, file.path(RPT_DIR, "supp", "supp_fdr_landscape"), 150, 135)
+save_png(p_fdr, file.path(RPT_DIR, "supp", "supp_fdr_landscape"), 160, 145)
 F02_AUDIT[["supp_fdr_landscape"]] <- tibble::tibble(
   gene = rownames(lfc), min_q = min_q
 ) |>
