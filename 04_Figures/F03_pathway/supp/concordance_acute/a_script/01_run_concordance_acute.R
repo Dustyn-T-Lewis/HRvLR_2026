@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
-# Acute concordance: HR vs LR over T2 to T3. Same builders as the training arm on the
-# acute contrast pair. Rendered by the shared concordance driver.
+# Acute concordance: HR vs LR over T2 to T3. Same builders as the training arm
+# on the acute contrast pair. Rendered by the shared concordance driver.
 pacman::p_load(here)
 source(here("04_Figures", "F03_pathway", "a_script", "f00_concordance.R"))
 

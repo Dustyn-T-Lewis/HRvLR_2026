@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
-# F02 build: render every panel (each owns its supplement), stitch the composite,
-# write one workbook. The only script in this unit that writes.
+# F02 build: render every panel (each owns its supplement), stitch the
+# composite, write one workbook. The only script in this unit that writes.
 pacman::p_load(here, openxlsx)
 
 F02_AUDIT <- list()
@@ -16,7 +16,8 @@ panel_dir <- here("04_Figures", "F02_proteome", "a_script", "panels")
 for (p in c(
   "panel_a_pca", "panel_b_trajectory", "panel_c_divergence",
   "panel_d_dep_counts", "panel_e_effectsize", "panel_f_pathways",
-  "panel_g_splsda", "panel_h_clustering", "supp_pi_heatmap", "supp_fdr_landscape"
+  "panel_g_splsda", "panel_h_clustering", "supp_pi_heatmap",
+  "supp_fdr_landscape"
 )) {
   source(file.path(panel_dir, paste0(p, ".R")))
 }
@@ -25,7 +26,9 @@ for (p in c(
 sheets <- sort(names(F02_AUDIT))
 overview <- data.frame(
   sheet = sheets,
-  description = gsub("_", " ", sub("^panel_([A-Za-z])_", "Panel \\U\\1: ", sheets, perl = TRUE)),
+  description = gsub(
+    "_", " ", sub("^panel_([A-Za-z])_", "Panel \\U\\1: ", sheets, perl = TRUE)
+  ),
   stringsAsFactors = FALSE
 )
 
@@ -36,7 +39,10 @@ for (s in sheets) {
   addWorksheet(wb, substr(s, 1, 31))
   writeData(wb, substr(s, 1, 31), F02_AUDIT[[s]])
 }
-saveWorkbook(wb, file.path(DAT_DIR, "F02_proteome_source_data.xlsx"), overwrite = TRUE)
+saveWorkbook(
+  wb, file.path(DAT_DIR, "F02_proteome_source_data.xlsx"),
+  overwrite = TRUE
+)
 
 source(here("04_Figures", "F02_proteome", "a_script", "composite.R"))
 

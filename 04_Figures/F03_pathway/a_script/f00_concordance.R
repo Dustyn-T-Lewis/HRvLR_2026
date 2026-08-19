@@ -202,7 +202,10 @@ render_concordance_figure <- function(cfg) {
   overview <- data.frame(
     sheet = names(sheets),
     description = c(
-      sprintf("Panel A: per-protein HR/LR %s logFC, quadrant, sig class", tolower(cfg$labels$phase)),
+      sprintf(
+        "Panel A: per-protein HR/LR %s logFC, quadrant, sig class",
+        tolower(cfg$labels$phase)
+      ),
       "Panel A: over-representation per concordance quadrant",
       "Panel B: pi-sig proteins, quadrant, GO-Slim category, HR/LR logFC",
       "Panel C: fry rotation test of HR DEP sets along the LR contrast",
@@ -220,7 +223,10 @@ render_concordance_figure <- function(cfg) {
     addWorksheet(wb, nm)
     writeData(wb, nm, as.data.frame(sheets[[nm]]))
   }
-  saveWorkbook(wb, file.path(dat, paste0(cfg$fig_id, "_source_data.xlsx")), overwrite = TRUE)
+  saveWorkbook(
+    wb, file.path(dat, paste0(cfg$fig_id, "_source_data.xlsx")),
+    overwrite = TRUE
+  )
 
   message(sprintf("%s complete: %s vs %s", cfg$fig_id, cfg$c_hi, cfg$c_lo))
 }

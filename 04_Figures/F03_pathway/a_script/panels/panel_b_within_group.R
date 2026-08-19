@@ -1,10 +1,15 @@
-# Lead figure: the four within-group responses - what training and the acute bout do to
-# the proteome inside each arm. Arms in columns (HR left, LR right), phases in rows, with a
-# faint arm-coloured wash so the two arms read as columns. Seeing HR beside LR is the direct
-# view of the responder question; the formal between-responder test is the second figure.
-if (!exists("fg")) source(here::here("04_Figures", "F03_pathway", "a_script", "setup.R"))
+# Lead figure: the four within-group responses - what training and the acute
+# bout do to the proteome inside each arm. Arms in columns (HR left, LR right),
+# phases in rows, with a faint arm-coloured wash so the two arms read as
+# columns. Seeing HR beside LR is the direct view of the responder question; the
+# formal between-responder test is the second figure.
+if (!exists("fg")) {
+  source(here::here("04_Figures", "F03_pathway", "a_script", "setup.R"))
+}
 
-WITHIN_GROUP_CONTRASTS <- c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR")
+WITHIN_GROUP_CONTRASTS <- c(
+  "Training_HR", "Training_LR", "Acute_HR", "Acute_LR"
+)
 
 panel_within_group <- function(fg, dep, pw) {
   resp <- RING_PALETTES$responses

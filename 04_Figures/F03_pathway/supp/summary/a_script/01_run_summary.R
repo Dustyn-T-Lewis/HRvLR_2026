@@ -1,8 +1,9 @@
 #!/usr/bin/env Rscript
-# F03_pathway/supp summary: how much the proteome moves (magnitude) against how much HR and
-# LR move together (concordance), for training and the acute bout side by side. The
-# five-panel composites carry the per-condition detail; this is the one read-out that
-# puts magnitude and concordance in the same frame before either figure is finalised.
+# F03_pathway/supp summary: how much the proteome moves (magnitude) against how
+# much HR and LR move together (concordance), for training and the acute bout
+# side by side. The five-panel composites carry the per-condition detail; this
+# is the one read-out that puts magnitude and concordance in the same frame
+# before either figure is finalised.
 pacman::p_load(here, dplyr, tidyr, readr, ggplot2, patchwork)
 
 source(here("functions", "shared_style.R"))
@@ -34,7 +35,9 @@ per_protein <- conditions |>
   filter(!is.na(lfc_HR), !is.na(lfc_LR)) |>
   mutate(phase = factor(phase, levels = c("Training", "Acute")))
 
-stopifnot(nrow(per_protein) > 0, all(c("Training", "Acute") %in% per_protein$phase))
+stopifnot(
+  nrow(per_protein) > 0, all(c("Training", "Acute") %in% per_protein$phase)
+)
 
 concordance <- per_protein |>
   group_by(phase) |>
@@ -62,8 +65,9 @@ magnitude <- per_protein |>
     .groups = "drop"
   )
 
-# Panel A: median absolute logFC per group, training vs acute. The proteome moves a
-# little more in HR than LR in both conditions, and a little more in the acute bout.
+# Panel A: median absolute logFC per group, training vs acute. The proteome
+# moves a little more in HR than LR in both conditions, and a little more in the
+# acute bout.
 pa <- ggplot(magnitude, aes(phase, med_abs, fill = group)) +
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
   geom_errorbar(
@@ -78,11 +82,15 @@ pa <- ggplot(magnitude, aes(phase, med_abs, fill = group)) +
   ) +
   FIG_THEME
 
-# Panel B: HR-LR concordance per condition with Fisher-z 95% CI. Both weak; the CIs
-# sit well below any moderate-agreement line, so the responders adapt largely apart.
+# Panel B: HR-LR concordance per condition with Fisher-z 95% CI. Both weak; the
+# CIs sit well below any moderate-agreement line, so the responders adapt
+# largely apart.
 pb <- ggplot(concordance, aes(phase, rho)) +
   geom_hline(yintercept = 0, colour = "grey80") +
-  geom_pointrange(aes(ymin = rho_lo, ymax = rho_hi), colour = GROUP_COLORS[["HR"]]) +
+  geom_pointrange(
+    aes(ymin = rho_lo, ymax = rho_hi),
+    colour = GROUP_COLORS[["HR"]]
+  ) +
   geom_text(
     aes(label = sprintf("\u03c1 = %.2f", rho)),
     vjust = -1.2, size = FIG_GEOM_TEXT, fontface = "bold"
@@ -101,7 +109,9 @@ fig <- pa + pb +
     subtitle = "Training (T1\u2192T2) and acute (T2\u2192T3), HR vs LR, non-imputed limma results",
     theme = theme(
       plot.title = element_text(face = "bold", size = FIG_TITLE_SIZE),
-      plot.subtitle = element_text(face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30")
+      plot.subtitle = element_text(
+        face = "italic", size = FIG_SUBTITLE_SIZE, colour = "grey30"
+      )
     )
   )
 

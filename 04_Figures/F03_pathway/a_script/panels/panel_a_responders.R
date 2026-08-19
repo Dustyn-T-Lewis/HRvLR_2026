@@ -1,12 +1,16 @@
 # Panel A: the five contrasts that actually test the study's question - does the
-# proteome of a high responder differ from a low responder? Three between-responder
-# rings (baseline, trained, acute; green/purple) beside the two interaction contrasts
-# (orange/purple). The interactions are the lowest-powered cells (8 vs 8) and are read
-# as hypothesis-generating, not as findings.
+# proteome of a high responder differ from a low responder? Three
+# between-responder rings (baseline, trained, acute; green/purple) beside the
+# two interaction contrasts (orange/purple). The interactions are the
+# lowest-powered cells (8 vs 8) and are read as hypothesis-generating, not as
+# findings.
 #
-# This panel owns its supplement: the un-deduplicated top-30 audit for its own five
-# contrasts, so the rings' parsimony can be checked against the full ranked enrichment.
-if (!exists("fg")) source(here::here("04_Figures", "F03_pathway", "a_script", "setup.R"))
+# This panel owns its supplement: the un-deduplicated top-30 audit for its own
+# five contrasts, so the rings' parsimony can be checked against the full ranked
+# enrichment.
+if (!exists("fg")) {
+  source(here::here("04_Figures", "F03_pathway", "a_script", "setup.R"))
+}
 
 panel_responders <- function(fg, dep, pw) {
   diff <- RING_PALETTES$differential

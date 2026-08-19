@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
-# F03 build: the five responder rings as the main figure, the four within-group rings as
-# the positive-control supplement, the per-contrast top-30 audits, and one workbook.
+# F03 build: the five responder rings as the main figure, the four within-group
+# rings as the positive-control supplement, the per-contrast top-30 audits, and
+# one workbook.
 # The only script in this unit that writes.
 pacman::p_load(here, patchwork, ggplot2, openxlsx, dplyr)
 
@@ -74,7 +75,9 @@ overview <- data.frame(
 )
 
 wb <- createWorkbook()
-for (s in c("overview", "fgsea_all", "fgsea_significant", "ring_pathways", "top30_updown")) {
+for (s in c(
+  "overview", "fgsea_all", "fgsea_significant", "ring_pathways", "top30_updown"
+)) {
   addWorksheet(wb, s)
 }
 writeData(wb, "overview", overview)
@@ -82,6 +85,9 @@ writeData(wb, "fgsea_all", fg)
 writeData(wb, "fgsea_significant", fg_sig)
 writeData(wb, "ring_pathways", ring_pathways)
 writeData(wb, "top30_updown", top30_updown)
-saveWorkbook(wb, file.path(DAT_DIR, "F03_pathway_source_data.xlsx"), overwrite = TRUE)
+saveWorkbook(
+  wb, file.path(DAT_DIR, "F03_pathway_source_data.xlsx"),
+  overwrite = TRUE
+)
 
 cat("F03 rebuilt: within-group lead (4 rings), between-responder second figure (5 rings), top-30 audits, workbook\n")

@@ -1,7 +1,8 @@
-# F03 setup: read the DEP fit from upstream c_data and compute the fgsea enrichment
-# for all 9 contrasts (moderated-t ranks vs Hallmark, KEGG, Reactome, GO:BP/CC/MF, GO
-# Slim), seeded. The cache is RAW - no redundancy collapse - because the EnrichmentMap
-# dedup is a display decision and belongs at ring-draw time, not in the cache.
+# F03 setup: read the DEP fit from upstream c_data and compute the fgsea
+# enrichment for all 9 contrasts (moderated-t ranks vs Hallmark, KEGG, Reactome,
+# GO:BP/CC/MF, GO Slim), seeded. The cache is RAW - no redundancy collapse -
+# because the EnrichmentMap dedup is a display decision and belongs at ring-draw
+# time, not in the cache.
 # Provides: dep, fg, pw, CONTRASTS, RPT_DIR, DAT_DIR. Writes nothing.
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr, openxlsx)
@@ -30,7 +31,9 @@ fg <- lapply(CONTRASTS, function(ct) {
   ranks <- sort(setNames(d$t, d$gene), decreasing = TRUE)
   res <- run_fgsea(ranks, pw)
   res$contrast <- ct
-  res$leadingEdge <- vapply(res$leadingEdge, function(x) paste(x, collapse = ";"), character(1))
+  res$leadingEdge <- vapply(
+    res$leadingEdge, function(x) paste(x, collapse = ";"), character(1)
+  )
   res
 }) |>
   bind_rows()

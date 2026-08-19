@@ -1,6 +1,6 @@
 # F03 composites: the four within-group responses as the lead figure, the five
-# between-responder contrasts as the second. Assembly only - the ring grids are built by
-# the panel scripts. No statistics.
+# between-responder contrasts as the second. Assembly only - the ring grids are
+# built by the panel scripts. No statistics.
 pacman::p_load(ggplot2, patchwork)
 
 annotate_composite <- function(grid, title, subtitle) {
