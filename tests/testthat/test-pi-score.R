@@ -31,8 +31,8 @@ test_that("a zero fold change is never selected", {
 })
 
 test_that("untested proteins land on 0, not NA", {
-  # limma returns NA for the 34 proteins with an inestimable cell mean. The final
-  # case_when branch maps them to 0L; sig_pi must never be NA.
+  # limma returns NA for the 34 proteins with an inestimable cell mean. The
+  # final case_when branch maps them to 0L; sig_pi must never be NA.
   res <- tibble(P.Value = c(NA_real_, 0.001), logFC = c(NA_real_, 2))
   out <- add_pi_score(res)
   expect_true(is.na(out$pi_score[1]))
@@ -43,9 +43,11 @@ test_that("untested proteins land on 0, not NA", {
 test_that("add_pi_score reproduces the shipped DEP table exactly", {
   # Equivalence check against a table written by the inline code this function
   # replaced: recomputing pi from its own P.Value and logFC must return the
-  # pi_score and sig_pi it already carries, or the refactor moved a published number.
+  # pi_score and sig_pi it already carries, or the refactor moved a published
+  # number.
   csv <- here::here(
-    "03_Features", "01_Proteins", "imputed", "c_data", "missforest", "combined_results_pi.csv"
+    "03_Features", "01_Proteins", "imputed", "c_data", "missforest",
+    "combined_results_pi.csv"
   )
   skip_if_not(file.exists(csv), "run 03_Features/01_Proteins/imputed first")
   shipped <- read_csv(csv, show_col_types = FALSE)

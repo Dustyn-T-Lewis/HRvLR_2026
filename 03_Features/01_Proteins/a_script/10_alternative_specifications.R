@@ -9,10 +9,10 @@
 #   continuous  replaces the binary label with the composite hypertrophy score.
 #               HR and LR are a split of that score, so the split throws away
 #               the spacing between subjects; regressing on the score keeps it.
-#   ancova      tests the trained state adjusted for the same protein's baseline.
-#               For pre-post designs this is usually better powered than either a
-#               change score or a post-only comparison, and it is the one the
-#               cell-means design cannot express.
+#   ancova      tests the trained state adjusted for the same protein's
+#               baseline. For pre-post designs this is usually better powered
+#               than either a change score or a post-only comparison, and it is
+#               the one the cell-means design cannot express.
 #   weights     limma::arrayWeights downweights samples whose residuals run
 #               large. It appears to find hits the primary misses and does not
 #               survive its own null: 10 BH hits observed, a median of 7 under
@@ -37,40 +37,70 @@ dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 mat <- protein_matrix()
 meta <- feature_metadata()
-meta$time <- factor(sub("^.*_", "", as.character(meta$group)), levels = c("T1", "T2", "T3"))
-meta$arm <- factor(sub("_.*$", "", as.character(meta$group)), levels = c("LR", "HR"))
+meta$time <- factor(
+  sub("^.*_", "", as.character(meta$group)),
+  levels = c("T1", "T2", "T3")
+)
+meta$arm <- factor(
+  sub("_.*$", "", as.character(meta$group)),
+  levels = c("LR", "HR")
+)
 
-pheno <- read_csv(here("00_input", "c_data", "phenotype.csv"), show_col_types = FALSE) |>
+pheno <- read_csv(
+  here("00_input", "c_data", "phenotype.csv"),
+  show_col_types = FALSE
+) |>
   mutate(subject = sub("^(HR|LR)_", "", .data$subject))
-meta$comp <- pheno$comp_hypertrophy[match(sub("^(HR|LR)_", "", meta$subject), pheno$subject)]
+meta$comp <- pheno$comp_hypertrophy[
+  match(sub("^(HR|LR)_", "", meta$subject), pheno$subject)
+]
 stopifnot(!anyNA(meta$comp))
 
 report <- function(tt, label, coefs) {
   map_dfr(coefs, function(cf) {
-    r <- limma::topTable(tt, coef = cf, number = Inf, adjust.method = "BH", sort.by = "none")
+    r <- limma::topTable(
+      tt,
+      coef = cf, number = Inf, adjust.method = "BH", sort.by = "none"
+    )
     tibble(
       spec = label, term = cf, n = nrow(r),
       nominal = sum(r$P.Value < 0.05, na.rm = TRUE),
       bh05 = sum(r$adj.P.Val < 0.05, na.rm = TRUE),
       bh10 = sum(r$adj.P.Val < 0.10, na.rm = TRUE),
       min_bh = min(r$adj.P.Val, na.rm = TRUE),
-      top = paste(utils::head(rownames(r)[order(r$P.Value)], 3), collapse = ", ")
+      top = paste(
+        utils::head(rownames(r)[order(r$P.Value)], 3),
+        collapse = ", "
+      )
     )
   })
 }
 
 gene_of <- function(ids) {
   ann <- as.data.frame(
-    readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))$annotation
+    readRDS(
+      here("02_Normalization", "c_data", "DAList_normalized.rds")
+    )$annotation
   )
-  paste(ann$gene[match(strsplit(ids, ", ")[[1]], ann$uniprot_id)], collapse = ", ")
+  paste(
+    ann$gene[match(strsplit(ids, ", ")[[1]], ann$uniprot_id)],
+    collapse = ", "
+  )
 }
 
 # Continuous: one slope on the composite score per timepoint.
 des_cont <- stats::model.matrix(~ 0 + time + time:comp, meta)
 colnames(des_cont) <- make.names(colnames(des_cont))
-corr_c <- limma::duplicateCorrelation(mat, des_cont, block = meta$subject)$consensus
-fit_c <- limma::eBayes(limma::lmFit(mat, des_cont, block = meta$subject, correlation = corr_c))
+corr_c <- limma::duplicateCorrelation(
+  mat, des_cont,
+  block = meta$subject
+)$consensus
+fit_c <- limma::eBayes(
+  limma::lmFit(
+    mat, des_cont,
+    block = meta$subject, correlation = corr_c
+  )
+)
 slope_terms <- grep("comp", colnames(des_cont), value = TRUE)
 res_cont <- report(fit_c, "continuous score", slope_terms)
 

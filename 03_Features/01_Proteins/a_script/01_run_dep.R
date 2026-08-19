@@ -7,19 +7,23 @@
 #
 # References:
 #   Ritchie et al. 2015, Nucleic Acids Res 43(7):e47 — limma
-#   Smyth, Michaud & Scott 2005, Bioinformatics 21(9):2067 — duplicateCorrelation
-#   Smyth 2004, Stat Appl Genet Mol Biol 3:1 — empirical Bayes moderation (the eBayes engine)
+#   Smyth, Michaud & Scott 2005, Bioinformatics 21(9):2067 —
+#   duplicateCorrelation
+#   Smyth 2004, Stat Appl Genet Mol Biol 3:1 — empirical Bayes moderation (the
+#   eBayes engine)
 #   Phipson et al. 2016, Ann Appl Stat 10(2):946 — robust empirical Bayes
 #   Xiao et al. 2014, Bioinformatics 30(6):801-807 — Pi-score
-#     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3. A transformed raw p,
-#     bounded in [0,1], controlling no error rate. See 04_pi_permutation.R.
+#     Pi = p^|logFC|; threshold Pi < 0.05 <-> original pi > 1.3. A transformed
+#     raw p, bounded in [0,1], controlling no error rate. See
+#     04_pi_permutation.R.
 #
-# On running limma without imputing: Karpievitch et al. 2012, BMC Bioinform 13(S16):S5 is the
-# source of the known COST of this choice, not a licence for it — it warns that complete-case
-# analysis yields downward-biased standard errors, i.e. it is anti-conservative. We accept that
-# and report it, because a method biased toward false positives returning zero BH hits in every
-# HR-vs-LR contrast makes the null stronger, not weaker. The imputed arms in 03_Features/01_Proteins/imputed
-# are the robustness check.
+# On running limma without imputing: Karpievitch et al. 2012, BMC Bioinform
+# 13(S16):S5 is the source of the known COST of this choice, not a licence for
+# it — it warns that complete-case analysis yields downward-biased standard
+# errors, i.e. it is anti-conservative. We accept that and report it, because a
+# method biased toward false positives returning zero BH hits in every HR-vs-LR
+# contrast makes the null stronger, not weaker. The imputed arms in
+# 03_Features/01_Proteins/imputed are the robustness check.
 
 pacman::p_load(dplyr, tibble, readr, purrr, proteoDA, here)
 source(here("03_Features", "contrasts.R"))
@@ -39,7 +43,9 @@ cfg <- list(
 dir.create(cfg$data_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(cfg$proteoDA_dir, recursive = TRUE, showWarnings = FALSE)
 
-required_meta_cols <- c("Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time")
+required_meta_cols <- c(
+  "Col_ID", "Subject_ID", "Group", "Timepoint", "Group_Time"
+)
 
 df <- read_csv(cfg$norm_csv, show_col_types = FALSE)
 
@@ -100,12 +106,15 @@ dal <- fit_limma_model(dal)
 
 within_cor <- dal$eBayes_fit$correlation %||%
   dal$tags$duplicate_correlation %||% NA_real_
-if (!is.na(within_cor)) cat(sprintf("Within-subject correlation: %.3f\n", within_cor))
+if (!is.na(within_cor)) {
+  cat(sprintf("Within-subject correlation: %.3f\n", within_cor))
+}
 
 # Selection is by BH. Pi and raw p are reported beside it; neither selects.
-# BH at 0.10 is our threshold for exploratory n=16 proteomics, not a literature-mandated one.
-# BH is applied WITHIN each contrast (topTable is called per coef, and decideTests defaults to
-# method = "separate"), never across the nine.
+# BH at 0.10 is our threshold for exploratory n=16 proteomics, not a
+# literature-mandated one. BH is applied WITHIN each contrast (topTable is
+# called per coef, and decideTests defaults to method = "separate"), never
+# across the nine.
 #
 # Pi used to be the selection criterion. 04_pi_permutation.R retired it:
 # shuffling the arm label across subjects produces MORE Pi hits than the real
@@ -141,7 +150,9 @@ tryCatch(
     title_column    = "gene",
     overwrite       = TRUE
   ),
-  error = function(e) warning("write_limma_plots failed: ", conditionMessage(e), call. = FALSE)
+  error = function(e) {
+    warning("write_limma_plots failed: ", conditionMessage(e), call. = FALSE)
+  }
 )
 
 # Per-contrast CSVs, combined results (wide), and formatted Excel workbook
@@ -165,10 +176,11 @@ file.remove(file.path(cfg$data_dir, "02_DA_summary_base.csv"))
 
 # proteoDA's summarize_contrast_DA lacks Pi-score columns, so we build our own.
 #
-# Every count column names the threshold it applies. proteoDA drives both of its own columns
-# off the single pval_thresh argument, so its `sig.PVal` means p < 0.10, not the p < 0.05 the
-# name implies, and its `sig.FDR` is an exact duplicate of the q < 0.10 column. Both were
-# read as 0.05 counts for months. The per-contrast CSVs still carry proteoDA's native names.
+# Every count column names the threshold it applies. proteoDA drives both of its
+# own columns off the single pval_thresh argument, so its `sig.PVal` means p <
+# 0.10, not the p < 0.05 the name implies, and its `sig.FDR` is an exact
+# duplicate of the q < 0.10 column. Both were read as 0.05 counts for months.
+# The per-contrast CSVs still carry proteoDA's native names.
 
 da_count_row <- function(res, cname, type) {
   if (type == "nonsig") {
@@ -193,7 +205,10 @@ da_count_row <- function(res, cname, type) {
 
 da_summary <- map_dfr(contrast_names, function(cname) {
   res <- dal$results[[cname]]
-  map_dfr(c("up", "down", "nonsig"), function(type) da_count_row(res, cname, type))
+  map_dfr(
+    c("up", "down", "nonsig"),
+    function(type) da_count_row(res, cname, type)
+  )
 })
 
 write_csv(da_summary, file.path(cfg$data_dir, "02_DA_summary.csv"))

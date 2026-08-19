@@ -1,45 +1,58 @@
 #!/usr/bin/env Rscript
 # Does the null depend on having deleted the blood-tagged proteins?
 #
-# The primary arm removes 120 proteins on HPA's "Secreted to blood" tag unless they clear a
-# muscle rescue (myonuclei >= 20 AND blood_conc < 1e9). That rule deletes 5% of the proteome,
-# and the deleted set is enriched BY CONSTRUCTION for the secreted / ECM / myokine compartment.
-# So "no HR-vs-LR difference in the muscle secretome" is currently an untested claim rather than
-# a null result. This tests it.
+# The primary arm removes 120 proteins on HPA's "Secreted to blood" tag unless
+# they clear a muscle rescue (myonuclei >= 20 AND blood_conc < 1e9). That rule
+# deletes 5% of the proteome, and the deleted set is enriched BY CONSTRUCTION
+# for the secreted / ECM / myokine compartment. So "no HR-vs-LR difference in
+# the muscle secretome" is currently an untested claim rather than a null
+# result. This tests it.
 #
-# The rescue is also known to be imperfect. HPA's tag is a sequence-based prediction (signal
-# peptide), not a measurement of carryover, and the transcript floor overrides the measured blood
-# concentration: C1QBP (mitochondrial, blood 1.5e6 pg/L), HMGB2 (nuclear, 8.3e5), PPIB, LGALS1
-# and CTSB (an exercise myokine) are all deleted despite plasma levels 4-5 orders of magnitude
-# below the genuine plasma proteins.
+# The rescue is also known to be imperfect. HPA's tag is a sequence-based
+# prediction (signal peptide), not a measurement of carryover, and the
+# transcript floor overrides the measured blood concentration: C1QBP
+# (mitochondrial, blood 1.5e6 pg/L), HMGB2 (nuclear, 8.3e5), PPIB, LGALS1 and
+# CTSB (an exercise myokine) are all deleted despite plasma levels 4-5 orders
+# of magnitude below the genuine plasma proteins.
 #
-# Sensitivity arm: add the 120 back, change nothing else, refit the same nine contrasts.
-# The curated list stays removed - keratins, globins and the 95 blood proteins matched by
-# accession in 00_input/blood_contaminants.csv, none of which is muscle under any reading.
+# Sensitivity arm: add the 120 back, change nothing else, refit the same nine
+# contrasts. The curated list stays removed - keratins, globins and the 95
+# blood proteins matched by accession in 00_input/blood_contaminants.csv, none
+# of which is muscle under any reading.
 #
-# NOTE: the protein count drives the normalization. limma's adaptive.span sets the loess span
-# from nrow, so a larger matrix normalizes on a different span (0.5075 -> reported below). That
-# is a genuine consequence of the filter, not an artifact of this script.
+# NOTE: the protein count drives the normalization. limma's adaptive.span sets
+# the loess span from nrow, so a larger matrix normalizes on a different span
+# (0.5075 -> reported below). That is a genuine consequence of the filter, not
+# an artifact of this script.
 
 pacman::p_load(proteoDA, here, readxl, readr, dplyr, stringr, tibble, purrr)
 source(here("03_Features", "contrasts.R"))
 source(here("01_Filtering", "a_script", "filter_config.R"))
 
-calls <- read_csv(here("01_Filtering", "c_data", "protein_calls.csv"), show_col_types = FALSE)
+calls <- read_csv(
+  here("01_Filtering", "c_data", "protein_calls.csv"),
+  show_col_types = FALSE
+)
 primary <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
 kept_samples <- colnames(primary$data)
 
 raw <- read_excel(here("00_input", "HRvLR_raw.xlsx"))
 annot_cols <- c("uniprot_id", "protein", "gene", "description", "n_seq")
-metadata <- as.data.frame(read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE))
+metadata <- as.data.frame(read_csv(
+  here("00_input", "HRvLR_meta.csv"),
+  show_col_types = FALSE
+))
 rownames(metadata) <- metadata$Col_ID
 
-# Everything the primary arm kept, plus the proteins it removed on the blood tag alone.
+# Everything the primary arm kept, plus the proteins it removed on the blood
+# tag alone.
 readmit <- calls$uniprot_id[calls$verdict == "remove: plasma"]
 keep_ids <- c(calls$uniprot_id[!str_starts(calls$verdict, "remove")], readmit)
 
 annotation <- as.data.frame(raw[raw$uniprot_id %in% keep_ids, annot_cols])
-intensity <- as.data.frame(data.matrix(raw[raw$uniprot_id %in% keep_ids, metadata$Col_ID]))
+intensity <- as.data.frame(data.matrix(
+  raw[raw$uniprot_id %in% keep_ids, metadata$Col_ID]
+))
 rownames(intensity) <- rownames(annotation) <- annotation$uniprot_id
 
 dal <- zero_to_missing(DAList(
@@ -65,7 +78,10 @@ dal$metadata$subject <- dal$metadata$Subject_ID
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
 dal <- fit_limma_model(dal)
-dal <- extract_DA_results(dal, pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH")
+dal <- extract_DA_results(
+  dal,
+  pval_thresh = 0.10, lfc_thresh = 0, adj_method = "BH"
+)
 
 res <- imap_dfr(dal$results, function(r, cname) {
   as_tibble(r, rownames = "uniprot_id") |>

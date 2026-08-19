@@ -33,37 +33,44 @@ test_that("centre_within_subject annihilates a pure subject-identity signal", {
   expect_lt(max(abs(centred)), 1e-12)
 })
 
-test_that("subject_variance recovers a planted ICC and returns 0 for pure noise", {
-  set.seed(42)
-  subject <- rep(paste0("S", 1:10), each = 3)
+test_that(
+  "subject_variance recovers a planted ICC and returns 0 for pure noise",
+  {
+    set.seed(42)
+    subject <- rep(paste0("S", 1:10), each = 3)
 
-  # MEhigh is almost entirely between-subject; MEnoise has no subject structure
-  high <- rep(rnorm(10, sd = 5), each = 3) + rnorm(30, sd = 0.3)
-  noise <- rnorm(30)
+    # MEhigh is almost entirely between-subject; MEnoise has no subject
+    # structure
+    high <- rep(rnorm(10, sd = 5), each = 3) + rnorm(30, sd = 0.3)
+    noise <- rnorm(30)
 
-  me_long <- bind_rows(
-    tibble(module = "MEhigh", subject = subject, ME = high),
-    tibble(module = "MEnoise", subject = subject, ME = noise)
-  )
+    me_long <- bind_rows(
+      tibble(module = "MEhigh", subject = subject, ME = high),
+      tibble(module = "MEnoise", subject = subject, ME = noise)
+    )
 
-  sv <- subject_variance(me_long)
+    sv <- subject_variance(me_long)
 
-  icc <- setNames(sv$icc, sv$module)
-  expect_gt(icc[["MEhigh"]], 0.9)
-  expect_lt(icc[["MEnoise"]], 0.5)
-  expect_true(all(sv$icc >= 0 & sv$icc <= 1))
-})
+    icc <- setNames(sv$icc, sv$module)
+    expect_gt(icc[["MEhigh"]], 0.9)
+    expect_lt(icc[["MEnoise"]], 0.5)
+    expect_true(all(sv$icc >= 0 & sv$icc <= 1))
+  }
+)
 
-test_that("choose_power falls back only when the scale-free fit never clears the cut", {
-  # pure noise cannot be scale-free, so pickSoftThreshold returns NA and the
-  # sample-size fallback must fire (n > 40 -> 12)
-  skip_if_not_installed("WGCNA")
-  set.seed(7)
-  expr <- matrix(rnorm(45 * 60), nrow = 45)
-  colnames(expr) <- paste0("p", 1:60)
+test_that(
+  "choose_power falls back only when the scale-free fit never clears the cut",
+  {
+    # pure noise cannot be scale-free, so pickSoftThreshold returns NA and the
+    # sample-size fallback must fire (n > 40 -> 12)
+    skip_if_not_installed("WGCNA")
+    set.seed(7)
+    expr <- matrix(rnorm(45 * 60), nrow = 45)
+    colnames(expr) <- paste0("p", 1:60)
 
-  pw <- suppressWarnings(choose_power(expr))
+    pw <- suppressWarnings(choose_power(expr))
 
-  expect_true(is.numeric(pw$power))
-  expect_true(pw$power %in% 1:20)
-})
+    expect_true(is.numeric(pw$power))
+    expect_true(pw$power %in% 1:20)
+  }
+)

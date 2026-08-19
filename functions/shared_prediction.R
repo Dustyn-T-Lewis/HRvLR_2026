@@ -254,10 +254,14 @@ selection_frequency <- function(selected, model) {
 # Statistic from out-of-fold predictions. Class arm reports AUC; the continuous
 # arm reports the leave-one-out Q^2 (higher is better).
 stat_auc <- function(y, preds) {
-  as.numeric(pROC::auc(pROC::roc(y, preds,
-    quiet = TRUE, levels = c(0, 1),
-    direction = "<"
-  )))
+  as.numeric(
+    pROC::auc(
+      pROC::roc(y, preds,
+        quiet = TRUE, levels = c(0, 1),
+        direction = "<"
+      )
+    )
+  )
 }
 
 stat_q2 <- function(y, preds) {

@@ -1,22 +1,28 @@
 #!/usr/bin/env Rscript
 # The proteins the model never tests, and the true BH denominator.
 #
-# min_groups = 1 admits a protein detected in a single Group_Time cell, on the reasoning that a
-# protein switched on in one responder group and off in the other is the biology under study.
-# With ~ 0 + group cell-means coding, a cell with no observations has no estimable mean, so limma
-# returns NA for every contrast touching it. Those proteins are admitted by the filter and then
-# silently never tested: the very on/off signal the filter was widened to keep is invisible to
-# the model that follows.
+# min_groups = 1 admits a protein detected in a single Group_Time cell, on the
+# reasoning that a protein switched on in one responder group and off in the
+# other is the biology under study. With ~ 0 + group cell-means coding, a cell
+# with no observations has no estimable mean, so limma returns NA for every
+# contrast touching it. Those proteins are admitted by the filter and then
+# silently never tested: the very on/off signal the filter was widened to keep
+# is invisible to the model that follows.
 #
-# Nothing here changes the fit. It reports what the fit could not reach, so the gap between the
-# filter's intent and the model's reach is on the record rather than hidden in NA rows.
+# Nothing here changes the fit. It reports what the fit could not reach, so the
+# gap between the filter's intent and the model's reach is on the record rather
+# than hidden in NA rows.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tibble, purrr, tidyr)
 
 dal <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
-fit <- readRDS(here("03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"))
+fit <- readRDS(here(
+  "03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"
+))
 
-cells <- factor(dal$metadata$Group_Time[match(colnames(dal$data), dal$metadata$Col_ID)])
+cells <- factor(dal$metadata$Group_Time[
+  match(colnames(dal$data), dal$metadata$Col_ID)
+])
 observed <- t(apply(dal$data, 1, \(x) tapply(!is.na(x), cells, sum)))
 
 untested <- tibble(

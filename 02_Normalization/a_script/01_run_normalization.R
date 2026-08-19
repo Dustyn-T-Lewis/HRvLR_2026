@@ -1,11 +1,12 @@
 #!/usr/bin/env Rscript
 # HRvLR Stage 02: cycloess normalization of the filtered, non-imputed DAList.
-# limma handles per-protein NAs downstream, so the canonical Stage 03 input stays
-# non-imputed; the imputation/ arms add exploratory imputed DALists alongside.
-# cycloess is limma::normalizeCyclicLoess(method = "fast"), 3 iterations. The span is not
-# 0.7: limma defaults adaptive.span = TRUE, which overrides the 0.7 formal with
-# chooseLowessSpan(nrow). The span is therefore a function of the protein count and
-# moves whenever filtering changes it.
+# limma handles per-protein NAs downstream, so the canonical Stage 03 input
+# stays non-imputed; the imputation/ arms add exploratory imputed DALists
+# alongside.
+# cycloess is limma::normalizeCyclicLoess(method = "fast"), 3 iterations. The
+# span is not 0.7: limma defaults adaptive.span = TRUE, which overrides the 0.7
+# formal with chooseLowessSpan(nrow). The span is therefore a function of the
+# protein count and moves whenever filtering changes it.
 
 pacman::p_load(proteoDA, here, readr, dplyr, stringr, tibble)
 source(here("functions", "shared_pca.R"))
@@ -17,7 +18,10 @@ clear_dir(data_dir)
 clear_dir(report_dir)
 
 dal <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
-cat(sprintf("Loaded filtered DAList: %d proteins x %d samples\n", nrow(dal$data), ncol(dal$data)))
+cat(sprintf(
+  "Loaded filtered DAList: %d proteins x %d samples\n",
+  nrow(dal$data), ncol(dal$data)
+))
 
 write_norm_report(dal,
   grouping_column = "Group_Time", output_dir = report_dir,
@@ -32,7 +36,10 @@ write_qc_report(dal,
   color_column = "Group_Time", output_dir = report_dir,
   filename = "qc_post.pdf", overwrite = TRUE
 )
-cat(sprintf("Normalized (cycloess): %d proteins x %d samples\n", nrow(dal$data), ncol(dal$data)))
+cat(sprintf(
+  "Normalized (cycloess): %d proteins x %d samples\n",
+  nrow(dal$data), ncol(dal$data)
+))
 
 export_df <- bind_cols(
   as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
@@ -49,7 +56,9 @@ subj_var <- dal$metadata |>
   select(Col_ID, Subject_ID, Group, Timepoint, Group_Time, iqr)
 
 log_dat <- dal$data
-grp_vec <- dal$metadata$Group_Time[match(colnames(log_dat), dal$metadata$Col_ID)]
+grp_vec <- dal$metadata$Group_Time[
+  match(colnames(log_dat), dal$metadata$Col_ID)
+]
 eta2_vals <- apply(log_dat, 1, function(x) {
   ok <- !is.na(x)
   if (sum(ok) < 4) {
@@ -71,4 +80,7 @@ intermediates <- c(filt, list(
 saveRDS(intermediates, file.path(data_dir, "00_report_intermediates.rds"))
 
 if (file.exists("Rplots.pdf")) file.remove("Rplots.pdf")
-cat(sprintf("Done: %d proteins x %d samples -> %s/\n", nrow(dal$data), ncol(dal$data), data_dir))
+cat(sprintf(
+  "Done: %d proteins x %d samples -> %s/\n",
+  nrow(dal$data), ncol(dal$data), data_dir
+))

@@ -47,7 +47,9 @@ pred_singscore <- function(expr, cache_path) {
     include_goslim = TRUE, exclude_variants = TRUE
   )
   gene_sets <- pw[classify_database(names(pw)) %in% c("Hallmark", "GO Slim")]
-  scores <- suppressWarnings(score_singscore(expr, gene_sets, min_size = SET_FLOOR))
+  scores <- suppressWarnings(
+    score_singscore(expr, gene_sets, min_size = SET_FLOOR)
+  )
   dir.create(dirname(cache_path), recursive = TRUE, showWarnings = FALSE)
   saveRDS(scores, cache_path)
   scores

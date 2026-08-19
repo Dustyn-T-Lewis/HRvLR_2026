@@ -1,8 +1,8 @@
 pacman::p_load(here, testthat, limma, dplyr)
 source(here("03_Features", "03_WGCNA", "a_script", "enrichment.R"))
 
-# A two-group design with one module planted to move and one planted flat. fry must find
-# the first and not the second.
+# A two-group design with one module planted to move and one planted flat. fry
+# must find the first and not the second.
 planted <- function(seed = 3, effect = 2.5) {
   set.seed(seed)
   n <- 20

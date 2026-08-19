@@ -34,7 +34,10 @@ summary_by_measure <- F01_AUDIT$secondary_delta |>
       ),
     by = "measure"
   ) |>
-  left_join(F01_AUDIT$lmm_fit_summary |> select(measure, icc), by = "measure") |>
+  left_join(
+    select(F01_AUDIT$lmm_fit_summary, measure, icc),
+    by = "measure"
+  ) |>
   select(measure, domain,
     group = Group, n, delta_mean, delta_sem,
     g_advantage, g_ci_lo, g_ci_hi, p, p_holm, icc
@@ -42,10 +45,14 @@ summary_by_measure <- F01_AUDIT$secondary_delta |>
 
 composite_summary <- f01_composite_scores(meta) |>
   group_by(Group) |>
-  summarise(n = n(), mean = mean(value), sd = sd(value), sem = sd / sqrt(n), .groups = "drop")
+  summarise(
+    n = n(), mean = mean(value), sd = sd(value), sem = sd / sqrt(n),
+    .groups = "drop"
+  )
 
 controls <- bind_rows(
-  F01_AUDIT$volume_load |> mutate(measure = "Accumulated volume load", .before = 1),
+  F01_AUDIT$volume_load |>
+    mutate(measure = "Accumulated volume load", .before = 1),
   composite_summary |> mutate(measure = "Composite hypertrophy", .before = 1)
 ) |>
   select(measure, group = Group, n, mean, sd, sem)
@@ -53,10 +60,13 @@ controls <- bind_rows(
 metadata <- tibble::tribble(
   ~field, ~value,
   "figure", "F01 phenotype atlas (HRvLR)",
-  "design", "16 subjects (8 HR, 8 LR), repeated measures T1/T2 (T3 not used here)",
-  "groups", "HR/LR defined by the composite hypertrophy score; split is descriptive",
+  "design",
+  "16 subjects (8 HR, 8 LR), repeated measures T1/T2 (T3 not used here)",
+  "groups",
+  "HR/LR defined by the composite hypertrophy score; split is descriptive",
   "divergence", "per-subject change (T2-T1); HR-minus-LR standardized difference (Hedges g, SD units) with 95% CI",
-  "test", "two-sample t-test per outcome, Holm-adjusted across the six outcomes",
+  "test",
+  "two-sample t-test per outcome, Holm-adjusted across the six outcomes",
   "robustness", "the Group x Timepoint mixed model agrees at two timepoints; see the panel C supplement",
   "control", "accumulated volume load: t-test with HR-LR difference + 95% CI, no equivalence claim at n=8/group",
   "source", "00_input/HRvLR_meta.csv"
@@ -67,11 +77,17 @@ addWorksheet(wb, "summary_by_measure")
 writeData(wb, "summary_by_measure", summary_by_measure)
 addWorksheet(wb, "controls_and_axis")
 writeData(wb, "controls_and_axis", controls, startRow = 1)
-writeData(wb, "controls_and_axis", F01_AUDIT$responder_axis, startRow = nrow(controls) + 3)
+writeData(
+  wb, "controls_and_axis", F01_AUDIT$responder_axis,
+  startRow = nrow(controls) + 3
+)
 addWorksheet(wb, "hlm_fit_summary")
 writeData(wb, "hlm_fit_summary", F01_AUDIT$lmm_fit_summary)
 addWorksheet(wb, "metadata")
 writeData(wb, "metadata", metadata)
-saveWorkbook(wb, file.path(F01_DAT, "F01_phenotype_source_data.xlsx"), overwrite = TRUE)
+saveWorkbook(
+  wb, file.path(F01_DAT, "F01_phenotype_source_data.xlsx"),
+  overwrite = TRUE
+)
 
 cat("F01 rebuilt: composite, panels, supplements, workbook written\n")

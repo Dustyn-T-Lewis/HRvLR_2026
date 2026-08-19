@@ -21,15 +21,18 @@ synthetic <- function(seed = 31) {
   list(meta = meta, mat = mat)
 }
 
-test_that("an adjusted design keeps the six group columns and adds the covariate", {
-  d <- synthetic()
-  covar <- setNames(rnorm(ncol(d$mat)), colnames(d$mat))
-  parts <- feature_design(d$mat, d$meta, adjust = covar)
+test_that(
+  "an adjusted design keeps the six group columns and adds the covariate",
+  {
+    d <- synthetic()
+    covar <- setNames(rnorm(ncol(d$mat)), colnames(d$mat))
+    parts <- feature_design(d$mat, d$meta, adjust = covar)
 
-  expect_true(all(GROUP_LEVELS %in% colnames(parts$design)))
-  expect_true("adjust" %in% colnames(parts$design))
-  expect_identical(ncol(parts$design), 7L)
-})
+    expect_true(all(GROUP_LEVELS %in% colnames(parts$design)))
+    expect_true("adjust" %in% colnames(parts$design))
+    expect_identical(ncol(parts$design), 7L)
+  }
+)
 
 test_that("the nine contrasts put no weight on the covariate", {
   d <- synthetic()

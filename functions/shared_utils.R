@@ -1,4 +1,5 @@
-# Shared pipeline utilities, sourced across stages and figures (alongside pca.R).
+# Shared pipeline utilities, sourced across stages and figures (alongside
+# pca.R).
 
 pacman::p_load(digest, openxlsx)
 
@@ -6,7 +7,10 @@ pacman::p_load(digest, openxlsx)
 # before a stage or figure writes, so a rerun never leaves stale outputs behind.
 clear_dir <- function(d) {
   dir.create(d, recursive = TRUE, showWarnings = FALSE)
-  unlink(setdiff(list.files(d, full.names = TRUE), file.path(d, ".gitkeep")), recursive = TRUE)
+  unlink(
+    setdiff(list.files(d, full.names = TRUE), file.path(d, ".gitkeep")),
+    recursive = TRUE
+  )
 }
 
 # Digest of whatever inputs a stage was built from, stamped into its workbook so

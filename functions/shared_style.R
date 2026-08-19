@@ -4,11 +4,12 @@
 pacman::p_load(ggplot2, scales, grid)
 
 # Colour palettes. Two blue/red mappings coexist and must not be conflated:
-# GROUP_COLORS encode responder (HR = dark blue, LR = dark red); DIR_COLORS encode
-# logFC direction (Up = light red, Down = light blue). The group hues are the
-# darker shades so a responder legend never reads as a direction legend. These are
-# HRvLR-specific: the YvO/Mito suites use the lighter #4393C3/#D6604D for their own
-# groups, so blue/red meaning does not carry across suites - always read the legend.
+# GROUP_COLORS encode responder (HR = dark blue, LR = dark red); DIR_COLORS
+# encode logFC direction (Up = light red, Down = light blue). The group hues
+# are the darker shades so a responder legend never reads as a direction
+# legend. These are HRvLR-specific: the YvO/Mito suites use
+# the lighter #4393C3/#D6604D for their own groups, so blue/red meaning
+# does not carry across suites - always read the legend.
 GROUP_COLORS <- c(HR = "#2166AC", LR = "#B2182B")
 DIR_COLORS <- c(Up = "#D6604D", Down = "#4393C3", NS = "grey70")
 
@@ -24,9 +25,10 @@ GROUP_FILL <- c(
 # Timepoint hues (Okabe-Ito, colourblind-safe): baseline / trained / acute
 TIME_COLORS <- c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")
 
-# Contrast codes: responder family sets the hue (HR blue / LR red / between-responder
-# green / interaction purple); timepoint sets the shade (training lighter -> acute darker,
-# baseline lightest). One palette for every contrast-keyed panel.
+# Contrast codes: responder family sets the hue (HR blue / LR red /
+# between-responder green / interaction purple); timepoint sets the shade
+# (training lighter -> acute darker, baseline lightest). One palette for every
+# contrast-keyed panel.
 CONTRAST_COLORS <- c(
   Training_HR          = "#6BAED6", # HR, training (T2-T1)
   Acute_HR             = "#2166AC", # HR, acute (T3-T2)
@@ -137,9 +139,9 @@ fisher_z_ci <- function(r, n, k = 0, level = 0.95) {
   c(lo = tanh(z - crit * se), hi = tanh(z + crit * se))
 }
 
-# Bonett & Wright 2000, Psychometrika 65(1), doi:10.1007/bf02294183: the improved
-# standard error for a Spearman correlation. Use this, not fisher_z_ci, whenever r
-# is a Spearman rho.
+# Bonett & Wright 2000, Psychometrika 65(1), doi:10.1007/bf02294183: the
+# improved standard error for a Spearman correlation. Use this, not
+# fisher_z_ci, whenever r is a Spearman rho.
 fisher_z_ci_spearman <- function(r, n, level = 0.95) {
   if (n < 4 || is.na(r)) {
     return(c(lo = NA_real_, hi = NA_real_))
@@ -197,7 +199,9 @@ reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
 }
 
 scale_y_reordered <- function(..., sep = "___") {
-  ggplot2::scale_y_discrete(labels = function(x) gsub(paste0(sep, ".+$"), "", x), ...)
+  ggplot2::scale_y_discrete(
+    labels = function(x) gsub(paste0(sep, ".+$"), "", x), ...
+  )
 }
 
 # Floating bracket above tallest data point (pad = fraction of range)
@@ -225,7 +229,8 @@ PDF_DEVICE <- get_pdf_device()
 # bg is stated rather than left to the device. The renders are already opaque
 # white, so this changes no PNG; it stops a transparent PDF appearing the day a
 # theme drops plot.background, and matches the hand-rolled ggsave calls.
-save_panel <- function(plot, path_stem, width, height, pdf_device = PDF_DEVICE) {
+save_panel <- function(plot, path_stem, width, height,
+                       pdf_device = PDF_DEVICE) {
   ggsave(paste0(path_stem, ".pdf"), plot,
     width = width, height = height, units = "mm", device = pdf_device,
     bg = "white"
@@ -250,13 +255,20 @@ DB_COLORS <- c(
   "GO Slim" = "#5D4037"
 )
 
-# F03 ring-volcano palettes, one per contrast family so a reader never conflates
-# a within-group trajectory with a between-responder difference or an interaction.
-# nes is the diverging arc ramp (down pole, midpoint, up pole); up/down recolour
-# the volcano points to the same poles. Responses read as the canonical red/blue;
-# baseline is green/purple; the interaction takes orange and its own purple.
+# F03 ring-volcano palettes, one per contrast family so a reader never
+# conflates a within-group trajectory with a between-responder difference or
+# an interaction. nes is the diverging arc ramp (down pole, midpoint, up
+# pole); up/down recolour the volcano points to the same poles. Responses
+# read as the canonical red/blue; baseline is green/purple; the interaction
+# takes orange and its own purple.
 RING_PALETTES <- list(
-  responses = list(nes = c("#2166AC", "grey95", "#B2182B"), up = "#B2182B", down = "#2166AC"),
-  differential = list(nes = c("#6A51A3", "grey95", "#238B45"), up = "#238B45", down = "#6A51A3"),
-  interaction = list(nes = c("#762A83", "grey95", "#E65100"), up = "#E65100", down = "#762A83")
+  responses = list(
+    nes = c("#2166AC", "grey95", "#B2182B"), up = "#B2182B", down = "#2166AC"
+  ),
+  differential = list(
+    nes = c("#6A51A3", "grey95", "#238B45"), up = "#238B45", down = "#6A51A3"
+  ),
+  interaction = list(
+    nes = c("#762A83", "grey95", "#E65100"), up = "#E65100", down = "#762A83"
+  )
 )

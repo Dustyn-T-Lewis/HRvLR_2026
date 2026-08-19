@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 # Imputation arm MsCoreUtils hybrid (exploratory; never the primary DEP input).
 #
-# Mechanism-aware hybrid, each tool used as designed: imputeLCMD::model.Selector()
-# classifies each protein MAR (1) vs MNAR (0) (Lazar 2016), then
-# MsCoreUtils::impute_matrix(method = "mixed") routes the MAR subset through kNN
-# and the MNAR subset through QRILC (left-censored).
+# Mechanism-aware hybrid, each tool used as designed:
+# imputeLCMD::model.Selector() classifies each protein MAR (1) vs MNAR (0)
+# (Lazar 2016), then MsCoreUtils::impute_matrix(method = "mixed") routes the MAR
+# subset through kNN and the MNAR subset through QRILC (left-censored).
 
 pacman::p_load(here, MsCoreUtils, imputeLCMD)
 set.seed(42)
@@ -48,4 +48,6 @@ dal$imputation <- list(
   n_mar = sum(randna), n_mnar = sum(!randna)
 )
 saveRDS(dal, file.path(data_dir, "DAList_imputed_mscoreutils.rds"))
-cat("[mscoreutils] done: hybrid (knn/QRILC) -> DAList_imputed_mscoreutils.rds\n")
+cat(
+  "[mscoreutils] done: hybrid (knn/QRILC) -> DAList_imputed_mscoreutils.rds\n"
+)

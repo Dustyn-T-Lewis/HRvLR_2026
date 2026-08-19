@@ -1,6 +1,6 @@
-# Shared PCA helper for the filtering and normalization stages: median-fills gaps,
-# optionally log2-transforms, and returns the prcomp fit, the PC1-3 scores joined
-# to metadata, and the top-3 variance-explained percentages.
+# Shared PCA helper for the filtering and normalization stages: median-fills
+# gaps, optionally log2-transforms, and returns the prcomp fit, the PC1-3
+# scores joined to metadata, and the top-3 variance-explained percentages.
 
 run_pca <- function(mat, metadata, log_transform = TRUE) {
   for (j in seq_len(ncol(mat))) {

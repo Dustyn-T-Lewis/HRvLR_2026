@@ -36,8 +36,9 @@ F04_AUDIT[["module_membership"]] <- tibble::enframe(
 )
 F04_AUDIT[["module_eigengene"]] <- me_long
 
-# Eigengene matrix in long form for the F05 prediction feature layer: bare module id
-# (moduleEigengenes prefixes "ME"), the sample, and the score. F05 reads group_id/sample_id/ME.
+# Eigengene matrix in long form for the F05 prediction feature layer: bare
+# module id (moduleEigengenes prefixes "ME"), the sample, and the score. F05
+# reads group_id/sample_id/ME.
 readr::write_csv(
   me_long |> transmute(group_id = sub("^ME", "", module), sample_id, ME),
   file.path(DAT_DIR, "wgcna_eigengene.csv")
@@ -50,7 +51,8 @@ metadata <- tibble::tribble(
     "WGCNA blockwiseModules: signed, bicor (maxPOutliers = 0.05), power = %d (signed R2 = %.3f, mean k = %.1f), deepSplit 2, minModuleSize 30, mergeCutHeight 0.15, pamRespectsDendro TRUE",
     wg$power, wg$r2, wg$mean_k
   ),
-  "module definition", "within-subject-centred abundance (removes subject identity as a driver)",
+  "module definition",
+  "within-subject-centred abundance (removes subject identity as a driver)",
   "module scoring", "eigengenes computed on RAW abundance, so the between-subject HR/LR contrast survives to be tested",
   "why", "built on raw abundance the modules encode subject identity (ICC up to 0.51); that artifact produced the earlier baseline-prediction q2 of 0.713",
   "module movement", "limma::fry, modules as the index, on the stage 03 design with subject block and duplicateCorrelation",

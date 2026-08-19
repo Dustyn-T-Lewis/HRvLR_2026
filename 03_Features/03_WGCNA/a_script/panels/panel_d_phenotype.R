@@ -1,22 +1,27 @@
 # Panel D: does a module's baseline eigengene predict how much a subject adapts?
 #
-# It does not, and the panel says so on its face. Two numbers are reported side by side for
-# every module x trait cell:
+# It does not, and the panel says so on its face. Two numbers are reported side
+# by side for every module x trait cell:
 #
 #   r      the in-sample correlation, which is what a naive reading would quote
-#   q2     leave-one-subject-out cross-validated R2; q2 <= 0 means the model predicts the
-#          held-out subject WORSE than the trait's own mean does
+#   q2     leave-one-subject-out cross-validated R2; q2 <= 0 means the model
+#          predicts the held-out subject WORSE than the trait's own mean does
 #
-# The gap between them is the point. An earlier version of this analysis reported a q2 of
-# 0.713 - an artifact of modules that encoded subject identity (see wgcna.R). With the
-# modules defined on within-subject co-regulation, the best cell in the whole grid is a q2
-# near 0.1, and that is the ARGMAX of every module-by-trait cell, so it is nearly free. A
-# fully nested per-fold refit reproduces the same null, so the transductive shortcut here is
-# not inflating it.
+# The gap between them is the point. An earlier version of this analysis
+# reported a q2 of 0.713 - an artifact of modules that encoded subject identity
+# (see wgcna.R). With the modules defined on within-subject co-regulation, the
+# best cell in the whole grid is a q2 near 0.1, and that is the ARGMAX of every
+# module-by-trait cell, so it is nearly free. A fully nested per-fold refit
+# reproduces the same null, so the transductive shortcut here is not inflating
+# it.
 #
-# This panel owns its supplement: the mixed model that keeps the full repeated-measures
-# structure this panel collapses to T1.
-if (!exists("mods")) source(here::here("03_Features", "03_WGCNA", "a_script", "setup.R"))
+# This panel owns its supplement: the mixed model that keeps the full
+# repeated-measures structure this panel collapses to T1.
+if (!exists("mods")) {
+  source(here::here(
+    "03_Features", "03_WGCNA", "a_script", "setup.R"
+  ))
+}
 pacman::p_load(ggplot2, dplyr, tidyr, purrr, forcats, lmerTest, lme4)
 
 loo_q2 <- function(x, y) {
@@ -37,12 +42,14 @@ t1 <- me_long |>
   filter(timepoint == "T1") |>
   select(subject, module, ME)
 
-grid <- tidyr::expand_grid(module = unique(t1$module), trait = ADAPTATION_TRAITS)
+grid <- tidyr::expand_grid(
+  module = unique(t1$module), trait = ADAPTATION_TRAITS
+)
 
 pred <- purrr::pmap_dfr(grid, function(module, trait) {
   d <- t1 |>
     filter(module == !!module) |>
-    left_join(pheno |> select(subject, value = all_of(trait)), by = "subject") |>
+    left_join(select(pheno, subject, value = all_of(trait)), by = "subject") |>
     filter(!is.na(ME), !is.na(value))
   ct <- suppressWarnings(stats::cor.test(d$ME, d$value))
   tibble(
@@ -85,16 +92,20 @@ save_panel(pD, file.path(RPT_DIR, "panels", "panel_d_phenotype"), 190, 120)
 F04_PANELS[["phenotype"]] <- pD
 F04_AUDIT[["module_prediction"]] <- pred
 
-# Supplement: the mixed model. Panel D collapses the design to T1; this keeps every
-# timepoint, fitting ME ~ trait * timepoint + (1 | subject). The trait:timepoint term asks
-# whether a module's whole time-course bends with the size of the response - the question
-# Panel D can only ask at one point in time. Singular fits are flagged, not dropped: a
-# time-invariant trait can drive the random-intercept variance to zero, which inflates the
-# trait main effect, so the interaction is the term to trust.
+# Supplement: the mixed model. Panel D collapses the design to T1; this keeps
+# every timepoint, fitting ME ~ trait * timepoint + (1 | subject). The
+# trait:timepoint term asks whether a module's whole time-course bends with the
+# size of the response - the question Panel D can only ask at one point in time.
+# Singular fits are flagged, not dropped: a time-invariant trait can drive the
+# random-intercept variance to zero, which inflates the trait main effect, so
+# the interaction is the term to trust.
 fit_cell <- function(module, trait) {
   d <- me_long |>
     filter(module == !!module) |>
-    left_join(pheno |> select(subject, trait_value = all_of(trait)), by = "subject") |>
+    left_join(
+      select(pheno, subject, trait_value = all_of(trait)),
+      by = "subject"
+    ) |>
     filter(!is.na(ME), !is.na(trait_value))
   fit <- tryCatch(
     suppressWarnings(
@@ -133,7 +144,9 @@ lmm_plot <- lmm |>
 
 p_lmm <- ggplot(lmm_plot, aes(trait, module, fill = -log10(fdr_trait_time))) +
   geom_tile(color = "white", linewidth = 0.4) +
-  scale_fill_gradient(low = "grey95", high = "#6A51A3", name = expression(-log[10] * " BH q")) +
+  scale_fill_gradient(
+    low = "grey95", high = "#6A51A3", name = expression(-log[10] * " BH q")
+  ) +
   scale_x_discrete(labels = TRAIT_LABELS) +
   labs(
     title = "Does the module's time-course bend with the response? (trait x timepoint)",
@@ -149,5 +162,7 @@ p_lmm <- ggplot(lmm_plot, aes(trait, module, fill = -log10(fdr_trait_time))) +
     plot.subtitle = element_text(size = 6.5, face = "italic", color = "grey40")
   )
 
-save_panel(p_lmm, file.path(RPT_DIR, "supp", "panel_d_supp_phenotype_lmm"), 190, 120)
+save_panel(
+  p_lmm, file.path(RPT_DIR, "supp", "panel_d_supp_phenotype_lmm"), 190, 120
+)
 F04_AUDIT[["module_phenotype_lmm"]] <- lmm
