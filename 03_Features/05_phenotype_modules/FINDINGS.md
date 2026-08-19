@@ -40,6 +40,35 @@ n = 557 and 374). Neither cluster's per-subject mean delta reaches
 permutation p < 0.05 for any phenotype. Proteins that move together
 over training do not move with how much anyone grew.
 
+## Change configurations and the pooled response (added same day)
+
+Figure: `b_reports/F_change_response.{png,pdf}`. The training (T2 - T1)
+and acute (T3 - T2) deltas of every feature level, plus the pooled
+all-subject contrasts the nine canonical contrasts never fit. The
+associations need no design contrast — they run on per-subject deltas —
+but the pooled contrasts supply the backdrop: Training_All finds 0
+proteins at BH < 0.05, Acute_All finds 9 (HNRNPR, PNPT1, SYNE2, ILF3,
+TCAP, APMAP, RCSD1 among them), and fry confirms MYC Targets V1
+(FDR 0.015) and Allograft Rejection (0.020) rising after the acute bout
+in everyone. The acute bout, pooled over 16 subjects, is the one place
+this cohort has an average proteomic response; training does not.
+(SYNE2 sits in the current matrix legitimately — it is not on the
+current blood list, consistent with the myonuclei rescue — but the
+README's old "removed as blood" sentence is now stale.)
+
+Module and pathway deltas associate with nothing beyond chance: 3
+nominal module hits of 144 tests (about 7 expected), and the acute
+protein-delta clusters graze p = 0.045-0.050 on the composite and
+d_mcsa without surviving any correction. fgsea on phenotype-correlation
+rankings produces the loudest and least trustworthy table: OxPhos at
+padj down to 4e-4 across several phenotypes — but it flips sign between
+the two strength measures within the training config, and the same
+engine's OxPhos claims on the pooled contrasts (padj 4e-17) die under
+fry's rotation null (FDR 0.17-0.48). Gene-permutation inference over
+the muscle proteome's most co-regulated set, with no fry counterpart
+available for correlation rankings: descriptive at best, and labelled
+so in the figure.
+
 ## Bottom line
 
 Removing the labels does not rescue the proteome-phenotype link. The
