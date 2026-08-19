@@ -1,13 +1,16 @@
 # F02 Panel H: unsupervised sample clustering on the full proteome
-# Sample-sample correlation over all 1900 proteins with no feature selection, so the
-# arms cannot be separated by construction. Rows and columns are ordered by hierarchical
-# clustering; the strips above carry arm and timepoint. If responder status organised
-# the proteome the blue and red strip would follow the dendrogram, and it does not.
+# Sample-sample correlation over all 1900 proteins with no feature
+# selection, so the arms cannot be separated by construction. Rows and
+# columns are ordered by hierarchical clustering; the strips above carry
+# arm and timepoint. If responder status organised the proteome the blue
+# and red strip would follow the dendrogram, and it does not.
 # Title on the composite.
 
 pacman::p_load(here, dplyr, tibble, tidyr, ggplot2, patchwork)
 
-if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+if (!exists("meta")) {
+  source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+}
 
 PH_W <- 130
 PH_H <- 110
@@ -20,9 +23,10 @@ ann <- meta |>
   filter(Col_ID %in% samp_order) |>
   mutate(Col_ID = factor(Col_ID, levels = samp_order))
 
-# Does a sample's nearest neighbour share its arm? Same-subject pairs are masked
-# first: a subject's other timepoints are its closest samples by a wide margin and
-# they always share its arm, so leaving them in measures subject identity, not arm.
+# Does a sample's nearest neighbour share its arm? Same-subject pairs are
+# masked first: a subject's other timepoints are its closest samples by
+# a wide margin and they always share its arm, so leaving them in
+# measures subject identity, not arm.
 arm <- stats::setNames(as.character(meta$Group), meta$Col_ID)
 subj <- stats::setNames(as.character(meta$subject), meta$Col_ID)
 
@@ -65,7 +69,9 @@ p_heat <- ggplot(heat, aes(col, row, fill = r)) +
   theme(
     axis.text = element_blank(), axis.ticks = element_blank(),
     panel.grid = element_blank(), legend.position = "right",
-    plot.caption = element_text(hjust = 0, size = FIG_GEOM_TEXT - 0.4, colour = "grey35")
+    plot.caption = element_text(
+      hjust = 0, size = FIG_GEOM_TEXT - 0.4, colour = "grey35"
+    )
   )
 
 strip <- function(fill_var, values, name) {
@@ -81,12 +87,12 @@ strip <- function(fill_var, values, name) {
     )
 }
 
-pH <- strip("Group", GROUP_COLORS, "Arm") /
+p_h <- strip("Group", GROUP_COLORS, "Arm") /
   strip("Timepoint", TIME_COLORS, "Timepoint") /
   p_heat +
   plot_layout(heights = c(1, 1, 26), guides = "collect")
 
-save_png(pH, file.path(RPT_DIR, "panels", "panel_h_clustering"), PH_W, PH_H)
+save_png(p_h, file.path(RPT_DIR, "panels", "panel_h_clustering"), PH_W, PH_H)
 F02_AUDIT[["panel_H_sample_correlation"]] <- tibble(
   sample = colnames(cor_mat), nearest_neighbour = nn,
   arm = arm[colnames(cor_mat)], nn_arm = arm[nn]

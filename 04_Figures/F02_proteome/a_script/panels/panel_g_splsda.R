@@ -1,13 +1,17 @@
 # F02 Panel G: supervised separation at baseline (sPLS-DA)
-# The supervised counterpart to Panel A. sPLS-DA is handed the arm labels and asked
-# for the axis that best splits them, so at 1898 proteins and 15 subjects it separates
-# whatever it is given. The right-hand facet fits the same pipeline to labels shuffled
-# across subjects and separates just as cleanly; the held-out numbers come from the
-# leave-one-subject-out screen, not from this fit. Title on the composite.
+# The supervised counterpart to Panel A. sPLS-DA is handed the arm labels
+# and asked for the axis that best splits them, so at 1898 proteins and
+# 15 subjects it separates whatever it is given. The right-hand facet
+# fits the same pipeline to labels shuffled across subjects and
+# separates just as cleanly; the held-out numbers come from the
+# leave-one-subject-out screen, not from this fit. Title on the
+# composite.
 
 pacman::p_load(here, dplyr, tibble, ggplot2, mixOmics, readr, withr)
 
-if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+if (!exists("meta")) {
+  source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+}
 
 PG_W <- 120
 PG_H <- 110
@@ -62,8 +66,13 @@ notes <- tibble(
   )
 )
 
-pG <- ggplot(scores, aes(comp1, comp2, colour = fitted_label, fill = fitted_label)) +
-  stat_ellipse(geom = "polygon", type = "norm", level = 0.8, alpha = 0.15, linewidth = 0.3) +
+p_g <- ggplot(
+  scores, aes(comp1, comp2, colour = fitted_label, fill = fitted_label)
+) +
+  stat_ellipse(
+    geom = "polygon", type = "norm", level = 0.8, alpha = 0.15,
+    linewidth = 0.3
+  ) +
   geom_point(size = 2.1) +
   facet_wrap(~facet) +
   scale_colour_manual(values = GROUP_COLORS) +
@@ -75,11 +84,17 @@ pG <- ggplot(scores, aes(comp1, comp2, colour = fitted_label, fill = fitted_labe
     fill = scales::alpha("white", 0.85),
     label.size = 0, label.padding = unit(2, "pt"), lineheight = 0.95
   ) +
-  labs(x = "sPLS-DA component 1", y = "sPLS-DA component 2", colour = NULL, fill = NULL) +
+  labs(
+    x = "sPLS-DA component 1", y = "sPLS-DA component 2", colour = NULL,
+    fill = NULL
+  ) +
   FIG_THEME +
-  theme(legend.position = "bottom", plot.margin = margin(t = 6, r = 5, b = 4, l = 4))
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(t = 6, r = 5, b = 4, l = 4)
+  )
 
-save_png(pG, file.path(RPT_DIR, "panels", "panel_g_splsda"), PG_W, PG_H)
+save_png(p_g, file.path(RPT_DIR, "panels", "panel_g_splsda"), PG_W, PG_H)
 F02_AUDIT[["panel_G_splsda_scores"]] <- scores |>
   mutate(subject = rep(t1$subject, 2), true_group = rep(t1$Group, 2))
 cat("F02 Panel G done.\n")

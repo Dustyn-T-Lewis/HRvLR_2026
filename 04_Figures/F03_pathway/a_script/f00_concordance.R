@@ -1,35 +1,49 @@
-# Driver for the HR-vs-LR concordance figures (F03_pathway/supp training and acute). One
-# parameterised render keeps the two figures a single source of truth; only the
-# per-figure config (contrast pair, factor levels, labels, composite titles)
-# differs. Builds the 5-panel YvO engine composite: A quadrant ORA, B pattern
-# heatmap + Sankey, C fry, D pathway NES scatter, E RRHO2. Reads the DEP results,
-# the imputed matrix (fry), and the shared F03 fgsea cache (NES scatter, computed
-# once in F03, never here).
-pacman::p_load(here, dplyr, readr, tibble, patchwork, cowplot, ggplot2, openxlsx)
+# Driver for the HR-vs-LR concordance figures (F03_pathway/supp training and
+# acute). One parameterised render keeps the two figures a single source of
+# truth; only the per-figure config (contrast pair, factor levels, labels,
+# composite titles) differs. Builds the 5-panel YvO engine composite: A quadrant
+# ORA, B pattern heatmap + Sankey, C fry, D pathway NES scatter, E RRHO2. Reads
+# the DEP results, the imputed matrix (fry), and the shared F03 fgsea cache (NES
+# scatter, computed once in F03, never here).
+pacman::p_load(
+  here, dplyr, readr, tibble, patchwork, cowplot, ggplot2, openxlsx
+)
 
 render_concordance_figure <- function(cfg) {
   source(here("functions", "shared_style.R"))
   source(here("functions", "shared_pathway_utils.R"))
-  source(here("04_Figures", "F03_pathway", "a_script", "f00_concordance_panels.R"))
+  source(
+    here("04_Figures", "F03_pathway", "a_script", "f00_concordance_panels.R")
+  )
 
-  fig_dir <- if (is.null(cfg$fig_dir)) here("04_Figures", cfg$fig_id) else cfg$fig_dir
+  fig_dir <- if (is.null(cfg$fig_dir)) {
+    here("04_Figures", cfg$fig_id)
+  } else {
+    cfg$fig_dir
+  }
   rpt <- file.path(fig_dir, "b_reports")
   dat <- file.path(fig_dir, "c_data")
   panels <- file.path(rpt, "panels")
   supp <- file.path(rpt, "supp")
-  for (d in c(panels, supp, dat)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  for (d in c(panels, supp, dat)) {
+    dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  }
 
   dep <- read_csv(
     here("03_Features", "01_Proteins", "c_data", "03_combined_results.csv"),
     show_col_types = FALSE
   )
-  da <- readRDS(here("02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"))
+  da <- readRDS(here(
+    "02_Normalization", "imputation", "c_data",
+    "DAList_imputed_missforest.rds"
+  ))
   cache <- as_tibble(openxlsx::read.xlsx(
     here("04_Figures", "F03_pathway", "c_data", "F03_pathway_source_data.xlsx"),
     sheet = "fgsea_all"
   ))
   pw <- build_pathway_collection(
-    min_size = 15, max_size = 500, include_goslim = FALSE, exclude_variants = TRUE
+    min_size = 15, max_size = 500, include_goslim = FALSE,
+    exclude_variants = TRUE
   )
 
   message("=== ", cfg$fig_id, " Panel A (quadrant ORA) ===")
@@ -62,7 +76,9 @@ render_concordance_figure <- function(cfg) {
   save_panel(supp_thresh$plot, file.path(supp, "supp_threshold"), 110, 90)
   supp_boot <- panel_rho_bootstrap(dep, cfg$c_hi, cfg$c_lo)
   save_panel(supp_boot$plot, file.path(supp, "supp_bootstrap"), 110, 90)
-  fry_le <- (ora_bars(fry_out$ora_up, COMP_RED) / ora_bars(fry_out$ora_down, COMP_BLUE)) +
+  fry_le <- (
+    ora_bars(fry_out$ora_up, COMP_RED) / ora_bars(fry_out$ora_down, COMP_BLUE)
+  ) +
     plot_annotation(
       title = "fry leading-edge ORA",
       subtitle = "Top concordant driving proteins per direction",
@@ -75,19 +91,25 @@ render_concordance_figure <- function(cfg) {
 
   # Composite: A + B top, C + D + E bottom (YvO F04 geometry)
   message("=== ", cfg$fig_id, " composite ===")
-  ttl_A <- "Quadrant ORA (Concordance)"
-  sub_A <- sprintf(
+  ttl_a <- "Quadrant ORA (Concordance)"
+  sub_a <- sprintf(
     "N = %d – %d DEPs (\u03a0) – %d enriched (FDR) – \u03c1 = %.2f",
     pa$n_total, pa$n_sig, pa$n_enrich, pa$rho
   )
-  ttl_B <- "Protein-to-Pathway"
-  sub_B <- sprintf("%d proteins – %d GO-Slim categories", pb$n_total, pb$n_pw)
-  ttl_C <- "fry: Concordance"
-  sub_C <- sprintf("n = %d proteins – dupCor = %.3f", fry_out$n_all, fry_out$cor_within)
-  ttl_D <- "Pathway Concordance"
-  sub_D <- sprintf("\u03c1 = %.2f – %.0f%% concordant", pd$rho, pd$conc_frac * 100)
-  ttl_E <- "RRHO2 Concordance"
-  sub_E <- sprintf("%d genes – %d concordant hotspot", pe$n_shared, pe$n_concordant)
+  ttl_b <- "Protein-to-Pathway"
+  sub_b <- sprintf("%d proteins – %d GO-Slim categories", pb$n_total, pb$n_pw)
+  ttl_c <- "fry: Concordance"
+  sub_c <- sprintf(
+    "n = %d proteins – dupCor = %.3f", fry_out$n_all, fry_out$cor_within
+  )
+  ttl_d <- "Pathway Concordance"
+  sub_d <- sprintf(
+    "\u03c1 = %.2f – %.0f%% concordant", pd$rho, pd$conc_frac * 100
+  )
+  ttl_e <- "RRHO2 Concordance"
+  sub_e <- sprintf(
+    "%d genes – %d concordant hotspot", pe$n_shared, pe$n_concordant
+  )
 
   pd_comp <- pd$plot + labs(subtitle = NULL)
   pe_comp <- pe$plot
@@ -130,8 +152,15 @@ render_concordance_figure <- function(cfg) {
 
   draw_head <- function(g, tag, ttl, sub, x, y) {
     g +
-      draw_label(tag, x = x, y = y, size = TAG_SZ, fontface = "bold", hjust = 0, vjust = 1) +
-      draw_label(ttl, x = x + X_TTL, y = y, size = TTL_SZ, fontface = "bold", hjust = 0, vjust = 1) +
+      draw_label(
+        tag,
+        x = x, y = y, size = TAG_SZ, fontface = "bold", hjust = 0, vjust = 1
+      ) +
+      draw_label(
+        ttl,
+        x = x + X_TTL, y = y, size = TTL_SZ, fontface = "bold", hjust = 0,
+        vjust = 1
+      ) +
       draw_label(sub,
         x = x + X_TTL, y = y - SUB_OFF, size = SUB_SZ, fontface = "bold.italic",
         hjust = 0, vjust = 1, colour = "grey40"
@@ -139,11 +168,11 @@ render_concordance_figure <- function(cfg) {
   }
 
   composite <- ggdraw(fig)
-  composite <- draw_head(composite, "A", ttl_A, sub_A, 0.006, 0.992)
-  composite <- draw_head(composite, "B", ttl_B, sub_B, 0.560, 0.992)
-  composite <- draw_head(composite, "C", ttl_C, sub_C, 0.006, 0.520)
-  composite <- draw_head(composite, "D", ttl_D, sub_D, 0.430, 0.520)
-  composite <- draw_head(composite, "E", ttl_E, sub_E, 0.720, 0.520)
+  composite <- draw_head(composite, "A", ttl_a, sub_a, 0.006, 0.992)
+  composite <- draw_head(composite, "B", ttl_b, sub_b, 0.560, 0.992)
+  composite <- draw_head(composite, "C", ttl_c, sub_c, 0.006, 0.520)
+  composite <- draw_head(composite, "D", ttl_d, sub_d, 0.430, 0.520)
+  composite <- draw_head(composite, "E", ttl_e, sub_e, 0.720, 0.520)
   composite <- composite +
     draw_label(
       "Panel D (NES concordance) uses Hallmark + GO Slim; ORA panels use the full pathway collection.",
@@ -162,7 +191,8 @@ render_concordance_figure <- function(cfg) {
   sheets <- list(
     panel_a_quadrants = quad_tbl,
     panel_a_ora = quad_ora,
-    panel_b_pattern = pb$data |> select(gene, quadrant, sig_cat, pathway, lfc_x, lfc_y),
+    panel_b_pattern = pb$data |>
+      select(gene, quadrant, sig_cat, pathway, lfc_x, lfc_y),
     panel_c_fry_results = fry_out$results,
     panel_d_nes = pd$data,
     panel_e_rrho2_hotspot = pe$hotspot,

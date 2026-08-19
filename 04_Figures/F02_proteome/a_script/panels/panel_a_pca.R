@@ -1,13 +1,15 @@
 # F02 Panel A: global proteome state (PCA + PERMANOVA)
-# PCA on the imputed matrix, one scatter coloured by responder group with timepoint as
-# point shape and 80% group ellipses. PERMANOVA: timepoint permutes within subject
-# blocks; group collapses to subject means and tests subjects as independent units, so
-# the partial subjects (S28/S29) don't act as unequal whole-plot blocks. Title on the
-# composite.
+# PCA on the imputed matrix, one scatter coloured by responder group with
+# timepoint as point shape and 80% group ellipses. PERMANOVA: timepoint
+# permutes within subject blocks; group collapses to subject means and
+# tests subjects as independent units, so the partial subjects (S28/S29)
+# don't act as unequal whole-plot blocks. Title on the composite.
 
 pacman::p_load(here, dplyr, tibble, ggplot2, vegan)
 
-if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+if (!exists("meta")) {
+  source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+}
 
 PA_W <- 120
 PA_H <- 110
@@ -34,7 +36,10 @@ subj_mat <- rowsum(mat, pca_df$Subject_ID)
 subj_mat <- subj_mat / as.integer(table(pca_df$Subject_ID)[rownames(subj_mat)])
 subj_group <- pca_df$Group[match(rownames(subj_mat), pca_df$Subject_ID)]
 set.seed(42)
-perm_group <- adonis2(vegdist(subj_mat, method = "euclidean") ~ subj_group, permutations = 999)
+perm_group <- adonis2(
+  vegdist(subj_mat, method = "euclidean") ~ subj_group,
+  permutations = 999
+)
 
 sig_mark <- function(p) if (p < 0.05) "*" else "ns"
 perm_label <- sprintf(
@@ -71,7 +76,10 @@ pA <- ggplot(pca_df, aes(PC1, PC2)) +
     x = fx(0.01), y = ky, label = "Group", hjust = 0, fontface = "bold",
     size = FIG_GEOM_TEXT - 0.3, color = "grey25"
   ) +
-  geom_point(data = key_grp, aes(x, ky), color = key_grp$col, size = 2.6, inherit.aes = FALSE) +
+  geom_point(
+    data = key_grp, aes(x, ky), color = key_grp$col, size = 2.6,
+    inherit.aes = FALSE
+  ) +
   geom_text(
     data = key_grp, aes(x + diff(xr) * 0.02, ky, label = lab), hjust = 0,
     fontface = "bold", size = FIG_GEOM_TEXT - 0.4, inherit.aes = FALSE
@@ -80,7 +88,10 @@ pA <- ggplot(pca_df, aes(PC1, PC2)) +
     x = fx(0.45), y = ky, label = "Time", hjust = 0, fontface = "bold",
     size = FIG_GEOM_TEXT - 0.3, color = "grey25"
   ) +
-  geom_point(data = key_tp, aes(x, ky), shape = key_tp$shp, color = "grey30", size = 2.3, inherit.aes = FALSE) +
+  geom_point(
+    data = key_tp, aes(x, ky), shape = key_tp$shp, color = "grey30",
+    size = 2.3, inherit.aes = FALSE
+  ) +
   geom_text(
     data = key_tp, aes(x + diff(xr) * 0.02, ky, label = lab), hjust = 0,
     size = FIG_GEOM_TEXT - 0.4, inherit.aes = FALSE
@@ -94,10 +105,17 @@ pA <- ggplot(pca_df, aes(PC1, PC2)) +
   coord_cartesian(
     ylim = c(yr[1] - diff(yr) * 0.05, yr[2] + diff(yr) * 0.05), clip = "off"
   ) +
-  labs(x = sprintf("PC1 (%.1f%%)", var_pct[1]), y = sprintf("PC2 (%.1f%%)", var_pct[2])) +
+  labs(
+    x = sprintf("PC1 (%.1f%%)", var_pct[1]),
+    y = sprintf("PC2 (%.1f%%)", var_pct[2])
+  ) +
   FIG_THEME +
-  theme(legend.position = "none", plot.margin = margin(t = 24, r = 5, b = 4, l = 4))
+  theme(
+    legend.position = "none",
+    plot.margin = margin(t = 24, r = 5, b = 4, l = 4)
+  )
 
 save_png(pA, file.path(RPT_DIR, "panels", "panel_a_pca"), PA_W, PA_H)
-F02_AUDIT[["panel_A_pca_scores"]] <- pca_df |> select(sample, PC1, PC2, Group, Timepoint)
+F02_AUDIT[["panel_A_pca_scores"]] <- pca_df |>
+  select(sample, PC1, PC2, Group, Timepoint)
 cat("F02 Panel A done.\n")

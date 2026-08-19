@@ -1,17 +1,22 @@
 # F02 Panel D: DEPs per contrast (diverging down/up, p and Pi counts)
-# Down (left) / up (right) % of proteome; per direction two bars overlaid from zero:
-# nominal p < 0.05 (light) and Pi < 0.05 (dark). Per-contrast background bands carry the
-# contrast code; Pi counts sit at the bar tips.
+# Down (left) / up (right) % of proteome; per direction two bars overlaid
+# from zero: nominal p < 0.05 (light) and Pi < 0.05 (dark). Per-contrast
+# background bands carry the contrast code; Pi counts sit at the bar
+# tips.
 
 pacman::p_load(here, dplyr, tidyr, tibble, ggplot2)
 
-if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+if (!exists("meta")) {
+  source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+}
 
 PF_W <- 120
 PF_H <- 110
 n_total <- nrow(dep_df)
 
-display_contrasts <- setdiff(MAIN_CONTRASTS, c("Training_Interaction", "Acute_Interaction"))
+display_contrasts <- setdiff(
+  MAIN_CONTRASTS, c("Training_Interaction", "Acute_Interaction")
+)
 
 frac_df <- lapply(display_contrasts, function(ct) {
   p <- dep_df[[paste0("P.Value_", ct)]]
@@ -38,7 +43,8 @@ frac_df <- lapply(display_contrasts, function(ct) {
   arrange(contrast, key)
 
 DIR_FILL <- c(
-  "Down p" = scales::alpha(DIR_COLORS[["Down"]], 0.40), "Down Pi" = DIR_COLORS[["Down"]],
+  "Down p" = scales::alpha(DIR_COLORS[["Down"]], 0.40),
+  "Down Pi" = DIR_COLORS[["Down"]],
   "Up p" = scales::alpha(DIR_COLORS[["Up"]], 0.40), "Up Pi" = DIR_COLORS[["Up"]]
 )
 
@@ -56,7 +62,9 @@ pD <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
     inherit.aes = FALSE, fill = scales::alpha(band_df$band, 0.14),
     color = "grey75", linewidth = 0.2
   ) +
-  geom_col(position = "identity", width = 0.7, color = "white", linewidth = 0.3) +
+  geom_col(
+    position = "identity", width = 0.7, color = "white", linewidth = 0.3
+  ) +
   geom_hline(yintercept = 0, linewidth = 0.4, color = "grey30") +
   geom_hline(
     yintercept = c(-chance_pct, chance_pct), linetype = "dotted",
@@ -64,7 +72,8 @@ pD <- ggplot(frac_df, aes(contrast, signed, fill = key)) +
   ) +
   geom_text(
     data = pi_lab, aes(contrast, signed, label = n),
-    inherit.aes = FALSE, hjust = ifelse(pi_lab$direction == "Down", 1.25, -0.25),
+    inherit.aes = FALSE,
+    hjust = ifelse(pi_lab$direction == "Down", 1.25, -0.25),
     size = FIG_GEOM_TEXT, fontface = "bold", color = "grey15"
   ) +
   scale_fill_manual(

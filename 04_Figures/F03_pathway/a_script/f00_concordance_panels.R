@@ -302,9 +302,11 @@ run_quadrant_ora <- function(quad_tbl, pw, n_show = 5) {
 # (bottom) each bar, anchored at the inner edge and read outward.
 make_half_bars <- function(df, fill_color, side, ylim) {
   if (is.null(df) || nrow(df) == 0) {
-    return(ggplot() +
-      theme_void() +
-      scale_y_continuous(limits = ylim, expand = c(0, 0)))
+    return(
+      ggplot() +
+        theme_void() +
+        scale_y_continuous(limits = ylim, expand = c(0, 0))
+    )
   }
   span <- max(abs(ylim))
   upper <- ylim[1] >= 0
@@ -389,8 +391,8 @@ sig_key_a <- function() {
 }
 
 # HR-vs-LR logFC scatter with flanking per-quadrant ORA half-bars; concordant
-# diagonal tinted red, discordant off-diagonal blue;
-# interaction-sig = Divergent.
+# diagonal tinted red, discordant off-diagonal blue; interaction-sig =
+# Divergent.
 panel_quadrant_ora <- function(quad_tbl, ora_df, cfg) {
   rho <- cor(
     quad_tbl$lfc_hi, quad_tbl$lfc_lo,
@@ -560,7 +562,7 @@ panel_pattern_heatmap <- function(dep, cfg) {
 
   go_result <- assign_go_slim_consolidated(sig_df$gene, dep$gene)
   sig_df <- sig_df |>
-    left_join(go_result |> select(gene, consolidated), by = "gene") |>
+    left_join(select(go_result, gene, consolidated), by = "gene") |>
     mutate(pathway = ifelse(
       is.na(consolidated), "Other", as.character(consolidated)
     )) |>
@@ -655,7 +657,7 @@ panel_pattern_heatmap <- function(dep, cfg) {
   bar_data <- sig_df |>
     filter(pathway %in% pw_counts$pathway) |>
     count(pathway, quadrant, name = "n_seg") |>
-    left_join(pw_counts |> select(pathway, y_center, n_prot), by = "pathway") |>
+    left_join(select(pw_counts, pathway, y_center, n_prot), by = "pathway") |>
     group_by(pathway) |>
     arrange(pathway, desc(n_seg)) |>
     mutate(
@@ -1033,8 +1035,10 @@ run_fry_concordance <- function(da, dep, pw, c_hi, c_lo, lo_levels) {
 
 ora_bars <- function(ora_df, fill, n = 5) {
   if (is.null(ora_df) || nrow(ora_df) == 0) {
-    return(ggplot() +
-      theme_void())
+    return(
+      ggplot() +
+        theme_void()
+    )
   }
   d <- ora_df |>
     arrange(desc(neg_log10_padj)) |>
@@ -1110,9 +1114,14 @@ panel_fry <- function(fry_out, cfg) {
       )
   }
   rank_curve <- ggplot(rk, aes(rank, t_lo)) +
-    geom_area(fill = scales::alpha(COMP_BLUE, 0.2), color = COMP_BLUE, linewidth = 0.3) +
+    geom_area(
+      fill = scales::alpha(COMP_BLUE, 0.2), color = COMP_BLUE, linewidth = 0.3
+    ) +
     geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.3) +
-    labs(x = sprintf("Rank (%s moderated t, n = %d)", cfg$labels$lo, n_all), y = NULL) +
+    labs(
+      x = sprintf("Rank (%s moderated t, n = %d)", cfg$labels$lo, n_all),
+      y = NULL
+    ) +
     scale_x_continuous(limits = c(1, n_all), expand = c(0.005, 0)) +
     FIG_THEME +
     theme(plot.margin = margin(0, 1, 1, 0, "mm"))
@@ -1122,9 +1131,14 @@ panel_fry <- function(fry_out, cfg) {
     patchwork::area(4, 1), patchwork::area(5, 1),
     patchwork::area(1, 2, 2, 2), patchwork::area(3, 2, 4, 2)
   )
-  es_plot("es_up", COMP_RED, sprintf("HR-up DEPs \u2192 %s rank", cfg$labels$lo), "Up") +
+  es_plot(
+    "es_up", COMP_RED, sprintf("HR-up DEPs \u2192 %s rank", cfg$labels$lo), "Up"
+  ) +
     bc_plot("in_up", COMP_RED, "Up") +
-    es_plot("es_down", COMP_BLUE, sprintf("HR-down DEPs \u2192 %s rank", cfg$labels$lo), "Down") +
+    es_plot(
+      "es_down", COMP_BLUE,
+      sprintf("HR-down DEPs \u2192 %s rank", cfg$labels$lo), "Down"
+    ) +
     bc_plot("in_down", COMP_BLUE, "Down") +
     rank_curve +
     ora_bars(fry_out$ora_up, COMP_RED) +
@@ -1139,7 +1153,9 @@ panel_fry <- function(fry_out, cfg) {
 build_nes_wide <- function(cache, c_hi, c_lo, c_int) {
   keep_db <- c("Hallmark", "GO Slim")
   wide <- cache |>
-    filter(contrast %in% c(c_hi, c_lo), database %in% keep_db, is.finite(NES)) |>
+    filter(
+      contrast %in% c(c_hi, c_lo), database %in% keep_db, is.finite(NES)
+    ) |>
     select(pathway, database, contrast, NES, padj, size) |>
     pivot_wider(
       id_cols = c(pathway, database),
@@ -1149,16 +1165,18 @@ build_nes_wide <- function(cache, c_hi, c_lo, c_int) {
       !is.na(.data[[paste0("NES_", c_hi)]]),
       !is.na(.data[[paste0("NES_", c_lo)]])
     ) |>
-    mutate(set_size = coalesce(.data[[paste0("size_", c_hi)]], .data[[paste0("size_", c_lo)]]))
+    mutate(set_size = coalesce(
+      .data[[paste0("size_", c_hi)]], .data[[paste0("size_", c_lo)]]
+    ))
   int <- cache |>
     filter(contrast == c_int, database %in% keep_db) |>
     select(pathway, NES_int = NES, padj_int = padj)
   left_join(wide, int, by = "pathway")
 }
 
-# NES(HR) vs NES(LR); ref_slope +1, diagonal concordant. Shape = database, size =
-# set size; interaction-divergent pathways (cached interaction padj < 0.05)
-# highlighted. Spearman rho + Fisher-z CI in the subtitle.
+# NES(HR) vs NES(LR); ref_slope +1, diagonal concordant. Shape = database,
+# size = set size; interaction-divergent pathways (cached interaction padj
+# < 0.05) highlighted. Spearman rho + Fisher-z CI in the subtitle.
 panel_nes_scatter <- function(nes_wide, c_hi, c_lo, cfg) {
   nes_x <- paste0("NES_", c_hi)
   nes_y <- paste0("NES_", c_lo)
@@ -1190,7 +1208,8 @@ panel_nes_scatter <- function(nes_wide, c_hi, c_lo, cfg) {
 
   p <- ggplot(d, aes(nx, ny)) +
     geom_rect(
-      data = tints, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill),
+      data = tints,
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill),
       inherit.aes = FALSE, alpha = 0.5
     ) +
     scale_fill_identity() +
@@ -1209,32 +1228,42 @@ panel_nes_scatter <- function(nes_wide, c_hi, c_lo, cfg) {
       aes(shape = database, size = set_size), fill = "#E08214", color = "black",
       alpha = 0.9, stroke = 0.4
     ) +
-    scale_shape_manual(values = c(Hallmark = 24, "GO Slim" = 21), name = "Database") +
-    scale_size_continuous(range = c(1.5, 5), name = "Set size", breaks = c(20, 50, 100, 200)) +
+    scale_shape_manual(
+      values = c(Hallmark = 24, "GO Slim" = 21), name = "Database"
+    ) +
+    scale_size_continuous(
+      range = c(1.5, 5), name = "Set size", breaks = c(20, 50, 100, 200)
+    ) +
     ggrepel::geom_label_repel(
       data = lab_d, aes(label = clean_pathway_name(pathway, 26)),
-      color = "black", fill = alpha("white", 0.85), size = 2.2, fontface = "bold",
-      lineheight = 0.82, max.overlaps = Inf, segment.size = 0.2, segment.color = "grey50",
+      color = "black", fill = alpha("white", 0.85), size = 2.2,
+      fontface = "bold",
+      lineheight = 0.82, max.overlaps = Inf, segment.size = 0.2,
+      segment.color = "grey50",
       min.segment.length = 0, box.padding = 0.4, label.padding = unit(1, "pt"),
       label.r = unit(0.5, "pt"), label.size = 0.2, seed = 42
     ) +
     annotate("label",
-      x = lim, y = lim, label = sprintf("Concordant Up  n = %d", sum(d$nx > 0 & d$ny > 0)),
+      x = lim, y = lim,
+      label = sprintf("Concordant Up  n = %d", sum(d$nx > 0 & d$ny > 0)),
       hjust = 1, vjust = 1, size = 2.6, fontface = "bold", color = COMP_RED,
       fill = alpha("white", 0.92), label.padding = unit(2, "pt")
     ) +
     annotate("label",
-      x = -lim, y = -lim, label = sprintf("Concordant Down  n = %d", sum(d$nx < 0 & d$ny < 0)),
+      x = -lim, y = -lim,
+      label = sprintf("Concordant Down  n = %d", sum(d$nx < 0 & d$ny < 0)),
       hjust = 0, vjust = 0, size = 2.6, fontface = "bold", color = COMP_RED,
       fill = alpha("white", 0.92), label.padding = unit(2, "pt")
     ) +
     annotate("label",
-      x = -lim, y = lim, label = sprintf("Discordant  n = %d", sum(d$nx < 0 & d$ny > 0)),
+      x = -lim, y = lim,
+      label = sprintf("Discordant  n = %d", sum(d$nx < 0 & d$ny > 0)),
       hjust = 0, vjust = 1, size = 2.6, fontface = "bold", color = COMP_BLUE,
       fill = alpha("white", 0.92), label.padding = unit(2, "pt")
     ) +
     annotate("label",
-      x = lim, y = -lim, label = sprintf("Discordant  n = %d", sum(d$nx > 0 & d$ny < 0)),
+      x = lim, y = -lim,
+      label = sprintf("Discordant  n = %d", sum(d$nx > 0 & d$ny < 0)),
       hjust = 1, vjust = 0, size = 2.6, fontface = "bold", color = COMP_BLUE,
       fill = alpha("white", 0.92), label.padding = unit(2, "pt")
     ) +
@@ -1253,7 +1282,9 @@ panel_nes_scatter <- function(nes_wide, c_hi, c_lo, cfg) {
       legend.key.size = unit(3, "mm")
     ) +
     guides(
-      shape = guide_legend(order = 1, override.aes = list(size = 3, fill = "grey50")),
+      shape = guide_legend(
+        order = 1, override.aes = list(size = 3, fill = "grey50")
+      ),
       size = guide_legend(order = 2)
     )
   list(plot = p, rho = rho, ci = ci, data = d, conc_frac = conc_frac)
@@ -1266,8 +1297,9 @@ JET_COLORS <- c(
   "yellow", "#FF7F00", "red", "#7F0000"
 )
 
-# RRHO2 of the two moderated-t rankings (t_HR vs t_LR). Warm corners = concordant
-# gene regulation; UU (top-left) + DD (bottom-right) are the concordant hotspots.
+# RRHO2 of the two moderated-t rankings (t_HR vs t_LR).
+# Warm corners = concordant gene regulation; UU (top-left) + DD (bottom-right)
+# are the concordant hotspots.
 panel_rrho2 <- function(dep, c_hi, c_lo, cfg) {
   rr <- tibble(
     gene = dep$gene,
@@ -1294,8 +1326,8 @@ panel_rrho2 <- function(dep, c_hi, c_lo, cfg) {
     UD = obj$genelist_ud$gene_list_overlap_ud,
     DU = obj$genelist_du$gene_list_overlap_du
   )
-  n_UU <- length(hotspot$UU)
-  n_DD <- length(hotspot$DD)
+  n_uu <- length(hotspot$UU)
+  n_dd <- length(hotspot$DD)
 
   hm_df <- expand.grid(row = seq_len(nr), col = seq_len(nc)) |>
     mutate(neg_log10_p = as.vector(hmat))
@@ -1356,8 +1388,8 @@ panel_rrho2 <- function(dep, c_hi, c_lo, cfg) {
     tibble(quadrant = "DU", gene = hotspot$DU)
   )
   list(
-    plot = plot, n_shared = n_shared, n_UU = n_UU, n_DD = n_DD,
-    n_concordant = n_UU + n_DD, hotspot = hotspot_export
+    plot = plot, n_shared = n_shared, n_uu = n_uu, n_dd = n_dd,
+    n_concordant = n_uu + n_dd, hotspot = hotspot_export
   )
 }
 
@@ -1396,7 +1428,11 @@ panel_threshold_sens <- function(dep, c_hi, c_lo) {
 
   plot <- ggplot(counts, aes(threshold, n, fill = quad)) +
     geom_col(position = "stack") +
-    geom_text(aes(label = n), position = position_stack(vjust = 0.5), size = 2.6, color = "white") +
+    geom_text(
+      aes(label = n),
+      position = position_stack(vjust = 0.5), size = 2.6,
+      color = "white"
+    ) +
     scale_fill_manual(
       values = c(
         "Concordant Up" = "#E57373", "Concordant Down" = "#64B5F6",
@@ -1425,14 +1461,25 @@ panel_rho_bootstrap <- function(dep, c_hi, c_lo, reps = 1000) {
   ci <- quantile(vals, c(0.025, 0.975))
   plot <- ggplot(tibble(rho = vals), aes(rho)) +
     geom_histogram(bins = 40, fill = "grey75", color = "white") +
-    annotate("rect", xmin = ci[1], xmax = ci[2], ymin = 0, ymax = Inf, alpha = 0.15, fill = unname(GROUP_COLORS["HR"])) +
-    geom_vline(xintercept = obs, linetype = "dashed", color = unname(GROUP_COLORS["LR"]), linewidth = 0.6) +
+    annotate(
+      "rect",
+      xmin = ci[1], xmax = ci[2], ymin = 0, ymax = Inf, alpha = 0.15,
+      fill = unname(GROUP_COLORS["HR"])
+    ) +
+    geom_vline(
+      xintercept = obs, linetype = "dashed",
+      color = unname(GROUP_COLORS["LR"]), linewidth = 0.6
+    ) +
     labs(
       x = "Spearman rho (logFC HR vs LR)", y = "Bootstrap reps",
-      subtitle = sprintf("rho = %.2f [%.2f, %.2f] (95%% CI, %d protein resamples)", obs, ci[1], ci[2], reps)
+      subtitle = sprintf(
+        "rho = %.2f [%.2f, %.2f] (95%% CI, %d protein resamples)",
+        obs, ci[1], ci[2], reps
+      )
     ) +
     FIG_THEME
   list(plot = plot, data = tibble(
-    stat = "spearman_rho", observed = obs, ci_lo = ci[1], ci_hi = ci[2], reps = reps
+    stat = "spearman_rho", observed = obs, ci_lo = ci[1], ci_hi = ci[2],
+    reps = reps
   ))
 }
