@@ -6142,6 +6142,52 @@
       "Maintainer": "Henrik Bengtsson <henrikb@braju.com>",
       "Repository": "CRAN"
     },
+    "galamm": {
+      "Package": "galamm",
+      "Version": "0.4.0",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        "R (>= 3.5.0)"
+      ],
+      "Imports": [
+        "gratia",
+        "lattice",
+        "lme4",
+        "Matrix",
+        "memoise",
+        "methods",
+        "mgcv",
+        "nlme",
+        "Rcpp",
+        "Rdpack",
+        "reformulas",
+        "stats"
+      ],
+      "LinkingTo": [
+        "Rcpp",
+        "RcppEigen"
+      ],
+      "Suggests": [
+        "covr",
+        "gamm4",
+        "knitr",
+        "PLmixed",
+        "rlang",
+        "rmarkdown",
+        "testthat (>=\n3.0.0)"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "GPL (>= 3)",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN",
+      "Type": "source"
+    },
     "gargle": {
       "Package": "gargle",
       "Version": "1.6.1",
