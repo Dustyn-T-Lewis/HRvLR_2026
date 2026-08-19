@@ -882,7 +882,8 @@ panel_pattern_heatmap <- function(dep, cfg) {
       y = BAR_YMAX, yend = BAR_YMAX, color = "grey20", linewidth = 0.5
     ) +
     geom_segment(
-      data = count_ticks, aes(x = x, xend = x, y = y_tick_top, yend = y_tick_bot),
+      data = count_ticks,
+      aes(x = x, xend = x, y = y_tick_top, yend = y_tick_bot),
       color = "grey20", linewidth = 0.3
     ) +
     geom_text(
@@ -935,7 +936,10 @@ panel_pattern_heatmap <- function(dep, cfg) {
     theme_void() +
     theme(plot.margin = margin(2, 2, 2, 2, "mm"))
 
-  list(plot = pB, n_total = n_total, n_pw = n_pw, data = sig_df, bar_data = bar_data, flow = flow_df)
+  list(
+    plot = pB, n_total = n_total, n_pw = n_pw, data = sig_df,
+    bar_data = bar_data, flow = flow_df
+  )
 }
 
 # Panel C: fry rotation test
@@ -964,10 +968,14 @@ run_fry_concordance <- function(da, dep, pw, c_hi, c_lo, lo_levels) {
   block <- meta$Subject_ID
   corfit <- duplicateCorrelation(mat, design, block = block)
   cor_within <- corfit$consensus.correlation
-  cm <- makeContrasts(contrasts = paste0(lo_levels[2], " - ", lo_levels[1]), levels = design)
+  cm <- makeContrasts(
+    contrasts = paste0(lo_levels[2], " - ", lo_levels[1]), levels = design
+  )
 
   imp_ids <- rownames(mat)
-  sig <- dep[dep[[paste0("sig_pi_", c_hi)]] != 0 & dep$uniprot_id %in% imp_ids, ]
+  sig <- dep[
+    dep[[paste0("sig_pi_", c_hi)]] != 0 & dep$uniprot_id %in% imp_ids,
+  ]
   lfc_hi <- sig[[paste0("logFC_", c_hi)]]
   up_ids <- sig$uniprot_id[lfc_hi > 0]
   dn_ids <- sig$uniprot_id[lfc_hi < 0]
@@ -987,7 +995,9 @@ run_fry_concordance <- function(da, dep, pw, c_hi, c_lo, lo_levels) {
   ) |>
     filter(!is.na(t_lo), uid %in% imp_ids) |>
     arrange(desc(t_lo)) |>
-    mutate(rank = row_number(), in_up = uid %in% up_ids, in_down = uid %in% dn_ids)
+    mutate(
+      rank = row_number(), in_up = uid %in% up_ids, in_down = uid %in% dn_ids
+    )
   rk$es_up <- running_es(rk$t_lo, rk$in_up)
   rk$es_down <- running_es(rk$t_lo, rk$in_down)
 
@@ -1031,10 +1041,14 @@ ora_bars <- function(ora_df, fill, n = 5) {
     slice_head(n = n) |>
     mutate(
       term = reorder(pathway_label, neg_log10_padj),
-      bar_fill = ifelse(significant, scales::alpha(fill, 0.85), scales::alpha(fill, 0.3))
+      bar_fill = ifelse(
+        significant, scales::alpha(fill, 0.85), scales::alpha(fill, 0.3)
+      )
     )
   ggplot(d, aes(neg_log10_padj, term)) +
-    geom_col(fill = d$bar_fill, color = "black", linewidth = 0.25, width = 0.7) +
+    geom_col(
+      fill = d$bar_fill, color = "black", linewidth = 0.25, width = 0.7
+    ) +
     geom_text(aes(label = sig_stars(padj)), hjust = -0.2, size = 2.6) +
     scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
     labs(x = expression(-log[10](p[adj])), y = NULL) +
@@ -1042,8 +1056,8 @@ ora_bars <- function(ora_df, fill, n = 5) {
     theme(axis.text.y = element_text(size = 7))
 }
 
-# Running-ES curves + barcode rugs + ranking metric + leading-edge ORA in the YvO
-# fry layout (ES + barcode per direction stacked, ORA flanking).
+# Running-ES curves + barcode rugs + ranking metric + leading-edge ORA in the
+# YvO fry layout (ES + barcode per direction stacked, ORA flanking).
 panel_fry <- function(fry_out, cfg) {
   rk <- fry_out$rank
   res <- fry_out$results
@@ -1065,7 +1079,9 @@ panel_fry <- function(fry_out, cfg) {
     ggplot(rk, aes(rank, .data[[es_col]])) +
       geom_area(fill = scales::alpha(col, 0.15), color = NA) +
       geom_line(color = col, linewidth = 0.6) +
-      geom_hline(yintercept = 0, linetype = "dashed", color = "grey60", linewidth = 0.3) +
+      geom_hline(
+        yintercept = 0, linetype = "dashed", color = "grey60", linewidth = 0.3
+      ) +
       annotate("text",
         x = n_all, y = Inf, label = lab, hjust = 1.05, vjust = 1.6,
         size = 2.6, fontface = "bold", color = "grey20"
