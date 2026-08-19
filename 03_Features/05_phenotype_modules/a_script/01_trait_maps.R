@@ -90,10 +90,9 @@ scan_level <- function(mats, level) {
     scans <- map(mats, cor_scan, pheno = pheno[[ph]], perm_idx = perm_idx)
     cons <- consistency_scan(scans)
     list(
-      map = imap_dfr(scans, \(s, i) mutate(
-        s$obs,
-        timepoint = TIMEPOINTS[i], phenotype = ph
-      )),
+      map = imap_dfr(scans, \(s, i) {
+        mutate(s$obs, timepoint = TIMEPOINTS[i], phenotype = ph)
+      }),
       consistency = tibble(
         level = level, phenotype = ph,
         n_observed = cons$n_observed,
