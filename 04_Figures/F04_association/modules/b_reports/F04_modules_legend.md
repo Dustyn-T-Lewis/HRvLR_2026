@@ -1,0 +1,9 @@
+**Modules: how high responders differ from low responders.**
+
+Nine stage 03 contrasts; all 12 modules shown. Screen = 108 estimable tests of 108 cells. 5 reach nominal p < .05 where chance predicts 5, and none survive BH. BH is applied within each contrast over that contrast's own feature list, never across the nine.
+
+Module detection is unsupervised and never saw the HR/LR labels, but it did see all 45 samples, and eBayes has 12 features to borrow variance across, which is close to no moderation at all. Eigengenes come from the missForest-imputed matrix, unlike the protein panel. 
+Each row is named by its own module's top ORA term, read from the network's enrichment at draw time rather than from a kept list, because WGCNA colours do not survive a rebuild. Rows reading no enriched term have none at BH < 0.05. # The interaction columns are the contrasts that answer the responder question: a difference at one timepoint can reflect a baseline difference, while a difference of differences cannot. 
+# T3 biopsies carry roughly twice the blood of T1 and T2, and the rise is not equal in the two arms: on the log2 haemoglobin index the arm x T3 term is b = -1.21, p = 0.032, and p = 0.017 by subject-label permutation, with LR rising 2.14 against HR's 0.57. A difference of differences removes a constant offset, not a differential one, so the interaction columns do not cancel it either. 03_Features/.../05_blood_adjusted.R refits each contrast the index as a covariate. 
+# At 7 HR and 8 LR a nominal p < .05 needs a large effect; these columns are a declared screen, not a discovery engine. 
+# A grey cell marked - is inestimable, not null: the contrast touches a Group_Time cell in which the feature was never observed, so limma returns NA and the feature is not counted in that contrast's BH denominator.
