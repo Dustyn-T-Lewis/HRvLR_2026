@@ -10,8 +10,10 @@ build_continuum <- function(meta, tag = "B") {
   comp <- f01_composite_scores(meta) |>
     arrange(value) |>
     mutate(subject = fct_inorder(subject))
-  boundary <- (min(comp$value[comp$Group == "HR"]) +
-    max(comp$value[comp$Group == "LR"])) / 2
+  boundary <- (
+    min(comp$value[comp$Group == "HR"]) +
+      max(comp$value[comp$Group == "LR"])
+  ) / 2
   swc <- 0.2 * sd(comp$value)
 
   p <- ggplot(comp, aes(value, subject, color = Group)) +

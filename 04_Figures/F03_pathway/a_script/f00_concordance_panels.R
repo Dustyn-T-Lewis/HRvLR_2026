@@ -389,7 +389,8 @@ sig_key_a <- function() {
 }
 
 # HR-vs-LR logFC scatter with flanking per-quadrant ORA half-bars; concordant
-# diagonal tinted red, discordant off-diagonal blue; interaction-sig = Divergent.
+# diagonal tinted red, discordant off-diagonal blue;
+# interaction-sig = Divergent.
 panel_quadrant_ora <- function(quad_tbl, ora_df, cfg) {
   rho <- cor(
     quad_tbl$lfc_hi, quad_tbl$lfc_lo,
@@ -421,14 +422,32 @@ panel_quadrant_ora <- function(quad_tbl, ora_df, cfg) {
     mutate(label_fill = SIG_LABEL_FILL_CONC[as.character(sig_class)])
 
   scatter <- ggplot(quad_tbl, aes(lfc_hi, lfc_lo)) +
-    annotate("rect", xmin = 0, xmax = Inf, ymin = 0, ymax = Inf, fill = CONC_TINT, alpha = 0.6) +
-    annotate("rect", xmin = -Inf, xmax = 0, ymin = -Inf, ymax = 0, fill = CONC_TINT, alpha = 0.6) +
-    annotate("rect", xmin = 0, xmax = Inf, ymin = -Inf, ymax = 0, fill = DISC_TINT, alpha = 0.6) +
-    annotate("rect", xmin = -Inf, xmax = 0, ymin = 0, ymax = Inf, fill = DISC_TINT, alpha = 0.6) +
+    annotate(
+      "rect",
+      xmin = 0, xmax = Inf, ymin = 0, ymax = Inf, fill = CONC_TINT, alpha = 0.6
+    ) +
+    annotate(
+      "rect",
+      xmin = -Inf, xmax = 0, ymin = -Inf, ymax = 0, fill = CONC_TINT,
+      alpha = 0.6
+    ) +
+    annotate(
+      "rect",
+      xmin = 0, xmax = Inf, ymin = -Inf, ymax = 0, fill = DISC_TINT, alpha = 0.6
+    ) +
+    annotate(
+      "rect",
+      xmin = -Inf, xmax = 0, ymin = 0, ymax = Inf, fill = DISC_TINT, alpha = 0.6
+    ) +
     geom_hline(yintercept = 0, color = "grey55", linewidth = 0.3) +
     geom_vline(xintercept = 0, color = "grey55", linewidth = 0.3) +
-    geom_abline(slope = 1, linetype = "dashed", color = "black", linewidth = 0.3) +
-    geom_point(data = ~ filter(.x, sig_class == "NS"), color = "grey80", size = 0.6, alpha = 0.35) +
+    geom_abline(
+      slope = 1, linetype = "dashed", color = "black", linewidth = 0.3
+    ) +
+    geom_point(
+      data = ~ filter(.x, sig_class == "NS"), color = "grey80",
+      size = 0.6, alpha = 0.35
+    ) +
     geom_point(
       data = ~ filter(.x, sig_class != "NS"), aes(fill = sig_class),
       shape = 21, size = 1.5, alpha = 0.9, color = "grey35", stroke = 0.25
@@ -436,47 +455,67 @@ panel_quadrant_ora <- function(quad_tbl, ora_df, cfg) {
     scale_fill_manual(values = SIG_COLORS_CONC, guide = "none") +
     ggrepel::geom_label_repel(
       data = lab_df, aes(label = gene),
-      fill = lab_df$label_fill, color = "white", size = 2.3, fontface = "italic",
+      fill = lab_df$label_fill, color = "white", size = 2.3,
+      fontface = "italic",
       max.overlaps = 30, segment.size = 0.2, min.segment.length = 0,
       label.padding = unit(1, "pt"), label.r = unit(0.5, "pt"),
       box.padding = 0.3, seed = 42
     ) +
     annotate("label",
-      x = lim, y = lim, label = sprintf("Concordant Up\n%s", qlab("Concordant Up")),
+      x = lim, y = lim,
+      label = sprintf("Concordant Up\n%s", qlab("Concordant Up")),
       hjust = 1, vjust = 1, size = 2.7, fontface = "bold", color = COMP_RED,
-      fill = alpha("white", 0.9), label.padding = unit(2, "pt"), lineheight = 0.9
+      fill = alpha("white", 0.9), label.padding = unit(2, "pt"),
+      lineheight = 0.9
     ) +
     annotate("label",
-      x = -lim, y = -lim, label = sprintf("%s\nConcordant Down", qlab("Concordant Down")),
+      x = -lim, y = -lim,
+      label = sprintf("%s\nConcordant Down", qlab("Concordant Down")),
       hjust = 0, vjust = 0, size = 2.7, fontface = "bold", color = COMP_RED,
-      fill = alpha("white", 0.9), label.padding = unit(2, "pt"), lineheight = 0.9
+      fill = alpha("white", 0.9), label.padding = unit(2, "pt"),
+      lineheight = 0.9
     ) +
     annotate("label",
-      x = -lim, y = lim, label = sprintf("HR Down / LR Up\n%s", qlab("HR Down / LR Up")),
+      x = -lim, y = lim,
+      label = sprintf("HR Down / LR Up\n%s", qlab("HR Down / LR Up")),
       hjust = 0, vjust = 1, size = 2.7, fontface = "bold", color = COMP_BLUE,
-      fill = alpha("white", 0.9), label.padding = unit(2, "pt"), lineheight = 0.9
+      fill = alpha("white", 0.9), label.padding = unit(2, "pt"),
+      lineheight = 0.9
     ) +
     annotate("label",
-      x = lim, y = -lim, label = sprintf("%s\nHR Up / LR Down", qlab("HR Up / LR Down")),
+      x = lim, y = -lim,
+      label = sprintf("%s\nHR Up / LR Down", qlab("HR Up / LR Down")),
       hjust = 1, vjust = 0, size = 2.7, fontface = "bold", color = COMP_BLUE,
-      fill = alpha("white", 0.9), label.padding = unit(2, "pt"), lineheight = 0.9
+      fill = alpha("white", 0.9), label.padding = unit(2, "pt"),
+      lineheight = 0.9
     ) +
     coord_cartesian(xlim = c(-lim, lim), ylim = c(-lim, lim), expand = FALSE) +
     labs(x = cfg$labels$x, y = cfg$labels$y) +
     FIG_THEME +
     theme(legend.position = "none", plot.margin = margin(2, 0, 0, 0, "mm"))
 
-  nw <- make_half_bars(filter(ora_df, quadrant == "HR Down / LR Up"), COMP_BLUE, "left", c(0, lim))
-  ne <- make_half_bars(filter(ora_df, quadrant == "Concordant Up"), COMP_RED, "right", c(0, lim))
-  sw <- make_half_bars(filter(ora_df, quadrant == "Concordant Down"), COMP_RED, "left", c(-lim, 0))
-  se <- make_half_bars(filter(ora_df, quadrant == "HR Up / LR Down"), COMP_BLUE, "right", c(-lim, 0))
+  nw <- make_half_bars(
+    filter(ora_df, quadrant == "HR Down / LR Up"), COMP_BLUE, "left", c(0, lim)
+  )
+  ne <- make_half_bars(
+    filter(ora_df, quadrant == "Concordant Up"), COMP_RED, "right", c(0, lim)
+  )
+  sw <- make_half_bars(
+    filter(ora_df, quadrant == "Concordant Down"), COMP_RED, "left", c(-lim, 0)
+  )
+  se <- make_half_bars(
+    filter(ora_df, quadrant == "HR Up / LR Down"), COMP_BLUE, "right",
+    c(-lim, 0)
+  )
 
   design <- c(
     patchwork::area(1, 1), patchwork::area(1, 2, 2, 2), patchwork::area(1, 3),
     patchwork::area(2, 1), patchwork::area(2, 3), patchwork::area(3, 1, 3, 3)
   )
   plot <- nw + scatter + ne + sw + se + sig_key_a() +
-    plot_layout(design = design, widths = c(70, 105, 70), heights = c(85, 85, 12))
+    plot_layout(
+      design = design, widths = c(70, 105, 70), heights = c(85, 85, 12)
+    )
   list(
     plot = plot, rho = rho, r_pear = r_pear,
     n_total = nrow(quad_tbl), n_sig = nrow(sig_sub),
@@ -522,7 +561,9 @@ panel_pattern_heatmap <- function(dep, cfg) {
   go_result <- assign_go_slim_consolidated(sig_df$gene, dep$gene)
   sig_df <- sig_df |>
     left_join(go_result |> select(gene, consolidated), by = "gene") |>
-    mutate(pathway = ifelse(is.na(consolidated), "Other", as.character(consolidated))) |>
+    mutate(pathway = ifelse(
+      is.na(consolidated), "Other", as.character(consolidated)
+    )) |>
     mutate(quadrant = factor(quadrant, levels = QUAD_ORDER_B)) |>
     arrange(quadrant, pathway, desc(lfc_x))
 
@@ -634,7 +675,9 @@ panel_pattern_heatmap <- function(dep, cfg) {
     )
 
   pw_labels <- pw_counts |>
-    transmute(x = X_BAR_L + n_prot * BAR_SCALE + 0.08, y = y_center, label = pathway)
+    transmute(
+      x = X_BAR_L + n_prot * BAR_SCALE + 0.08, y = y_center, label = pathway
+    )
 
   count_ticks <- tibble(
     val = pretty(c(0, count_max), n = 4),
@@ -681,16 +724,19 @@ panel_pattern_heatmap <- function(dep, cfg) {
     select(quadrant, pathway, n_flow, src_top, src_bot) |>
     left_join(target_bands, by = c("quadrant", "pathway"))
 
-  all_ribbons <- purrr::pmap_dfr(ribbon_df, function(quadrant, pathway, n_flow,
-                                                     src_top, src_bot, tgt_top, tgt_bot) {
-    rid <- paste(quadrant, pathway, sep = "___")
-    df <- make_sigmoid_ribbon(X_SANK_L, X_SANK_R, src_top, src_bot, tgt_top, tgt_bot,
-      n_pts = 60, ribbon_id = rid
-    )
-    df$quadrant <- quadrant
-    df$pathway <- pathway
-    df
-  })
+  all_ribbons <- purrr::pmap_dfr(
+    ribbon_df,
+    function(quadrant, pathway, n_flow, src_top, src_bot, tgt_top, tgt_bot) {
+      rid <- paste(quadrant, pathway, sep = "___")
+      df <- make_sigmoid_ribbon(
+        X_SANK_L, X_SANK_R, src_top, src_bot, tgt_top, tgt_bot,
+        n_pts = 60, ribbon_id = rid
+      )
+      df$quadrant <- quadrant
+      df$pathway <- pathway
+      df
+    }
+  )
 
   endpoint_bars <- bar_data |>
     transmute(
@@ -702,19 +748,32 @@ panel_pattern_heatmap <- function(dep, cfg) {
   lfc_to_color <- function(v, fc_max) {
     v <- pmax(-fc_max, pmin(fc_max, v))
     ifelse(v >= 0,
-      scales::seq_gradient_pal("#FFFFFF", unname(GROUP_COLORS["LR"]))(v / fc_max),
-      scales::seq_gradient_pal(unname(GROUP_COLORS["HR"]), "#FFFFFF")((v + fc_max) / fc_max)
+      scales::seq_gradient_pal("#FFFFFF", unname(GROUP_COLORS["LR"]))(
+        v / fc_max
+      ),
+      scales::seq_gradient_pal(unname(GROUP_COLORS["HR"]), "#FFFFFF")(
+        (v + fc_max) / fc_max
+      )
     )
   }
 
   heat_tiles <- bind_rows(
-    sig_df |> transmute(x = X_COL1, y, w = TILE_W, h = ROW_H, fill = lfc_to_color(lfc_x, fc_max)),
-    sig_df |> transmute(x = X_COL2, y, w = TILE_W, h = ROW_H, fill = lfc_to_color(lfc_y, fc_max))
+    sig_df |> transmute(
+      x = X_COL1, y, w = TILE_W, h = ROW_H, fill = lfc_to_color(lfc_x, fc_max)
+    ),
+    sig_df |> transmute(
+      x = X_COL2, y, w = TILE_W, h = ROW_H, fill = lfc_to_color(lfc_y, fc_max)
+    )
   )
   sig_tiles <- sig_df |>
-    transmute(x = X_SIG, y, w = STRIP_W, h = ROW_H, fill = SIG_COLORS_B[sig_cat])
+    transmute(
+      x = X_SIG, y, w = STRIP_W, h = ROW_H, fill = SIG_COLORS_B[sig_cat]
+    )
   quad_tiles <- sig_df |>
-    transmute(x = X_QUAD, y, w = STRIP_W, h = ROW_H, fill = QUAD_COLORS_B[as.character(quadrant)])
+    transmute(
+      x = X_QUAD, y, w = STRIP_W, h = ROW_H,
+      fill = QUAD_COLORS_B[as.character(quadrant)]
+    )
 
   divider_ys <- quad_ends[seq_len(length(QUAD_ORDER_B) - 1)]
   divider_ys <- divider_ys[divider_ys > 0 & divider_ys < total_h]
@@ -757,27 +816,36 @@ panel_pattern_heatmap <- function(dep, cfg) {
 
   pB <- ggplot() +
     geom_rect(
-      data = bg_stripes, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+      data = bg_stripes,
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
       fill = bg_stripes$fill, color = "grey70", linewidth = 0.2
     ) +
     geom_rect(
       data = heat_tiles,
-      aes(xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2),
+      aes(
+        xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2
+      ),
       fill = heat_tiles$fill, color = NA
     ) +
     geom_rect(
       data = sig_tiles,
-      aes(xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2),
+      aes(
+        xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2
+      ),
       fill = sig_tiles$fill, color = NA
     ) +
     geom_rect(
       data = quad_tiles,
-      aes(xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2),
+      aes(
+        xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2
+      ),
       fill = quad_tiles$fill, color = NA
     ) +
     geom_segment(
       data = tibble(y = divider_ys),
-      aes(x = X_SIG - STRIP_W / 2, xend = X_QUAD + STRIP_W / 2, y = y, yend = y),
+      aes(
+        x = X_SIG - STRIP_W / 2, xend = X_QUAD + STRIP_W / 2, y = y, yend = y
+      ),
       color = "grey30", linewidth = 0.4
     ) +
     geom_text(
@@ -789,20 +857,25 @@ panel_pattern_heatmap <- function(dep, cfg) {
       fill = QUAD_COLORS_B[all_ribbons$quadrant], alpha = 0.40, color = NA
     ) +
     geom_rect(
-      data = endpoint_bars, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+      data = endpoint_bars,
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
       fill = ENDPOINT_COLORS_B[endpoint_bars$quadrant], color = NA
     ) +
     geom_rect(
-      data = bar_data, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-      fill = QUAD_COLORS_B[as.character(bar_data$quadrant)], color = "black", linewidth = 0.3
+      data = bar_data,
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+      fill = QUAD_COLORS_B[as.character(bar_data$quadrant)], color = "black",
+      linewidth = 0.3
     ) +
     geom_text(
-      data = bar_data, aes(x = (xmin + xmax) / 2, y = (ymin + ymax) / 2, label = n_seg),
+      data = bar_data,
+      aes(x = (xmin + xmax) / 2, y = (ymin + ymax) / 2, label = n_seg),
       size = 2.6, fontface = "bold", color = "white"
     ) +
     geom_text(
       data = pw_labels, aes(x = x, y = y, label = label),
-      size = 3.0, hjust = 0, fontface = "bold", color = "grey15", lineheight = 0.8
+      size = 3.0, hjust = 0, fontface = "bold", color = "grey15",
+      lineheight = 0.8
     ) +
     annotate("segment",
       x = X_BAR_L - 0.05, xend = X_BAR_MAX + 2.0,
@@ -821,15 +894,22 @@ panel_pattern_heatmap <- function(dep, cfg) {
       label = "Protein count", size = 3.2, fontface = "bold", color = "grey20"
     ) +
     geom_rect(
-      data = grad_h_legend, aes(xmin = xmin, xmax = xmax, ymin = GRAD_Y, ymax = GRAD_Y + ROW_H * 1.4),
+      data = grad_h_legend,
+      aes(xmin = xmin, xmax = xmax, ymin = GRAD_Y, ymax = GRAD_Y + ROW_H * 1.4),
       fill = grad_h_legend$fill, color = NA
     ) +
     annotate("text",
       x = HEAT_MID, y = GRAD_Y + ROW_H * 3.0, label = "logFC", size = 3.0,
       fontface = "bold", color = "grey20"
     ) +
-    annotate("text", x = HEAT_LEFT, y = GRAD_Y + ROW_H * 3.0, label = sprintf("%.1f", -fc_max), size = 2.6, color = "grey30") +
-    annotate("text", x = HEAT_RIGHT, y = GRAD_Y + ROW_H * 3.0, label = sprintf("+%.1f", fc_max), size = 2.6, color = "grey30") +
+    annotate("text",
+      x = HEAT_LEFT, y = GRAD_Y + ROW_H * 3.0,
+      label = sprintf("%.1f", -fc_max), size = 2.6, color = "grey30"
+    ) +
+    annotate("text",
+      x = HEAT_RIGHT, y = GRAD_Y + ROW_H * 3.0,
+      label = sprintf("+%.1f", fc_max), size = 2.6, color = "grey30"
+    ) +
     geom_point(
       data = sig_key_df, aes(x = x, y = y), shape = 22, size = 3.2,
       fill = sig_key_df$fill, color = "grey30", stroke = 0.3
@@ -1100,7 +1180,9 @@ panel_nes_scatter <- function(nes_wide, c_hi, c_lo, cfg) {
     scale_fill_identity() +
     geom_hline(yintercept = 0, color = "grey60", linewidth = 0.3) +
     geom_vline(xintercept = 0, color = "grey60", linewidth = 0.3) +
-    geom_abline(slope = 1, linetype = "dashed", color = "black", linewidth = 0.3) +
+    geom_abline(
+      slope = 1, linetype = "dashed", color = "black", linewidth = 0.3
+    ) +
     geom_point(
       data = ~ filter(.x, !divergent),
       aes(shape = database, size = set_size), fill = "grey65", color = "grey45",

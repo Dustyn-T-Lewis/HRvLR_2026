@@ -1,15 +1,21 @@
-# F02 supplement: pi-selected protein heatmaps, real arm labels beside shuffled ones
-# One row per timepoint. Left column selects proteins by pi < PI_THRESH on the real arm
-# contrast; right column runs the identical selection on labels shuffled across subjects.
-# Rows and columns are clustered, so the blocks are the ones a reader would find. Both
-# columns block, because selecting proteins for separating the arms and then displaying
-# that separation is one fact shown twice. The shuffled column is the control that says so.
+# F02 supplement: pi-selected protein heatmaps, real arm labels beside
+# shuffled ones
+# One row per timepoint. Left column selects proteins by pi < PI_THRESH on
+# the real arm contrast; right column runs the identical selection on
+# labels shuffled across subjects. Rows and columns are clustered, so the
+# blocks are the ones a reader would find. Both columns block, because
+# selecting proteins for separating the arms and then displaying that
+# separation is one fact shown twice. The shuffled column is the control
+# that says so.
 
 pacman::p_load(
-  here, dplyr, tibble, limma, withr, ComplexHeatmap, circlize, grid, patchwork, ggplot2
+  here, dplyr, tibble, limma, withr, ComplexHeatmap, circlize, grid,
+  patchwork, ggplot2
 )
 
-if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+if (!exists("meta")) {
+  source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+}
 source(here("03_Features", "contrasts.R"))
 source(here("functions", "shared_pathway_utils.R"))
 
@@ -20,12 +26,17 @@ TP_LABEL <- c(T1 = "T1 baseline", T2 = "T2 trained", T3 = "T3 acute")
 goslim <- build_goslim_gene_sets(min_size = SET_FLOOR, max_size = 500)
 slim_sizes <- lengths(goslim)
 
-# A protein sits in several slim terms; take the smallest containing term so the label
-# is the most specific available, and leave the rest unassigned.
+# A protein sits in several slim terms; take the smallest containing term
+# so the label is the most specific available, and leave the rest
+# unassigned.
 slim_of <- function(genes) {
   vapply(genes, function(g) {
     hit <- names(goslim)[vapply(goslim, function(s) g %in% s, logical(1))]
-    if (!length(hit)) "Unassigned" else sub("^GOSLIM_", "", hit[which.min(slim_sizes[hit])])
+    if (!length(hit)) {
+      "Unassigned"
+    } else {
+      sub("^GOSLIM_", "", hit[which.min(slim_sizes[hit])])
+    }
   }, character(1))
 }
 
@@ -53,7 +64,9 @@ pi_panels <- lapply(names(TP_LABEL), function(tp) {
       colnames(z) <- samples
       list(
         z = z, arm = s$lab, slim = slim_of(rownames(z)),
-        title = sprintf("%s  |  %s  |  %d proteins", TP_LABEL[[tp]], s$tag, nrow(z))
+        title = sprintf(
+          "%s  |  %s  |  %d proteins", TP_LABEL[[tp]], s$tag, nrow(z)
+        )
       )
     }
   )
@@ -75,7 +88,8 @@ draw_pi_panel <- function(p) {
   ht <- Heatmap(
     p$z,
     name = "z", col = z_scale,
-    column_title = p$title, column_title_gp = gpar(fontsize = 8, fontface = "bold"),
+    column_title = p$title,
+    column_title_gp = gpar(fontsize = 8, fontface = "bold"),
     cluster_rows = TRUE, cluster_columns = TRUE,
     show_row_dend = TRUE, show_column_dend = TRUE,
     row_dend_width = unit(6, "mm"), column_dend_height = unit(6, "mm"),
@@ -107,7 +121,8 @@ draw_pi_panel <- function(p) {
   wrap_elements(grid.grabExpr(draw(ht, merge_legend = TRUE)))
 }
 
-# Rows sized by the taller panel in each pair so cells stay square across the sheet.
+# Rows sized by the taller panel in each pair so cells stay square across
+# the sheet.
 row_heights <- vapply(seq(1, length(pi_panels), by = 2), function(i) {
   max(nrow(pi_panels[[i]]$z), nrow(pi_panels[[i + 1]]$z))
 }, numeric(1))
@@ -117,10 +132,10 @@ p_pi <- wrap_plots(lapply(pi_panels, draw_pi_panel), ncol = 2) +
   plot_annotation(
     title = "pi-selected proteins, real arm labels beside shuffled ones",
     caption = paste(
-      "Left selects proteins by pi < 0.05 on the real arm contrast; right runs the",
-      "identical selection on labels shuffled across subjects.\nRows and columns are",
-      "clustered within each panel. Both block, and at every timepoint the shuffle",
-      "selects more proteins than the arm does."
+      "Left selects proteins by pi < 0.05 on the real arm contrast; right",
+      "runs the identical selection on labels shuffled across subjects.\nRows",
+      "and columns are clustered within each panel. Both block, and at every",
+      "timepoint the shuffle selects more proteins than the arm does."
     ),
     theme = theme(
       plot.title = element_text(face = "bold", size = 9),
@@ -128,7 +143,8 @@ p_pi <- wrap_plots(lapply(pi_panels, draw_pi_panel), ncol = 2) +
     )
   )
 
-# Each panel needs its cells plus about 21 mm of dendrogram, title and column labels.
+# Each panel needs its cells plus about 21 mm of dendrogram, title and
+# column labels.
 save_png(
   p_pi, file.path(RPT_DIR, "supp", "supp_pi_heatmap"),
   200, sum(row_heights) * CELL_MM + 21 * length(row_heights)

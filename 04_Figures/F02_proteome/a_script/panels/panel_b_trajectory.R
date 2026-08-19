@@ -1,11 +1,14 @@
 # F02 Panel B: response-trajectory magnitude (RRPP permutation)
-# Per-subject change-vector length ||delta|| (training T2 - T1, acute T3 - T2), HR vs LR,
-# tested with RRPP (Collyer, Sekora & Adams 2015). How far the proteome moved; the
-# direction geometry is in the supplement. Title drawn on the composite.
+# Per-subject change-vector length ||delta|| (training T2 - T1, acute T3 -
+# T2), HR vs LR, tested with RRPP (Collyer, Sekora & Adams 2015). How far
+# the proteome moved; the direction geometry is in the supplement. Title
+# drawn on the composite.
 
 pacman::p_load(here, dplyr, tidyr, tibble, ggplot2, RRPP)
 
-if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+if (!exists("meta")) {
+  source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
+}
 
 PB_W <- 120
 PB_H <- 110
@@ -14,8 +17,12 @@ subject_of <- function(ids) sub("_T[123]$", "", ids)
 subj_group <- setNames(meta$Group, subject_of(meta$Col_ID))
 
 delta_matrix <- function(from_tp, to_tp) {
-  from_ids <- meta$Col_ID[meta$Timepoint == from_tp & meta$Col_ID %in% colnames(imp_mat)]
-  to_ids <- meta$Col_ID[meta$Timepoint == to_tp & meta$Col_ID %in% colnames(imp_mat)]
+  from_ids <- meta$Col_ID[
+    meta$Timepoint == from_tp & meta$Col_ID %in% colnames(imp_mat)
+  ]
+  to_ids <- meta$Col_ID[
+    meta$Timepoint == to_tp & meta$Col_ID %in% colnames(imp_mat)
+  ]
   paired <- intersect(subject_of(from_ids), subject_of(to_ids))
   d <- t(imp_mat[, to_ids[match(paired, subject_of(to_ids))]]) -
     t(imp_mat[, from_ids[match(paired, subject_of(from_ids))]])
@@ -31,23 +38,40 @@ mag_fit <- function(phase) {
   grp <- droplevels(subj_group[rownames(dm)])
   mag <- sqrt(rowSums(dm^2))
   set.seed(42)
-  tab <- anova(lm.rrpp(mag ~ grp, data = rrpp.data.frame(mag = mag, grp = grp), iter = 999))$table
+  tab <- anova(lm.rrpp(
+    mag ~ grp,
+    data = rrpp.data.frame(mag = mag, grp = grp), iter = 999
+  ))$table
   list(
-    mag = tibble(subject = rownames(dm), phase = phase, Group = grp, magnitude = mag),
-    stat = tibble(phase = phase, p = tab$`Pr(>F)`[1], label = sprintf("RRPP %s", fmt_p(tab$`Pr(>F)`[1])))
+    mag = tibble(
+      subject = rownames(dm), phase = phase, Group = grp, magnitude = mag
+    ),
+    stat = tibble(
+      phase = phase, p = tab$`Pr(>F)`[1],
+      label = sprintf("RRPP %s", fmt_p(tab$`Pr(>F)`[1]))
+    )
   )
 }
 
 fits <- lapply(c("Training", "Acute"), mag_fit)
-relabel <- function(x) factor(recode(x, Training = phase_levels[1], Acute = phase_levels[2]), levels = phase_levels)
+relabel <- function(x) {
+  factor(
+    recode(x, Training = phase_levels[1], Acute = phase_levels[2]),
+    levels = phase_levels
+  )
+}
 mag_df <- bind_rows(lapply(fits, `[[`, "mag")) |> mutate(phase = relabel(phase))
-mag_stat <- bind_rows(lapply(fits, `[[`, "stat")) |> mutate(phase = relabel(phase))
+mag_stat <- bind_rows(lapply(fits, `[[`, "stat")) |>
+  mutate(phase = relabel(phase))
 
 pB <- ggplot(mag_df, aes(Group, magnitude, color = Group, fill = Group)) +
-  geom_boxplot(alpha = 0.18, outlier.shape = NA, width = 0.55, linewidth = 0.4) +
-  # Seeded: geom_jitter draws its offsets at render time, so an unseeded jitter
-  # redraws the points on every ggsave and the panel never reproduces. RRPP leaves
-  # the RNG in a state we do not control, so the seed must live on the layer.
+  geom_boxplot(
+    alpha = 0.18, outlier.shape = NA, width = 0.55, linewidth = 0.4
+  ) +
+  # Seeded: geom_jitter draws its offsets at render time, so an unseeded
+  # jitter redraws the points on every ggsave and the panel never
+  # reproduces. RRPP leaves the RNG in a state we do not control, so the
+  # seed must live on the layer.
   geom_point(
     position = position_jitter(width = 0.12, height = 0, seed = 42),
     size = 1.6, alpha = 0.85
@@ -82,8 +106,12 @@ subject_of <- function(ids) sub("_T[123]$", "", ids)
 subj_group <- setNames(meta$Group, subject_of(meta$Col_ID))
 
 delta_matrix <- function(from_tp, to_tp) {
-  from_ids <- meta$Col_ID[meta$Timepoint == from_tp & meta$Col_ID %in% colnames(imp_mat)]
-  to_ids <- meta$Col_ID[meta$Timepoint == to_tp & meta$Col_ID %in% colnames(imp_mat)]
+  from_ids <- meta$Col_ID[
+    meta$Timepoint == from_tp & meta$Col_ID %in% colnames(imp_mat)
+  ]
+  to_ids <- meta$Col_ID[
+    meta$Timepoint == to_tp & meta$Col_ID %in% colnames(imp_mat)
+  ]
   paired <- intersect(subject_of(from_ids), subject_of(to_ids))
   d <- t(imp_mat[, to_ids[match(paired, subject_of(to_ids))]]) -
     t(imp_mat[, from_ids[match(paired, subject_of(from_ids))]])
@@ -92,8 +120,12 @@ delta_matrix <- function(from_tp, to_tp) {
 }
 
 vector_angle <- function(dm, grp) {
-  mu <- vapply(levels(grp), function(g) colMeans(dm[grp == g, , drop = FALSE]), numeric(ncol(dm)))
-  cos_ab <- sum(mu[, 1] * mu[, 2]) / (sqrt(sum(mu[, 1]^2)) * sqrt(sum(mu[, 2]^2)))
+  mu <- vapply(
+    levels(grp), function(g) colMeans(dm[grp == g, , drop = FALSE]),
+    numeric(ncol(dm))
+  )
+  cos_ab <- sum(mu[, 1] * mu[, 2]) /
+    (sqrt(sum(mu[, 1]^2)) * sqrt(sum(mu[, 2]^2)))
   acos(pmin(pmax(cos_ab, -1), 1)) * 180 / pi
 }
 
@@ -104,26 +136,51 @@ dir_fit <- function(phase) {
   dm <- delta_matrix(phase_defs[[phase]][1], phase_defs[[phase]][2])
   grp <- droplevels(subj_group[rownames(dm)])
   set.seed(42)
-  vec_tab <- anova(lm.rrpp(dm ~ grp, data = rrpp.data.frame(dm = dm, grp = grp), iter = 999))$table
+  vec_tab <- anova(lm.rrpp(
+    dm ~ grp,
+    data = rrpp.data.frame(dm = dm, grp = grp), iter = 999
+  ))$table
   pca <- prcomp(dm, center = TRUE, scale. = FALSE)
   list(
     scores = as_tibble(pca$x[, 1:2]) |> mutate(Group = grp, phase = phase),
-    stat = tibble(phase = phase, p = vec_tab$`Pr(>F)`[1], label = sprintf("vector %s\nangle = %.0f°", fmt_p(vec_tab$`Pr(>F)`[1]), vector_angle(dm, grp)))
+    stat = tibble(
+      phase = phase, p = vec_tab$`Pr(>F)`[1],
+      label = sprintf(
+        "vector %s\nangle = %.0f°", fmt_p(vec_tab$`Pr(>F)`[1]),
+        vector_angle(dm, grp)
+      )
+    )
   )
 }
 
 fits <- lapply(c("Training", "Acute"), dir_fit)
-relabel <- function(x) factor(recode(x, Training = phase_levels[1], Acute = phase_levels[2]), levels = phase_levels)
-dir_score <- bind_rows(lapply(fits, `[[`, "scores")) |> mutate(phase = relabel(phase))
-dir_stat <- bind_rows(lapply(fits, `[[`, "stat")) |> mutate(phase = relabel(phase))
+relabel <- function(x) {
+  factor(
+    recode(x, Training = phase_levels[1], Acute = phase_levels[2]),
+    levels = phase_levels
+  )
+}
+dir_score <- bind_rows(lapply(fits, `[[`, "scores")) |>
+  mutate(phase = relabel(phase))
+dir_stat <- bind_rows(lapply(fits, `[[`, "stat")) |>
+  mutate(phase = relabel(phase))
 
-pDir <- ggplot(dir_score, aes(PC1, PC2, color = Group)) +
-  stat_ellipse(aes(fill = Group), geom = "polygon", alpha = 0.10, level = 0.80, show.legend = FALSE) +
-  stat_ellipse(aes(group = Group), level = 0.80, linewidth = 0.4, linetype = "dashed") +
+p_dir <- ggplot(dir_score, aes(PC1, PC2, color = Group)) +
+  stat_ellipse(
+    aes(fill = Group),
+    geom = "polygon", alpha = 0.10, level = 0.80,
+    show.legend = FALSE
+  ) +
+  stat_ellipse(
+    aes(group = Group),
+    level = 0.80, linewidth = 0.4, linetype = "dashed"
+  ) +
   geom_point(size = 1.7, alpha = 0.9) +
   geom_text(
-    data = dir_stat, aes(x = -Inf, y = Inf, label = label), inherit.aes = FALSE,
-    hjust = -0.05, vjust = 1.15, size = FIG_GEOM_TEXT, fontface = "bold", color = "grey25"
+    data = dir_stat, aes(x = -Inf, y = Inf, label = label),
+    inherit.aes = FALSE,
+    hjust = -0.05, vjust = 1.15, size = FIG_GEOM_TEXT, fontface = "bold",
+    color = "grey25"
   ) +
   facet_wrap(~phase, scales = "free") +
   scale_color_manual(values = GROUP_COLORS) +
@@ -136,6 +193,6 @@ pDir <- ggplot(dir_score, aes(PC1, PC2, color = Group)) +
   FIG_THEME +
   theme(legend.position = "bottom")
 
-save_png(pDir, file.path(supp_dir, "panel_o_direction"), PD_W, PD_H)
+save_png(p_dir, file.path(supp_dir, "panel_o_direction"), PD_W, PD_H)
 F02_AUDIT[["panel_O_direction"]] <- dir_score
 cat("F02 Supp Panel O (direction) done.\n")
