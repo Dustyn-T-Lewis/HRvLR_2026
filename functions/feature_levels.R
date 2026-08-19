@@ -39,10 +39,9 @@ pathway_matrix <- function() {
   readRDS(do.call(here, as.list(SINGSCORE_CACHE)))
 }
 
-# score_singscore() is called with min_size = 1L on sets already filtered to
-# 15-500 *annotated* members, so a 200-member set with 11 detected scores like
-# a fully measured one. fgsea excludes those by filtering on detected size;
-# nothing filters them here, so the count travels with the row instead.
+# Sets are filtered to SET_FLOOR detected members before scoring, matching what
+# fgsea and fry apply. The counts still travel with the row so a reader can see
+# how much of each set was measured.
 pathway_coverage <- function(gene_sets, detected_genes) {
   tibble(
     feature = names(gene_sets),

@@ -11,6 +11,11 @@
 #   dedup_em() / dedup_report() EnrichmentMap combined-coefficient collapse
 #   classify_database()         database label for plotting
 
+# Minimum members a set needs to be scored. fgsea and fry apply it to detected
+# members; singscore scoring must use the same denominator, or a 200-member set
+# with 3 measured proteins scores like a fully covered one.
+SET_FLOOR <- 15L
+
 deduplicate_enrichment_flat <- function(results, pathways, jaccard_cutoff = 0.5) {
   if (nrow(results) == 0) {
     return(results)
