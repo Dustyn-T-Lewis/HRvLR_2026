@@ -84,7 +84,7 @@ write_csv(
 n_identified <- sum(abs(loadings$z) >= 2, na.rm = TRUE)
 message(paste(capture.output(print(as.data.frame(loadings))), collapse = "\n"))
 message(sprintf(
-  "free loadings with |z| >= 2: %d of 5 | Spearman rho: %.3f vs d_mcsa, %.3f vs composite",
+  "free loadings with |z| >= 2: %d of 5 | rho %.3f vs d_mcsa, %.3f vs comp",
   n_identified, rho_mcsa, rho_comp
 ))
 message(sprintf(
