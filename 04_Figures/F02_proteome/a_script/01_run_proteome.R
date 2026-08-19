@@ -16,7 +16,7 @@ panel_dir <- here("04_Figures", "F02_proteome", "a_script", "panels")
 for (p in c(
   "panel_a_pca", "panel_b_trajectory", "panel_c_divergence",
   "panel_d_dep_counts", "panel_e_effectsize", "panel_f_pathways",
-  "panel_g_splsda", "panel_h_clustering", "supp_pi_heatmap"
+  "panel_g_splsda", "panel_h_clustering", "supp_pi_heatmap", "supp_fdr_landscape"
 )) {
   source(file.path(panel_dir, paste0(p, ".R")))
 }

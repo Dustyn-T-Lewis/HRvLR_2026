@@ -1,0 +1,13 @@
+level,phenotype,n_observed,null_median,emp_p,consistent
+module,comp_hypertrophy,0,0,1,
+module,d_fcsa_I,0,0,1,
+module,d_fcsa_II,0,0,1,
+module,d_mcsa,1,0,0.056943056943056944,brown
+module,d_1rm_legpress,0,0,1,
+module,d_1rm_ext,0,0,1,
+pathway,comp_hypertrophy,1,0,0.2727272727272727,HALLMARK_PEROXISOME
+pathway,d_fcsa_I,0,0,1,
+pathway,d_fcsa_II,0,0,1,
+pathway,d_mcsa,2,0,0.0919080919080919,HALLMARK_E2F_TARGETS;HALLMARK_INTERFERON_GAMMA_RESPONSE
+pathway,d_1rm_legpress,0,0,1,
+pathway,d_1rm_ext,2,0,0.0989010989010989,HALLMARK_ADIPOGENESIS;HALLMARK_BILE_ACID_METABOLISM

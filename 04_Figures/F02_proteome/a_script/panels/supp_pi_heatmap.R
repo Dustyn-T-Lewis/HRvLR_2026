@@ -1,28 +1,31 @@
 # F02 supplement: pi-selected protein heatmaps, real arm labels beside shuffled ones
 # One row per timepoint. Left column selects proteins by pi < PI_THRESH on the real arm
 # contrast; right column runs the identical selection on labels shuffled across subjects.
-# Both columns block cleanly, because selecting proteins for separating the arms and then
-# displaying that separation is one fact shown twice. The shuffled column is the control
-# that says so. Rows are grouped by GO Slim, the compact axis, so blocks can be read
-# against biology rather than against the selection.
+# Rows and columns are clustered, so the blocks are the ones a reader would find. Both
+# columns block, because selecting proteins for separating the arms and then displaying
+# that separation is one fact shown twice. The shuffled column is the control that says so.
 
-pacman::p_load(here, dplyr, tidyr, tibble, ggplot2, patchwork, limma, withr)
+pacman::p_load(
+  here, dplyr, tibble, limma, withr, ComplexHeatmap, circlize, grid, patchwork, ggplot2
+)
 
 if (!exists("meta")) source(here("04_Figures", "F02_proteome", "a_script", "setup.R"))
 source(here("03_Features", "contrasts.R"))
 source(here("functions", "shared_pathway_utils.R"))
 
 PI_HM_SEED <- 7
+CELL_MM <- 3.4
 TP_LABEL <- c(T1 = "T1 baseline", T2 = "T2 trained", T3 = "T3 acute")
 
 goslim <- build_goslim_gene_sets(min_size = SET_FLOOR, max_size = 500)
+slim_sizes <- lengths(goslim)
+
 # A protein sits in several slim terms; take the smallest containing term so the label
-# is the most specific one available, and leave the rest unassigned.
+# is the most specific available, and leave the rest unassigned.
 slim_of <- function(genes) {
-  sizes <- lengths(goslim)
   vapply(genes, function(g) {
     hit <- names(goslim)[vapply(goslim, function(s) g %in% s, logical(1))]
-    if (!length(hit)) "Unassigned" else hit[which.min(sizes[hit])]
+    if (!length(hit)) "Unassigned" else sub("^GOSLIM_", "", hit[which.min(slim_sizes[hit])])
   }, character(1))
 }
 
@@ -33,111 +36,99 @@ pi_selected <- function(x, g) {
   rownames(x)[pi_score(tt$P.Value, tt$logFC) < PI_THRESH]
 }
 
-heat_frame <- function(tp, labels, arm, tag) {
+pi_panels <- lapply(names(TP_LABEL), function(tp) {
   samples <- meta$Col_ID[meta$Timepoint == tp]
   x <- imp_mat[, samples]
-  keep <- pi_selected(x, factor(labels))
-  z <- t(scale(t(x[keep, , drop = FALSE])))
-  as.data.frame(z) |>
-    rownames_to_column("gene") |>
-    pivot_longer(-"gene", names_to = "sample", values_to = "z") |>
-    mutate(
-      slim = slim_of(.data$gene)[.data$gene],
-      arm = arm[.data$sample],
-      timepoint = TP_LABEL[[tp]],
-      tag = tag,
-      n_sel = length(keep)
-    )
-}
-
-set_labels <- function(tp) {
-  samples <- meta$Col_ID[meta$Timepoint == tp]
   real <- as.character(meta$Group[match(samples, meta$Col_ID)])
-  list(
-    samples = samples, real = real,
-    shuffled = with_seed(PI_HM_SEED + match(tp, names(TP_LABEL)), sample(real))
-  )
-}
+  shuffled <- with_seed(PI_HM_SEED + match(tp, names(TP_LABEL)), sample(real))
 
-frames <- lapply(names(TP_LABEL), function(tp) {
-  lab <- set_labels(tp)
-  arm_real <- stats::setNames(lab$real, lab$samples)
-  arm_shuf <- stats::setNames(lab$shuffled, lab$samples)
-  bind_rows(
-    heat_frame(tp, lab$real, arm_real, "Selected on arm"),
-    heat_frame(tp, lab$shuffled, arm_shuf, "Selected on shuffle")
+  lapply(
+    list(
+      list(tag = "Selected on arm", lab = real),
+      list(tag = "Selected on shuffle", lab = shuffled)
+    ),
+    function(s) {
+      keep <- pi_selected(x, factor(s$lab))
+      z <- t(scale(t(x[keep, , drop = FALSE])))
+      colnames(z) <- samples
+      list(
+        z = z, arm = s$lab, slim = slim_of(rownames(z)),
+        title = sprintf("%s  |  %s  |  %d proteins", TP_LABEL[[tp]], s$tag, nrow(z))
+      )
+    }
   )
 })
-pi_heat <- bind_rows(frames) |>
-  mutate(
-    timepoint = factor(.data$timepoint, levels = unname(TP_LABEL)),
-    tag = factor(.data$tag, levels = c("Selected on arm", "Selected on shuffle"))
+pi_panels <- unlist(pi_panels, recursive = FALSE)
+
+# One colour per GO Slim term seen anywhere, so the same term reads the same in
+# every panel.
+slim_levels <- sort(unique(unlist(lapply(pi_panels, function(p) p$slim))))
+slim_cols <- stats::setNames(
+  grDevices::hcl.colors(length(slim_levels), "Dark 3"), slim_levels
+)
+
+z_scale <- colorRamp2(
+  c(-2, 0, 2), c(DIR_COLORS[["Down"]], "white", DIR_COLORS[["Up"]])
+)
+
+draw_pi_panel <- function(p) {
+  ht <- Heatmap(
+    p$z,
+    name = "z", col = z_scale,
+    column_title = p$title, column_title_gp = gpar(fontsize = 8, fontface = "bold"),
+    cluster_rows = TRUE, cluster_columns = TRUE,
+    show_row_dend = TRUE, show_column_dend = TRUE,
+    row_dend_width = unit(6, "mm"), column_dend_height = unit(6, "mm"),
+    show_row_names = TRUE, show_column_names = TRUE,
+    row_names_gp = gpar(fontsize = 5.6), column_names_gp = gpar(fontsize = 5.6),
+    width = unit(ncol(p$z) * CELL_MM, "mm"),
+    height = unit(nrow(p$z) * CELL_MM, "mm"),
+    top_annotation = HeatmapAnnotation(
+      Arm = p$arm,
+      col = list(Arm = GROUP_COLORS),
+      annotation_name_gp = gpar(fontsize = 6),
+      simple_anno_size = unit(2.6, "mm")
+    ),
+    left_annotation = rowAnnotation(
+      `GO Slim` = p$slim,
+      col = list(`GO Slim` = slim_cols),
+      annotation_name_gp = gpar(fontsize = 6),
+      simple_anno_size = unit(2.6, "mm"),
+      show_legend = FALSE
+    ),
+    heatmap_legend_param = list(
+      title_gp = gpar(fontsize = 6), labels_gp = gpar(fontsize = 5.6),
+      grid_width = unit(2.5, "mm"), legend_height = unit(14, "mm")
+    )
   )
-
-# Order samples by the label the selection used, and proteins by GO Slim block.
-pi_heat <- pi_heat |>
-  arrange(.data$timepoint, .data$tag, .data$arm, .data$sample) |>
-  group_by(.data$timepoint, .data$tag) |>
-  mutate(
-    sample = factor(.data$sample, levels = unique(.data$sample)),
-    gene = factor(.data$gene, levels = unique(.data$gene[order(.data$slim, .data$gene)]))
-  ) |>
-  ungroup()
-
-counts <- distinct(pi_heat, timepoint, tag, n_sel)
-
-# Each cell gets its own axes. facet_grid would spread every panel's tiles over the
-# union of all gene and sample levels, leaving six sparse rectangles.
-one_heat <- function(tp, tg) {
-  d <- filter(pi_heat, .data$timepoint == tp, .data$tag == tg) |>
-    mutate(
-      gene = factor(.data$gene, levels = unique(.data$gene[order(.data$slim, .data$gene)])),
-      sample = factor(.data$sample, levels = unique(.data$sample[order(.data$arm, .data$sample)]))
-    )
-  slim_runs <- d |>
-    distinct(.data$gene, .data$slim) |>
-    arrange(.data$gene) |>
-    count(.data$slim, name = "n")
-
-  ggplot(d, aes(sample, gene, fill = z)) +
-    geom_raster() +
-    scale_fill_gradient2(
-      low = DIR_COLORS[["Down"]], mid = "white", high = DIR_COLORS[["Up"]],
-      midpoint = 0, limits = c(-2, 2), oob = scales::squish, name = "z"
-    ) +
-    labs(
-      title = sprintf(
-        "%s  |  %s  |  %d proteins, %d GO Slim groups",
-        tp, tg, d$n_sel[1], nrow(slim_runs)
-      ),
-      x = NULL, y = NULL
-    ) +
-    FIG_THEME +
-    theme(
-      axis.text = element_blank(), axis.ticks = element_blank(),
-      panel.grid = element_blank(),
-      plot.title = element_text(size = FIG_GEOM_TEXT, face = "bold", colour = "grey20")
-    )
+  wrap_elements(grid.grabExpr(draw(ht, merge_legend = TRUE)))
 }
 
-grid <- lapply(levels(pi_heat$timepoint), function(tp) {
-  lapply(levels(pi_heat$tag), function(tg) one_heat(tp, tg))
-})
+# Rows sized by the taller panel in each pair so cells stay square across the sheet.
+row_heights <- vapply(seq(1, length(pi_panels), by = 2), function(i) {
+  max(nrow(pi_panels[[i]]$z), nrow(pi_panels[[i + 1]]$z))
+}, numeric(1))
 
-p_pi <- wrap_plots(unlist(grid, recursive = FALSE), ncol = 2, guides = "collect") +
+p_pi <- wrap_plots(lapply(pi_panels, draw_pi_panel), ncol = 2) +
+  plot_layout(heights = row_heights) +
   plot_annotation(
     caption = paste(
       "Left selects proteins by pi < 0.05 on the real arm contrast; right runs the",
-      "identical selection on labels shuffled across subjects.\nBoth block, and at every",
-      "timepoint the shuffle selects more proteins than the arm does. Samples ordered by",
-      "the label the selection used;\nrows grouped by GO Slim."
+      "identical selection on labels shuffled across subjects.\nRows and columns are",
+      "clustered within each panel. Both block, and at every timepoint the shuffle",
+      "selects more proteins than the arm does."
     ),
     theme = theme(
-      plot.caption = element_text(hjust = 0, size = FIG_GEOM_TEXT - 0.4, colour = "grey35")
+      plot.caption = element_text(hjust = 0, size = 6, colour = "grey35")
     )
   )
 
-save_png(p_pi, file.path(RPT_DIR, "supp", "supp_pi_heatmap"), 200, 210)
-F02_AUDIT[["supp_pi_heatmap"]] <- pi_heat |>
-  distinct(timepoint, tag, gene, slim, n_sel)
+# Each panel needs its cells plus about 21 mm of dendrogram, title and column labels.
+save_png(
+  p_pi, file.path(RPT_DIR, "supp", "supp_pi_heatmap"),
+  200, sum(row_heights) * CELL_MM + 21 * length(row_heights)
+)
+F02_AUDIT[["supp_pi_heatmap"]] <- bind_rows(lapply(pi_panels, function(p) {
+  tibble(panel = p$title, gene = rownames(p$z), slim = p$slim)
+}))
 cat("F02 pi heatmap supplement done.\n")
