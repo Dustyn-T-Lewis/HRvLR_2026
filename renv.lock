@@ -9363,6 +9363,64 @@
       "Author": "Francois Husson [aut, cre] (ORCID: <https://orcid.org/0000-0002-7271-8877>), Julie Josse [aut]",
       "Repository": "CRAN"
     },
+    "missMethyl": {
+      "Package": "missMethyl",
+      "Version": "1.46.0",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        "R (>= 3.6.0)",
+        "IlluminaHumanMethylation450kanno.ilmn12.hg19",
+        "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
+        "IlluminaHumanMethylationEPICv2anno.20a1.hg38"
+      ],
+      "Imports": [
+        "AnnotationDbi",
+        "BiasedUrn",
+        "Biobase",
+        "BiocGenerics",
+        "GenomeInfoDb",
+        "GenomicRanges",
+        "GO.db",
+        "IlluminaHumanMethylation450kmanifest",
+        "IlluminaHumanMethylationEPICmanifest",
+        "IlluminaHumanMethylationEPICv2manifest",
+        "IRanges",
+        "limma",
+        "methods",
+        "methylumi",
+        "minfi",
+        "org.Hs.eg.db",
+        "ruv",
+        "S4Vectors",
+        "statmod",
+        "stringr",
+        "SummarizedExperiment"
+      ],
+      "LinkingTo": [
+        null
+      ],
+      "Suggests": [
+        "BiocStyle",
+        "edgeR",
+        "knitr",
+        "minfiData",
+        "rmarkdown",
+        "tweeDEseqCountData",
+        "DMRcate",
+        "ExperimentHub"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "GPL-2",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "no",
+      "Repository": "BioCsoft",
+      "Type": "source"
+    },
     "mitml": {
       "Package": "mitml",
       "Version": "0.4-5",
