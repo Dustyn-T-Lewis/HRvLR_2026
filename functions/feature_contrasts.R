@@ -19,6 +19,18 @@ feature_metadata <- function() {
   )
 }
 
+# The continuous tree's metadata: timepoint only, no arm. Same normalized
+# DAList as feature_metadata(), just keyed on Timepoint instead of Group_Time.
+feature_metadata_pooled <- function() {
+  dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
+  m <- as.data.frame(dal$metadata)
+  tibble(
+    sample_id = m$Col_ID,
+    timepoint = factor(m$Timepoint, levels = c("T1", "T2", "T3")),
+    subject = m$Subject_ID
+  )
+}
+
 # The model spec on its own: means design over the six Group_Time cells, the
 # nine contrasts, and the subject blocking with its consensus correlation.
 # Exposed because a set-level test has to be fitted against the same model as
@@ -52,6 +64,36 @@ feature_design <- function(mat, meta = feature_metadata(), adjust = NULL) {
   )
 }
 
+# The continuous tree's design: means model over the three timepoints, no arm
+# term anywhere, and the two pooled contrasts (Training, Acute) in place of
+# the nine. Mirrors feature_design() rather than parameterising it, so a
+# caller cannot mismatch feature_metadata_pooled() with the group design by
+# forgetting to override a default.
+feature_design_pooled <- function(mat, meta = feature_metadata_pooled(),
+                                  adjust = NULL) {
+  meta <- meta[match(colnames(mat), meta$sample_id), ]
+  if (anyNA(meta$sample_id)) {
+    stop("feature matrix has samples absent from the normalisation metadata")
+  }
+  design <- stats::model.matrix(~ 0 + timepoint, meta)
+  colnames(design) <- levels(meta$timepoint)
+  if (!is.null(adjust)) {
+    if (!all(colnames(mat) %in% names(adjust))) {
+      stop("adjust is missing samples present in the feature matrix")
+    }
+    design <- cbind(design, adjust = unname(adjust[colnames(mat)]))
+  }
+  cm <- limma::makeContrasts(contrasts = POOLED_CONTRASTS, levels = design)
+  colnames(cm) <- trimws(sub("=.*$", "", POOLED_CONTRASTS))
+  list(
+    design = design, contrasts = cm, block = meta$subject,
+    correlation = limma::duplicateCorrelation(
+      mat, design,
+      block = meta$subject
+    )$consensus
+  )
+}
+
 # BH is applied within each contrast, matching extract_DA_results()'s per-coef
 # topTable call. Pooling the nine would imply an independence that the shared
 # subjects and overlapping contrasts do not have.
@@ -64,6 +106,33 @@ feature_design <- function(mat, meta = feature_metadata(), adjust = NULL) {
 fit_feature_contrasts <- function(mat, meta = feature_metadata(),
                                   adjust = NULL, robust = FALSE) {
   parts <- feature_design(mat, meta, adjust = adjust)
+  cm <- parts$contrasts
+  fit <- limma::lmFit(mat, parts$design,
+    block = parts$block, correlation = parts$correlation
+  )
+  fit2 <- limma::eBayes(limma::contrasts.fit(fit, cm), robust = robust)
+  res <- bind_rows(lapply(colnames(cm), function(ct) {
+    limma::topTable(fit2,
+      coef = ct, number = Inf, adjust.method = "BH", sort.by = "none"
+    ) |>
+      tibble::rownames_to_column("feature") |>
+      transmute(
+        contrast = ct, feature = .data$feature, logFC = .data$logFC,
+        t = .data$t, p = .data$P.Value, bh = .data$adj.P.Val
+      )
+  }))
+  attr(res, "within_cor") <- parts$correlation
+  res
+}
+
+# The continuous-tree counterpart to fit_feature_contrasts(). Mirrors it line
+# for line rather than adding a design_fn argument to the group-based
+# version: fit_feature_contrasts()'s meta default is feature_metadata(), and
+# a design_fn switch without also switching that default is a silent
+# mismatch waiting to happen.
+fit_feature_contrasts_pooled <- function(mat, meta = feature_metadata_pooled(),
+                                         adjust = NULL, robust = FALSE) {
+  parts <- feature_design_pooled(mat, meta, adjust = adjust)
   cm <- parts$contrasts
   fit <- limma::lmFit(mat, parts$design,
     block = parts$block, correlation = parts$correlation

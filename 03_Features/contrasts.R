@@ -24,6 +24,15 @@ HRVLR_CONTRASTS <- c(
 
 CONTRAST_NAMES <- trimws(sub("=.*$", "", HRVLR_CONTRASTS))
 
+# The continuous tree's two pooled contrasts: no arm term, averaged across all
+# 16 subjects. Training_All and Acute_All were previously defined inline in
+# 05_pooled_response.R; this is that same pair, promoted beside the nine so
+# both trees read one contrasts file.
+POOLED_CONTRASTS <- c(
+  "Training = T2 - T1",
+  "Acute = T3 - T2"
+)
+
 # proteoDA writes the fit wide, one column per statistic per contrast. The
 # feature layer and the imputed arms read it long, so the pivot lives here
 # instead of in each caller. Contrast names contain underscores and Acute_HR is
