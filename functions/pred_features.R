@@ -25,10 +25,7 @@ pred_paths <- function() {
     eigen = here(
       "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
     ),
-    cache = here(
-      "03_Analysis", "categorical", "02_Pathways", "c_data",
-      "singscore_scores.rds"
-    )
+    cache = here("02_Normalization", "c_data", "singscore_scores.rds")
   )
 }
 

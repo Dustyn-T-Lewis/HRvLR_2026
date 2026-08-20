@@ -8,9 +8,7 @@
 # kept is arbitrary.
 
 pacman::p_load(here, dplyr, tibble, purrr, openxlsx, WGCNA, ggplot2, patchwork)
-source(here(
-  "03_Analysis", "categorical", "03_WGCNA", "a_script", "shared_wgcna.R"
-))
+source(here("functions", "shared_wgcna.R"))
 source(here("functions", "ora_bars.R"))
 source(here("functions", "shared_style.R"))
 

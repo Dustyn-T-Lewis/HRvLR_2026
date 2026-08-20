@@ -5,10 +5,6 @@
 
 pacman::p_load(here, dplyr, tidyr, readr)
 
-SINGSCORE_CACHE <- c(
-  "03_Analysis", "categorical", "02_Pathways", "c_data", "singscore_scores.rds"
-)
-
 LEVEL_DIR <- c(
   pathways = "02_Pathways", modules = "03_WGCNA", proteins = "01_Proteins"
 )
@@ -23,9 +19,12 @@ protein_matrix <- function() {
   mat
 }
 
-module_matrix <- function() {
+# tree selects which of 03_Analysis/{categorical,continuous} to read.
+# Defaults to categorical so every caller written before the continuous tree
+# existed keeps working unchanged.
+module_matrix <- function(tree = "categorical") {
   eigen_csv <- here(
-    "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
+    "03_Analysis", tree, "03_WGCNA", "c_data", "wgcna_eigengene.csv"
   )
   wide <- read_csv(eigen_csv, show_col_types = FALSE) |>
     pivot_wider(names_from = "sample_id", values_from = "ME") |>
@@ -35,8 +34,11 @@ module_matrix <- function() {
   mat
 }
 
+# singscore has no design/contrast in it -- it is a per-sample score derived
+# only from the shared normalized/imputed data, so unlike module_matrix() it
+# does not take a tree argument. Both trees read the one cache.
 pathway_matrix <- function() {
-  readRDS(do.call(here, as.list(SINGSCORE_CACHE)))
+  readRDS(here("02_Normalization", "c_data", "singscore_scores.rds"))
 }
 
 # Sets are filtered to SET_FLOOR detected members before scoring, matching what

@@ -66,11 +66,7 @@ module_mats <- map(TIMEPOINTS, function(tp) {
     as.matrix()
 })
 
-sing <- readRDS(
-  here(
-    "03_Analysis", "categorical", "02_Pathways", "c_data", "singscore_scores.rds"
-  )
-)
+sing <- readRDS(here("02_Normalization", "c_data", "singscore_scores.rds"))
 sing_meta <- split_id(colnames(sing))
 pathway_mats <- map(TIMEPOINTS, function(tp) {
   m <- sing[, sing_meta$timepoint == tp, drop = FALSE]

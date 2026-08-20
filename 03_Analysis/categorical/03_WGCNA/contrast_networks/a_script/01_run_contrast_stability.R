@@ -11,9 +11,7 @@
 # delta matrix has one column per subject, so centring would zero it entirely.
 
 pacman::p_load(here, dplyr, openxlsx, WGCNA)
-source(here(
-  "03_Analysis", "categorical", "03_WGCNA", "a_script", "shared_wgcna.R"
-))
+source(here("functions", "shared_wgcna.R"))
 source(here("functions", "shared_utils.R"))
 source(here(
   "03_Analysis", "categorical", "03_WGCNA", "a_script", "loso_wgcna_refit.R"

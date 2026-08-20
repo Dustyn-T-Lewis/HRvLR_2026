@@ -1,7 +1,5 @@
 pacman::p_load(here, testthat, dplyr, tibble)
-source(here::here(
-  "03_Analysis", "categorical", "03_WGCNA", "a_script", "shared_wgcna.R"
-))
+source(here::here("functions", "shared_wgcna.R"))
 
 test_that("centre_within_subject removes the between-subject mean exactly", {
   set.seed(1)
