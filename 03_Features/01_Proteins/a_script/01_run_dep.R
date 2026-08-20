@@ -104,11 +104,11 @@ dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 dal <- add_contrasts(dal, contrasts_vector = HRVLR_CONTRASTS)
 dal <- fit_limma_model(dal)
 
-within_cor <- dal$eBayes_fit$correlation %||%
-  dal$tags$duplicate_correlation %||% NA_real_
-if (!is.na(within_cor)) {
-  cat(sprintf("Within-subject correlation: %.3f\n", within_cor))
-}
+within_cor <- limma::duplicateCorrelation(
+  dal$data, dal$design$design_matrix,
+  block = meta$subject
+)$consensus
+cat(sprintf("Within-subject correlation: %.3f\n", within_cor))
 
 # Selection is by BH. Pi and raw p are reported beside it; neither selects.
 # BH at 0.10 is our threshold for exploratory n=16 proteomics, not a
