@@ -57,7 +57,8 @@ LEVEL_BOOK <- c(
 contrast_grid <- function(level) {
   d <- read.xlsx(
     here(
-      "03_Analysis", "categorical", LEVEL_DIR[[level]], "c_data", LEVEL_BOOK[[level]]
+      "03_Analysis", "categorical", LEVEL_DIR[[level]], "c_data",
+      LEVEL_BOOK[[level]]
     ),
     "contrasts"
   )
@@ -65,29 +66,12 @@ contrast_grid <- function(level) {
   if (level != "pathways") {
     d$n_detected <- NA_integer_
     d$n_annotated <- NA_integer_
-    d$fry_fdr <- NA_real_
-  } else {
-    # singscore collapses a set to one score per sample and tests that; fry
-    # tests the member proteins directly and rotates residuals, so inter-gene
-    # correlation is carried rather than assumed away. Where the two disagree
-    # the rotation test is the one whose null holds, which is why it is marked
-    # on the tile rather than filed in a workbook.
-    fry <- read.xlsx(
-      here(
-        "03_Analysis", "categorical", "02_Pathways", "c_data", LEVEL_BOOK[["pathways"]]
-      ),
-      "fry"
-    )
-    d <- left_join(
-      d, select(fry, feature = "pathway", "contrast", fry_fdr = "fdr"),
-      by = c("feature", "contrast")
-    )
   }
   d |>
     filter(!is.na(.data$label_key), .data$label_key != "") |>
     select(
       "feature", "label_key", "contrast", "logFC", "p", "bh",
-      "n_detected", "n_annotated", "fry_fdr"
+      "n_detected", "n_annotated"
     )
 }
 
@@ -117,7 +101,8 @@ contrast_features <- function(d, level) {
 module_sizes <- function() {
   atlas <- read.xlsx(
     here(
-      "03_Analysis", "categorical", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"
+      "03_Analysis", "categorical", "03_WGCNA", "c_data",
+      "WGCNA_source_data.xlsx"
     ),
     "module_atlas"
   )
@@ -350,10 +335,6 @@ family_tile_panel <- function(d, rows, family, show_legend = TRUE) {
       data = filter(fd, !is.na(.data$bh), .data$bh < BH_CUT),
       fill = NA, colour = "black", linewidth = 0.8
     ) +
-    geom_tile(
-      data = filter(fd, !is.na(.data$fry_fdr), .data$fry_fdr < BH_CUT),
-      fill = NA, colour = "#1B7837", linewidth = 0.8, linetype = "22"
-    ) +
     geom_text(
       aes(
         label = paste0(.data$shown, .data$star),
@@ -461,12 +442,11 @@ contrast_caption <- function(level, rows) {
       "set.",
       "Scores",
       "come from the missForest-imputed matrix, unlike the protein panel.",
-      "\n* A dashed green outline marks limma::fry FDR < .05 over the same",
-      "set, a rotation test on the member proteins that carries inter-gene",
-      "correlation instead of assuming it away. It is not a stricter version",
-      "of the singscore call but a different one, and the two disagree both",
-      "ways: fry marks rows whose singscore BH runs to .19, and it clears",
-      "every set in both interaction columns."
+      "\n* The rotation-test cross-check (limma::fry) this panel used to",
+      "outline in dashed green was retired: this tree tests pathways with",
+      "singscore (this table) and fgsea only, and fgsea has no rotation-test",
+      "confirmation of its own, so a large fgsea hit count should be read as",
+      "what preranked GSEA alone finds, not as a confirmed enrichment."
     ),
     proteins = paste(
       "Read directly from stage 03: limma with duplicateCorrelation blocking",

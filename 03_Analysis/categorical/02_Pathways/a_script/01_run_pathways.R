@@ -1,12 +1,22 @@
-# Pathway level of the feature layer: per-sample singscore ranks, then the same
-# nine contrasts stage 03 fits on proteins. The scores are the feature space
-# F05 and F06 predict from, so the cache written here is the one they read.
+# Pathway level of the feature layer: per-sample singscore ranks, tested
+# through the same estimator the nine contrasts fit on proteins, plus a
+# second, independent per-contrast test (fgsea) over the same sets. The
+# singscore matrix cached here is the sample-level pathway feature
+# F04_classification reads.
 #
 # Foroutan et al. 2018, BMC Bioinformatics 19:404 -- singscore
 #
 # Coverage travels with every row. A set can pass the 15-500 annotated-size
 # filter with a tenth of its members measured, and a score built on 11 of 200
 # proteins is not a readout of that pathway.
+#
+# fgsea has no rotation-test cross-check here (fry was dropped from every
+# pathway/module call in this tree). fgsea permutes gene labels and assumes
+# they vary independently, which they do not on shared biopsies -- this
+# repo caught a concrete false positive this way before (an OxPhos call at
+# padj 4e-17 that a rotation test rejected). Without that check, read a
+# large fgsea hit count as what preranked GSEA alone can find, not as
+# confirmed enrichment.
 
 pacman::p_load(here, dplyr, openxlsx)
 source(here("functions", "feature_contrasts.R"))
@@ -38,27 +48,30 @@ results <- fit_feature_contrasts(scores) |>
     pi = pi_score(.data$p, .data$logFC)
   )
 
-# The same sets tested a second way. singscore collapses a set to one score per
-# sample and then tests that score; fry tests the member proteins directly,
-# rotating residuals so inter-gene correlation is carried rather than assumed
-# away. fgsea (F03) assumes it away, which is what makes the three-way
-# comparison worth having. Complete data is required, so this runs on the
-# missForest arm.
+# The same sets tested a second way, per contrast: singscore collapses a set
+# to one score per sample and tests that score through the shared estimator
+# above; fgsea asks whether the set's own genes cluster at one end of that
+# contrast's full ranked list (canonical fgseaMultilevel, run_fgsea() in
+# shared_pathway_utils.R). Complete data is required, so this runs on the
+# missForest arm, matching pred_gene_expression()'s gene-symbol collapse --
+# the same matrix msigdbr's gene sets are keyed on.
 expr <- pred_gene_expression(readRDS(pred_paths()$dalist))
-parts <- feature_design(expr)
-fry_res <- pathway_fry(
-  expr, gene_sets, parts$design, parts$contrasts,
-  block = parts$block, correlation = parts$correlation
-)
+expr_fit <- fit_feature_contrasts(expr)
 
-fry_summary <- fry_res |>
+fgsea_res <- bind_rows(lapply(unique(expr_fit$contrast), function(ct) {
+  rows <- filter(expr_fit, .data$contrast == ct)
+  run_fgsea(sort(setNames(rows$t, rows$feature)), gene_sets) |>
+    mutate(contrast = ct)
+}))
+
+fgsea_summary <- fgsea_res |>
   group_by(.data$contrast) |>
   summarise(
-    n_tested = dplyr::n(), n_nominal = sum(.data$p < 0.05),
-    n_fdr = sum(.data$fdr < 0.05), min_fdr = min(.data$fdr), .groups = "drop"
+    n_tested = dplyr::n(), n_nominal = sum(.data$pval < 0.05),
+    n_fdr = sum(.data$padj < 0.05), min_fdr = min(.data$padj), .groups = "drop"
   )
-cat("\nfry (rotation test, subject-blocked) over the same sets:\n")
-print(as.data.frame(fry_summary))
+cat("\nfgsea (preranked) over the same sets:\n")
+print(as.data.frame(fgsea_summary))
 
 summary_tbl <- results |>
   group_by(.data$contrast) |>
@@ -85,7 +98,7 @@ print(as.data.frame(
 write.xlsx(
   list(
     contrasts = results, summary = summary_tbl, coverage = coverage,
-    fry = fry_res, fry_summary = fry_summary
+    fgsea = fgsea_res, fgsea_summary = fgsea_summary
   ),
   file.path(out_dir, "pathway_contrasts.xlsx")
 )
