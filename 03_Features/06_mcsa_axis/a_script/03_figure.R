@@ -40,7 +40,9 @@ scans <- read_cell("02_protein_mcsa.csv")
 survivors <- read_cell("02_survivors.csv")
 
 symbols <- read_csv(
-  here("03_Features", "01_Proteins", "c_data", "03_combined_results.csv"),
+  here(
+    "03_Analysis", "categorical", "01_Proteins", "c_data", "03_combined_results.csv"
+  ),
   show_col_types = FALSE
 ) |>
   select(feature = "uniprot_id", gene = "gene")

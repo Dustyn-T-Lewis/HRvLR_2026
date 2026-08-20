@@ -44,7 +44,9 @@ readable_on <- function(fill) {
 
 wgcna_ora <- function() {
   read.xlsx(
-    here("03_Features", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+    here(
+      "03_Analysis", "categorical", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"
+    ),
     "module_ora"
   ) |>
     group_by(.data$module) |>
@@ -83,7 +85,9 @@ driver_keys <- function(features, level) {
     # A gene symbol names itself, so the bar carries the protein's WGCNA module
     # instead: the panel then traces protein -> module without a second figure.
     mm <- read.xlsx(
-      here("03_Features", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+      here(
+        "03_Analysis", "categorical", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"
+      ),
       "module_membership"
     )
     module <- mm$module[match(features, mm$gene)]

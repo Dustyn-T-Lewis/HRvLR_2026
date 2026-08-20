@@ -6,7 +6,8 @@
 # tile, stars mark nominal p and a black outline marks BH q < .05 applied within
 # the contrast.
 #
-# Every number here is read from 03_Features. Nothing is refitted at draw time.
+# Every number here is read from 03_Analysis/categorical. Nothing is refitted
+# at draw time.
 
 pacman::p_load(
   here, dplyr, readr, ggplot2, patchwork, scales, stringr, openxlsx
@@ -55,7 +56,9 @@ LEVEL_BOOK <- c(
 
 contrast_grid <- function(level) {
   d <- read.xlsx(
-    here("03_Features", LEVEL_DIR[[level]], "c_data", LEVEL_BOOK[[level]]),
+    here(
+      "03_Analysis", "categorical", LEVEL_DIR[[level]], "c_data", LEVEL_BOOK[[level]]
+    ),
     "contrasts"
   )
   d$label_key <- if (level == "proteins") d$gene else d$feature
@@ -70,7 +73,9 @@ contrast_grid <- function(level) {
     # the rotation test is the one whose null holds, which is why it is marked
     # on the tile rather than filed in a workbook.
     fry <- read.xlsx(
-      here("03_Features", "02_Pathways", "c_data", LEVEL_BOOK[["pathways"]]),
+      here(
+        "03_Analysis", "categorical", "02_Pathways", "c_data", LEVEL_BOOK[["pathways"]]
+      ),
       "fry"
     )
     d <- left_join(
@@ -111,7 +116,9 @@ contrast_features <- function(d, level) {
 
 module_sizes <- function() {
   atlas <- read.xlsx(
-    here("03_Features", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"),
+    here(
+      "03_Analysis", "categorical", "03_WGCNA", "c_data", "WGCNA_source_data.xlsx"
+    ),
     "module_atlas"
   )
   stats::setNames(atlas$n_proteins, atlas$module)
@@ -421,7 +428,8 @@ SHARED_FOOTNOTES <- paste(
   "term is b = -1.21, p = 0.032, and p = 0.017 by subject-label permutation,",
   "with LR rising 2.14 against HR's 0.57. A difference of differences removes",
   "a constant offset, not a differential one, so the interaction columns do",
-  "not cancel it either. 03_Features/.../05_blood_adjusted.R refits each contrast",
+  "not cancel it either. categorical/01_Proteins/.../05_blood_adjusted.R",
+  "refits each contrast with",
   "the index as a covariate.",
   "\n# At 7 HR and 8 LR a nominal p < .05 needs a large effect; these columns",
   "are a declared screen, not a discovery engine.",

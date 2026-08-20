@@ -23,10 +23,11 @@ pred_paths <- function() {
     ),
     pheno = here("00_input", "c_data", "phenotype.csv"),
     eigen = here(
-      "03_Features", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
+      "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
     ),
     cache = here(
-      "03_Features", "02_Pathways", "c_data", "singscore_scores.rds"
+      "03_Analysis", "categorical", "02_Pathways", "c_data",
+      "singscore_scores.rds"
     )
   )
 }

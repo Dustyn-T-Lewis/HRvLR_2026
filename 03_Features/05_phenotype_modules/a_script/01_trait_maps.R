@@ -50,7 +50,9 @@ split_id <- function(ids) {
 }
 
 eig <- read_csv(
-  here("03_Features", "03_WGCNA", "c_data", "wgcna_eigengene.csv"),
+  here(
+    "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
+  ),
   show_col_types = FALSE
 )
 eig <- bind_cols(eig, rename(split_id(eig$sample_id), subj = "subject"))
@@ -65,7 +67,9 @@ module_mats <- map(TIMEPOINTS, function(tp) {
 })
 
 sing <- readRDS(
-  here("03_Features", "02_Pathways", "c_data", "singscore_scores.rds")
+  here(
+    "03_Analysis", "categorical", "02_Pathways", "c_data", "singscore_scores.rds"
+  )
 )
 sing_meta <- split_id(colnames(sing))
 pathway_mats <- map(TIMEPOINTS, function(tp) {

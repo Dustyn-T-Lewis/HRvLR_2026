@@ -1,5 +1,7 @@
 pacman::p_load(here, testthat)
-source(here("03_Features", "03_WGCNA", "a_script", "loso_wgcna_refit.R"))
+source(here(
+  "03_Analysis", "categorical", "03_WGCNA", "a_script", "loso_wgcna_refit.R"
+))
 
 test_that("match_modules pairs by protein overlap and reports jaccard", {
   full <- c(p1 = "blue", p2 = "blue", p3 = "blue", p4 = "red", p5 = "red")

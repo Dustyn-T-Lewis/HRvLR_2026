@@ -1,5 +1,7 @@
 pacman::p_load(here, testthat, dplyr)
-source(here("03_Features", "01_Proteins", "a_script", "pi_permutation.R"))
+source(here(
+  "03_Analysis", "categorical", "01_Proteins", "a_script", "pi_permutation.R"
+))
 
 # 16 subjects, 8 per arm, three timepoints each - the roster shape without the
 # two partial subjects, which the permutation handles the same way.

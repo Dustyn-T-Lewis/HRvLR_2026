@@ -81,14 +81,18 @@ scan_deltas <- function(mat, ids, level) {
 }
 
 eig <- read_csv(
-  here("03_Features", "03_WGCNA", "c_data", "wgcna_eigengene.csv"),
+  here(
+    "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
+  ),
   show_col_types = FALSE
 ) |>
   pivot_wider(names_from = "sample_id", values_from = "ME")
 eig_mat <- as.matrix(column_to_rownames(eig, "group_id"))
 
 sing <- readRDS(
-  here("03_Features", "02_Pathways", "c_data", "singscore_scores.rds")
+  here(
+    "03_Analysis", "categorical", "02_Pathways", "c_data", "singscore_scores.rds"
+  )
 )
 
 change_trait <- bind_rows(

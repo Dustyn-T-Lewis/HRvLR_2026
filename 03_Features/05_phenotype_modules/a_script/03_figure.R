@@ -146,7 +146,9 @@ p_c <- ggplot(cluster_trait, aes(.data$pheno_label, .data$feature_label)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 eig <- read_csv(
-  here("03_Features", "03_WGCNA", "c_data", "wgcna_eigengene.csv"),
+  here(
+    "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
+  ),
   show_col_types = FALSE
 ) |>
   filter(.data$group_id == "brown") |>
