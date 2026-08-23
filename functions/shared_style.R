@@ -41,6 +41,14 @@ CONTRAST_COLORS <- c(
   Acute_Interaction    = "#6A51A3" # differential acute response
 )
 
+# The continuous tree's two pooled contrasts. Neutral blues, light-to-dark
+# training -> acute, deliberately not the HR/LR-coded hues above since this
+# tree never splits by arm.
+POOLED_CONTRAST_COLORS <- c(
+  Training = "#4292C6",
+  Acute    = "#08519C"
+)
+
 # Phenotype domains for F01: muscle size, fibre size, strength. Reuses the
 # established hues so the palette keeps a single source.
 DOMAIN_COLORS <- c(
@@ -115,6 +123,8 @@ CTR_SHORT <- c(
   Training_Interaction = "Tr.Int.",
   Acute_Interaction    = "Ac.Int."
 )
+
+POOLED_CTR_SHORT <- c(Training = "Training", Acute = "Acute")
 
 # Helper functions
 
