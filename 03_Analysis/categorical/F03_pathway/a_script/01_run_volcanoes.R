@@ -12,7 +12,7 @@ F03_TABLES <- list()
 
 a_script <- here("03_Analysis", "categorical", "F03_pathway", "a_script")
 source(file.path(a_script, "setup.R"))
-source(file.path(a_script, "rings.R"))
+source(here("functions", "rings.R"))
 source(here("functions", "shared_utils.R"))
 
 clear_dir(RPT_DIR)
