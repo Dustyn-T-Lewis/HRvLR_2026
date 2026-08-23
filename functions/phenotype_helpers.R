@@ -81,6 +81,40 @@ change_advantage_table <- function(meta) {
     mutate(p_holm = p.adjust(p, method = "holm"))
 }
 
+# The continuous tree's counterpart to change_advantage(): no HR/LR contrast,
+# just how much every subject changed on each outcome. Median and IQR carry
+# the typical response; the range shows how wide it actually is, which is
+# the whole reason to read this continuously instead of as two group means.
+# Reported in the outcome's raw units AND standardized by that outcome's own
+# change-score SD (the single-group analogue of Hedges g's SD-unit scale),
+# because fCSA/mCSA (thousands of um^2) and 1RM (tens of kg) cannot share
+# one raw-unit axis.
+change_magnitude <- function(meta, col) {
+  d <- prepost_long(meta, col) |>
+    pivot_wider(names_from = Timepoint, values_from = value) |>
+    filter(!is.na(T1), !is.na(T2)) |>
+    mutate(delta = T2 - T1)
+  sd_delta <- stats::sd(d$delta)
+  tibble(
+    n = nrow(d), median = stats::median(d$delta),
+    q1 = stats::quantile(d$delta, 0.25, names = FALSE),
+    q3 = stats::quantile(d$delta, 0.75, names = FALSE),
+    min = min(d$delta), max = max(d$delta), sd_delta = sd_delta,
+    median_sd = median / sd_delta, q1_sd = q1 / sd_delta,
+    q3_sd = q3 / sd_delta, min_sd = min / sd_delta, max_sd = max / sd_delta
+  )
+}
+
+change_magnitude_table <- function(meta) {
+  purrr::map_dfr(seq_len(nrow(MEASURES)), function(i) {
+    change_magnitude(meta, MEASURES$col[i]) |>
+      mutate(
+        measure = MEASURES$label[i], domain = MEASURES$domain[i],
+        .before = 1
+      )
+  })
+}
+
 # The six raw models, named by outcome, for the easystats report and
 # diagnostics.
 lmm_models <- function(meta) {

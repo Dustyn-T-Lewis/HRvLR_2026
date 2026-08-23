@@ -4,9 +4,7 @@
 pacman::p_load(here, dplyr, tidyr, tibble, purrr)
 
 source(here::here("functions", "shared_style.R"))
-source(here::here(
-  "03_Analysis", "categorical", "F01_phenotype", "a_script", "phenotype.R"
-))
+source(here::here("functions", "phenotype_helpers.R"))
 
 F01_RPT <- here::here(
   "03_Analysis", "categorical", "F01_phenotype", "b_reports"
