@@ -7,8 +7,13 @@
 # about the V1 proteomic null; that belongs to the discussion.
 
 pacman::p_load(
-  here, dplyr, tidyr, purrr, tibble, readr, broom, mclust, openxlsx
+  here, dplyr, tidyr, purrr, tibble, readr, broom, withr, openxlsx
 )
+
+# mclust is attached per call rather than for the session. Mclust() evaluates
+# its own matched call in the caller's frame, so it needs the package on the
+# search path and cannot be used purely qualified; leaving it attached masks
+# purrr::map with mclust::map for every script sourced afterwards.
 
 OUT_DIR <- here("03_Features", "01_Responsiveness", "c_data")
 
@@ -88,17 +93,26 @@ split_check <- tibble(
 # count by BIC over G = 1:4 and can return G = 1, which is the answer that says
 # there is no grouping to find. This is the phenotype-side counterpart of the
 # question stage 03 asks of the proteome.
-set.seed(42)
-mod <- mclust::Mclust(pheno$comp_hypertrophy, G = 1:4, verbose = FALSE)
-
 # BIC alone is thin at n = 16, and a two-component 1D mixture will always find
 # the largest gap whether or not it means anything. The bootstrap LRT is the
 # test that carries a p-value: it simulates from the fitted G-component model
 # to build the null distribution of the likelihood ratio against G + 1.
-lrt <- mclust::mclustBootstrapLRT(
-  pheno$comp_hypertrophy,
-  modelName = mod$modelName, maxG = 2, nboot = 999
-)
+composite_mixture <- function(x) {
+  withr::local_package("mclust")
+  fit <- mclust::Mclust(x, G = 1:4, verbose = FALSE)
+  list(
+    fit = fit,
+    lrt = mclust::mclustBootstrapLRT(
+      x,
+      modelName = fit$modelName, maxG = 2, nboot = 999
+    )
+  )
+}
+
+set.seed(42)
+fitted_mixture <- composite_mixture(pheno$comp_hypertrophy)
+mod <- fitted_mixture$fit
+lrt <- fitted_mixture$lrt
 
 composite_modality <- tibble(
   best_g = mod$G,

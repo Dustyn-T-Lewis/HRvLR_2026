@@ -21,8 +21,13 @@
 # count is calibrated by shuffling them.
 
 pacman::p_load(
-  here, dplyr, tidyr, purrr, tibble, readr, mclust, broom, openxlsx
+  here, dplyr, tidyr, purrr, tibble, readr, broom, withr, openxlsx
 )
+
+# mclust is attached per call rather than for the session. Mclust() evaluates
+# its own matched call in the caller's frame, so it needs the package on the
+# search path and cannot be used purely qualified; leaving it attached masks
+# purrr::map with mclust::map for every script sourced afterwards.
 
 source(here("functions", "feature_levels.R"))
 
@@ -88,6 +93,7 @@ protein_wide <- function() {
 }
 
 cluster_subjects <- function(mat) {
+  withr::local_package("mclust")
   scores <- stats::prcomp(mat, center = TRUE, scale. = TRUE)$x[, seq_len(N_PC),
     drop = FALSE
   ]

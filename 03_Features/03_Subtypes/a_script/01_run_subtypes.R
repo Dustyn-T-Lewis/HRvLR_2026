@@ -18,9 +18,13 @@
 # picking the k that gave the best answer is the failure mode this sweep
 # exists to prevent.
 
-# MASS is called qualified, never attached: MASS::select() masks dplyr::select()
-# for every script sourced after this one in the same session.
-pacman::p_load(here, dplyr, tidyr, purrr, tibble, readr, mclust, openxlsx)
+# MASS is called qualified, never attached: MASS::select() masks dplyr::select.
+pacman::p_load(here, dplyr, tidyr, purrr, tibble, readr, withr, openxlsx)
+
+# mclust is attached per call rather than for the session. Mclust() evaluates
+# its own matched call in the caller's frame, so it needs the package on the
+# search path and cannot be used purely qualified; leaving it attached masks
+# purrr::map with mclust::map for every script sourced afterwards.
 
 source(here("functions", "feature_levels.R"))
 
@@ -71,6 +75,7 @@ protein_baseline <- function(n_top = N_PROTEINS) {
 # component count do than a single component. Returns NA when no model in the
 # family is estimable, which is a legitimate outcome at this sample size.
 bic_gain <- function(z) {
+  withr::local_package("mclust")
   fit <- try(mclust::Mclust(z, G = 1:G_MAX, verbose = FALSE), silent = TRUE)
   if (inherits(fit, "try-error") || is.null(fit)) {
     return(list(g = NA_integer_, gain = NA_real_, fit = NULL))
@@ -128,6 +133,7 @@ gate_open <- any(cells$p_empirical < GATE_ALPHA, na.rm = TRUE)
 # split scored against the labels is informative context when the gate is shut
 # and would be the headline if it opened; it is never promoted silently.
 two_group <- purrr::map_dfr(names(spaces), function(sp) {
+  withr::local_package("mclust")
   scores <- stats::prcomp(spaces[[sp]], center = TRUE, scale. = TRUE)$x[, 1:2]
   fit <- mclust::Mclust(scores, G = 2, verbose = FALSE)
   assign_tbl <- tibble(
