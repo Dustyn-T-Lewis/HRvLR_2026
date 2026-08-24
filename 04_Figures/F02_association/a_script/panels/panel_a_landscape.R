@@ -29,10 +29,23 @@ build_landscape <- function(summary_tbl, tag = "A") {
     scale_colour_manual(values = unname(GROUP_COLORS), name = NULL) +
     labs(
       title = "Every phenotype, every window, every feature level", tag = tag,
-      subtitle = paste(
-        "Smallest BH-adjusted p per cell; dashed = 0.05.",
-        "One of 60 cells clears it"
-      ),
+      subtitle = if (is.null(sweep_calibration)) {
+        "Smallest BH-adjusted p per cell; dashed = 0.05"
+      } else {
+        sprintf(
+          paste(
+            "Smallest BH-adjusted p per cell; dashed = 0.05.",
+            "%d of %d cells clear it, against %.1f expected by chance"
+          ),
+          sweep_calibration$observed_hit_cells[
+            sweep_calibration$level == "all"
+          ],
+          sweep_calibration$n_cells[sweep_calibration$level == "all"],
+          sweep_calibration$expected_hit_cells[
+            sweep_calibration$level == "all"
+          ]
+        )
+      },
       x = expression(-log[10] * "(smallest adjusted p)"), y = NULL
     ) +
     FIG_THEME +
