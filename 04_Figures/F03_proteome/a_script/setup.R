@@ -20,6 +20,9 @@ sweep_summary <- as_tibble(read.xlsx(
 confirmation <- as_tibble(read.xlsx(
   file.path(PROT_DIR, "02_confirmation.xlsx"), "confirmation"
 ))
+sweep_calibration <- as_tibble(read.xlsx(
+  file.path(PROT_DIR, "02_confirmation.xlsx"), "sweep_calibration"
+))
 perm_null <- read_csv(file.path(PROT_DIR, "02_perm_null_draws.csv"),
   show_col_types = FALSE
 )
@@ -32,9 +35,22 @@ fgsea_null <- read_csv(file.path(PATH_DIR, "02_fgsea_null_counts.csv"),
 
 LABEL_NAMES <- c(
   given = "Given HR/LR", fcsa_I = "fCSA type I", fcsa_II = "fCSA type II",
-  mcsa = "Whole-muscle CSA", `1rm_legpress` = "1RM leg press",
-  `1rm_ext` = "1RM leg extension"
+  fcsa_mixed = "fCSA mixed", nfibre_mixed = "Fibre count, mixed",
+  nfibre_I = "Fibre count, type I", mcsa = "Whole-muscle CSA",
+  `1rm_legpress` = "1RM leg press", `1rm_ext` = "1RM leg extension",
+  volume_load = "Training volume load"
 )
+
+# One row per partition, named by the labels that share it, so the panel shows
+# 8 tested splits rather than 10 labels of which three are the same split.
+partition_names <- function(summary_tbl) {
+  summary_tbl |>
+    distinct(.data$partition, .data$label) |>
+    summarise(
+      split = paste(LABEL_NAMES[.data$label], collapse = " / "),
+      .by = "partition"
+    )
+}
 
 if (!exists("F03_PANELS")) F03_PANELS <- list()
 if (!exists("F03_AUDIT")) F03_AUDIT <- list()

@@ -1,10 +1,11 @@
-# Gate 3: permutation runs only against a hit that already exists.
+# What a random split of these subjects produces, for every partition.
 #
-# The sweep produced BH survivors under two of six labels. BH controls the false
-# discovery rate within a cell given its own null, which is not the same as
-# knowing how often an arbitrary split of these 16 subjects yields a survivor at
-# all. That is what this asks, by reassigning the label across subjects and
-# refitting.
+# With 24 cells the question is no longer only "is this hit real" but "how many
+# hits should a sweep this size produce when nothing is there". BH controls the
+# false discovery rate inside a cell given its own null; it says nothing about
+# how often an arbitrary split of 16 subjects yields a survivor. So every
+# partition is permuted, not only the two that hit, which gives both the
+# per-cell p-value and the expected number of hit cells under the null.
 #
 # Subject is the unit of randomisation because the label is a subject property.
 # Timepoint travels with the sample untouched, so the repeated-measures
@@ -29,15 +30,9 @@ labels_long <- read_csv(
   show_col_types = FALSE
 )
 
-hit_labels <- summary_tbl |>
-  filter(.data$n_bh >= 1) |>
-  pull(.data$label) |>
-  unique()
-
-if (!length(hit_labels)) {
-  message("no BH survivor in any cell; gate 3 stays shut and nothing is run")
-  quit(save = "no")
-}
+reps <- summary_tbl |>
+  distinct(.data$partition, .data$label, .keep_all = TRUE) |>
+  slice_max(.data$r2_alone, n = 1, by = "partition", with_ties = FALSE)
 
 mat <- protein_matrix()
 
@@ -70,7 +65,7 @@ fit_once <- function(label_vec, correlation, samples) {
 }
 
 set.seed(42)
-fitted <- map(hit_labels, function(l) {
+fitted <- map(reps$label, function(l) {
   lab <- labels_long |> filter(.data$label == l)
   vec <- setNames(lab$level, lab$subject)
   parts <- label_design(mat, vec)
@@ -115,16 +110,34 @@ confirmation <- map_dfr(fitted, function(x) {
     )
 })
 
+# The sweep-level read: how many cells cleared BH, against how many an
+# all-null sweep of the same shape would be expected to produce. The per-cell
+# null rate is what supplies the expectation.
+sweep_calibration <- tibble(
+  n_cells = nrow(confirmation),
+  observed_hit_cells = sum(confirmation$n_bh >= 1),
+  expected_hit_cells = sum(confirmation$null_any_hit),
+  p_binomial = stats::pbinom(
+    sum(confirmation$n_bh >= 1) - 1,
+    size = nrow(confirmation),
+    prob = mean(confirmation$null_any_hit),
+    lower.tail = FALSE
+  )
+)
+
 confirmed <- confirmation |> filter(.data$n_bh >= 1, .data$p_count < 0.05)
 
 write_csv(null_draws, file.path(OUT_DIR, "02_perm_null_draws.csv"))
 write.xlsx(
-  list(confirmation = confirmation),
+  list(confirmation = confirmation, sweep_calibration = sweep_calibration),
   file.path(OUT_DIR, "02_confirmation.xlsx")
 )
 
 print(as.data.frame(confirmation), digits = 3)
+print(as.data.frame(sweep_calibration), digits = 3)
 message(
   "\n", nrow(confirmed), " of ", sum(confirmation$n_bh >= 1),
-  " hit cells survive a ", N_PERM, "-permutation subject-label null"
+  " hit cells survive a ", N_PERM, "-permutation subject-label null; ",
+  "a sweep this size expects ", round(sweep_calibration$expected_hit_cells, 1),
+  " hit cells with nothing there"
 )

@@ -14,9 +14,18 @@ source(here("functions", "feature_levels.R"))
 
 LABEL_CELLS <- c("hi_T1", "hi_T2", "hi_T3", "lo_T1", "lo_T2", "lo_T3")
 
+# Baseline asks whether the groups differed before training started, so a hit
+# there would be a predictive signature. The two interactions ask whether the
+# groups responded differently, over the training block and over the acute bout.
+#
+# The acute contrast is written as an interaction rather than per arm on
+# purpose. T3 biopsies are roughly twice as bloody as T1 and T2, which
+# confounds a per-arm acute contrast; taking the difference of the two arms'
+# acute changes cancels a shift that hits both arms alike.
 LABEL_CONTRASTS <- c(
   "Baseline = hi_T1 - lo_T1",
-  "Training_Interaction = (hi_T2 - hi_T1) - (lo_T2 - lo_T1)"
+  "Training_Interaction = (hi_T2 - hi_T1) - (lo_T2 - lo_T1)",
+  "Acute_Interaction = (hi_T3 - hi_T2) - (lo_T3 - lo_T2)"
 )
 
 LABEL_CONTRAST_NAMES <- trimws(sub("=.*$", "", LABEL_CONTRASTS))
@@ -116,7 +125,8 @@ verify_v1_equivalence <- function(book = V1_RESULTS, tol = 1e-6) {
   fitted <- fit_label_contrasts(protein_matrix(), given, robust = TRUE)
   v1_name <- c(
     Baseline = "Baseline_HRvLR",
-    Training_Interaction = "Training_Interaction"
+    Training_Interaction = "Training_Interaction",
+    Acute_Interaction = "Acute_Interaction"
   )
   bind_rows(lapply(LABEL_CONTRAST_NAMES, function(ct) {
     ref <- openxlsx::read.xlsx(book, v1_name[[ct]])

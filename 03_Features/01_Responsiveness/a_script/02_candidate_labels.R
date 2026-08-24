@@ -10,7 +10,10 @@
 #
 # The internal flag records whether an outcome is an ingredient of
 # comp_hypertrophy. An internal label cannot corroborate the composite that
-# contains it, so its sweep result is descriptive only.
+# contains it, so its sweep result is descriptive only. Three labels are
+# genuinely external: both 1RM measures and volume load, the last of which
+# shares r2 = 0.002 with the composite and describes what a subject did rather
+# than what happened to them.
 
 pacman::p_load(here, dplyr, tidyr, purrr, tibble, readr, openxlsx)
 
@@ -46,6 +49,21 @@ given <- tibble(
 
 candidate_labels <- bind_rows(given, trait_labels)
 
+# Several labels land on the same split: the three fibre-area measures
+# correlate above 0.9 and their median cuts are identical. Fitting each would
+# report one test three times and inflate the sweep's apparent size, so each
+# partition is named once and the labels sharing it are recorded against it. A
+# split and its complement are the same partition, hence the canonical form.
+partition_of <- function(level, subject) {
+  ord <- order(subject)
+  s <- paste(level[ord], collapse = "")
+  min(s, chartr("hilo", "lohi", s))
+}
+
+partitions <- candidate_labels |>
+  summarise(key = partition_of(.data$level, .data$subject), .by = label) |>
+  mutate(partition = as.integer(factor(.data$key, levels = unique(.data$key))))
+
 labels_meta <- candidate_labels |>
   summarise(
     n = dplyr::n(),
@@ -74,7 +92,17 @@ labels_meta <- candidate_labels |>
       mclust::adjustedRandIndex(j$level, j$level_given)
     })
   ) |>
-  arrange(desc(r2_alone))
+  left_join(
+    partitions |> dplyr::select(label, partition),
+    by = "label"
+  ) |>
+  mutate(
+    shares_partition_with = purrr::map_chr(seq_along(.data$label), function(i) {
+      other <- .data$label[.data$partition == .data$partition[i]]
+      paste(setdiff(other, .data$label[i]), collapse = ", ")
+    })
+  ) |>
+  arrange(.data$partition, desc(.data$r2_alone))
 
 write_csv(candidate_labels, file.path(OUT_DIR, "02_candidate_labels.csv"))
 write.xlsx(
@@ -83,3 +111,7 @@ write.xlsx(
 )
 
 print(as.data.frame(labels_meta), digits = 3)
+message(
+  "\n", nrow(labels_meta), " labels resolve to ",
+  dplyr::n_distinct(labels_meta$partition), " distinct partitions"
+)

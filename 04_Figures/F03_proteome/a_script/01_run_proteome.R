@@ -23,9 +23,10 @@ metadata <- tibble::tribble(
   ~field, ~value,
   "figure", "F03 label sweep and its calibration",
   "design", paste(
-    "six candidate labels x two contrasts. Baseline asks whether the groups",
-    "differ before training; Training_Interaction whether their response",
-    "diverged"
+    "ten candidate labels resolving to eight distinct splits, by three",
+    "contrasts. Baseline asks whether the groups differed before training;",
+    "the two interactions whether they diverged over training and over the",
+    "acute bout"
   ),
   "estimator", paste(
     "limma on the six label-by-timepoint cells, subject as the blocking",
@@ -42,8 +43,9 @@ metadata <- tibble::tribble(
     "are bloodier; neither contrast here touches T3"
   ),
   "result", paste(
-    "three protein-contrast survivors across twelve cells, all at Baseline;",
-    "neither hit cell survives a 999-permutation subject-label null"
+    "three protein-contrast survivors across 24 cells, all at Baseline.",
+    "Two cells cleared BH against 2.6 expected by chance (p = 0.75), and",
+    "neither survives a 999-permutation subject-label null"
   ),
   "pathways", paste(
     "fgsea returned 1398 set-contrast hits, but a random split of the same",

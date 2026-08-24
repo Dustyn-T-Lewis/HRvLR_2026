@@ -12,9 +12,16 @@ pacman::p_load(
 
 OUT_DIR <- here("03_Features", "01_Responsiveness", "c_data")
 
+# Change scores. volume_load is excluded because it is a total, not a change:
+# asking whether it differs from zero is asking whether the cohort lifted
+# anything. It still gets a candidate label and still appears in the separation
+# table, where the question is meaningful.
 TRAITS <- c(
-  "d_fcsa_I", "d_fcsa_II", "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
+  "d_fcsa_I", "d_fcsa_II", "d_fcsa_mixed", "d_nfibre_mixed", "d_nfibre_I",
+  "d_mcsa", "d_1rm_legpress", "d_1rm_ext"
 )
+
+SPLIT_TRAITS <- c(TRAITS, "volume_load")
 
 pheno <- read_csv(here("00_input", "c_data", "phenotype.csv"),
   show_col_types = FALSE
@@ -36,7 +43,7 @@ change_summary <- map_dfr(c("comp_hypertrophy", TRAITS), function(v) {
 
 # What the label separates. comp_hypertrophy is included as the identity case:
 # the label is its median split, so its separation is arithmetic, not evidence.
-label_separation <- map_dfr(c("comp_hypertrophy", TRAITS), function(v) {
+label_separation <- map_dfr(c("comp_hypertrophy", SPLIT_TRAITS), function(v) {
   broom::tidy(stats::t.test(pheno[[v]] ~ pheno$group_arm)) |>
     transmute(
       trait = v, hr = estimate1, lr = estimate2,
@@ -52,7 +59,7 @@ label_separation <- map_dfr(c("comp_hypertrophy", TRAITS), function(v) {
 
 # How much of comp_hypertrophy each outcome accounts for. The single-predictor
 # r2 column is what decides the internal/external flag the sweep carries.
-composite_structure <- map_dfr(TRAITS, function(v) {
+composite_structure <- map_dfr(SPLIT_TRAITS, function(v) {
   fit <- stats::lm(pheno$comp_hypertrophy ~ pheno[[v]])
   tibble(
     trait = v,
@@ -62,8 +69,7 @@ composite_structure <- map_dfr(TRAITS, function(v) {
 })
 
 joint_r2 <- summary(stats::lm(
-  comp_hypertrophy ~ d_fcsa_I + d_fcsa_II + d_mcsa +
-    d_1rm_legpress + d_1rm_ext,
+  stats::reformulate(TRAITS, response = "comp_hypertrophy"),
   data = pheno
 ))$r.squared
 
@@ -107,11 +113,14 @@ composite_modality <- tibble(
   )
 )
 
-# Two fibre-CSA measurement methods on the same samples. Reported because they
-# disagree in a way that cannot be a scale difference, not because anything
-# downstream uses them.
+# The MyoVision columns are fibre counts, not areas, despite the "fCSA" in
+# their meta names; the source workbook calls them "Number of fCSA - Mixed
+# (MyoVision)". Recorded here because the naming invites reading them as a
+# second area measurement that disagrees with the first, and they do not
+# disagree: a count runs an order of magnitude below an area and moves against
+# it, since larger fibres pack fewer into the imaged field.
 meta <- read_csv(here("00_input", "HRvLR_meta.csv"), show_col_types = FALSE)
-method_check <- map_dfr(
+fibre_count_check <- map_dfr(
   list(
     c("fCSA_Mixed_Pre", "MyoVision_fCSA_mixed_Pre"),
     c("fCSA_Type_I_Pre", "MyoVision_fCSA_Type_I__Pre")
@@ -119,13 +128,14 @@ method_check <- map_dfr(
   function(pair) {
     d <- meta |>
       filter(.data$Timepoint %in% c("T1", "T2")) |>
-      select(manual = all_of(pair[1]), myovision = all_of(pair[2])) |>
+      select(area = all_of(pair[1]), count = all_of(pair[2])) |>
       tidyr::drop_na()
     tibble(
       quantity = pair[1], n = nrow(d),
-      r = cor(d$manual, d$myovision),
-      mean_difference = mean(d$myovision - d$manual),
-      sd_difference = sd(d$myovision - d$manual)
+      area_median = stats::median(d$area),
+      count_median = stats::median(d$count),
+      r_area_count = cor(d$area, d$count),
+      r_area_inverse_count = cor(d$area, 1 / d$count)
     )
   }
 )
@@ -138,13 +148,13 @@ write.xlsx(
     composite_structure = composite_structure,
     split_check = split_check,
     composite_modality = composite_modality,
-    method_check = method_check
+    fibre_count_check = fibre_count_check
   ),
   file.path(OUT_DIR, "01_label_audit.xlsx")
 )
 
 message(
-  "composite joint r2 on the five outcomes: ", round(joint_r2, 3),
+  "composite joint r2 on the eight change scores: ", round(joint_r2, 3),
   "; label is the exact median cut: ",
   split_check$top_half_all_hr && split_check$bottom_half_all_lr
 )

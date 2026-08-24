@@ -14,7 +14,8 @@ functions/                                      shared code, flat
 03_Features/
   01_Responsiveness/   label audit, candidate label construction
   02_WGCNA/            modules and eigengenes
-  03_Subtypes/         blind clustering with a no-cluster null
+  03_Subtypes/         blind clustering with a no-cluster null, then the
+                       reverse direction: proteome-drawn groups vs phenotype
   04_Proteins/         limma sweep across candidate labels, then permutation
   05_Pathways/         fgsea and singscore, then a calibration check
 04_Figures/
@@ -34,7 +35,8 @@ Written before fitting. A stage that fails its gate reports the failure and
 stops rather than reinterpreting.
 
 1. Stage 03 interprets clusters only if BIC selects more than one component or
-   the observed fit beats a no-cluster null. **Shut.**
+   the observed fit beats a no-cluster null. **Shut.** The forced two-group
+   split is still tested against phenotype and reported as descriptive.
 2. Stage 05 runs only if stage 04 produces a BH survivor. **Open** (three
    survivors), so stage 05 ran.
 3. Permutation runs only to confirm a hit that already exists, never as a
@@ -44,16 +46,17 @@ stops rather than reinterpreting.
 
 **The label.** HR/LR is the exact median cut of `comp_hypertrophy`: the top
 eight subjects are HR without exception. That composite arrives without a
-stated formula but is reconstructable from the five measured outcomes at
-r² = 0.977, and it is dominated by the two fibre cross-sectional area measures
-(r = 0.86 and 0.83) over whole-muscle CSA (0.50) and the two strength measures
-(0.27, 0.13).
+stated formula but is reconstructable from the eight change scores at
+r² = 0.984, and it is dominated by the three fibre cross-sectional area
+measures (r = 0.86, 0.84, 0.83) over whole-muscle CSA (0.50), the two strength
+measures (0.27, 0.13) and training volume load (0.04).
 
-Neither fibre measure changed over training: d = −0.11 [−0.64, 0.43] for type
-I and 0.06 [−0.47, 0.60] for type II. Whole-muscle CSA and both strength
-measures did, at d = 1.13 to 1.48. The label separates the fibre measures
-(p ≈ 0.001) and, weakly, whole-muscle CSA (p = 0.044); it does not separate
-either strength measure (p = 0.79 and 0.63). Splitting on a composite
+None of the fibre measures changed over training: d = −0.11 [−0.64, 0.43] for
+type I, 0.06 [−0.47, 0.60] for type II, −0.02 for mixed, and neither fibre
+count moved either. Whole-muscle CSA and both strength measures did, at
+d = 1.13 to 1.48. The label separates the fibre measures (p ≈ 0.001 to 0.03)
+and, weakly, whole-muscle CSA (p = 0.044); it does not separate either strength
+measure (p = 0.79 and 0.63) or volume load (p = 0.64). Splitting on a composite
 necessarily separates that composite's ingredients, so the fibre separation
 says nothing about whether the label tracks anything beyond its construction.
 
@@ -66,15 +69,30 @@ every label, was run on module eigengenes and on the 500 highest-variance
 proteins, at two, three and four retained principal components. No cell beat
 its null (p = 0.10 to 0.61). The null matters: data drawn from a single
 Gaussian with the observed covariance and no groups in it gets assigned more
-than one component in 47 to 77 percent of draws at this sample size. A forced
-two-group split agrees with no label (adjusted Rand index −0.08 to 0.16).
+than one component in 47 to 77 percent of draws at this sample size. What a
+forced two-group split does track is the next section.
 
-**Proteins.** Six labels by two contrasts is twelve cells. Three
-protein-contrast survivors at BH < 0.05, all at Baseline: TMED5 and TBCB under
-whole-muscle CSA, PLIN3 under 1RM leg extension. Neither hit cell survives a
-999-permutation subject-label null (p = 0.056 and 0.130) — a random split of
-these sixteen subjects clears BH 13 to 16 percent of the time. The given HR/LR
-label is the most null of the six, at a smallest adjusted p of 0.996 and 0.938.
+**Proteins.** Ten candidate labels resolve to eight distinct splits — the
+three fibre-area measures cut the cohort identically — and each is fitted
+against three contrasts, so 24 tests rather than the 30 the label count
+suggests. Three protein-contrast survivors at BH < 0.05, all at Baseline:
+TMED5 and TBCB under whole-muscle CSA, PLIN3 under 1RM leg extension. Every
+Training and every Acute cell is empty.
+
+The sweep-level read is the one that settles it. Two of 24 cells cleared BH,
+against **2.6 expected by chance** (p = 0.75): a random split of these sixteen
+subjects clears BH 8 to 16 percent of the time, so a sweep this size should
+produce about this many hits with nothing there. It produced slightly fewer.
+Neither hit cell survives its own permutation null (p = 0.054 and 0.146). The
+given HR/LR label is among the most null of the eight.
+
+**The reverse direction.** Groups drawn from the proteome alone, then tested
+against every phenotype — the one direction that could name a proteome-defined
+responder group without circularity, since the clustering never sees a
+phenotype. Four views (baseline and training-change, on module eigengenes and
+on the 500 highest-variance proteins) by ten phenotypes: **zero hits across 40
+tests**, smallest unadjusted p of 0.37, and the derived groups agree with the
+given HR/LR label at an adjusted Rand index between -0.06 and +0.03.
 
 **Pathways, and a warning.** fgsea returned 1,398 set-contrast hits down to
 padj = 2e-19. It returned more under 1RM leg extension, a split with almost no
@@ -86,29 +104,38 @@ proteins as exchangeable; pathway members are co-regulated and share technical
 structure in a normalised MS matrix, which makes that null anticonservative
 here. **No pathway result in this repository should be read as evidence.**
 singscore, scored per sample and fitted through the same estimator the proteins
-used, returned zero hits across all twelve cells. V1 recorded the same failure
+used, returned zero hits across every cell. V1 recorded the same failure
 mode for STRING's PPI enrichment p on this proteome.
 
 ## Equivalence with V1
 
 The sweep estimator generalises V1's design to an arbitrary label. Under the
-given HR/LR label its two contrasts are V1's `Baseline_HRvLR` and
-`Training_Interaction`, and they agree with V1's committed numbers to
-4.9e-15 across all 1,900 proteins. `verify_v1_equivalence()` runs this check
+given HR/LR label its three contrasts are V1's `Baseline_HRvLR`,
+`Training_Interaction` and `Acute_Interaction`, and they agree with V1's
+committed numbers to 4.9e-15 across all 1,900 proteins. `verify_v1_equivalence()` runs this check
 and its result ships in `03_Features/04_Proteins/c_data/01_sweep.xlsx`. Module
 eigengenes reproduce V1's to zero difference, as they must — module
 construction never sees a label.
 
-## Data integrity note
+## Phenotypes
 
-Manual and MyoVision fibre cross-sectional area correlate negatively
-(r = −0.63 for mixed, −0.44 for type I) with a mean offset of −5,660 across 32
-paired measurements. Two methods measuring one quantity cannot correlate
-negatively, so either they measure different things despite the naming or
-something is mislabelled upstream. Nothing here uses the MyoVision columns —
-`build_phenotype.R` never did — but the discrepancy is recorded in
-`03_Features/01_Responsiveness/c_data/01_label_audit.xlsx` because it touches
-the measure the responder label is built on.
+Ten, up from the five V1 used. The additions came from columns already in the
+input that no stage had read:
+
+- `d_fcsa_mixed`, mixed-fibre cross-sectional area.
+- `d_nfibre_mixed` and `d_nfibre_I`, the MyoVision columns. These are **fibre
+  counts, not areas**, despite carrying "fCSA" in their meta names; the source
+  workbook calls them "Number of fCSA - Mixed (MyoVision)". That is why they
+  run 142-1119 where the areas run 3800-10700, and why they correlate
+  negatively with area — larger fibres, fewer of them in the imaged field. An
+  earlier draft of this file recorded that negative correlation as a data
+  integrity fault. It is not one.
+- `volume_load`, total kilograms lifted over the programme, recorded once per
+  subject. It spans 3.5-fold across the cohort and is the only variable here
+  describing what a subject did rather than what happened to them. It shares
+  r² = 0.002 with the composite, making it the cleanest external split
+  available — and HR and LR do not differ on it (d = -0.24, p = 0.64), so the
+  responder label is not a restatement of who trained harder.
 
 Phenotype exists at T1 and T2 only. With no comparator arm and no repeat
 baseline, true individual response cannot be separated from measurement error

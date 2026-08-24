@@ -21,6 +21,23 @@ forced_two_group <- as_tibble(read.xlsx(
 null_draws <- read_csv(file.path(SUB_DIR, "01_null_draws.csv"),
   show_col_types = FALSE
 )
+cluster_phenotype <- as_tibble(read.xlsx(
+  file.path(SUB_DIR, "02_cluster_phenotype.xlsx"), "phenotype_tests"
+))
+cluster_calibration <- as_tibble(read.xlsx(
+  file.path(SUB_DIR, "02_cluster_phenotype.xlsx"), "calibration"
+))
+
+PHENO_LABELS <- c(
+  comp_hypertrophy = "Composite hypertrophy",
+  d_fcsa_I = "fCSA type I", d_fcsa_II = "fCSA type II",
+  d_fcsa_mixed = "fCSA mixed", d_nfibre_mixed = "Fibre count, mixed",
+  d_nfibre_I = "Fibre count, type I", d_mcsa = "Whole-muscle CSA",
+  d_1rm_legpress = "1RM leg press", d_1rm_ext = "1RM leg extension",
+  volume_load = "Training volume load"
+)
+
+VIEW_LABELS <- c(baseline = "Baseline", training_change = "Training change")
 
 SPACE_LABELS <- c(
   eigengenes = "Module eigengenes (12)",

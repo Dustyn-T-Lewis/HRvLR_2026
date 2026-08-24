@@ -31,19 +31,25 @@ TRAIT_LABELS <- c(
   comp_hypertrophy = "Composite hypertrophy",
   d_fcsa_I = "fCSA type I",
   d_fcsa_II = "fCSA type II",
+  d_fcsa_mixed = "fCSA mixed",
+  d_nfibre_mixed = "Fibre count, mixed",
+  d_nfibre_I = "Fibre count, type I",
   d_mcsa = "Whole-muscle CSA",
   d_1rm_legpress = "1RM leg press",
-  d_1rm_ext = "1RM leg extension"
+  d_1rm_ext = "1RM leg extension",
+  volume_load = "Training volume load"
 )
 
 # Both effect-size panels use this one order so a trait keeps its row between
 # them and the reversal between "changed" and "separated" reads as a flip in
 # place rather than a reshuffle.
+# volume_load is a total, not a change, so it has no row in change_summary and
+# is appended at the end rather than ordered among the change scores.
 TRAIT_ORDER <- change_summary |>
   filter(.data$trait != "comp_hypertrophy") |>
   arrange(.data$mean_d) |>
   pull(.data$trait) |>
-  (\(x) unname(TRAIT_LABELS[x]))()
+  (\(x) unname(TRAIT_LABELS[c(x, "volume_load")]))()
 
 if (!exists("F01_PANELS")) F01_PANELS <- list()
 if (!exists("F01_AUDIT")) F01_AUDIT <- list()
