@@ -43,8 +43,9 @@ label_cells <- function(label, meta = sample_metadata()) {
     ))
 }
 
-label_design <- function(mat, label, adjust = NULL) {
-  meta <- label_cells(label)
+label_design <- function(mat, label, adjust = NULL,
+                         meta = sample_metadata()) {
+  meta <- label_cells(label, meta)
   meta <- meta[match(colnames(mat), meta$sample_id), ]
   keep <- !is.na(meta$sample_id)
   mat <- mat[, keep, drop = FALSE]

@@ -1,10 +1,10 @@
-# HRvLR 2026 - restore the package library and record what was installed.
+# HRvLR 2026 V2 - restore the package library and record what was installed.
 # Run once after cloning: Rscript setup.R
 #
-# renv.lock is the authority: 392 packages, 43 from Bioconductor and 3 from
-# GitHub (proteoDA, enrichVolcano, RRHO2), pinned to the versions the committed
-# figures were rendered with. Nothing is listed here a second time, because a
-# hand-kept list drifts from the lockfile the moment either changes.
+# renv.lock is the authority, pinned to the versions the committed figures were
+# rendered with. Nothing is listed here a second time, because a hand-kept list
+# drifts from the lockfile the moment either changes. _dependencies.R names the
+# packages so renv can see past pacman::p_load(); it is never sourced.
 #
 # ragg matters more than its absence from any script suggests. ggplot2::ggsave()
 # picks ragg::agg_png() when ragg is installed and grDevices::png() when it is
