@@ -28,7 +28,11 @@ change_summary <- map_dfr(c("comp_hypertrophy", TRAITS), function(v) {
       trait = v, n = sum(!is.na(pheno[[v]])), mean = estimate,
       ci_lo = conf.low, ci_hi = conf.high, t = statistic, p = p.value
     )
-})
+}) |>
+  mutate(
+    sd_change = map_dbl(trait, ~ sd(pheno[[.x]], na.rm = TRUE)),
+    across(c(mean, ci_lo, ci_hi), ~ .x / sd_change, .names = "{.col}_d")
+  )
 
 # What the label separates. comp_hypertrophy is included as the identity case:
 # the label is its median split, so its separation is arithmetic, not evidence.
@@ -37,12 +41,13 @@ label_separation <- map_dfr(c("comp_hypertrophy", TRAITS), function(v) {
     transmute(
       trait = v, hr = estimate1, lr = estimate2,
       difference = estimate1 - estimate2,
+      ci_lo = conf.low, ci_hi = conf.high,
       t = statistic, p = p.value
     )
 }) |>
   mutate(
     sd_change = map_dbl(trait, ~ sd(pheno[[.x]], na.rm = TRUE)),
-    d = difference / sd_change
+    across(c(difference, ci_lo, ci_hi), ~ .x / sd_change, .names = "{.col}_d")
   )
 
 # How much of comp_hypertrophy each outcome accounts for. The single-predictor
