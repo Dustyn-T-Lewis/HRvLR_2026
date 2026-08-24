@@ -1,7 +1,8 @@
-# Shared inputs and feature/outcome builders for the F05 prediction suite.
-# Loads the imputed proteome, exposes three feature spaces (gene-collapsed
-# proteins, singscore pathway scores, WGCNA module eigengenes), and builds the
-# per-contrast subject-level feature matrices plus the phenotype outcomes.
+# Shared inputs and feature/outcome builders for the F04_classification and
+# F04_association supervised sub-stages. Loads the imputed proteome, exposes
+# three feature spaces (gene-collapsed proteins, singscore pathway scores,
+# WGCNA module eigengenes), and builds the per-contrast subject-level feature
+# matrices plus the phenotype outcomes.
 #
 # singscore is single-sample and rank-based: each sample's score depends only on
 # its own within-sample gene ranks, so scoring the full matrix once is
@@ -15,7 +16,11 @@ pacman::p_load(here, dplyr, readr, limma, singscore)
 source(here("functions", "shared_pathway_utils.R"))
 source(here("functions", "shared_singscore.R"))
 
-pred_paths <- function() {
+# tree selects which of 03_Analysis/{categorical,continuous} the module
+# eigengenes come from -- the same modules either way (module construction
+# never references Group), but each tree fits its own contrast set on top,
+# so each caller reads its own tree's eigengene file.
+pred_paths <- function(tree = "categorical") {
   list(
     dalist = here(
       "02_Normalization", "imputation", "c_data",
@@ -23,7 +28,7 @@ pred_paths <- function() {
     ),
     pheno = here("00_input", "c_data", "phenotype.csv"),
     eigen = here(
-      "03_Analysis", "categorical", "03_WGCNA", "c_data", "wgcna_eigengene.csv"
+      "03_Analysis", tree, "03_WGCNA", "c_data", "wgcna_eigengene.csv"
     ),
     cache = here("02_Normalization", "c_data", "singscore_scores.rds")
   )
@@ -66,8 +71,8 @@ pred_eigengene_matrix <- function(eigen_path, sample_order) {
 
 # Load everything once and return the shared bundle: sample metadata, the three
 # feature matrices (features x sample), and the phenotype table.
-pred_load <- function() {
-  paths <- pred_paths()
+pred_load <- function(tree = "categorical") {
+  paths <- pred_paths(tree)
   da <- readRDS(paths$dalist)
 
   meta <- da$metadata |>

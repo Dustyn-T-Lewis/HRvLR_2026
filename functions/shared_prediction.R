@@ -1,12 +1,20 @@
-# Leakage-free nested leave-one-subject-out harness for the prediction suite.
-# Rows are subjects, so leave-one-subject-out is leave-one-row-out. Every fold:
-# features are z-scored on the training subjects and that centre/scale is
-# applied to the held-out subject; each engine's hyperparameters are tuned by an
-# inner LOSO on the training subjects only; the held-out subject is never seen
-# until it is predicted. Every fit also reports which features it selected, so
-# the outer folds yield a per-feature selection frequency (methods doc Part 6).
-# The permutation null shuffles the outcome across subjects and re-runs the
-# entire nested LOSO.
+# Leakage-free nested leave-one-subject-out harness for F04_classification
+# and F04_association. Rows are subjects, so leave-one-subject-out is
+# leave-one-row-out. Every fold: features are z-scored on the training
+# subjects and that centre/scale is applied to the held-out subject; the
+# elastic-net alpha and lambda are tuned by an inner LOSO on the training
+# subjects only; the held-out subject is never seen until it is predicted.
+# Every fit also reports which features it selected, so the outer folds
+# yield a per-feature selection frequency. The permutation null shuffles
+# the outcome across subjects and re-runs the entire nested LOSO.
+#
+# Trimmed to the elastic-net + plain-unpenalized path only (2026-08-24):
+# a six-learner sweep (sPLS-DA, PAM, random forest, SVM) and a B-grid
+# permutation-resolution sweep both existed here for the deleted
+# F05/F06 screens. This repo's own prior build notes already concluded
+# complex learners don't beat regularized linear models at n=16, and nested
+# LOSO already needs no B-grid once B is fixed at 200 for a confirmatory
+# pass rather than a screen-design comparison.
 
 # The permutation null forks PERM_CORES workers; each would otherwise let its
 # BLAS spawn one thread per core, oversubscribing the machine by orders of
@@ -17,13 +25,9 @@ Sys.setenv(
   VECLIB_MAXIMUM_THREADS = "1", MKL_NUM_THREADS = "1"
 )
 
-pacman::p_load(glmnet, mixOmics, pamr, pROC, ranger, e1071, parallel, withr)
+pacman::p_load(glmnet, pROC, parallel, withr)
 
-GLMNET_ALPHAS <- c(0.1, 0.5, 1.0)
 ENET_ALPHAS <- c(0.25, 0.5, 0.75)
-RF_TREES <- 500L
-SVM_COST <- 1
-SPLS_NCOMP <- 1L
 N_PERM <- 200L
 PERM_SEED <- 42L
 PERM_CORES <- as.integer(Sys.getenv(
@@ -43,19 +47,12 @@ scale_train_apply <- function(x_train, x_test) {
   )
 }
 
-# keepX candidates scale with the feature count: a handful for the low-dimension
-# module space, a wider sparse sweep for pathways and proteins. Capped at p so a
-# 10-feature space never asks for 50.
-spls_keepx_grid <- function(p) {
-  unique(pmin(c(2L, 5L, 10L, 20L, 50L), p))
-}
-
-# glmnet: inner LOSO over the training subjects tunes alpha and lambda together;
-# the winning (alpha, lambda.1se) is refit on all training subjects. lambda.1se
-# is the parsimonious choice (methods doc Part 4); the caller can read
+# Elastic net: inner LOSO over the training subjects tunes alpha and lambda
+# together; the winning (alpha, lambda.1se) is refit on all training
+# subjects. lambda.1se is the parsimonious choice; the caller can read
 # lambda.min off the same fit.
 fit_predict_glmnet <- function(x_tr, y_tr, x_te, family,
-                               alphas = GLMNET_ALPHAS) {
+                               alphas = ENET_ALPHAS) {
   fold_id <- seq_len(nrow(x_tr))
   best <- NULL
   best_cvm <- Inf
@@ -76,112 +73,6 @@ fit_predict_glmnet <- function(x_tr, y_tr, x_te, family,
     pred = as.numeric(predict(best, x_te, s = "lambda.1se", type = type)),
     selected = names(beta)[beta != 0]
   )
-}
-
-spls_score <- function(fit, x_te, family) {
-  pr <- predict(fit, x_te)
-  if (family == "binomial") {
-    pr$predict[, "1", SPLS_NCOMP]
-  } else {
-    pr$predict[, 1, SPLS_NCOMP]
-  }
-}
-
-# sPLS / sPLS-DA: inner LOSO over the training subjects tunes keepX; the winning
-# keepX is refit on all training subjects. Scaling is off because the harness
-# already z-scored on train.
-fit_predict_spls <- function(x_tr, y_tr, x_te, family) {
-  grid <- spls_keepx_grid(ncol(x_tr))
-  fit_one <- function(xx, yy, keepx) {
-    if (family == "binomial") {
-      splsda(xx, factor(yy, levels = c(0, 1)),
-        ncomp = SPLS_NCOMP, keepX = keepx, scale = FALSE
-      )
-    } else {
-      spls(xx, yy, ncomp = SPLS_NCOMP, keepX = keepx, scale = FALSE)
-    }
-  }
-  best_k <- grid[[1]]
-  best_score <- Inf
-  for (k in grid) {
-    err <- 0
-    for (i in seq_len(nrow(x_tr))) {
-      sc <- scale_train_apply(x_tr[-i, , drop = FALSE], x_tr[i, , drop = FALSE])
-      fit <- fit_one(sc$train, y_tr[-i], k)
-      pred <- spls_score(fit, sc$test, family)
-      err <- err + (y_tr[i] - pred)^2
-    }
-    if (err < best_score) {
-      best_score <- err
-      best_k <- k
-    }
-  }
-  fit <- fit_one(x_tr, y_tr, best_k)
-  sel <- mixOmics::selectVar(fit, comp = SPLS_NCOMP)
-  list(
-    pred = spls_score(fit, x_te, family),
-    selected = if (family == "binomial") sel$name else sel$X$name
-  )
-}
-
-# Nearest shrunken centroids (Tibshirani 2002): the interpretable diagonal
-# baseline the small-n literature favours. pamr wants features x samples, so the
-# harness matrices are transposed on the way in. The shrinkage threshold is
-# tuned by a leave-one-out pamr.cv on training subjects; ties break to largest
-# threshold (sparsest centroid). Classification only.
-fit_predict_pam <- function(x_tr, y_tr, x_te) {
-  dat <- list(
-    x = t(x_tr), y = factor(y_tr, levels = c(0, 1)),
-    geneid = colnames(x_tr)
-  )
-  utils::capture.output(fit <- pamr::pamr.train(dat))
-  folds <- as.list(seq_len(nrow(x_tr)))
-  utils::capture.output(cv <- pamr::pamr.cv(fit, dat, folds = folds))
-  thr <- max(cv$threshold[cv$error == min(cv$error)])
-  post <- pamr::pamr.predict(fit, t(x_te), threshold = thr, type = "posterior")
-  nz <- pamr::pamr.predict(fit, t(x_te), threshold = thr, type = "nonzero")
-  list(pred = post[, "1"], selected = colnames(x_tr)[nz])
-}
-
-# Random forest (ranger): a breadth-only robustness learner, single-threaded so
-# it nests cleanly inside the permutation mclapply, seeded for reproducibility.
-# It uses every feature, so it yields no sparse signature; selected is empty by
-# design (the methods doc forbids ranking off RF importance).
-fit_predict_ranger <- function(x_tr, y_tr, x_te, family) {
-  df_tr <- as.data.frame(x_tr)
-  df_te <- as.data.frame(x_te)
-  if (family == "binomial") {
-    rf <- ranger::ranger(
-      x = df_tr, y = factor(y_tr, levels = c(0, 1)),
-      probability = TRUE, num.trees = RF_TREES, num.threads = 1L, seed = 1L
-    )
-    pred <- predict(rf, df_te)$predictions[, "1"]
-  } else {
-    rf <- ranger::ranger(
-      x = df_tr, y = y_tr,
-      num.trees = RF_TREES, num.threads = 1L, seed = 1L
-    )
-    pred <- predict(rf, df_te)$predictions
-  }
-  list(pred = as.numeric(pred), selected = character(0))
-}
-
-# Linear-kernel SVM (e1071) at a fixed cost: nothing is tuned, so there is no
-# in-fold choice to leak. A dense robustness learner, no sparse signature.
-fit_predict_svm <- function(x_tr, y_tr, x_te, family) {
-  if (family == "binomial") {
-    fit <- e1071::svm(x_tr, factor(y_tr, levels = c(0, 1)),
-      kernel = "linear", cost = SVM_COST, scale = FALSE, probability = TRUE
-    )
-    pr <- predict(fit, x_te, probability = TRUE)
-    pred <- attr(pr, "probabilities")[, "1"]
-  } else {
-    fit <- e1071::svm(x_tr, y_tr,
-      kernel = "linear", cost = SVM_COST, scale = FALSE
-    )
-    pred <- predict(fit, x_te)
-  }
-  list(pred = as.numeric(pred), selected = character(0))
 }
 
 # Plain unpenalized model, only valid where p < n (the module space). Column
@@ -205,14 +96,7 @@ fit_predict_plain <- function(x_tr, y_tr, x_te, family) {
 
 fit_predict <- function(model, x_tr, y_tr, x_te, family) {
   switch(model,
-    glmnet = fit_predict_glmnet(x_tr, y_tr, x_te, family),
-    enet = fit_predict_glmnet(x_tr, y_tr, x_te, family, ENET_ALPHAS),
-    lasso = fit_predict_glmnet(x_tr, y_tr, x_te, family, 1),
-    ridge = fit_predict_glmnet(x_tr, y_tr, x_te, family, 0),
-    spls = fit_predict_spls(x_tr, y_tr, x_te, family),
-    pam = fit_predict_pam(x_tr, y_tr, x_te),
-    rf = fit_predict_ranger(x_tr, y_tr, x_te, family),
-    svm = fit_predict_svm(x_tr, y_tr, x_te, family),
+    enet = fit_predict_glmnet(x_tr, y_tr, x_te, family),
     plain = fit_predict_plain(x_tr, y_tr, x_te, family),
     stop("unknown model: ", model)
   )
@@ -360,112 +244,6 @@ run_cont_cell <- function(x, y, model, outcome, nperm = N_PERM,
       perm_p_spearman = perm_p(obs_rho, null[, "rho"], "greater"),
       null_q2_mean = mean(null[, "q2"], na.rm = TRUE)
     ),
-    preds = data.frame(
-      outcome = outcome, model = model, subject = rownames(x),
-      y = y, pred = preds
-    ),
-    selection = selection_frequency(fit$selected, model)
-  )
-}
-
-B_GRID <- c(0L, 200L, 1000L)
-
-# Metric null under B outcome shuffles, each re-running the whole nested LOSO.
-# Because perm_matrix is seeded, the first b columns of a bmax draw reproduce a
-# standalone b-permutation null, so one bmax pass serves every smaller B in the
-# grid by prefix-slicing.
-sweep_class_null <- function(x, y, model, bmax, cores) {
-  pm <- perm_matrix(length(y), bmax)
-  unlist(mclapply(seq_len(bmax), function(b) {
-    yp <- y[pm[, b]]
-    stat_auc(yp, nested_loso(x, yp, model, "binomial")$preds)
-  }, mc.cores = cores))
-}
-
-sweep_cont_null <- function(x, y, model, bmax, cores) {
-  pm <- perm_matrix(length(y), bmax)
-  null <- mclapply(seq_len(bmax), function(b) {
-    yp <- y[pm[, b]]
-    pp <- nested_loso(x, yp, model, "gaussian")$preds
-    c(q2 = stat_q2(yp, pp), rho = stat_spearman(yp, pp))
-  }, mc.cores = cores)
-  do.call(rbind, null)
-}
-
-# Classification cell across a grid of permutation counts: observed AUC once,
-# one null pass at max(B), one summary row per B with that B's permutation p.
-sweep_class_cell <- function(x, y, model, b_grid = B_GRID, cores = PERM_CORES) {
-  fit <- nested_loso(x, y, model, "binomial")
-  preds <- fit$preds
-  obs <- stat_auc(y, preds)
-  roc_obj <- pROC::roc(y, preds,
-    quiet = TRUE, levels = c(0, 1), direction = "<"
-  )
-  ci <- as.numeric(pROC::ci.auc(roc_obj))
-  bmax <- max(b_grid)
-  null <- if (bmax > 0) {
-    sweep_class_null(x, y, model, bmax, cores)
-  } else {
-    numeric(0)
-  }
-  summ <- do.call(rbind, lapply(sort(b_grid), function(b) {
-    nb <- if (b > 0) null[seq_len(b)] else numeric(0)
-    data.frame(
-      model = model, metric = "AUC", n = length(y), p = ncol(x), B = b,
-      estimate = obs, ci_lo = ci[1], ci_hi = ci[3],
-      perm_p = if (b > 0) perm_p(obs, nb, "greater") else NA_real_,
-      null_mean = if (b > 0) mean(nb) else NA_real_,
-      null_sd = if (b > 0) stats::sd(nb) else NA_real_
-    )
-  }))
-  # At B = 0 the null is empty, and data.frame() recycles a length-1 model
-  # against it rather than returning no rows. The continuous cell already
-  # guards this; without the same guard here the metrics-only pass dies on
-  # every leaf it writes.
-  null_df <- if (length(null)) {
-    data.frame(model = model, auc = null)
-  } else {
-    data.frame(model = character(0), auc = numeric(0))
-  }
-  list(
-    summary = summ, null = null_df,
-    preds = data.frame(
-      model = model, subject = rownames(x), y = y, pred = preds
-    ),
-    selection = selection_frequency(fit$selected, model)
-  )
-}
-
-# Continuous cell for one outcome across a grid of permutation counts.
-sweep_cont_cell <- function(x, y, model, outcome, b_grid = B_GRID,
-                            cores = PERM_CORES) {
-  fit <- nested_loso(x, y, model, "gaussian")
-  preds <- fit$preds
-  obs_q2 <- stat_q2(y, preds)
-  obs_rho <- stat_spearman(y, preds)
-  bmax <- max(b_grid)
-  null <- if (bmax > 0) sweep_cont_null(x, y, model, bmax, cores) else NULL
-  summ <- do.call(rbind, lapply(sort(b_grid), function(b) {
-    nq <- if (b > 0) null[seq_len(b), "q2"] else numeric(0)
-    nr <- if (b > 0) null[seq_len(b), "rho"] else numeric(0)
-    data.frame(
-      outcome = outcome, model = model, n = length(y), p = ncol(x), B = b,
-      q2 = obs_q2, spearman = obs_rho,
-      perm_p_q2 = if (b > 0) perm_p(obs_q2, nq, "greater") else NA_real_,
-      perm_p_spearman = if (b > 0) perm_p(obs_rho, nr, "greater") else NA_real_,
-      null_q2_mean = if (b > 0) mean(nq) else NA_real_,
-      null_q2_sd = if (b > 0) stats::sd(nq) else NA_real_
-    )
-  }))
-  null_df <- if (is.null(null)) {
-    data.frame(
-      outcome = character(0), model = character(0), q2 = numeric(0)
-    )
-  } else {
-    data.frame(outcome = outcome, model = model, q2 = null[, "q2"])
-  }
-  list(
-    summary = summ, null = null_df,
     preds = data.frame(
       outcome = outcome, model = model, subject = rownames(x),
       y = y, pred = preds

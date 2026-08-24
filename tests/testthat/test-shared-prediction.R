@@ -7,8 +7,8 @@ test_that("shared_prediction harness is deterministic and leakage-free", {
   )
   y <- as.numeric(x[, 1] > 0)
 
-  fit1 <- suppressWarnings(nested_loso(x, y, "glmnet", "binomial"))
-  fit2 <- suppressWarnings(nested_loso(x, y, "glmnet", "binomial"))
+  fit1 <- suppressWarnings(nested_loso(x, y, "enet", "binomial"))
+  fit2 <- suppressWarnings(nested_loso(x, y, "enet", "binomial"))
   expect_identical(fit1$preds, fit2$preds)
   expect_length(fit1$preds, 20)
   expect_length(fit1$selected, 20)
@@ -23,7 +23,7 @@ test_that("shared_prediction harness is deterministic and leakage-free", {
   expect_equal(nrow(al$x), 19)
 })
 
-test_that("all three model paths recover a planted signal and report it", {
+test_that("enet and plain both recover a planted signal and report it", {
   source(here::here("functions", "shared_prediction.R"))
 
   set.seed(2)
@@ -34,32 +34,29 @@ test_that("all three model paths recover a planted signal and report it", {
   y <- rep(c(0, 1), each = 8)
   x[, "f1"] <- x[, "f1"] + y * 3
 
-  for (m in c("glmnet", "spls", "pam")) {
-    res <- suppressWarnings(run_class_cell(x, y, m, nperm = 20, cores = 1))
-    expect_gt(res$summary$estimate, 0.5)
-    expect_true("f1" %in% res$selection$feature)
-    expect_true(all(res$selection$freq >= 0 & res$selection$freq <= 1))
-  }
+  res <- suppressWarnings(run_class_cell(x, y, "enet", nperm = 20, cores = 1))
+  expect_gt(res$summary$estimate, 0.5)
+  expect_true("f1" %in% res$selection$feature)
+  expect_true(all(res$selection$freq >= 0 & res$selection$freq <= 1))
+
+  # plain is only valid at p < n; module-sized inputs (< 16 features here)
+  x_small <- x[, 1:5]
+  fit <- suppressWarnings(nested_loso(x_small, y, "plain", "binomial"))
+  expect_length(fit$preds, n)
+  expect_true(all(is.finite(fit$preds)))
 })
 
 test_that("selection_frequency counts folds and stays in [0, 1]", {
   source(here::here("functions", "shared_prediction.R"))
 
   sel <- list(c("a", "b"), c("a"), c("a", "c"), character(0))
-  freq <- selection_frequency(sel, "glmnet")
+  freq <- selection_frequency(sel, "enet")
   expect_equal(freq$freq[freq$feature == "a"], 0.75)
   expect_equal(freq$folds[freq$feature == "b"], 1L)
   expect_true(all(freq$freq <= 1))
 
-  empty <- selection_frequency(list(character(0), character(0)), "pam")
+  empty <- selection_frequency(list(character(0), character(0)), "enet")
   expect_equal(nrow(empty), 0L)
-})
-
-test_that("spls keepX grid is data-driven and capped at p", {
-  source(here::here("functions", "shared_prediction.R"))
-  expect_true(all(spls_keepx_grid(6) <= 6))
-  expect_setequal(spls_keepx_grid(6), c(2, 5, 6))
-  expect_true(max(spls_keepx_grid(2000)) == 50)
 })
 
 test_that("stat_q2 is 1 for perfect fit and <=0 for mean prediction", {
@@ -77,54 +74,7 @@ test_that("perm_p respects the 1/(B+1) floor and side", {
   expect_equal(perm_p(0.5, c(1, 1, 0, 0), "greater"), 3 / 5)
 })
 
-# B = 0 is the metrics-only pass: run every cell for its point estimate, then
-# come back later for the permutation nulls. Without it the fast pass has to be
-# faked with a tiny B, which is slower and reports a p nobody should read.
-test_that("a cell at B = 0 returns metrics and no null", {
+test_that("fit_predict rejects an unknown model", {
   source(here::here("functions", "shared_prediction.R"))
-
-  set.seed(11)
-  y <- rep(c(0, 1), each = 8)
-  x <- matrix(rnorm(16 * 5),
-    nrow = 16, dimnames = list(paste0("s", 1:16), paste0("f", 1:5))
-  )
-  x[, 1] <- x[, 1] + 2 * y
-
-  cls <- suppressWarnings(
-    sweep_class_cell(x, y, "glmnet", b_grid = c(0L, 0L), cores = 1L)
-  )
-  expect_identical(unique(cls$summary$B), 0L)
-  expect_true(is.na(cls$summary$perm_p[1]))
-  expect_true(is.na(cls$summary$null_mean[1]))
-  expect_false(is.na(cls$summary$estimate[1]))
-  expect_identical(nrow(cls$null), 0L)
-  expect_named(cls$null, c("model", "auc"))
-
-  cont <- suppressWarnings(
-    sweep_cont_cell(x, as.numeric(x[, 1]), "glmnet", "d_test",
-      b_grid = c(0L, 0L), cores = 1L
-    )
-  )
-  expect_identical(unique(cont$summary$B), 0L)
-  expect_true(is.na(cont$summary$perm_p_q2[1]))
-  expect_false(is.na(cont$summary$q2[1]))
-  expect_identical(nrow(cont$null), 0L)
-})
-
-test_that("a B = 0 cell still carries its predictions and selections", {
-  source(here::here("functions", "shared_prediction.R"))
-
-  set.seed(12)
-  y <- rep(c(0, 1), each = 8)
-  x <- matrix(rnorm(16 * 5),
-    nrow = 16, dimnames = list(paste0("s", 1:16), paste0("f", 1:5))
-  )
-  x[, 1] <- x[, 1] + 2 * y
-  cls <- suppressWarnings(
-    sweep_class_cell(x, y, "glmnet", b_grid = c(0L, 0L), cores = 1L)
-  )
-
-  expect_identical(nrow(cls$preds), 16L)
-  expect_true(all(cls$preds$subject %in% rownames(x)))
-  expect_gt(nrow(cls$selection), 0L)
+  expect_error(fit_predict("rf", matrix(1), 1, matrix(1), "binomial"))
 })
