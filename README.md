@@ -14,8 +14,8 @@ standing in for: **does the proteome track how much a subject adapted?**
 00_input/          raw matrix, sample metadata, phenotype table
 01_Filtering/      protein filtering
 02_Normalization/  cycloess, imputation, per-sample pathway scores
-03_Features/       modules, the association sweep, its calibration
-04_Figures/        F01_phenotype, F02_association
+03_Features/       modules, GO annotation, the sweep, its calibration
+04_Figures/        F01_phenotype, F02_association, F03_modules
 functions/         shared code, flat
 ```
 
