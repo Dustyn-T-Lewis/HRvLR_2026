@@ -101,3 +101,7 @@ message(
   "\nfgsea: ", sum(fgsea_summary$n_bh), " set-contrast hits at BH < ", BH_ALPHA,
   " | singscore: ", sum(singscore_summary$n_bh)
 )
+message(
+  "the fgsea counts above are not interpretable until 02_fgsea_calibration.R ",
+  "has been run; it reports whether a random split produces as many"
+)

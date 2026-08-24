@@ -99,8 +99,35 @@ write_csv(
   tibble(perm = seq_len(N_PERM), n_hits = null_counts),
   file.path(OUT_DIR, "02_fgsea_null_counts.csv")
 )
+verdict <- tibble(
+  field = c("verdict", "consequence", "singscore", "precedent"),
+  value = c(
+    sprintf(
+      paste(
+        "fgsea padj is uninformative here: a random split of the same",
+        "subjects yields a median of %s significant sets against %s observed",
+        "(empirical p = %s)"
+      ),
+      stats::median(null_counts), observed, signif(calibration$p_empirical, 2)
+    ),
+    paste(
+      "no pathway hit from 01_run_pathways.R can stand; the counts are",
+      "reported for the record and carry no evidence"
+    ),
+    paste(
+      "singscore, scored per sample and fitted through the protein",
+      "estimator, returned zero hits across all twelve cells"
+    ),
+    paste(
+      "the same failure was recorded for STRING's PPI enrichment p on this",
+      "proteome: a competitive null that assumes independent features is",
+      "anticonservative on a correlated MS matrix"
+    )
+  )
+)
+
 write.xlsx(
-  list(calibration = calibration),
+  list(calibration = calibration, verdict = verdict),
   file.path(OUT_DIR, "02_fgsea_calibration.xlsx")
 )
 

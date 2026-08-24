@@ -70,7 +70,7 @@ fit_once <- function(label_vec, correlation, samples) {
 }
 
 set.seed(42)
-confirmation <- map_dfr(hit_labels, function(l) {
+fitted <- map(hit_labels, function(l) {
   lab <- labels_long |> filter(.data$label == l)
   vec <- setNames(lab$level, lab$subject)
   parts <- label_design(mat, vec)
@@ -82,10 +82,19 @@ confirmation <- map_dfr(hit_labels, function(l) {
     fit_once(shuffled, parts$correlation, samples) |> mutate(perm = i)
   })
 
-  observed |>
-    mutate(label = l, .before = 1) |>
+  list(
+    label = l,
+    observed = observed |> mutate(label = l, .before = 1),
+    null = null |> mutate(label = l, .before = 1)
+  )
+})
+
+null_draws <- map_dfr(fitted, "null")
+
+confirmation <- map_dfr(fitted, function(x) {
+  x$observed |>
     left_join(
-      null |>
+      x$null |>
         summarise(
           null_any_hit = mean(.data$n_bh >= 1),
           null_hits_mean = mean(.data$n_bh),
@@ -95,9 +104,9 @@ confirmation <- map_dfr(hit_labels, function(l) {
       by = "contrast"
     ) |>
     left_join(
-      null |>
+      x$null |>
         dplyr::select(contrast, perm, null_n = n_bh) |>
-        left_join(observed, by = "contrast") |>
+        left_join(x$observed, by = "contrast") |>
         summarise(
           p_count = (sum(.data$null_n >= .data$n_bh) + 1) / (N_PERM + 1),
           .by = "contrast"
@@ -108,6 +117,7 @@ confirmation <- map_dfr(hit_labels, function(l) {
 
 confirmed <- confirmation |> filter(.data$n_bh >= 1, .data$p_count < 0.05)
 
+write_csv(null_draws, file.path(OUT_DIR, "02_perm_null_draws.csv"))
 write.xlsx(
   list(confirmation = confirmation),
   file.path(OUT_DIR, "02_confirmation.xlsx")
