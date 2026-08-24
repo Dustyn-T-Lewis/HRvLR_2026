@@ -6,8 +6,7 @@ responder groups, no cut points, no baseline contrast.
 The original study labelled subjects High and Low Responder by median-splitting
 a composite hypertrophy score. V1 tested that label at four levels and found
 nothing. This project drops the label and asks the question the label was
-standing in for: **does a protein's change over a window track how much a
-subject adapted?**
+standing in for: **does the proteome track how much a subject adapted?**
 
 ## Layout
 
@@ -27,10 +26,10 @@ paths go through `here::here()`, and any stochastic step is seeded.
 
 ## The design
 
-Each subject contributes one column: how much a feature moved over a window.
-That change is regressed on the subject's adaptation. Nobody is cut into a
-group, so no cut point has to be defended and no composite can separate its own
-ingredients.
+Each subject contributes one column: a feature's value at a timepoint, or how
+much it moved over a window. That column is regressed on the subject's
+adaptation. Nobody is cut into a group, so no cut point has to be defended and
+no composite can separate its own ingredients.
 
 - **Windows.** Six. Three levels (the value at T1, T2 or T3) and three changes
   (training T2−T1, acute T3−T2, total T3−T1). Levels ask a between-person
