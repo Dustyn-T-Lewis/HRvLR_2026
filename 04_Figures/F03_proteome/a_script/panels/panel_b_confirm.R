@@ -23,7 +23,7 @@ build_confirm <- function(perm_null, confirmation, tag = "B") {
 
   nd <- perm_null |>
     inner_join(
-      hit |> select(label, contrast),
+      hit |> dplyr::select(label, contrast),
       by = c("label", "contrast")
     ) |>
     mutate(
@@ -41,7 +41,10 @@ build_confirm <- function(perm_null, confirmation, tag = "B") {
   p <- ggplot(nd, aes(.data$bin, .data$n_perm)) +
     geom_col(fill = "grey80", width = 0.8) +
     geom_col(
-      data = inner_join(nd, obs |> select(cell, bin), by = c("cell", "bin")),
+      data = inner_join(
+        nd, obs |> dplyr::select(cell, bin),
+        by = c("cell", "bin")
+      ),
       fill = "#B2182B", width = 0.8
     ) +
     geom_text(

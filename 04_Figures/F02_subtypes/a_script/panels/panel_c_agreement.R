@@ -45,7 +45,7 @@ build_agreement <- function(forced_two_group, tag = "C") {
       panel.grid.major.y = element_blank()
     )
 
-  list(plot = p, audit = d |> select(space, label, n, ari, gate_open))
+  list(plot = p, audit = d |> dplyr::select(space, label, n, ari, gate_open))
 }
 
 c_agreement <- build_agreement(forced_two_group)

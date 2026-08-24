@@ -18,9 +18,9 @@
 # picking the k that gave the best answer is the failure mode this sweep
 # exists to prevent.
 
-pacman::p_load(
-  here, dplyr, tidyr, purrr, tibble, readr, mclust, MASS, openxlsx
-)
+# MASS is called qualified, never attached: MASS::select() masks dplyr::select()
+# for every script sourced after this one in the same session.
+pacman::p_load(here, dplyr, tidyr, purrr, tibble, readr, mclust, openxlsx)
 
 source(here("functions", "feature_levels.R"))
 

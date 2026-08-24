@@ -39,7 +39,7 @@ build_change <- function(change_summary, tag = "A") {
       panel.grid.major.y = element_blank()
     )
 
-  list(plot = p, audit = d |> select(
+  list(plot = p, audit = d |> dplyr::select(
     trait, n, mean, ci_lo, ci_hi,
     mean_d, ci_lo_d, ci_hi_d, p, moved
   ))

@@ -48,7 +48,7 @@ build_sweep <- function(sweep_summary, tag = "A") {
       panel.grid.major.y = element_blank()
     )
 
-  list(plot = p, audit = d |> select(
+  list(plot = p, audit = d |> dplyr::select(
     label, contrast, internal, n_tested,
     n_nominal, n_bh, min_bh
   ))

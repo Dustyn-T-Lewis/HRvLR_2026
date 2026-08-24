@@ -50,7 +50,7 @@ build_null <- function(null_draws, cluster_cells, tag = "A") {
         element_text(size = 6.5, face = "italic", colour = "grey40")
     )
 
-  list(plot = p, audit = cc |> select(
+  list(plot = p, audit = cc |> dplyr::select(
     space, n_pc, best_g, bic_gain,
     null_gain_median, null_gain_q95, p_empirical
   ))

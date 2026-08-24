@@ -55,7 +55,7 @@ build_separation <- function(label_separation, composite_structure, tag = "C") {
       panel.grid.major.y = element_blank()
     )
 
-  list(plot = p, audit = d |> select(
+  list(plot = p, audit = d |> dplyr::select(
     trait, hr, lr, difference, ci_lo, ci_hi,
     difference_d, ci_lo_d, ci_hi_d, p, r2_alone, internal, separated
   ))

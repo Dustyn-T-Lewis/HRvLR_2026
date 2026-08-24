@@ -39,7 +39,7 @@ build_falsepos <- function(cluster_cells, tag = "B") {
       legend.position = "top"
     )
 
-  list(plot = p, audit = d |> select(space, n_pc, null_g_above_1))
+  list(plot = p, audit = d |> dplyr::select(space, n_pc, null_g_above_1))
 }
 
 b_falsepos <- build_falsepos(cluster_cells)
