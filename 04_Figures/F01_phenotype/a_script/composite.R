@@ -1,18 +1,17 @@
-# F01 composite: the two effect-size panels stack on the left so they share an
-# axis and read against each other; the continuum carries the right. Assembly
-# only, no statistics.
+# F01 composite: what adapted on the left over the subject map, the
+# redundancy structure on the right. Assembly only, no statistics.
 pacman::p_load(patchwork, ggplot2)
 
-left_col <- (F01_PANELS$change / F01_PANELS$separation) +
-  plot_layout(heights = c(1, 1))
+left_col <- (F01_PANELS$change / F01_PANELS$space) +
+  plot_layout(heights = c(1, 1.25))
 
-composite <- (left_col | F01_PANELS$continuum) +
-  plot_layout(widths = c(1, 0.95)) +
+composite <- (left_col | F01_PANELS$structure) +
+  plot_layout(widths = c(1, 1)) +
   plot_annotation(
-    title = "F01 · The responder phenotype and the label cut from it",
+    title = "F01 · The adaptations this proteome is mapped onto",
     subtitle = paste(
-      "What changed over training, what the HR/LR label separates,",
-      "and the composite the split was drawn on."
+      "Ten phenotypes treated as continuous outcomes: what moved, how the",
+      "subjects sit, and how much the measures overlap."
     ),
     theme = theme(
       plot.title = element_text(face = "bold", size = 14),

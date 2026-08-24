@@ -20,7 +20,7 @@ protein_matrix <- function() {
 
 module_matrix <- function() {
   eigen_csv <- here(
-    "03_Features", "02_WGCNA", "c_data", "wgcna_eigengene.csv"
+    "03_Features", "c_data", "wgcna_eigengene.csv"
   )
   wide <- read_csv(eigen_csv, show_col_types = FALSE) |>
     pivot_wider(names_from = "sample_id", values_from = "ME") |>

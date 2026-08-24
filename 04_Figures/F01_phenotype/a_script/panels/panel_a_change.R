@@ -1,24 +1,30 @@
-# Panel A: did each outcome change over training at all? On a common effect-size
-# scale because the raw units span two orders of magnitude and the comparison
-# across outcomes is the whole point of the panel.
-if (!exists("change_summary")) {
+# Panel A: which adaptations actually happened. On a common effect-size scale
+# because the raw units span orders of magnitude, and because an outcome whose
+# change interval covers zero cannot anchor an association no matter what the
+# proteome does.
+if (!exists("pheno")) {
   source(here::here("04_Figures", "F01_phenotype", "a_script", "setup.R"))
 }
-pacman::p_load(ggplot2, forcats)
+pacman::p_load(ggplot2, forcats, broom, purrr, dplyr)
 
-build_change <- function(change_summary, tag = "A") {
-  d <- change_summary |>
-    filter(.data$trait != "comp_hypertrophy") |>
+build_change <- function(pheno, tag = "A") {
+  d <- map_dfr(CHANGE_TRAITS, function(v) {
+    broom::tidy(stats::t.test(pheno[[v]])) |>
+      transmute(
+        trait = v, n = sum(!is.na(pheno[[v]])),
+        sd = stats::sd(pheno[[v]], na.rm = TRUE),
+        mean_d = estimate / sd, ci_lo_d = conf.low / sd,
+        ci_hi_d = conf.high / sd, p = p.value
+      )
+  }) |>
     mutate(
-      label = TRAIT_LABELS[.data$trait],
-      moved = .data$ci_lo_d > 0 | .data$ci_hi_d < 0,
-      label = factor(.data$label, levels = TRAIT_ORDER)
+      label = fct_reorder(TRAIT_LABELS[.data$trait], .data$mean_d),
+      moved = .data$ci_lo_d > 0 | .data$ci_hi_d < 0
     )
 
   p <- ggplot(d, aes(.data$mean_d, .data$label, colour = .data$moved)) +
     geom_vline(
-      xintercept = 0, linetype = "dashed", colour = "grey50",
-      linewidth = 0.4
+      xintercept = 0, linetype = "dashed", colour = "grey50", linewidth = 0.4
     ) +
     geom_errorbar(aes(xmin = .data$ci_lo_d, xmax = .data$ci_hi_d),
       orientation = "y", width = 0.18, linewidth = 0.6
@@ -28,7 +34,7 @@ build_change <- function(change_summary, tag = "A") {
       values = c(`TRUE` = "#2166AC", `FALSE` = "grey60"), guide = "none"
     ) +
     labs(
-      title = "Which outcomes actually changed", tag = tag,
+      title = "Which adaptations happened", tag = tag,
       subtitle = "Mean change over training, in SD units, with 95% CI",
       x = "Change (SD units)", y = NULL
     ) +
@@ -39,16 +45,13 @@ build_change <- function(change_summary, tag = "A") {
       panel.grid.major.y = element_blank()
     )
 
-  list(plot = p, audit = d |> dplyr::select(
-    trait, n, mean, ci_lo, ci_hi,
-    mean_d, ci_lo_d, ci_hi_d, p, moved
-  ))
+  list(plot = p, audit = d |> dplyr::select(-label))
 }
 
-a_change <- build_change(change_summary)
+a_change <- build_change(pheno)
 save_panel(
   a_change$plot, file.path(F01_RPT, "panels", "panel_a_change"),
-  135, 85
+  135, 90
 )
 F01_PANELS[["change"]] <- a_change$plot
 F01_AUDIT[["change_over_training"]] <- a_change$audit

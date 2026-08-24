@@ -9,49 +9,38 @@ source(file.path(a_script, "setup.R"))
 source(here("functions", "shared_utils.R"))
 
 clear_dir(F01_RPT)
-dir.create(file.path(F01_RPT, "panels"),
-  recursive = TRUE,
-  showWarnings = FALSE
-)
+dir.create(file.path(F01_RPT, "panels"), recursive = TRUE, showWarnings = FALSE)
 dir.create(F01_DAT, recursive = TRUE, showWarnings = FALSE)
 
-for (p in c("panel_a_change", "panel_b_continuum", "panel_c_separation")) {
+for (p in c("panel_a_change", "panel_b_structure", "panel_c_space")) {
   source(file.path(a_script, "panels", paste0(p, ".R")))
 }
 
-F01_AUDIT[["composite_structure"]] <- composite_structure
-F01_AUDIT[["composite_modality"]] <- composite_modality
-
 metadata <- tibble::tribble(
   ~field, ~value,
-  "figure", "F01 responder phenotype and label construction",
-  "n", "16 subjects, complete on every outcome except 1RM leg extension (15)",
+  "figure", "F01 the adaptation phenotypes, as continuous outcomes",
+  "n", paste(
+    "16 subjects; 1RM leg extension has one missing value and drops that",
+    "subject from its own cell only"
+  ),
   "effect size", paste(
-    "mean or group difference divided by the SD of the change score;",
-    "95% CI from the same t interval"
+    "mean change divided by the SD of the change score, with the 95% CI",
+    "from the same t interval"
   ),
-  "composite", paste(
-    "comp_hypertrophy arrives from the source spreadsheet without a",
-    "stated formula; the five outcomes reconstruct it at r2 = 0.977"
+  "volume_load", paste(
+    "a total, not a change, so it carries no row in panel A; it appears in",
+    "the correlation structure and is tested like the rest"
   ),
-  "label", paste(
-    "HR/LR is the exact median cut of comp_hypertrophy: the top eight",
-    "are HR without exception"
+  "fibre counts", paste(
+    "the MyoVision columns are fibre counts, not areas, despite the fCSA in",
+    "their meta names; they move against area because larger fibres pack",
+    "fewer into the imaged field"
   ),
-  "bimodality", paste(
-    "mclust BIC selects two components; bootstrap LRT over 999",
-    "replicates gives p = 0.035, and that solution recovers the given",
-    "label exactly (ARI = 1)"
+  "no group split", paste(
+    "the original HR/LR label appears in panel C only to show where a median",
+    "cut would have fallen; nothing in this project now conditions on it"
   ),
-  "internal flag", paste(
-    "an outcome with r2 >= 0.20 against the composite is an ingredient",
-    "of it and cannot corroborate the label cut from it"
-  ),
-  "not claimed", paste(
-    "this figure reports the construction and the separations; it draws",
-    "no inference about the proteomic result"
-  ),
-  "source", "03_Features/01_Responsiveness/c_data/01_label_audit.xlsx"
+  "source", "00_input/c_data/phenotype.csv"
 )
 
 sheets <- sort(names(F01_AUDIT))
@@ -71,10 +60,10 @@ saveWorkbook(wb, file.path(F01_DAT, "F01_phenotype_source_data.xlsx"),
 source(file.path(a_script, "composite.R"))
 
 ggsave(file.path(F01_RPT, "F01_phenotype.png"), composite,
-  width = 290, height = 190, units = "mm", dpi = 300, bg = "white"
+  width = 290, height = 200, units = "mm", dpi = 300, bg = "white"
 )
 ggsave(file.path(F01_RPT, "F01_phenotype.pdf"), composite,
-  width = 290, height = 190, units = "mm", device = PDF_DEVICE, bg = "white"
+  width = 290, height = 200, units = "mm", device = PDF_DEVICE, bg = "white"
 )
 
 message("F01 rebuilt")
