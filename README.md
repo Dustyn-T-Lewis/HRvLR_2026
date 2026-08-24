@@ -32,10 +32,10 @@ That change is regressed on the subject's adaptation. Nobody is cut into a
 group, so no cut point has to be defended and no composite can separate its own
 ingredients.
 
-- **Windows.** Training (T2 − T1) and Acute (T3 − T2). Baseline is absent by
-  design: comparing levels between people answers a different question from
-  whether a change tracks a change, and V1 already tested the baseline form
-  across 54 cells without promoting anything.
+- **Windows.** Six. Three levels (the value at T1, T2 or T3) and three changes
+  (training T2−T1, acute T3−T2, total T3−T1). Levels ask a between-person
+  question, changes a within-person one; the two families are reported apart
+  and never pooled.
 - **Levels.** Proteins (1900), WGCNA module eigengenes (12), singscore
   pathways (57).
 - **Estimator.** `limma` with a continuous predictor. One row per subject means
@@ -44,8 +44,8 @@ ingredients.
   difference. The moderated variance is why limma beats a per-feature `lm` at
   n = 14.
 
-3 levels × 2 windows × 10 phenotypes = **60 cells**. BH within each cell, never
-across them.
+3 feature levels × 6 windows × 10 phenotypes = **180 cells**. BH within each
+cell, then a second correction across all 180.
 
 ## Phenotypes
 
@@ -80,44 +80,66 @@ measurement error within this study (Atkinson & Batterham 2015, *Exp Physiol*
 
 ## What it found
 
-**One cell of 60 cleared BH, against 2.6 expected by chance.**
+**Nothing survives the sweep-level correction.** Three of 180 cells clear BH
+inside themselves, all against change in whole-muscle CSA. After correcting the
+per-cell permutation p across the sweep, none has q below 1.
 
-| Level | Cells | Cleared BH | Expected under the null |
-|---|---|---|---|
-| Proteins | 20 | 0 | 0.77 |
-| Modules | 20 | 1 | 0.92 |
-| Pathways | 20 | 0 | 0.92 |
-| **All** | **60** | **1** | **2.61** |
+Every count runs below its own null:
 
-The expectation is not one rate applied sixty times. BH over 12 module
-eigengenes is a far weaker filter than the same alpha over 1900 proteins, so
-each cell's null rate is estimated separately by shuffling the phenotype across
-subjects, 999 times per cell.
+| | observed | expected under the null |
+|---|---|---|
+| Cells with permutation p < 0.05 | 3 | 9 |
+| Cells with ≥1 BH hit | 3 | 8.9 |
+| Total BH hits | 6 | 24.4 |
+| Surviving BH across the 180 cells | **0** | — |
 
-**The one hit does not hold.** Module greenyellow against Δ whole-muscle CSA
-over the acute window: BH = 0.037, n = 15. Three independent checks disagree
-with it.
+The expectation is built per cell, by shuffling the phenotype across subjects
+999 times. It has to be: BH over 12 module eigengenes is a far weaker filter
+than the same alpha over 1900 proteins, so a single rate applied 180 times
+would be wrong in both directions.
 
-- Its own permutation null puts it at p = 0.051.
-- Spearman rho = −0.35, p = 0.20. A linear fit a rank test cannot see is being
-  carried by the extremes of the scale rather than by the ordering.
-- Refit dropping each subject in turn, it holds in **6 of 15 folds**. Dropping
-  HR_S29 or LR_S14 moves it to BH ≈ 0.20.
+### The one that came closest
 
-LR_S14 is the same subject V1's `06_mcsa_axis` found its Δ mCSA result resting
-on. Two independent analyses, one influential point.
+Module **greenyellow** against change in whole-muscle CSA, at the T2 level.
+It passes every check applied to itself and still fails the sweep.
 
-**V1's one hit does not reproduce, and could not have.** PSME1's best cell here
-is p = 0.035 unadjusted, BH = 0.885. V1 tested its T2 *level* against Δ mCSA;
-this tests its *change*. Different quantities, so this is not a failed
-replication.
+- BH = 0.0009 within its cell; **0.0058** after adjusting for the biopsy
+  composition panels that confound the phenotype.
+- Spearman rho = 0.59, p = 0.021, so a rank test sees it.
+- Refit dropping each subject in turn, it holds in **14 of 15** folds.
+- Its own permutation p is 0.020 — but **q = 1** across the sweep, and three
+  cells at p < 0.05 out of 180 is fewer than the nine noise alone produces.
+
+Those first three checks ask whether an association is internally consistent
+given that you are looking at it. They do not ask whether you should have been
+looking. The sweep-level correction asks that, and answers no.
+
+greenyellow is the **extracellular matrix** module (interstitial matrix
+q = 1.6e-06, ECM structural constituent q = 2.3e-05, ECM organization
+q = 0.011; hubs LUM, FBLN2, ASPN, CALD1, TAGLN, MYH11). The direction is
+mechanically coherent, since whole-muscle CSA includes interstitium while fibre
+CSA does not, and the two are uncorrelated here at r = 0.03. Coherence is not
+evidence, and this one did not clear the bar.
+
+Its fit also rests on LR_S14, the highest subject on both axes — the same
+subject V1's `06_mcsa_axis` result rested on, and a subject labelled Low
+Responder despite the largest whole-muscle gain in the cohort.
+
+### Biopsy composition is a real confound
+
+At T2 the myofibre fraction correlates **−0.81** with change in whole-muscle
+CSA and the blood fraction **+0.71**. Subjects who gained more muscle gave
+less fibre-pure biopsies, which will induce proteome-wide differences tracking
+that phenotype for reasons that are about the needle. Adjusting for the two
+confounding panels removed four of the six within-cell hits, including
+`HALLMARK_COAGULATION` — a blood signature that had appeared as a result.
 
 ## Reading the null
 
 Nothing in this proteome tracks how much these subjects adapted, at any of
-three feature levels, over either window, against any of ten phenotypes. The
-sweep returned fewer hits than chance predicts, and the single hit fails
-permutation, rank correlation, and leave-one-subject-out.
+three feature levels, in any of six windows, against any of ten phenotypes. The
+sweep returned fewer hits than chance predicts on every count, and no cell
+survives correction across it.
 
 That is a calibrated negative rather than an absence of evidence. Each stage
 carries its own null, so "we found nothing" and "there was nothing to find" are
@@ -136,7 +158,7 @@ for (f in list.files("04_Figures", "^01_run_.*[.]R$",
 }
 ```
 
-`03_confirm_hits.R` permutes all 60 cells and takes about 45 minutes.
+`03_confirm_hits.R` permutes all 180 cells and takes about two hours.
 Everything else runs in under a minute.
 
 ## Archived

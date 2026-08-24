@@ -57,6 +57,14 @@ confirmation <- pmap_dfr(cells, function(level, window, phenotype) {
   )
 })
 
+# The per-cell permutation p asks whether a cell holds up given that you are
+# looking at it. It does not ask whether you should have been looking. With 180
+# cells, roughly nine will clear p < 0.05 on noise alone, so the sweep-level
+# correction below is the statistic that decides, and a cell clearing its own
+# null while failing this one has not survived the sweep.
+confirmation <- confirmation |>
+  mutate(q_across_sweep = stats::p.adjust(.data$p_empirical, method = "BH"))
+
 # Per-cell null rates differ by an order of magnitude across levels, because
 # BH over 12 modules is a much weaker filter than BH over 1900 proteins. The
 # expectation has to be summed cell by cell rather than taken from one rate.
@@ -65,6 +73,10 @@ sweep_calibration <- confirmation |>
     n_cells = dplyr::n(),
     observed_hit_cells = sum(.data$n_bh >= 1),
     expected_hit_cells = sum(.data$null_any_hit),
+    observed_hits = sum(.data$n_bh),
+    expected_hits = sum(.data$null_hits_mean),
+    cells_p_below_05 = sum(.data$p_empirical < 0.05),
+    cells_surviving_sweep_bh = sum(.data$q_across_sweep < 0.05),
     .by = level
   ) |>
   bind_rows(
@@ -72,11 +84,16 @@ sweep_calibration <- confirmation |>
       level = "all",
       n_cells = nrow(confirmation),
       observed_hit_cells = sum(confirmation$n_bh >= 1),
-      expected_hit_cells = sum(confirmation$null_any_hit)
+      expected_hit_cells = sum(confirmation$null_any_hit),
+      observed_hits = sum(confirmation$n_bh),
+      expected_hits = sum(confirmation$null_hits_mean),
+      cells_p_below_05 = sum(confirmation$p_empirical < 0.05),
+      cells_surviving_sweep_bh = sum(confirmation$q_across_sweep < 0.05)
     )
   )
 
-confirmed <- confirmation |> filter(.data$n_bh >= 1, .data$p_empirical < 0.05)
+confirmed <- confirmation |>
+  filter(.data$n_bh >= 1, .data$q_across_sweep < 0.05)
 
 write_csv(confirmation, file.path(OUT_DIR, "03_confirmation.csv"))
 write.xlsx(
@@ -88,8 +105,8 @@ print(as.data.frame(sweep_calibration), digits = 3)
 print(as.data.frame(filter(confirmation, .data$n_bh >= 1)), digits = 3)
 message(
   "\n", nrow(confirmed), " of ", sum(confirmation$n_bh >= 1),
-  " hit cells survive a ", N_PERM, "-permutation phenotype null; ",
-  "a sweep this size expects ",
+  " hit cells survive the sweep-level correction across ", nrow(confirmation),
+  " cells; a sweep this size expects ",
   round(sweep_calibration$expected_hit_cells[
     sweep_calibration$level == "all"
   ], 1), " hit cells with nothing there"
