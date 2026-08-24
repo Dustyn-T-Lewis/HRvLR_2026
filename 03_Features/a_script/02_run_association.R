@@ -1,16 +1,16 @@
-# Does a proteome change track an adaptation?
+# Does the proteome track an adaptation?
 #
-# Three feature levels by two windows by ten phenotypes. The training window
-# asks whether the protein change over the block tracks how much a subject
-# adapted; the acute window asks whether the response to a single bout in a
-# trained muscle tracks the same thing. Both regress a per-subject change on a
-# per-subject phenotype, so nobody is cut into a group and no cut point has to
-# be defended.
+# Three feature levels by six windows by ten phenotypes. Three windows are
+# levels (the value at T1, T2 or T3) and three are changes (training, acute,
+# total). Levels ask a between-person question - do people carrying more of
+# this feature adapt more - and changes ask a within-person one. Both regress
+# one value per subject on that subject's adaptation, so nobody is cut into a
+# group and no cut point has to be defended.
 #
-# There is no baseline window. A baseline association compares levels between
-# people, which answers a different question from whether a change tracks a
-# change, and V1 already tested the baseline form across 54 cells without
-# promoting anything.
+# The two families are reported apart and never pooled. Within the level
+# family the three windows are close to one question, because a subject's
+# proteome at T1, T2 and T3 is largely the same proteome; window_redundancy
+# below measures that instead of assuming it.
 #
 # BH within each cell, never across the sweep: the phenotypes are correlated
 # (three fibre-area measures share r > 0.9) and both windows draw on the same
@@ -37,7 +37,7 @@ annotation <- read_csv(
 
 changes <- expand_grid(level = names(features), window = names(WINDOWS)) |>
   mutate(mat = map2(.data$level, .data$window, function(l, w) {
-    subject_change(features[[l]], w)
+    subject_window(features[[l]], w)
   }))
 
 cells <- expand_grid(
@@ -64,7 +64,24 @@ summary_tbl <- results |>
     min_bh = min(.data$bh, na.rm = TRUE),
     .by = c(level, window, phenotype)
   ) |>
-  arrange(.data$min_bh)
+  arrange(.data$min_bh) |>
+  mutate(family = ifelse(.data$window %in% LEVEL_WINDOWS, "level", "change"))
+
+# How much do the windows repeat each other? Correlating the per-feature t
+# statistics between two windows of the same level and phenotype says how far
+# from independent those cells are. A pair near 1 is one test counted twice.
+window_redundancy <- results |>
+  dplyr::select(level, window, phenotype, feature, t) |>
+  pivot_wider(names_from = "window", values_from = "t") |>
+  group_by(level) |>
+  group_modify(function(d, key) {
+    w <- as.matrix(d[, names(WINDOWS)])
+    m <- stats::cor(w, use = "pairwise.complete.obs")
+    tibble::as_tibble(m, rownames = "window_a") |>
+      pivot_longer(-"window_a", names_to = "window_b", values_to = "r")
+  }) |>
+  ungroup() |>
+  filter(.data$window_a < .data$window_b)
 
 survivors <- results |>
   filter(.data$bh < BH_ALPHA) |>
@@ -74,7 +91,10 @@ survivors <- results |>
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 write_csv(results, file.path(OUT_DIR, "02_association_full.csv"))
 write.xlsx(
-  list(association_summary = summary_tbl, survivors = survivors),
+  list(
+    association_summary = summary_tbl, survivors = survivors,
+    window_redundancy = window_redundancy
+  ),
   file.path(OUT_DIR, "02_association.xlsx")
 )
 

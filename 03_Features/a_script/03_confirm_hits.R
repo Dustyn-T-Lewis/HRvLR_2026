@@ -26,7 +26,7 @@ features <- feature_matrices()
 
 changes <- expand_grid(level = names(features), window = names(WINDOWS)) |>
   mutate(mat = map2(.data$level, .data$window, function(l, w) {
-    subject_change(features[[l]], w)
+    subject_window(features[[l]], w)
   }))
 
 cells <- expand_grid(

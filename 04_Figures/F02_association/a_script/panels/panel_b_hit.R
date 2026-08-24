@@ -10,7 +10,7 @@ pacman::p_load(ggplot2, ggrepel, dplyr)
 build_hit <- function(survivors, pheno, tag = "B") {
   top <- survivors |> slice_min(.data$bh, n = 1, with_ties = FALSE)
   feat <- feature_matrices()[[top$level]]
-  delta <- subject_change(feat, top$window)
+  delta <- subject_window(feat, top$window)
   subjects <- colnames(delta)
   d <- tibble::tibble(
     subject = subjects,

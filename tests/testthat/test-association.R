@@ -15,7 +15,7 @@ fixture_matrix <- function(meta) {
   )
 }
 
-test_that("subject_change subtracts in the stated direction", {
+test_that("subject_window subtracts in the stated direction", {
   source(here::here("functions", "association.R"))
 
   meta <- tibble::tribble(
@@ -26,25 +26,58 @@ test_that("subject_change subtracts in the stated direction", {
     nrow = 2, dimnames = list(c("f1", "f2"), meta$sample_id)
   )
 
-  out <- subject_change(mat, "training", meta)
+  out <- subject_window(mat, "training", meta)
   expect_equal(colnames(out), "S01")
   expect_equal(unname(out[, "S01"]), c(3, 6))
 })
 
-test_that("subject_change drops subjects missing either timepoint", {
+test_that("subject_window drops subjects missing a needed timepoint", {
   source(here::here("functions", "association.R"))
   meta <- fixture_meta()
   mat <- fixture_matrix(meta)
 
-  training <- subject_change(mat, "training", meta)
+  training <- subject_window(mat, "training", meta)
   expect_setequal(colnames(training), c("S01", "S02"))
 
-  acute <- subject_change(mat, "acute", meta)
+  acute <- subject_window(mat, "acute", meta)
   expect_setequal(colnames(acute), c("S01", "S02", "S29"))
   expect_false("S28" %in% colnames(acute))
+
+  total <- subject_window(mat, "total", meta)
+  expect_setequal(colnames(total), c("S01", "S02"))
 })
 
-test_that("subject_change pairs each subject with its own timepoints", {
+test_that("a level window returns the value itself, not a difference", {
+  source(here::here("functions", "association.R"))
+  meta <- fixture_meta()
+  mat <- fixture_matrix(meta)
+
+  # T1 exists for S01, S02 and S28 but not S29.
+  t1 <- subject_window(mat, "T1", meta)
+  expect_setequal(colnames(t1), c("S01", "S02", "S28"))
+  expect_equal(
+    unname(t1[, "S01"]),
+    unname(mat[, "S01_T1"])
+  )
+
+  t3 <- subject_window(mat, "T3", meta)
+  expect_setequal(colnames(t3), c("S01", "S02", "S29"))
+  expect_false("S28" %in% colnames(t3))
+})
+
+test_that("total change equals training plus acute where both exist", {
+  source(here::here("functions", "association.R"))
+  meta <- fixture_meta()
+  mat <- fixture_matrix(meta)
+
+  both <- c("S01", "S02")
+  tr <- subject_window(mat, "training", meta)[, both, drop = FALSE]
+  ac <- subject_window(mat, "acute", meta)[, both, drop = FALSE]
+  tot <- subject_window(mat, "total", meta)[, both, drop = FALSE]
+  expect_equal(tot, tr + ac)
+})
+
+test_that("subject_window pairs each subject with its own timepoints", {
   source(here::here("functions", "association.R"))
 
   # Rows deliberately out of subject order, so a positional pairing would
@@ -62,16 +95,16 @@ test_that("subject_change pairs each subject with its own timepoints", {
 
   # S01 rises 1 -> 10, S02 falls 30 -> 20. A positional pairing would cross
   # them and return something else for both.
-  out <- subject_change(mat, "training", meta)
+  out <- subject_window(mat, "training", meta)
   expect_equal(unname(out[, "S01"]), 9)
   expect_equal(unname(out[, "S02"]), -10)
 })
 
-test_that("subject_change rejects an unknown window", {
+test_that("subject_window rejects an unknown window", {
   source(here::here("functions", "association.R"))
   meta <- fixture_meta()
   expect_error(
-    subject_change(fixture_matrix(meta), "baseline", meta), "unknown window"
+    subject_window(fixture_matrix(meta), "nonsense", meta), "unknown window"
   )
 })
 
