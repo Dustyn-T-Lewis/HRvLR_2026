@@ -95,23 +95,32 @@ cluster_cell <- function(space, mat, k) {
     numeric(2)
   )
   usable <- !is.na(null["gain", ])
-  tibble(
-    space = space, n_pc = k, n_subjects = nrow(scores),
-    best_g = obs$g, bic_gain = obs$gain,
-    null_g_above_1 = mean(null["g", usable] > 1),
-    null_gain_median = stats::median(null["gain", usable]),
-    null_gain_q95 = stats::quantile(null["gain", usable], 0.95),
-    p_empirical =
-      (sum(null["gain", usable] >= obs$gain) + 1) / (sum(usable) + 1)
+  list(
+    summary = tibble(
+      space = space, n_pc = k, n_subjects = nrow(scores),
+      best_g = obs$g, bic_gain = obs$gain,
+      null_g_above_1 = mean(null["g", usable] > 1),
+      null_gain_median = stats::median(null["gain", usable]),
+      null_gain_q95 = stats::quantile(null["gain", usable], 0.95),
+      p_empirical =
+        (sum(null["gain", usable] >= obs$gain) + 1) / (sum(usable) + 1)
+    ),
+    draws = tibble(
+      space = space, n_pc = k,
+      null_g = null["g", usable], null_gain = null["gain", usable]
+    )
   )
 }
 
 set.seed(42)
 spaces <- list(eigengenes = eigengene_baseline(), proteins = protein_baseline())
 
-cells <- purrr::map_dfr(names(spaces), function(sp) {
-  purrr::map_dfr(PC_GRID, function(k) cluster_cell(sp, spaces[[sp]], k))
-})
+fitted <- purrr::map(names(spaces), function(sp) {
+  purrr::map(PC_GRID, function(k) cluster_cell(sp, spaces[[sp]], k))
+}) |> purrr::list_flatten()
+
+cells <- purrr::map_dfr(fitted, "summary")
+null_draws <- purrr::map_dfr(fitted, "draws")
 
 gate_open <- any(cells$p_empirical < GATE_ALPHA, na.rm = TRUE)
 
@@ -153,6 +162,7 @@ two_group$gate_open <- gate_open
 two_group$interpretation <- verdict
 
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+write_csv(null_draws, file.path(OUT_DIR, "01_null_draws.csv"))
 write.xlsx(
   list(cluster_cells = cells, forced_two_group = two_group),
   file.path(OUT_DIR, "01_subtypes.xlsx")
