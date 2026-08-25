@@ -68,15 +68,23 @@ stopifnot(identical(rownames(res$results[[1]]), rownames(annotation)))
 combined <- res$results |>
   lapply(function(d) dplyr::bind_cols(annotation, d)) |>
   dplyr::bind_rows(.id = "contrast") |>
-  tibble::as_tibble()
+  tibble::as_tibble() |>
+  add_pi_score()
 
-# The BH denominator per contrast. Proteins with an inestimable cell mean come
-# back NA and are never tested, so the denominator is below 1900 and differs by
-# contrast. Recording it stops anyone reading a q as if it spanned everything.
-bh_denominators <- combined |>
+# Three significance layers per contrast, reported side by side as V1 did.
+# The pi-score is the primary criterion (Xiao Eq. 2, pi = p^|log2FC|), BH is
+# the conservative one, and the nominal count is the exploratory one. Proteins
+# with an inestimable cell mean come back NA and are never tested, so the BH
+# denominator is below 1900 and differs by contrast; recording it stops anyone
+# reading a q as if it spanned everything.
+contrast_summary <- combined |>
   summarise(
     n_tested = sum(!is.na(.data$P.Value)),
     n_untested = sum(is.na(.data$P.Value)),
+    n_nominal = sum(.data$P.Value < 0.05, na.rm = TRUE),
+    n_pi = sum(.data$sig_pi != 0L, na.rm = TRUE),
+    n_pi_up = sum(.data$sig_pi == 1L, na.rm = TRUE),
+    n_pi_down = sum(.data$sig_pi == -1L, na.rm = TRUE),
     n_bh05 = sum(.data$adj.P.Val < 0.05, na.rm = TRUE),
     min_bh = min(.data$adj.P.Val, na.rm = TRUE),
     .by = "contrast"
@@ -88,18 +96,19 @@ dir.create(RPT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 saveRDS(fit, file.path(OUT_DIR, "01_limma_DAList.rds"))
 write_csv(combined, file.path(OUT_DIR, "01_dep_results.csv"))
-write_csv(bh_denominators, file.path(RPT_DIR, "bh_denominators.csv"))
+write_csv(contrast_summary, file.path(RPT_DIR, "contrast_summary.csv"))
 write.xlsx(
   c(
-    list(bh_denominators = bh_denominators),
+    list(contrast_summary = contrast_summary),
     split(combined, factor(combined$contrast, levels = CONTRAST_NAMES))
   ),
   file.path(OUT_DIR, "01_dep_results.xlsx")
 )
 
-print(as.data.frame(bh_denominators), row.names = FALSE, digits = 3)
+print(as.data.frame(contrast_summary), row.names = FALSE, digits = 3)
 message(
   "\nwithin-subject correlation: ", round(within_cor, 4),
-  " | total BH survivors across nine contrasts: ",
-  sum(bh_denominators$n_bh05)
+  " | pi-score hits: ", sum(contrast_summary$n_pi),
+  " | nominal: ", sum(contrast_summary$n_nominal),
+  " | BH: ", sum(contrast_summary$n_bh05)
 )
