@@ -133,6 +133,74 @@ that phenotype for reasons that are about the needle. Adjusting for the two
 confounding panels removed four of the six within-cell hits, including
 `HALLMARK_COAGULATION` — a blood signature that had appeared as a result.
 
+## Why continuous, and not groups
+
+The design is not a preference. Before drawing any partition, five methods were
+run on five feature spaces to ask whether group structure exists at all
+(`06_clusterability.R`). Two of them can return "no clusters" as an answer.
+
+| Space | n | p | dip p | gap k | max silhouette |
+|---|---|---|---|---|---|
+| Subjects, baseline modules | 15 | 12 | 0.47 | 1 | 0.32 |
+| Subjects, T2 modules | 15 | 12 | 0.29 | 1 | 0.19 |
+| Subjects, baseline proteins | 15 | 931 | 0.35 | 1 | 0.20 |
+| All 45 samples, proteins | 45 | 931 | 0.95 | 1 | 0.13 |
+| Subjects, ten phenotypes | 15 | 10 | 0.53 | 1 | 0.30 |
+
+No space rejects unimodality, every gap statistic selects k = 1, and every
+silhouette falls in the "weak, could be artificial" band below 0.5. The one
+variable that comes close to two modes is `comp_hypertrophy` itself, the
+composite the original HR/LR label was cut from (dip p = 0.071, and a mclust
+bootstrap LRT of p = 0.035 whose two-component solution recovers the given
+label exactly).
+
+Only mclust disagrees, and it is reported to be contradicted. At p = 1902 with
+K = 2 even its most constrained covariance family estimates thousands of
+parameters from sixteen observations, and it drops unfittable models from the
+BIC table silently rather than warning, so the curve spans only the
+degenerate-but-estimable subset (Bouveyron & Brunet-Saumard 2014). Its own
+simulated null assigns more than one component to structureless data in 49 to
+67 percent of draws at n = 15.
+
+### Known limitations of the clustering that was run
+
+Three choices in the clusterability work are weaker than the alternatives, and
+are recorded rather than defended:
+
+- **PCA before clustering** is *tandem analysis*, and the reduction optimises
+  variance reconstruction rather than cluster separation. Chang (1983) built a
+  mixture whose leading components carry no cluster information; Yeung & Ruzzo
+  (2001) found it "does not necessarily improve, and often degrades, cluster
+  quality". Reduced or factorial k-means (Markos et al. 2019, `clustrd`)
+  optimise both under one criterion. At n = 15 the covariance has rank at most
+  14, so no number of retained components is defensible anyway.
+- **The top-variance filter** is the ad-hoc step sparse clustering was written
+  to replace: real clusters "differ only with respect to a small fraction of
+  the features, and will be missed if one clusters the observations using the
+  full set" (Witten & Tibshirani 2010).
+- **The single-Gaussian null** implements SigClust's logic (Liu et al. 2008)
+  with a different statistic rather than the canonical test.
+
+None of this changes the conclusion. Six independent reads agree, including
+the dip test that methodologists recommend for exactly this question
+(Adolfsson, Ackerman & Brownstein 2019).
+
+### What the field does at 100x this sample size
+
+Stokes et al., *A network-based atlas of human skeletal muscle aging*
+(medRxiv, 17 Feb 2026, doi:10.64898/2026.02.15.26346348, not peer reviewed),
+assembles 1,675 muscle transcriptomes. With that sample they still **never
+cluster subjects**: modules are built on genes with MEGENA, and responder
+status is assigned from the phenotype outcome, not discovered. Their stated
+floor for reliably estimating a pairwise correlation is 30 to 150 samples,
+citing Schonbrodt & Perugini (2013), and their smallest network is n = 47.
+
+They also reject WGCNA, which this project uses, on the grounds that it "has no
+robust statistical thresholding" and that "module membership can be indistinct
+from random". That criticism is live and unaddressed here. It changes no
+conclusion, because no module result survived the sweep, but a writeup that
+leans on the modules should answer it.
+
 ## Reading the null
 
 Nothing in this proteome tracks how much these subjects adapted, at any of
@@ -175,3 +243,54 @@ subjects produced a median of 102 significant sets against 98 observed
 co-regulated proteins as exchangeable. Pathway work here goes through
 singscore, which scores each sample independently and is fitted through the
 same estimator the proteins use.
+
+## References
+
+Adolfsson A, Ackerman M, Brownstein NC (2019). To cluster, or not to cluster:
+an analysis of clusterability methods. *Pattern Recognition* 88:13-26.
+
+Atkinson G, Batterham AM (2015). True and false interindividual differences in
+the physiological response to an intervention. *Exp Physiol* 100:577-588.
+
+Bouveyron C, Brunet-Saumard C (2014). Model-based clustering of
+high-dimensional data: a review. *Comput Stat Data Anal* 71:52-78.
+
+Chang WC (1983). On using principal components before separating a mixture of
+two multivariate normal distributions. *J R Stat Soc C* 32:267-275.
+
+Cohen J (1983). The cost of dichotomization. *Appl Psychol Meas* 7:249-253.
+
+Hartigan JA, Hartigan PM (1985). The dip test of unimodality. *Ann Stat*
+13:70-84.
+
+Liu Y, Hayes DN, Nobel A, Marron JS (2008). Statistical significance of
+clustering for high-dimension, low-sample size data. *JASA* 103:1281-1293.
+
+Markos A, Iodice D'Enza A, van de Velden M (2019). Beyond tandem analysis:
+joint dimension reduction and clustering in R. *J Stat Softw* 91(10).
+
+Neufeld A, Gao LL, Witten D (2024). Inference after latent variable estimation
+for single-cell RNA sequencing data. *Biostatistics* 25:270-287.
+
+Royston P, Altman DG, Sauerbrei W (2006). Dichotomizing continuous predictors
+in multiple regression: a bad idea. *Stat Med* 25:127-141.
+
+Scrucca L, Fop M, Murphy TB, Raftery AE (2016). mclust 5: clustering,
+classification and density estimation using Gaussian finite mixture models.
+*R Journal* 8(1):289-317.
+
+Senbabaoglu Y, Michailidis G, Li JZ (2014). Critical limitations of consensus
+clustering in class discovery. *Sci Rep* 4:6207.
+
+Stokes T, Lim C, Ali M, et al. (2026). A network-based atlas of human skeletal
+muscle aging. *medRxiv* doi:10.64898/2026.02.15.26346348. Preprint, not peer
+reviewed.
+
+Tibshirani R, Walther G, Hastie T (2001). Estimating the number of clusters in
+a data set via the gap statistic. *J R Stat Soc B* 63:411-423.
+
+Ullmann T, Hennig C, Boulesteix AL (2023). Validation of cluster analysis
+results on validation data. *PLOS Comput Biol* 19:e1010820.
+
+Witten DM, Tibshirani R (2010). A framework for feature selection in
+clustering. *JASA* 105:713-726.
