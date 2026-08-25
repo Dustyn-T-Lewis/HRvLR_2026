@@ -36,7 +36,7 @@ build_robust <- function(tag = "C") {
       labels = c(`TRUE` = "still < 0.05", `FALSE` = "lost"), name = NULL
     ) +
     labs(
-      title = "The one hit, refit without each subject", tag = tag,
+      title = "The strongest hit, refit without each subject", tag = tag,
       subtitle = sprintf(
         "Holds in %d of %d folds. Spearman rho = %.2f, p = %.2f",
         rb$loso_folds_below_alpha[1], rb$loso_folds[1],

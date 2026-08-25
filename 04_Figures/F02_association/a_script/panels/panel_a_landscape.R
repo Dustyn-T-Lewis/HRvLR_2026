@@ -6,6 +6,15 @@ if (!exists("summary_tbl")) {
 }
 pacman::p_load(ggplot2, forcats, dplyr)
 
+# Six windows, in two families: levels warm, changes cool, so the reader can
+# see at a glance which question a point belongs to.
+WINDOW_COLORS <- c(
+  "Level at T1" = "#FDBF6F", "Level at T2" = "#FF7F00",
+  "Level at T3" = "#B15928",
+  "Training (T2-T1)" = "#A6CEE3", "Acute (T3-T2)" = "#1F78B4",
+  "Total (T3-T1)" = "#08519C"
+)
+
 build_landscape <- function(summary_tbl, tag = "A") {
   d <- summary_tbl |>
     mutate(
@@ -15,7 +24,9 @@ build_landscape <- function(summary_tbl, tag = "A") {
       level_lab = factor(LEVEL_LABELS[.data$level],
         levels = unname(LEVEL_LABELS)
       ),
-      window_lab = WINDOW_LABELS[.data$window],
+      window_lab = factor(WINDOW_LABELS[.data$window],
+        levels = names(WINDOW_COLORS)
+      ),
       neglog = -log10(.data$min_bh)
     )
 
@@ -26,7 +37,7 @@ build_landscape <- function(summary_tbl, tag = "A") {
     ) +
     geom_point(size = 2.4, position = position_dodge(0.6)) +
     facet_wrap(~level_lab) +
-    scale_colour_manual(values = unname(GROUP_COLORS), name = NULL) +
+    scale_colour_manual(values = WINDOW_COLORS, name = NULL) +
     labs(
       title = "Every phenotype, every window, every feature level", tag = tag,
       subtitle = if (is.null(sweep_calibration)) {

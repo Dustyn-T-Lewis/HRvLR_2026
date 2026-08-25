@@ -51,7 +51,15 @@ LEVEL_LABELS <- c(
   pathways = "Pathways (57)"
 )
 
-WINDOW_LABELS <- c(training = "Training (T2-T1)", acute = "Acute (T3-T2)")
+WINDOW_LABELS <- c(
+  T1 = "Level at T1", T2 = "Level at T2", T3 = "Level at T3",
+  training = "Training (T2-T1)", acute = "Acute (T3-T2)",
+  total = "Total (T3-T1)"
+)
+
+# Level windows carry a value, change windows a difference; panels that name
+# the y axis need to say which.
+window_family <- function(w) ifelse(w %in% LEVEL_WINDOWS, "level", "change")
 
 if (!exists("F02_PANELS")) F02_PANELS <- list()
 if (!exists("F02_AUDIT")) F02_AUDIT <- list()

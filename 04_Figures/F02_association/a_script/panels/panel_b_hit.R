@@ -35,11 +35,11 @@ build_hit <- function(survivors, pheno, tag = "B") {
       title = sprintf("%s vs %s", top$feature, TRAIT_LABELS[top$phenotype]),
       tag = tag,
       subtitle = sprintf(
-        "%s window, n = %d, BH = %.3f, Spearman rho = %.2f",
+        "%s, n = %d, BH = %.4f, Spearman rho = %.2f",
         WINDOW_LABELS[top$window], nrow(d), top$bh, rho
       ),
       x = TRAIT_LABELS[top$phenotype],
-      y = sprintf("%s change", top$feature)
+      y = sprintf("%s %s", top$feature, window_family(top$window))
     ) +
     FIG_THEME +
     theme(plot.subtitle = element_text(
