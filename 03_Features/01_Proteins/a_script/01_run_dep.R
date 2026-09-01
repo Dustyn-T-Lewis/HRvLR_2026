@@ -26,15 +26,15 @@
 # 03_Features/01_Proteins/imputed are the robustness check.
 
 pacman::p_load(dplyr, tibble, readr, purrr, proteoDA, here)
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 cfg <- list(
   norm_csv = here("02_Normalization", "c_data", "normalized.csv"),
   norm_rds = here("02_Normalization", "c_data", "DAList_normalized.rds"),
-  data_dir = here("03_Analysis", "categorical", "01_Proteins", "c_data"),
-  report_dir = here("03_Analysis", "categorical", "01_Proteins", "b_reports"),
+  data_dir = here("03_Features", "01_Proteins", "c_data"),
+  report_dir = here("03_Features", "01_Proteins", "b_reports"),
   proteoDA_dir = here(
-    "03_Analysis", "categorical", "01_Proteins", "b_reports", "01_proteoDA"
+    "03_Features", "01_Proteins", "b_reports", "01_proteoDA"
   ),
   pval_thresh = 0.10,
   lfc_thresh = 0,

@@ -8,7 +8,7 @@
 pacman::p_load(here, tidyverse, patchwork, grid, vegan)
 
 source(here("functions", "shared_style.R"))
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 # Paths
 NORM_FILE <- here("02_Normalization", "c_data", "normalized.csv")
@@ -16,7 +16,7 @@ IMP_FILE <- here(
   "02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"
 )
 DEP_FILE <- here(
-  "03_Analysis", "categorical", "01_Proteins", "c_data",
+  "03_Features", "01_Proteins", "c_data",
   "03_combined_results.csv"
 )
 META_FILE <- here("00_input", "HRvLR_meta.csv")

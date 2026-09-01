@@ -7,7 +7,7 @@
 pacman::p_load(here, tidyverse, patchwork, grid, vegan)
 
 source(here("functions", "shared_style.R"))
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 NORM_FILE <- here("02_Normalization", "c_data", "normalized.csv")
 IMP_FILE <- here(

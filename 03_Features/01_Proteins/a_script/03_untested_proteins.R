@@ -17,7 +17,7 @@ pacman::p_load(proteoDA, here, readr, dplyr, tibble, purrr, tidyr)
 
 dal <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
 fit <- readRDS(here(
-  "03_Analysis", "categorical", "01_Proteins", "c_data", "01_limma_DAList.rds"
+  "03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"
 ))
 
 cells <- factor(dal$metadata$Group_Time[
@@ -45,7 +45,7 @@ denominators <- imap_dfr(fit$results, \(r, cname) {
   )
 })
 
-out_dir <- here("03_Analysis", "categorical", "01_Proteins", "b_reports")
+out_dir <- here("03_Features", "01_Proteins", "b_reports")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 write_csv(untested, file.path(out_dir, "untested_proteins.csv"))
 write_csv(denominators, file.path(out_dir, "bh_denominators.csv"))

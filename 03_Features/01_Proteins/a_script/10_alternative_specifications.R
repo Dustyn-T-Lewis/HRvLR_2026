@@ -29,10 +29,10 @@
 pacman::p_load(here, dplyr, tibble, purrr, readr, limma, openxlsx)
 source(here("functions", "feature_contrasts.R"))
 source(here("functions", "feature_levels.R"))
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 set.seed(42)
-OUT <- here("03_Analysis", "categorical", "01_Proteins", "c_data", "alt_specs")
+OUT <- here("03_Features", "01_Proteins", "c_data", "alt_specs")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 mat <- protein_matrix()

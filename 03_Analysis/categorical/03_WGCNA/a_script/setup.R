@@ -9,7 +9,7 @@ source(here("functions", "shared_wgcna.R"))
 source(here(
   "03_Analysis", "categorical", "03_WGCNA", "a_script", "enrichment.R"
 ))
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 RPT_DIR <- here("03_Analysis", "categorical", "03_WGCNA", "b_reports")
 DAT_DIR <- here("03_Analysis", "categorical", "03_WGCNA", "c_data")
@@ -49,7 +49,7 @@ stopifnot(setequal(names(TRAIT_LABELS), ADAPTATION_TRAITS))
 # contrasts, and the within-subject correlation. fry reuses all three rather
 # than re-deriving them.
 dep_fit <- readRDS(here(
-  "03_Analysis", "categorical", "01_Proteins", "c_data", "01_limma_DAList.rds"
+  "03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"
 ))
 DESIGN <- dep_fit$design$design_matrix
 CONTRAST_MATRIX <- dep_fit$design$contrast_matrix

@@ -33,7 +33,7 @@ render_concordance_figure <- function(cfg) {
 
   dep <- read_csv(
     here(
-      "03_Analysis", "categorical", "01_Proteins", "c_data", "03_combined_results.csv"
+      "03_Features", "01_Proteins", "c_data", "03_combined_results.csv"
     ),
     show_col_types = FALSE
   )

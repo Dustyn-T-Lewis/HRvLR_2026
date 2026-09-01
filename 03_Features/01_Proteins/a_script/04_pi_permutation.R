@@ -8,7 +8,7 @@
 
 pacman::p_load(here, dplyr, openxlsx)
 source(here(
-  "03_Analysis", "categorical", "01_Proteins", "a_script", "pi_permutation.R"
+  "03_Features", "01_Proteins", "a_script", "pi_permutation.R"
 ))
 source(here("functions", "feature_levels.R"))
 
@@ -29,6 +29,6 @@ cat(sprintf(
 write.xlsx(
   list(pi_permutation = res),
   here(
-    "03_Analysis", "categorical", "01_Proteins", "c_data", "06_pi_permutation.xlsx"
+    "03_Features", "01_Proteins", "c_data", "06_pi_permutation.xlsx"
   )
 )

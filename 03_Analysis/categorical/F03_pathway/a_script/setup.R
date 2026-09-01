@@ -8,7 +8,7 @@
 pacman::p_load(here, dplyr, tidyr, readr, tibble, fgsea, msigdbr, openxlsx)
 source(here("functions", "shared_style.R"))
 source(here("functions", "shared_pathway_utils.R"))
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 RPT_DIR <- here("03_Analysis", "categorical", "F03_pathway", "b_reports")
 DAT_DIR <- here("03_Analysis", "categorical", "F03_pathway", "c_data")
@@ -17,7 +17,7 @@ CONTRASTS <- sub(" =.*$", "", HRVLR_CONTRASTS)
 
 dep <- read_csv(
   here(
-    "03_Analysis", "categorical", "01_Proteins", "c_data", "03_combined_results.csv"
+    "03_Features", "01_Proteins", "c_data", "03_combined_results.csv"
   ),
   show_col_types = FALSE
 )

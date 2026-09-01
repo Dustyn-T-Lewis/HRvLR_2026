@@ -15,12 +15,12 @@
 # near zero. The arm is kept BECAUSE it demonstrates that.
 
 pacman::p_load(proteoDA, here, readr, dplyr, tidyr, tibble, purrr)
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 source(here("functions", "shared_utils.R"))
 
 CANONICAL <- "missforest"
 clear_dir(here(
-  "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data"
+  "03_Features", "01_Proteins", "imputed", "c_data"
 ))
 
 nd <- here("02_Normalization", "imputation", "c_data")
@@ -42,7 +42,7 @@ runs <- imap(methods, function(rds, m) {
     if (m == CANONICAL) " (canonical)" else ""
   ))
   out_dir <- here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data", m
+    "03_Features", "01_Proteins", "imputed", "c_data", m
   )
 
   dal$metadata$group <- factor(dal$metadata$Group_Time, levels = GROUP_LEVELS)
@@ -105,7 +105,7 @@ sens <- bind_rows(
 write_csv(
   sens,
   here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data",
+    "03_Features", "01_Proteins", "imputed", "c_data",
     "sensitivity_bh_vs_pi.csv"
   )
 )
@@ -156,7 +156,7 @@ cmp <- imap_dfr(runs, function(res, m) {
 write_csv(
   cmp,
   here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data",
+    "03_Features", "01_Proteins", "imputed", "c_data",
     "logfc_concordance.csv"
   )
 )
@@ -174,6 +174,6 @@ cmp |>
 cat(sprintf(
   "\nDone: imputed DEP for %d methods -> %s\n",
   length(methods), here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data"
+    "03_Features", "01_Proteins", "imputed", "c_data"
   )
 ))

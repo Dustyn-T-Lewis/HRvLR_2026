@@ -28,7 +28,7 @@ source(here("functions", "feature_contrasts.R"))
 source(here("functions", "feature_levels.R"))
 source(here("functions", "pred_features.R"))
 source(here(
-  "03_Analysis", "categorical", "01_Proteins", "a_script", "pi_permutation.R"
+  "03_Features", "01_Proteins", "a_script", "pi_permutation.R"
 ))
 
 mat <- as.matrix(readRDS(pred_paths()$dalist)$data)
@@ -55,7 +55,7 @@ results <- bind_rows(lapply(colnames(parts$contrasts), function(ct) {
 
 write.xlsx(
   list(diffvar = results),
-  here("03_Analysis", "categorical", "01_Proteins", "c_data", "08_diffvar.xlsx")
+  here("03_Features", "01_Proteins", "c_data", "08_diffvar.xlsx")
 )
 
 summary_tbl <- results |>
@@ -125,7 +125,7 @@ if (nrow(hits) == 0) {
       )
     ),
     here(
-      "03_Analysis", "categorical", "01_Proteins", "c_data", "08_diffvar.xlsx"
+      "03_Features", "01_Proteins", "c_data", "08_diffvar.xlsx"
     )
   )
 }

@@ -9,8 +9,8 @@
 pacman::p_load(here, dplyr, openxlsx)
 source(here("functions", "feature_contrasts.R"))
 
-out_dir <- here("03_Analysis", "categorical", "01_Proteins", "c_data")
-report_dir <- here("03_Analysis", "categorical", "01_Proteins", "b_reports")
+out_dir <- here("03_Features", "01_Proteins", "c_data")
+report_dir <- here("03_Features", "01_Proteins", "b_reports")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 

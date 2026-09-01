@@ -61,7 +61,7 @@ relabel <- function(d) {
 # non-imputed fit.
 sens <- relabel(read_csv(
   here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data",
+    "03_Features", "01_Proteins", "imputed", "c_data",
     "sensitivity_bh_vs_pi.csv"
   ),
   show_col_types = FALSE
@@ -108,7 +108,7 @@ p_pi <- ggplot(sens, aes(contrast, n_pi, fill = method)) +
 # best while imp4p was destroying the null.
 conc <- read_csv(
   here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data",
+    "03_Features", "01_Proteins", "imputed", "c_data",
     "logfc_concordance.csv"
   ),
   show_col_types = FALSE

@@ -26,7 +26,7 @@
 # an artifact of this script.
 
 pacman::p_load(proteoDA, here, readxl, readr, dplyr, stringr, tibble, purrr)
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 source(here("01_Filtering", "a_script", "filter_config.R"))
 
 calls <- read_csv(
@@ -99,7 +99,7 @@ summary_tbl <- res |>
   ) |>
   mutate(is_null_contrast = contrast %in% RESPONDER_CONTRASTS)
 
-report_dir <- here("03_Analysis", "categorical", "01_Proteins", "b_reports")
+report_dir <- here("03_Features", "01_Proteins", "b_reports")
 dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 write_csv(summary_tbl, file.path(report_dir, "blood_filter_sensitivity.csv"))
 

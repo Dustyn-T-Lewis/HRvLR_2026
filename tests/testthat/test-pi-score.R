@@ -1,5 +1,5 @@
 pacman::p_load(testthat, here, dplyr, tibble, readr)
-source(here::here("03_Analysis", "contrasts.R"))
+source(here::here("03_Features", "contrasts.R"))
 
 test_that("pi_score is p raised to the absolute log2 fold change", {
   res <- tibble(P.Value = c(0.05, 0.5, 0.001), logFC = c(2, -3, 0.5))
@@ -46,7 +46,7 @@ test_that("add_pi_score reproduces the shipped DEP table exactly", {
   # pi_score and sig_pi it already carries, or the refactor moved a published
   # number.
   csv <- here::here(
-    "03_Analysis", "categorical", "01_Proteins", "imputed", "c_data",
+    "03_Features", "01_Proteins", "imputed", "c_data",
     "missforest", "combined_results_pi.csv"
   )
   skip_if_not(file.exists(csv), "run categorical/01_Proteins/imputed first")

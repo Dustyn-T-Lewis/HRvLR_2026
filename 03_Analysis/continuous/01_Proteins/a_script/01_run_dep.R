@@ -16,7 +16,7 @@
 # limma/proteoDA citation list; nothing about the estimator changes here.
 
 pacman::p_load(dplyr, tibble, readr, purrr, proteoDA, here)
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 cfg <- list(
   norm_csv = here("02_Normalization", "c_data", "normalized.csv"),

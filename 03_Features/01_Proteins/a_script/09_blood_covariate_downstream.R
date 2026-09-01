@@ -26,7 +26,7 @@ set.seed(42)
 B <- 200
 KEEP <- 50
 OUT <- here(
-  "03_Analysis", "categorical", "01_Proteins", "c_data", "blood_covariate"
+  "03_Features", "01_Proteins", "c_data", "blood_covariate"
 )
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 

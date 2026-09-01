@@ -18,7 +18,7 @@ if (!exists("meta")) {
     "03_Analysis", "categorical", "F02_proteome", "a_script", "setup.R"
   ))
 }
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 source(here("functions", "shared_pathway_utils.R"))
 
 PI_HM_SEED <- 7

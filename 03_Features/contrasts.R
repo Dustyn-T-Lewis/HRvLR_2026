@@ -39,7 +39,7 @@ POOLED_CONTRASTS <- c(
 # a prefix of Acute_HRvLR, so the longest name has to be offered first.
 dep_contrasts_long <- function(
   path = here::here(
-    "03_Analysis", "categorical", "01_Proteins", "c_data",
+    "03_Features", "01_Proteins", "c_data",
     "03_combined_results.csv"
   )
 ) {

@@ -73,6 +73,6 @@ cat(
 write.xlsx(
   list(summary = summary_tbl, all = compare),
   here(
-    "03_Analysis", "categorical", "01_Proteins", "c_data", "07_blood_adjusted.xlsx"
+    "03_Features", "01_Proteins", "c_data", "07_blood_adjusted.xlsx"
   )
 )

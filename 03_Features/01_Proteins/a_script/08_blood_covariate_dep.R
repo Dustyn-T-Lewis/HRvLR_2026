@@ -20,12 +20,12 @@
 # interactions are null, is a candidate and not a result.
 
 pacman::p_load(proteoDA, here, dplyr, tibble, readr, openxlsx)
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 source(here("functions", "blood_index_model.R"))
 source(here("functions", "shared_utils.R"))
 
 OUT <- here(
-  "03_Analysis", "categorical", "01_Proteins", "c_data", "blood_covariate"
+  "03_Features", "01_Proteins", "c_data", "blood_covariate"
 )
 clear_dir(OUT)
 

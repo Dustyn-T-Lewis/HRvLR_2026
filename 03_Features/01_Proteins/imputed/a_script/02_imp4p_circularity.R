@@ -21,7 +21,7 @@
 # See b_reports/imp4p_circularity.csv.
 
 pacman::p_load(proteoDA, imp4p, here, readr, dplyr, tibble, purrr)
-source(here("03_Analysis", "contrasts.R"))
+source(here("03_Features", "contrasts.R"))
 
 N_PERM <- 3
 
@@ -97,7 +97,7 @@ permuted <- map_dfr(seq_len(N_PERM), function(i) {
 out <- bind_rows(real, permuted)
 
 report_dir <- here(
-  "03_Analysis", "categorical", "01_Proteins", "imputed", "b_reports"
+  "03_Features", "01_Proteins", "imputed", "b_reports"
 )
 dir.create(report_dir, recursive = TRUE, showWarnings = FALSE)
 write_csv(out, file.path(report_dir, "imp4p_circularity.csv"))
