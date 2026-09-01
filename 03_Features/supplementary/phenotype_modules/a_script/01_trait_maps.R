@@ -23,11 +23,12 @@
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble, purrr, cluster)
 source(here(
-  "03_Features", "05_phenotype_modules", "a_script", "trait_helpers.R"
+  "03_Features", "supplementary", "phenotype_modules", "a_script",
+  "trait_helpers.R"
 ))
 
 set.seed(42)
-OUT <- here("03_Features", "05_phenotype_modules", "c_data")
+OUT <- here("03_Features", "supplementary", "phenotype_modules", "c_data")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 TIMEPOINTS <- c("T1", "T2", "T3")

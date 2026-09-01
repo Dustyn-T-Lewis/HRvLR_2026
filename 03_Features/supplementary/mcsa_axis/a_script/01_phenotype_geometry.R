@@ -15,9 +15,12 @@
 # that moves a long way when one row leaves.
 
 pacman::p_load(here, dplyr, tidyr, readr, tibble, purrr)
-source(here("03_Features", "06_mcsa_axis", "a_script", "mcsa_helpers.R"))
+source(here(
+  "03_Features", "supplementary", "mcsa_axis", "a_script",
+  "mcsa_helpers.R"
+))
 
-OUT <- here("03_Features", "06_mcsa_axis", "c_data")
+OUT <- here("03_Features", "supplementary", "mcsa_axis", "c_data")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 TRAITS <- c(
@@ -29,7 +32,8 @@ pheno <- phenotype_table()
 
 pairwise_rho <- function(d, subject_set) {
   m <- stats::cor(
-    d[, TRAITS], method = "spearman", use = "pairwise.complete.obs"
+    d[, TRAITS],
+    method = "spearman", use = "pairwise.complete.obs"
   )
   as.data.frame(as.table(m)) |>
     rlang::set_names(c("trait_x", "trait_y", "rho")) |>
@@ -50,7 +54,10 @@ geometry <- bind_rows(
 write_csv(geometry, file.path(OUT, "01_phenotype_geometry.csv"))
 
 loadings <- read_csv(
-  here("03_Features", "04_galamm_pilot", "c_data", "02_q2_measurement.csv"),
+  here(
+    "03_Features", "supplementary", "galamm_pilot", "c_data",
+    "02_q2_measurement.csv"
+  ),
   show_col_types = FALSE
 )
 

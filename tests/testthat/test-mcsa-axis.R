@@ -1,4 +1,7 @@
-source(here::here("03_Features", "06_mcsa_axis", "a_script", "mcsa_helpers.R"))
+source(here::here(
+  "03_Features", "supplementary", "mcsa_axis", "a_script",
+  "mcsa_helpers.R"
+))
 
 fake_pheno <- function() {
   data.frame(

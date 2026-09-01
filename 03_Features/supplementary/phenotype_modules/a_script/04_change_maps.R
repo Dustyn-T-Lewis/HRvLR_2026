@@ -21,14 +21,15 @@ pacman::p_load(here, dplyr, tidyr, readr, tibble, purrr, cluster)
 source(here("functions", "shared_hlm.R"))
 source(here("functions", "blood_index_model.R"))
 source(here(
-  "03_Features", "04_galamm_pilot", "a_script", "pilot_helpers.R"
+  "03_Features", "supplementary", "galamm_pilot", "a_script", "pilot_helpers.R"
 ))
 source(here(
-  "03_Features", "05_phenotype_modules", "a_script", "trait_helpers.R"
+  "03_Features", "supplementary", "phenotype_modules", "a_script",
+  "trait_helpers.R"
 ))
 
 set.seed(42)
-OUT <- here("03_Features", "05_phenotype_modules", "c_data")
+OUT <- here("03_Features", "supplementary", "phenotype_modules", "c_data")
 
 PHENOS <- c(
   "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_mcsa",

@@ -1,5 +1,5 @@
 source(here::here(
-  "03_Features", "04_galamm_pilot", "a_script", "pilot_helpers.R"
+  "03_Features", "supplementary", "galamm_pilot", "a_script", "pilot_helpers.R"
 ))
 
 test_that("varident_ratios recovers simulated per-timepoint SDs", {

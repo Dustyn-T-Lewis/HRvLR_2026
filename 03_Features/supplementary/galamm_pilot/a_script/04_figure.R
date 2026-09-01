@@ -14,8 +14,8 @@ pacman::p_load(here, dplyr, tidyr, readr, ggplot2, ggrepel, patchwork)
 source(here("functions", "shared_style.R"))
 source(here("functions", "shared_hlm.R"))
 
-DAT <- here("03_Features", "04_galamm_pilot", "c_data")
-OUT <- here("03_Features", "04_galamm_pilot", "b_reports")
+DAT <- here("03_Features", "supplementary", "galamm_pilot", "c_data")
+OUT <- here("03_Features", "supplementary", "galamm_pilot", "b_reports")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 variance <- read_csv(file.path(DAT, "01_q1_variance.csv"),

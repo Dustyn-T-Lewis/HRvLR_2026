@@ -14,8 +14,8 @@ pacman::p_load(
 )
 source(here("functions", "shared_style.R"))
 
-DAT <- here("03_Features", "05_phenotype_modules", "c_data")
-OUT <- here("03_Features", "05_phenotype_modules", "b_reports")
+DAT <- here("03_Features", "supplementary", "phenotype_modules", "c_data")
+OUT <- here("03_Features", "supplementary", "phenotype_modules", "b_reports")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 PHENO_LABELS <- c(

@@ -21,10 +21,16 @@
 pacman::p_load(here, dplyr, purrr, readr, tibble)
 source(here("functions", "shared_hlm.R"))
 source(here("functions", "blood_index_model.R"))
-source(here("03_Features", "04_galamm_pilot", "a_script", "pilot_helpers.R"))
-source(here("03_Features", "06_mcsa_axis", "a_script", "mcsa_helpers.R"))
+source(here(
+  "03_Features", "supplementary", "galamm_pilot", "a_script",
+  "pilot_helpers.R"
+))
+source(here(
+  "03_Features", "supplementary", "mcsa_axis", "a_script",
+  "mcsa_helpers.R"
+))
 
-OUT <- here("03_Features", "06_mcsa_axis", "c_data")
+OUT <- here("03_Features", "supplementary", "mcsa_axis", "c_data")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 N_PERM <- 200L
 

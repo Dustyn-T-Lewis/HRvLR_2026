@@ -20,10 +20,13 @@
 pacman::p_load(here, dplyr, tidyr, purrr, tibble, readr, galamm)
 source(here("functions", "shared_hlm.R"))
 source(here("functions", "blood_index_model.R"))
-source(here("03_Features", "04_galamm_pilot", "a_script", "pilot_helpers.R"))
+source(here(
+  "03_Features", "supplementary", "galamm_pilot", "a_script",
+  "pilot_helpers.R"
+))
 
 set.seed(42)
-OUT <- here("03_Features", "04_galamm_pilot", "c_data")
+OUT <- here("03_Features", "supplementary", "galamm_pilot", "c_data")
 stopifnot(
   "run 02_q2_measurement.R first" =
     file.exists(file.path(OUT, "02_q2_measurement.csv"))

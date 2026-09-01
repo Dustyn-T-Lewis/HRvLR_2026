@@ -22,10 +22,13 @@
 pacman::p_load(here, dplyr, tidyr, purrr, tibble, readr, nlme, emmeans)
 source(here("functions", "shared_hlm.R"))
 source(here("functions", "blood_index_model.R"))
-source(here("03_Features", "04_galamm_pilot", "a_script", "pilot_helpers.R"))
+source(here(
+  "03_Features", "supplementary", "galamm_pilot", "a_script",
+  "pilot_helpers.R"
+))
 
 set.seed(42)
-OUT <- here("03_Features", "04_galamm_pilot", "c_data")
+OUT <- here("03_Features", "supplementary", "galamm_pilot", "c_data")
 dir.create(OUT, recursive = TRUE, showWarnings = FALSE)
 
 inp <- pilot_data()

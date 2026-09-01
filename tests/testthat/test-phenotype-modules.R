@@ -1,5 +1,6 @@
 source(here::here(
-  "03_Features", "05_phenotype_modules", "a_script", "trait_helpers.R"
+  "03_Features", "supplementary", "phenotype_modules", "a_script",
+  "trait_helpers.R"
 ))
 
 test_that("cor_scan recovers a planted association", {

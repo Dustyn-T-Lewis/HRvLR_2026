@@ -17,11 +17,17 @@ pacman::p_load(
 source(here("functions", "shared_style.R"))
 source(here("functions", "shared_hlm.R"))
 source(here("functions", "blood_index_model.R"))
-source(here("03_Features", "04_galamm_pilot", "a_script", "pilot_helpers.R"))
-source(here("03_Features", "06_mcsa_axis", "a_script", "mcsa_helpers.R"))
+source(here(
+  "03_Features", "supplementary", "galamm_pilot", "a_script",
+  "pilot_helpers.R"
+))
+source(here(
+  "03_Features", "supplementary", "mcsa_axis", "a_script",
+  "mcsa_helpers.R"
+))
 
-DAT <- here("03_Features", "06_mcsa_axis", "c_data")
-RPT <- here("03_Features", "06_mcsa_axis", "b_reports")
+DAT <- here("03_Features", "supplementary", "mcsa_axis", "c_data")
+RPT <- here("03_Features", "supplementary", "mcsa_axis", "b_reports")
 dir.create(RPT, recursive = TRUE, showWarnings = FALSE)
 
 SET_LINES <- c(`all subjects` = "solid", `LR_S14 dropped` = "22")
@@ -41,7 +47,8 @@ survivors <- read_cell("02_survivors.csv")
 
 symbols <- read_csv(
   here(
-    "03_Analysis", "categorical", "01_Proteins", "c_data", "03_combined_results.csv"
+    "03_Analysis", "categorical", "01_Proteins", "c_data",
+    "03_combined_results.csv"
   ),
   show_col_types = FALSE
 ) |>
