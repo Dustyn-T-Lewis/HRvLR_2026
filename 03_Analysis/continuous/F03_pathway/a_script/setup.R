@@ -19,8 +19,8 @@ CONTRASTS <- trimws(sub("=.*$", "", POOLED_CONTRASTS))
 
 dep <- read_csv(
   here(
-    "03_Analysis", "continuous", "01_Proteins", "c_data",
-    "02_combined_results.csv"
+    "03_Features", "01_Proteins", "c_data",
+    "03_combined_results.csv"
   ),
   show_col_types = FALSE
 )

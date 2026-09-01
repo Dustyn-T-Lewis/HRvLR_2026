@@ -17,7 +17,7 @@ pacman::p_load(proteoDA, here, readr, dplyr, tibble, purrr, tidyr)
 
 dal <- readRDS(here("01_Filtering", "c_data", "DAList_filtered.rds"))
 fit <- readRDS(here(
-  "03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"
+  "03_Features", "01_Proteins", "c_data", "01_limma_DAList_categorical.rds"
 ))
 
 cells <- factor(dal$metadata$Group_Time[

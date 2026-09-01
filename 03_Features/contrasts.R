@@ -33,17 +33,40 @@ POOLED_CONTRASTS <- c(
   "Acute = T3 - T2"
 )
 
+POOLED_CONTRAST_NAMES <- trimws(sub("=.*$", "", POOLED_CONTRASTS))
+
+# One place naming which contrasts belong to which family, so a caller never
+# has to hard-code the membership it wants.
+ALL_CONTRAST_NAMES <- list(
+  categorical = CONTRAST_NAMES,
+  pooled = POOLED_CONTRAST_NAMES
+)
+
+contrast_family <- function(contrast) {
+  ifelse(contrast %in% POOLED_CONTRAST_NAMES, "pooled", "categorical")
+}
+
 # proteoDA writes the fit wide, one column per statistic per contrast. The
 # feature layer and the imputed arms read it long, so the pivot lives here
-# instead of in each caller. Contrast names contain underscores and Acute_HR is
-# a prefix of Acute_HRvLR, so the longest name has to be offered first.
+# instead of in each caller. Contrast names contain underscores, Acute_HR is a
+# prefix of Acute_HRvLR, and Training is a prefix of Training_HR, so the longest
+# name has to be offered first.
+#
+# Since 2026-08-31 the combined CSV carries both contrast families. `families`
+# defaults to the categorical nine because every current caller compares against
+# an imputed arm that fits only those; ask for "pooled" or both explicitly.
 dep_contrasts_long <- function(
   path = here::here(
     "03_Features", "01_Proteins", "c_data",
     "03_combined_results.csv"
-  )
+  ),
+  families = "categorical"
 ) {
-  ordered <- CONTRAST_NAMES[order(nchar(CONTRAST_NAMES), decreasing = TRUE)]
+  families <- match.arg(families, c("categorical", "pooled"),
+    several.ok = TRUE
+  )
+  wanted <- unlist(ALL_CONTRAST_NAMES[families], use.names = FALSE)
+  ordered <- wanted[order(nchar(wanted), decreasing = TRUE)]
   pattern <- paste0("^(.*)_(", paste(ordered, collapse = "|"), ")$")
   readr::read_csv(path, show_col_types = FALSE) |>
     tidyr::pivot_longer(
@@ -51,12 +74,13 @@ dep_contrasts_long <- function(
       names_pattern = pattern,
       names_to = c(".value", "contrast")
     ) |>
+    dplyr::mutate(family = contrast_family(contrast)) |>
     dplyr::select(
-      contrast, uniprot_id, gene, protein, description,
+      family, contrast, uniprot_id, gene, protein, description,
       logFC, CI.L, CI.R, average_intensity, t, B,
       P.Value, adj.P.Val, sig.PVal, sig.FDR, pi_score, sig_pi
     ) |>
-    dplyr::arrange(match(contrast, CONTRAST_NAMES))
+    dplyr::arrange(match(contrast, wanted))
 }
 
 # The cell order the design matrix inherits. Pinned here because every arm has

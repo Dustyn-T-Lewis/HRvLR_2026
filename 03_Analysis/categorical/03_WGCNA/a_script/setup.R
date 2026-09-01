@@ -49,7 +49,7 @@ stopifnot(setequal(names(TRAIT_LABELS), ADAPTATION_TRAITS))
 # contrasts, and the within-subject correlation. fry reuses all three rather
 # than re-deriving them.
 dep_fit <- readRDS(here(
-  "03_Features", "01_Proteins", "c_data", "01_limma_DAList.rds"
+  "03_Features", "01_Proteins", "c_data", "01_limma_DAList_categorical.rds"
 ))
 DESIGN <- dep_fit$design$design_matrix
 CONTRAST_MATRIX <- dep_fit$design$contrast_matrix

@@ -1,7 +1,0 @@
-contrast,type,sig.P.10,sig.FDR.05,sig.FDR.10,sig.Pi,lfc_thresh,p_adj_method
-Training,up,162,0,0,14,0,BH
-Training,down,123,0,0,19,0,BH
-Training,nonsig,1611,1896,1896,1867,0,BH
-Acute,up,179,4,11,47,0,BH
-Acute,down,165,2,4,13,0,BH
-Acute,nonsig,1553,1891,1882,1840,0,BH

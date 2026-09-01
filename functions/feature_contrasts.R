@@ -155,7 +155,7 @@ fit_feature_contrasts_pooled <- function(mat, meta = feature_metadata_pooled(),
 verify_protein_equivalence <- function(tol = 1e-6) {
   fitted <- fit_feature_contrasts(protein_matrix(), robust = TRUE)
   book <- here(
-    "03_Features", "01_Proteins", "c_data", "05_results.xlsx"
+    "03_Features", "01_Proteins", "c_data", "05_results_categorical.xlsx"
   )
   bind_rows(lapply(unique(fitted$contrast), function(ct) {
     ref <- openxlsx::read.xlsx(book, ct)

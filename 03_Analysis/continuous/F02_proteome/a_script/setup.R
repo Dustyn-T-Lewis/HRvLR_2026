@@ -14,8 +14,8 @@ IMP_FILE <- here(
   "02_Normalization", "imputation", "c_data", "DAList_imputed_missforest.rds"
 )
 DEP_FILE <- here(
-  "03_Analysis", "continuous", "01_Proteins", "c_data",
-  "02_combined_results.csv"
+  "03_Features", "01_Proteins", "c_data",
+  "03_combined_results.csv"
 )
 META_FILE <- here("00_input", "HRvLR_meta.csv")
 PHENO_FILE <- here("00_input", "c_data", "phenotype.csv")
