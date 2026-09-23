@@ -1,7 +1,6 @@
 # Score every sample on every set. singscore ranks each sample's proteins and scores sets
-# against those ranks, so a score is rank-based and sample-independent: it does not move when
-# the cohort changes, which is what a repeated-measures design needs. No p-value, and it never
-# sees the contrast. The matrix is what 05_classify_and_associate_sets reads. Ranks need every
+# against those ranks, so a score does not change with the cohort. No p-value, and it never sees
+# the contrast. The matrix is what 05_classify_and_associate_sets reads. Ranks need every
 # protein present in every sample, so this reads the imputed matrix.
 
 suppressPackageStartupMessages({
@@ -99,6 +98,8 @@ print(structure_check)
 # already returned.
 figures <- here("03_Pathway_Enrichment", "04_run_singscore", "b_reports")
 dir.create(figures, recursive = TRUE, showWarnings = FALSE)
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figures, "[.](png|pdf)$", full.names = TRUE))
 save_figure <- function(figure, name, height) {
   walk(c("png", "pdf"), \(extension) {
     ggsave(file.path(figures, paste0(name, ".", extension)), figure,
@@ -153,7 +154,7 @@ save_figure(
 )
 message("wrote 2 cohort figures")
 
-packages <- c("here", "proteoDA", "singscore", "dplyr", "purrr", "ggplot2")
+packages <- c("here", "singscore", "dplyr", "purrr", "ggplot2")
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
 )

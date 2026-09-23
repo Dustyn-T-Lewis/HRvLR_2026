@@ -14,6 +14,8 @@ suppressPackageStartupMessages({
 stage <- here("03_Pathway_Enrichment", "02_enrich_volcano_fgsea")
 figure_dir <- file.path(stage, "b_reports")
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
@@ -37,10 +39,12 @@ stopifnot(nrow(fgsea_results) > 0, !is.null(protein_results$label))
 # volcano_ring() matches leading-edge genes against the point labels, and a label carries its
 # accession when a symbol sits on more than one protein. Translate the edges into label space
 # or the tick lines silently draw nothing.
-gene_to_label <- with(
-  filter(protein_results, contrast == contrast[1], !is.na(gene)),
-  set_names(label, gene)
-)
+# Built from every protein, tested or not, so a protein untested in one contrast still gets its
+# tick in another.
+gene_to_label <- fg$protein_results |>
+  filter(!is.na(gene)) |>
+  distinct(gene, label) |>
+  with(set_names(label, gene))
 fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) {
   unname(gene_to_label[genes[genes %in% names(gene_to_label)]])
 })
@@ -142,7 +146,7 @@ for (contrast in plot_order) {
   message("drew ", contrast)
 }
 # Same points, colours, rings and notation; only the labels move. A pi label ranks and selects
-# nothing, so nothing named on these two panels has been discovered.
+# nothing; a protein named on these two panels is not a hit.
 for (contrast in c("Training_HR", "Training_LR")) {
   volcano <- make_volcano(contrast, rank_by = "pi")
   save_volcano(volcano, paste0("protein_volcano_pi_rank_", contrast))

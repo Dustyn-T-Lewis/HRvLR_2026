@@ -1,5 +1,5 @@
-# Answer two questions about every tested set: how well its score separates the study's groups,
-# and whether it tracks the phenotype. The unit is the set, with no collapse and no grouping,
+# For every tested set: how well its score separates the study's groups, and whether it tracks
+# the phenotype. The unit is the set, with no collapse and no grouping,
 # and results are read per database so each collection carries its own chance expectation.
 #
 # Eight tasks mirror the contrasts. The four within-arm tasks compare a subject's later biopsy
@@ -15,7 +15,6 @@ suppressPackageStartupMessages({
   library(here)
   library(dplyr)
   library(tibble)
-  library(tidyr)
   library(purrr)
   library(ggplot2)
 })
@@ -24,6 +23,8 @@ stage <- here("03_Pathway_Enrichment", "05_classify_and_associate_sets")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(
   gene_sets = "03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds",
@@ -220,7 +221,7 @@ chance_expectation <- bind_rows(
       features, nominal, expected, fdr_sig
     )
 ) |>
-  mutate(ratio = round(nominal / pmax(expected, 0.1), 2)) |>
+  mutate(ratio = round(nominal / expected, 2)) |>
   relocate(ratio, .after = expected)
 
 
@@ -369,7 +370,7 @@ draw_association_figure <- function(which_window, index, title) {
       scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
       scale_fill_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
       labs(
-        x = paste("set score,", title, ", one point per subject"),
+        x = paste0("set score, ", title, ", one point per subject"),
         y = "phenotype", title = paste("Set score against phenotype,", title),
         subtitle = "Spearman, subjects pooled across arms",
         caption = sprintf(
@@ -515,7 +516,7 @@ print(hit_counts)
 
 # ---- one workbook --------------------------------------------------------------------------
 
-packages <- c("here", "fgsea", "pROC", "dplyr", "purrr", "ggplot2", "enrichVolcano")
+packages <- c("here", "pROC", "dplyr", "purrr", "ggplot2", "enrichVolcano")
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
 )

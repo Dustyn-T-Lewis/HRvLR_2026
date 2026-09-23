@@ -13,10 +13,16 @@ out <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 cache_dir <- file.path(out, "cache")
 dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
 
-inputs <- c(proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds")
+inputs <- c(
+  proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds",
+  goslim = "03_Pathway_Enrichment/00_build_gene_sets/c_data/cache/goslim_generic.obo"
+)
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
-  stop("Run 01_Preprocess first. Missing: ", paste(inputs[!file.exists(paths)], collapse = ", "))
+  stop(
+    "Run 01_Preprocess first and restore the GO Slim cache (README). Missing: ",
+    paste(inputs[!file.exists(paths)], collapse = ", ")
+  )
 }
 proteins <- readRDS(paths[["proteins"]])
 manifest <- tibble(

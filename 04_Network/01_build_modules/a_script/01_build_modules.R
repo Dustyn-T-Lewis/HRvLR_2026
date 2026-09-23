@@ -1,13 +1,13 @@
 # Co-expression modules: the module-by-sample eigengene matrix and each protein's membership,
 # which every later network step reads.
 #
-# WGCNA correlates proteins across samples as if they were independent. These 45 samples are 16
-# subjects measured up to three times, and on raw abundance subject identity drives the leading
-# components, so modules built there would encode who a biopsy came from. Modules are therefore
-# defined on abundance centred within subject, which leaves how proteins move together inside a
-# person, and eigengenes are scored on raw abundance, so between-arm differences survive to be
-# tested. Construction never sees a label or a phenotype. WGCNA needs a complete matrix, so this
-# reads the imputed one.
+# WGCNA treats samples as independent, but these 45 samples are 16 subjects measured up to three
+# times, and subject identity drives the leading components of raw abundance. Modules are
+# defined on subject-centred abundance and scored on raw abundance, so between-arm differences
+# stay testable. A subject with one biopsy centres to a column of zeros and carries no
+# within-subject information, so it is left out of the definition and kept in the scoring.
+# Construction never sees a label or a phenotype. WGCNA needs a complete matrix, so this reads the
+# imputed one.
 #
 # Parameters follow the WGCNA FAQ's two recommended departures from default, a signed network and
 # biweight midcorrelation, and are otherwise package defaults.
@@ -26,6 +26,8 @@ stage <- here("04_Network", "01_build_modules")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds")
 paths <- map_chr(inputs, here)
@@ -46,16 +48,21 @@ disableWGCNAThreads()
 # maxPOutliers = 0.05 is the FAQ's "strongly recommend"; the default of 1 disables the outlier
 # guard. pearsonFallback covers proteins with zero MAD, which imputation can produce.
 bicor_args <- list(corType = "bicor", maxPOutliers = 0.05, pearsonFallback = "individual")
-centred <- abund - t(apply(t(abund), 2, \(x) ave(x, meta$subject)))
+repeated <- meta |>
+  add_count(subject) |>
+  filter(n > 1)
+centred <- t(apply(abund[, repeated$sample_id], 1, \(x) x - ave(x, repeated$subject)))
 expr <- t(centred)
 
 # The power is the lowest whose signed scale-free fit clears pickSoftThreshold's default 0.85.
-# The FAQ's sample-size table is the fallback when no power clears it.
+# The WGCNA FAQ's signed table (under 20 samples 18, 20-30 16, 31-40 14, over 40 12) is the
+# fallback when no power clears it.
 sft <- pickSoftThreshold(expr,
   powerVector = 1:20, networkType = "signed",
   corFnc = "bicor", corOptions = list(maxPOutliers = 0.05), verbose = 0
 )
-power <- coalesce(sft$powerEstimate, if (nrow(expr) > 40) 12L else 16L)
+faq_power <- c(18L, 16L, 14L, 12L)[findInterval(nrow(expr), c(20, 31, 41)) + 1]
+power <- coalesce(sft$powerEstimate, faq_power)
 fit_indices <- as_tibble(sft$fitIndices) |>
   mutate(signed_r2 = -sign(slope) * SFT.R.sq)
 
@@ -108,9 +115,10 @@ module_summary <- count(filter(membership, module != "grey"), module, name = "pr
   arrange(desc(proteins))
 print(as.data.frame(module_summary), digits = 3)
 message(sprintf(
-  "power %d (signed R2 %.3f, mean k %.1f); %d modules, %d of %d proteins unassigned",
+  "power %d (signed R2 %.3f, mean k %.1f); %d modules, %d of %d proteins unassigned; %s",
   power, fit_indices$signed_r2[power], fit_indices$mean.k.[power], nrow(eigengenes),
-  sum(colours == "grey"), length(colours)
+  sum(colours == "grey"), length(colours),
+  sprintf("%d of %d samples define the modules", nrow(expr), ncol(abund))
 ))
 
 

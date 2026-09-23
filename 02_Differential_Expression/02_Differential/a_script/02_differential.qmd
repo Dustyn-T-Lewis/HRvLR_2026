@@ -35,6 +35,9 @@ dal <- d$dal
 contrast_names <- colnames(dal$design$contrast_matrix)
 out <- here("02_Differential_Expression", "02_Differential", "c_data")
 figures <- here("02_Differential_Expression", "02_Differential", "b_reports")
+bundle <- file.path(figures, "02_differential_figures.pdf")
+# Clear last render's numbered figures and bundle; write_limma_plots() output is left alone.
+unlink(c(list.files(figures, "^0[0-9]_.*[.](png|pdf)$", full.names = TRUE), bundle))
 
 # Same samples in the same order. limma compares only the counts.
 stopifnot(identical(rownames(dal$design$design_matrix), colnames(dal$data)))
@@ -61,7 +64,7 @@ c(within_subject_correlation = round(eb$correlation, 3))
 static plots beside them. Neither is tracked.
 
 Effect size the primary contrast could detect at 80% power, two-sided 0.05. An empty contrast
-says nothing about effects below this.
+cannot exclude effects below this.
 
 ```{r detectable-effect}
 se <- eb$stdev.unscaled[, "Training_Interaction"] * sqrt(eb$s2.post)
@@ -123,6 +126,9 @@ null_calibration <- results |>
 null_calibration
 ```
 
+All three summarise the same p-value histogram. A spike at zero on a flat background is signal; a
+distribution sloping up toward 1 is a conservative test.
+
 ```{r p-histogram}
 #| fig-height: 6
 p_histogram <- results |>
@@ -143,8 +149,8 @@ p_histogram <- results |>
     title = "P-value distribution per contrast",
     subtitle = "limma via proteoDA, 20 bins", x = "p", y = "proteins",
     caption = paste(
-      "Dashed line marks a flat null (tested / 20). A spike at zero is signal; a slope toward 1 is",
-      "a conservative test. Table: c_data/02_differential.xlsx, DEP_matrix."
+      "Bars: proteins per p-value bin. Dashed line: the height of a flat null (tested / 20).",
+      "Table: c_data/02_differential.xlsx, DEP_matrix."
     )
   ) +
   theme_minimal(base_size = 10) +
@@ -367,7 +373,8 @@ c(contrast_pages = length(contrast_hits), task_pages = length(task_hits))
 
 ## Outputs
 
-Written before the floor is checked, so a failure leaves the evidence on disk.
+The fit and the figures are written before the floor is checked, so a failure leaves them on disk.
+The workbook follows the two appendices, whose tables it carries.
 
 ```{r write}
 dep_matrix <- results |>
@@ -440,7 +447,8 @@ imputed <- readRDS(here("01_Preprocess", "03_Imputation", "c_data", "DAList_impu
 abundance <- as.matrix(imputed$data)
 design <- fit$design$design_matrix
 stopifnot(identical(colnames(abundance), rownames(design)), !anyNA(abundance))
-fry_correlation <- duplicateCorrelation(abundance, design, block = meta$subject)$consensus
+fry_correlation <- duplicateCorrelation(abundance, design, block = meta$subject)
+fry_correlation <- fry_correlation$consensus.correlation
 
 member_rows <- function(cn, criterion, direction) {
   r <- filter(results, contrast == cn)
@@ -459,12 +467,13 @@ pairings <- tribble(
   "Acute_HR", "Acute_LR",
   "Acute_LR", "Acute_HR"
 )
+selections <- expand_grid(criterion = c("pi", "bh", "nominal"), direction = c("up", "down"))
 fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
-  sets <- cross2(c("pi", "bh", "nominal"), c("up", "down")) |>
-    map(\(x) member_rows(set_from, x[[1]], x[[2]])) |>
-    set_names(map_chr(cross2(c("pi", "bh", "nominal"), c("up", "down")), paste, collapse = "_"))
+  sets <- pmap(selections, \(criterion, direction) member_rows(set_from, criterion, direction)) |>
+    set_names(paste(selections$criterion, selections$direction, sep = "_"))
   sets <- keep(sets, \(rows) length(rows) >= 5)
-  if (!length(sets)) {
+  # fry() drops its FDR column when handed a single set, so one set is not tested.
+  if (length(sets) < 2) {
     return(NULL)
   }
   fry(abundance,
@@ -489,7 +498,7 @@ write_xlsx(
   file.path(out, "02_differential.xlsx")
 )
 pages <- sort(list.files(figures, "^0[0-9]_.*[.]pdf$", full.names = TRUE))
-invisible(qpdf::pdf_combine(pages, file.path(figures, "02_differential_figures.pdf")))
+invisible(qpdf::pdf_combine(pages, bundle))
 length(pages)
 ```
 

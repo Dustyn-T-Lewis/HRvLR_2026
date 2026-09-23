@@ -100,8 +100,8 @@ roles
 `Training_Interaction` is the **primary** comparison: does the training response differ between
 responder groups. `Acute_Interaction` asks the same of the acute bout. `Baseline_HRvLR` is the
 **floor**. It is not a true negative control: the label was cut from the training outcome, so a
-real baseline difference would be predictive. With no predictive signal it is empty, and it is
-read as the count a between-arm contrast returns when nothing is there. The six others are
+real baseline difference would be predictive. It is empty and is the null reference for a between-arm
+contrast. The six others are
 **descriptive**. `Training_Interaction` equals `Trained_HRvLR` minus `Baseline_HRvLR` exactly, so
 these are not nine independent questions.
 

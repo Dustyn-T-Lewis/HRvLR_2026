@@ -31,7 +31,6 @@ is read at nominal p. BH within each window and outcome is the reported quantity
 ```{r setup}
 library(here)
 library(dplyr)
-library(tidyr)
 library(purrr)
 library(tibble)
 library(ggplot2)
@@ -40,6 +39,9 @@ dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_norma
 phenotype <- readr::read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 out <- here("02_Differential_Expression", "03_Phenotype", "c_data")
 figures <- here("02_Differential_Expression", "03_Phenotype", "b_reports")
+bundle <- file.path(figures, "03_phenotype_figures.pdf")
+# Clear last render's figures and bundle so the bundle holds only this render's pages.
+unlink(c(list.files(figures, "^0[0-9]_.*[.](png|pdf)$", full.names = TRUE), bundle))
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 ```
 
@@ -118,16 +120,21 @@ results <- imap(windows, \(values, window) {
   relocate(window, outcome, protein, gene)
 ```
 
-The same correlation inside each arm, descriptive only: 7 or 8 subjects per arm.
+The same correlation inside each arm and window, descriptive only: 4 to 8 subjects per correlation.
 
 ```{r by-arm}
 arm_of <- set_names(phenotype$group_arm, phenotype$subject)
 by_arm <- map(set_names(c("HR", "LR")), \(arm) {
-  values <- windows$training[, arm_of[colnames(windows$training)] == arm, drop = FALSE]
-  map(set_names(outcomes), \(name) spearman_by_row(values, outcome_of(name, colnames(values)))) |>
-    list_rbind(names_to = "outcome")
+  imap(windows, \(values, window) {
+    kept <- values[, arm_of[colnames(values)] == arm, drop = FALSE]
+    map(set_names(outcomes), \(name) spearman_by_row(kept, outcome_of(name, colnames(kept)))) |>
+      list_rbind(names_to = "outcome") |>
+      mutate(window = window, .before = 1)
+  }) |>
+    list_rbind()
 }) |>
-  list_rbind(names_to = "arm")
+  list_rbind(names_to = "arm") |>
+  filter(!is.na(p))
 ```
 
 ## What survives
@@ -145,8 +152,7 @@ summary_table <- results |>
 summary_table
 ```
 
-Read `ratio` first. A value near 1 is what the test returns when nothing is there, whatever the
-smallest p happens to be.
+Read `ratio` first. A ratio near 1 is the null count, whatever the smallest p.
 
 ```{r figure-chance}
 #| fig-width: 8
@@ -282,7 +288,7 @@ saveRDS(list(results = results, by_arm = by_arm, summary = summary_table),
   compress = "xz"
 )
 pages <- sort(list.files(figures, "^0[0-9]_.*[.]pdf$", full.names = TRUE))
-invisible(qpdf::pdf_combine(pages, file.path(figures, "03_phenotype_figures.pdf")))
+invisible(qpdf::pdf_combine(pages, bundle))
 length(pages)
 ```
 

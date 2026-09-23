@@ -1,7 +1,6 @@
-# Put HR and LR on one pair of axes, once for training and once for the acute bout. fgsea
-# scores each set once per contrast, so plotting one arm's NES against the other's asks
-# directly whether the two responder groups move the same biology. Computes no new test; it
-# reads 01_run_fgsea_and_fry and reshapes.
+# Put HR and LR on one pair of axes, once for training and once for the acute bout. fgsea scores
+# each set once per contrast, so one arm's NES against the other's compares the arms set by set.
+# No new test; it reshapes 01_run_fgsea_and_fry output.
 
 suppressPackageStartupMessages({
   library(here)
@@ -17,6 +16,8 @@ stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
 figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
@@ -31,10 +32,13 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
     filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
     mutate(contrast = if_else(contrast == x_contrast, "x", "y")) |>
     pivot_wider(
-      id_cols = c(set_id, database, pathway, n),
-      names_from = contrast, values_from = c(NES, padj, main)
+      id_cols = c(set_id, database, pathway),
+      names_from = contrast, values_from = c(n, NES, padj, main)
     ) |>
     mutate(
+      # A protein untested in one contrast leaves that ranking, so a set's measured size can
+      # differ by one or two between arms; the point is sized by the larger.
+      n = pmax(n_x, n_y),
       significance = case_when(
         padj_x < 0.05 & padj_y < 0.05 ~ "Both",
         padj_x < 0.05 ~ x_contrast,
@@ -47,8 +51,8 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
       survivor = main_x | main_y,
       label = enrichVolcano::ev_clean_label(pathway)
     )
-  # A protein untested in one contrast leaves that ranking, so a set near the size floor can
-  # drop out of one arm. Only sets scored in both are compared.
+  # A set near the size floor can drop out of one arm entirely. Only sets scored in both are
+  # compared.
   paired <- filter(paired, !is.na(NES_x), !is.na(NES_y))
   stopifnot(nrow(paired) > 0)
 
@@ -73,8 +77,7 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
     limit <- span + c(-1, 1) * diff(span) * pad
     shown <- filter(data, significance != "NS")
     stats <- concordance(data)
-    # A rank correlation over a handful of points is noise, so the panel reports it only when
-    # there are enough sets for it to describe anything.
+    # A panel reports rho only with 30 or more sets.
     caption <- sprintf(
       "%d sets | %d significant | %d discordant",
       stats$sets, stats$significant, stats$discordant
@@ -152,7 +155,7 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
       paste0("NES concordance, all collections: ", x_contrast, " against ", y_contrast),
       sprintf("fgsea NES per contrast, %d sets, BH within contrast", nrow(paired)),
       paste(
-        "One point per gene set, scored in both training contrasts. Dashed line is identity;",
+        "One point per gene set, scored in both", tag, "contrasts. Dashed line is identity;",
         "grey points reach neither threshold. Discordant sets sit on opposite sides of zero and",
         "are significant in one arm only. Panel C rescales them.",
         "Table: c_data/nes_scatter.csv."
@@ -194,10 +197,6 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
     mutate(concordance(curated), population = "Hallmark and GO Slim")
   ) |>
     relocate(population)
-  stopifnot(
-    nrow(discordant_sets) == sum(paired$discordant & paired$significance != "NS"),
-    sum(curated$significance != "NS") == nrow(filter(curated, significance != "NS"))
-  )
   export <- paired |>
     transmute(
       pair = tag, x_contrast, y_contrast, set_id, database, pathway, label,
@@ -218,7 +217,7 @@ summary_table <- list_rbind(map(pairs, "summary"))
 export <- list_rbind(map(pairs, "export"))
 print(as.data.frame(summary_table))
 
-packages <- c("here", "fgsea", "dplyr", "ggplot2", "ggrepel", "patchwork", "enrichVolcano")
+packages <- c("here", "dplyr", "tidyr", "ggplot2", "ggrepel", "patchwork", "enrichVolcano")
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
 )

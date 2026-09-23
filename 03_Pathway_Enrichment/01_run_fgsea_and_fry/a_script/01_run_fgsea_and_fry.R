@@ -9,8 +9,8 @@
 # within-subject correlation, so the repeated measures are built in. fry cannot take a missing
 # value, so it reads the imputed matrix, with a correlation estimated on that same matrix.
 #
-# Both ship as rows of one table, and set_summary puts their counts side by side, the floor
-# contrast among them.
+# Both ship as rows of one table. Each method's BH runs over all 1,378 sets within a contrast,
+# pooling the five collections, as BFR does.
 
 suppressPackageStartupMessages({
   library(here)
@@ -98,7 +98,7 @@ set_rows <- map(sets, \(genes) match(gene_map$protein[match(genes, gene_map$gene
 stopifnot(!any(map_lgl(set_rows, anyNA)))
 
 abundance <- as.matrix(imputed$data)
-correlation <- duplicateCorrelation(abundance, design, block = subject)$consensus
+correlation <- duplicateCorrelation(abundance, design, block = subject)$consensus.correlation
 message("within-subject correlation on the imputed matrix: ", round(correlation, 3))
 
 set.seed(1)
@@ -131,7 +131,7 @@ set_tests <- bind_rows(
 
 # Five collections overlap, so glycolysis is tested in Hallmark, KEGG, Reactome and GO.
 # collapsePathways re-runs each significant set conditioned on a more significant one's leading
-# edge and keeps it only if it still stands alone. It prunes after testing rather than
+# edge and keeps it only if it stays significant. It prunes after testing rather than
 # re-adjusting, so the surviving list's FDR is conservative.
 main_sets <- map(set_names(contrast_names), function(contrast) {
   significant <- fgsea_raw[[contrast]][padj < 0.05][order(pval)]
@@ -153,7 +153,7 @@ set_tests <- set_tests |>
   relocate(contrast, method, set_id, database, pathway)
 
 # One row per contrast: how many sets each test called, and how many survived collapse. The floor
-# is printed first, for the reader to compare against.
+# is printed first.
 set_summary <- set_tests |>
   summarise(
     sets = n_distinct(set_id),
@@ -171,6 +171,8 @@ print(as.data.frame(set_summary))
 # One directory per collection plus all_db, one file per contrast. Each panel shows the ten
 # strongest collapse survivors by adjusted p.
 figure_root <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "b_reports")
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figure_root, "[.](png|pdf)$", full.names = TRUE, recursive = TRUE))
 save_figure <- function(figure, file, width, height) {
   walk(c("png", "pdf"), \(extension) {
     ggsave(paste0(file, ".", extension), figure,
@@ -195,7 +197,10 @@ draw_dotplot <- function(rows, colour_by, file) {
     scale_size_continuous(range = c(2, 6), name = "genes") +
     labs(
       x = "normalised enrichment score", y = NULL, title = unique(top$contrast),
-      subtitle = sprintf("%s, fgsea, BH within contrast", unique(rows$database[1])),
+      subtitle = sprintf(
+        "%s, fgsea, BH within contrast",
+        if (colour_by == "database") "all collections" else rows$database[1]
+      ),
       caption = sprintf(
         paste(
           "%s of %d collapse survivor%s, ranked by adjusted p.",
@@ -255,7 +260,7 @@ save_figure(
       subtitle = "fgsea at FDR 0.05, then collapsePathways",
       caption = paste(
         "collapsePathways re-tests each significant set conditioned on a stronger set's leading",
-        "edge and keeps it only if it stands alone. Table: c_data/set_tests.csv."
+        "edge and keeps it only if it stays significant. Table: c_data/set_tests.csv."
       )
     ) +
     theme_minimal(base_size = 9) +
@@ -266,6 +271,14 @@ save_figure(
 
 # Every set nominal under fry in at least one contrast, as a dot matrix. Fill is the fgsea NES,
 # for direction; size is -log10 fry p; a black ring marks fry FDR < 0.05.
+# One label per set, built before the join so two sets sharing a display name stay apart.
+set_labels <- gs$set_catalog |>
+  filter(qualifies) |>
+  transmute(
+    set_id,
+    label = gsub("\n", " ", paste0("[", database, "] ", enrichVolcano::ev_clean_label(pathway)))
+  ) |>
+  mutate(label = if_else(duplicated(label) | duplicated(label, fromLast = TRUE), set_id, label))
 hit_data <- set_tests |>
   filter(method == "fry") |>
   select(set_id, contrast, p, fdr = padj) |>
@@ -273,11 +286,7 @@ hit_data <- set_tests |>
     set_tests |> filter(method == "fgsea") |> select(set_id, contrast, effect = NES),
     by = c("set_id", "contrast")
   ) |>
-  left_join(select(gs$set_catalog, set_id, database, pathway), by = "set_id") |>
-  mutate(
-    label = paste0("[", database, "] ", enrichVolcano::ev_clean_label(pathway)),
-    label = if_else(duplicated(label) & !duplicated(set_id), set_id, label)
-  )
+  left_join(set_labels, by = "set_id")
 ranked_hits <- hit_data |>
   summarise(n_nominal = sum(p < 0.05), best = min(p), .by = label) |>
   filter(n_nominal > 0) |>

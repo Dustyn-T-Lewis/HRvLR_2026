@@ -2,7 +2,8 @@
 # nine contrasts, the eight classification tasks, and association with the ten phenotypes.
 #
 # The contrasts reuse the protein fit's design and subject block, with the within-subject
-# correlation re-estimated on the eigengenes, so a module is tested exactly as a protein was.
+# correlation re-estimated on the eigengenes, so a module is tested as a protein was apart from
+# that correlation.
 # Twelve features make BH a far weaker filter than 1,900 proteins; each table reports the count
 # chance would give beside it.
 
@@ -10,7 +11,6 @@ suppressPackageStartupMessages({
   library(here)
   library(dplyr)
   library(tibble)
-  library(tidyr)
   library(purrr)
   library(ggplot2)
   library(limma)
@@ -20,6 +20,8 @@ stage <- here("04_Network", "03_classify_and_associate_modules")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
+# Clear last run's figures so the bundle holds only this run's pages.
+unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(
   modules = "04_Network/01_build_modules/c_data/modules.rds",
@@ -46,7 +48,7 @@ stopifnot(identical(colnames(me), rownames(design)))
 
 # ---- contrasts -----------------------------------------------------------------------------
 
-correlation <- duplicateCorrelation(me, design, block = subject)$consensus
+correlation <- duplicateCorrelation(me, design, block = subject)$consensus.correlation
 module_fit <- lmFit(me, design, block = subject, correlation = correlation) |>
   contrasts.fit(contrast_matrix) |>
   eBayes(robust = TRUE)
@@ -158,10 +160,11 @@ chance_expectation <- bind_rows(
       nominal, fdr_sig
     )
 ) |>
-  mutate(expected = 0.05 * tested, .after = tested)
+  mutate(expected = 0.05 * tested, ratio = round(nominal / expected, 2), .after = tested)
 print(as.data.frame(
   chance_expectation |>
-    summarise(across(c(tested, expected, nominal, fdr_sig), sum), .by = analysis)
+    summarise(across(c(tested, expected, nominal, fdr_sig), sum), .by = analysis) |>
+    mutate(ratio = round(nominal / expected, 2))
 ))
 
 

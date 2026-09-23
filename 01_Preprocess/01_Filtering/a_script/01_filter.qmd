@@ -50,6 +50,7 @@ Each value was set from annotation alone. No contrast, phenotype or group label 
 cfg <- list(
   miss_min_reps = 5, # detected samples a Group_Time cell needs
   miss_min_groups = 1, # cells that must clear miss_min_reps
+  cor_min_obs = 15, # samples a protein needs before blood_cor is computed
   outlier_k = 3, # outlier methods that must agree, of four
   mahal_p = 0.01, # PCA Mahalanobis chi-square tail
   mad_k = 3, # Hampel constant
@@ -68,7 +69,7 @@ myonuclei 0 to 237 and rescued ones 21 to 362. `blood_max` does the separating. 
 removed proteins above `myo_cut` all measure 2.3e9 to 4.2e11 pg/L in plasma; intracellular
 proteins measure 1e6 to 1e8.
 
-The floor over-deletes a few real proteins: C1QBP, HMGB2, PPIB, LGALS1 and CTSB clear
+The floor over-deletes five real proteins: C1QBP, HMGB2, PPIB, LGALS1 and CTSB clear
 `blood_max` and fail only on myonuclei. V1 refitted the nine contrasts with all 120
 blood-tagged proteins readmitted and found no BH hit in any HR-versus-LR or interaction
 contrast, so the null does not rest on this rule. Readmitting them took Acute_LR from 0 to 53
@@ -152,9 +153,13 @@ raw <- read_excel(here("00_Input", "HRvLR_raw.xlsx"))
 metadata <- as.data.frame(read_csv(here("00_Input", "HRvLR_meta.csv"), show_col_types = FALSE))
 rownames(metadata) <- metadata$Col_ID
 
-annotation <- raw[, c("uniprot_id", "protein", "gene", "description", "n_seq")]
+annotation_cols <- c("uniprot_id", "protein", "gene", "description", "n_seq")
+# Every run in the report must be on the sample sheet and every sheet row in the report, or a
+# sample would silently drop out or come back all-NA.
+runs <- setdiff(names(raw), annotation_cols)
+stopifnot("sample sheet and report disagree" = setequal(runs, metadata$Col_ID))
+annotation <- raw[, annotation_cols]
 intensity <- data.matrix(raw[, metadata$Col_ID])
-stopifnot("sample sheet and report disagree" = setequal(colnames(intensity), metadata$Col_ID))
 n_raw <- nrow(annotation)
 
 # One row per accession: the highest-mean row wins.
@@ -180,7 +185,7 @@ log_int[!is.finite(log_int)] <- NA
 blood_index <- colMeans(log_int[annotation$gene %in% cfg$blood_anchor, , drop = FALSE],
   na.rm = TRUE
 )
-testable <- rowSums(!is.na(log_int)) >= cfg$miss_min_reps * 3
+testable <- rowSums(!is.na(log_int)) >= cfg$cor_min_obs
 blood_cor <- suppressWarnings(as.vector(cor(
   t(log_int), blood_index,
   method = "spearman", use = "pairwise.complete.obs"
@@ -289,9 +294,7 @@ outlier_diag <- dal$metadata |>
   select(Col_ID, Subject_ID, Group, Timepoint) |>
   mutate(
     pct_missing = colMeans(is.na(dal$data))[Col_ID] * 100,
-    delta_missing = ave(pct_missing, str_remove(Col_ID, "_T[123]$"),
-      FUN = \(x) sapply(x, \(v) max(abs(v - x)))
-    ),
+    delta_missing = ave(pct_missing, Subject_ID, FUN = \(x) pmax(x - min(x), max(x) - x)),
     miss_flag = tukey(pct_missing) | tukey(delta_missing),
     pca_flag = mahalanobis(pcs, colMeans(pcs), cov(pcs)) > qchisq(1 - cfg$mahal_p, df = 3),
     mad_flag = hampel(apply(lg, 2, median, na.rm = TRUE)[Col_ID]),
@@ -299,6 +302,7 @@ outlier_diag <- dal$metadata |>
     n_flags = miss_flag + pca_flag + mad_flag + cor_flag,
     consensus_outlier = n_flags >= cfg$outlier_k
   )
+stopifnot(identical(rownames(pcs), outlier_diag$Col_ID))
 outlier_ids <- outlier_diag$Col_ID[outlier_diag$consensus_outlier]
 dal <- filter_samples(dal, !(Col_ID %in% outlier_ids))
 filter(outlier_diag, n_flags > 0) |> select(Col_ID, Group, Timepoint, n_flags, consensus_outlier)
@@ -387,10 +391,52 @@ consensus <- ggplot(flags, aes(method, Col_ID, fill = flagged)) +
   theme_minimal(base_size = 10)
 ```
 
-On the log2 haemoglobin index, the arm-by-T3 term is b = -1.21 (p = 0.032; 0.017 by
-subject-label permutation): LR's blood content rises 2.14 at T3 against HR's 0.57. The same
-term on the percent-of-signal scale is p = 0.26. The confound does not cancel in the
-interaction contrasts.
+## Blood at T3 by arm
+
+Tests whether blood content rises more at T3 in one arm, with a mixed model on the analysed
+samples (arm by timepoint, subject intercept) on two scales: the log2 haemoglobin index and the
+blood panel's share of signal. The permutation p shuffles the HR/LR label across subjects 999 times.
+
+```{r blood-by-arm}
+blood_data <- dal$metadata |>
+  select(Col_ID, Subject_ID, Group, Timepoint) |>
+  mutate(
+    Group = factor(Group, c("HR", "LR")),
+    log2_index = unname(blood_index[Col_ID]),
+    pct_signal = filter(qc_index, panel == "blood")$pct_signal[
+      match(Col_ID, filter(qc_index, panel == "blood")$Col_ID)
+    ]
+  )
+arm_by_t3 <- function(data, response) {
+  fit <- suppressMessages(lme4::lmer(
+    reformulate(c("Group * Timepoint", "(1 | Subject_ID)"), response),
+    data = data
+  ))
+  coef(summary(fit))["GroupLR:TimepointT3", c("Estimate", "t value")]
+}
+set.seed(42)
+arms <- distinct(blood_data, Subject_ID, Group)
+blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
+  observed <- arm_by_t3(blood_data, response)
+  null_t <- replicate(999, {
+    shuffled <- set_names(sample(arms$Group), arms$Subject_ID)
+    arm_by_t3(mutate(blood_data, Group = shuffled[Subject_ID]), response)[["t value"]]
+  })
+  tibble(
+    scale = response, lr_minus_hr_at_t3 = round(observed[["Estimate"]], 3),
+    t = round(observed[["t value"]], 2),
+    permutation_p = (1 + sum(abs(null_t) >= abs(observed[["t value"]]))) / 1000
+  )
+}) |>
+  list_rbind()
+blood_by_arm
+blood_data |>
+  summarise(mean_log2_index = round(mean(log2_index), 2), .by = c(Group, Timepoint)) |>
+  arrange(Group, Timepoint)
+```
+
+The estimate is LR's T3 rise over HR's, relative to T1. A confound on this scale does not cancel
+in the interaction contrasts.
 
 ## Why blood_cor removes nothing
 
@@ -434,7 +480,8 @@ write_xlsx(
     protein_calls = protein_calls,
     contamination_index = qc_index,
     blood_index = tibble(Col_ID = names(blood_index), blood_index = unname(blood_index)),
-    outlier_diagnostics = outlier_diag
+    outlier_diagnostics = outlier_diag,
+    blood_by_arm = blood_by_arm
   ),
   file.path(out, "01_filter.xlsx")
 )
