@@ -1,0 +1,291 @@
+---
+title: "03 · Protein against phenotype"
+subtitle: "Every protein correlated with the ten adaptation measures"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 150
+    fig-align: center
+execute:
+  message: false
+---
+
+`02_Differential` asks which proteins differ between groups. This asks whether a protein tracks
+how much a subject adapted. A contrast compares group means and carries no per-subject outcome,
+so it cannot answer that.
+
+Each subject contributes one value per protein: the level at T1, the change over training
+(T2 − T1), or the change over the acute bout (T3 − T2). Each is correlated with the ten
+phenotypes, all T2 − T1 changes except `volume_load`. Training change is the window that matches
+the phenotypes; the baseline level asks whether a starting proteome predicts adaptation, and the
+acute change whether the bout response does.
+
+Up to 1,900 proteins per cell mean about 95 nominal hits at p < 0.05 by chance, so nothing here
+is read at nominal p. BH within each window and outcome is the reported quantity.
+
+```{r setup}
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+
+dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"))
+phenotype <- readr::read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
+out <- here("02_Differential_Expression", "03_Phenotype", "c_data")
+figures <- here("02_Differential_Expression", "03_Phenotype", "b_reports")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+```
+
+## Windows
+
+A subject contributes to a window only when every timepoint it needs was acquired. S29 has no
+T1 and S28 no T2 or T3, so the windows hold 14 or 15 subjects.
+
+```{r windows}
+meta <- as_tibble(dal$metadata) |>
+  select(sample_id = Col_ID, subject = Subject_ID, arm = Group, timepoint = Timepoint)
+by_subject <- function(mat, timepoint) {
+  rows <- filter(meta, timepoint == .env$timepoint)
+  set_names(as.data.frame(mat[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
+}
+change <- function(mat, from, to) {
+  a <- by_subject(mat, from)
+  b <- by_subject(mat, to)
+  both <- intersect(colnames(a), colnames(b))
+  b[, both, drop = FALSE] - a[, both, drop = FALSE]
+}
+windows <- list(
+  training = change(dal$data, "T1", "T2"),
+  baseline = by_subject(dal$data, "T1"),
+  acute = change(dal$data, "T2", "T3")
+)
+map_int(windows, ncol)
+```
+
+## Correlations
+
+Spearman throughout. A protein is tested in a window only when at least two thirds of that
+window's subjects observed it: a protein seen in two subjects fits a rank correlation through two
+points. The p comes from the t approximation (`exact = FALSE`). Above nine observations
+`cor.test`'s "exact" p is an Edgeworth series, and in the far tail it returns exactly 0: RPS4X
+against `d_mcsa`, rho 0.91 on 14 subjects, came back p = 0 and topped the BH list.
+
+```{r correlate}
+outcomes <- c(
+  "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_fcsa_mixed", "d_nfibre_mixed",
+  "d_nfibre_I", "d_mcsa", "d_1rm_legpress", "d_1rm_ext", "volume_load"
+)
+spearman_by_row <- function(values, outcome) {
+  usable <- !is.na(outcome)
+  values <- values[, usable, drop = FALSE]
+  outcome <- outcome[usable]
+  min_obs <- ceiling(2 * length(outcome) / 3)
+  fits <- apply(values, 1, \(row) {
+    seen <- !is.na(row)
+    if (sum(seen) < min_obs) {
+      return(c(r = NA, p = NA, n = sum(seen)))
+    }
+    test <- stats::cor.test(row[seen], outcome[seen], method = "spearman", exact = FALSE)
+    c(r = unname(test$estimate), p = test$p.value, n = sum(seen))
+  })
+  tibble(
+    protein = rownames(values), n = unname(fits["n", ]),
+    r = unname(fits["r", ]), p = unname(fits["p", ])
+  )
+}
+outcome_of <- function(name, subjects) {
+  set_names(phenotype[[name]], phenotype$subject)[subjects]
+}
+results <- imap(windows, \(values, window) {
+  map(set_names(outcomes), \(name) {
+    spearman_by_row(values, outcome_of(name, colnames(values)))
+  }) |>
+    list_rbind(names_to = "outcome") |>
+    mutate(window = window)
+}) |>
+  list_rbind() |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome)) |>
+  left_join(tibble(protein = dal$annotation$uniprot_id, gene = dal$annotation$gene),
+    by = "protein"
+  ) |>
+  relocate(window, outcome, protein, gene)
+```
+
+The same correlation inside each arm, descriptive only: 7 or 8 subjects per arm.
+
+```{r by-arm}
+arm_of <- set_names(phenotype$group_arm, phenotype$subject)
+by_arm <- map(set_names(c("HR", "LR")), \(arm) {
+  values <- windows$training[, arm_of[colnames(windows$training)] == arm, drop = FALSE]
+  map(set_names(outcomes), \(name) spearman_by_row(values, outcome_of(name, colnames(values)))) |>
+    list_rbind(names_to = "outcome")
+}) |>
+  list_rbind(names_to = "arm")
+```
+
+## What survives
+
+```{r summary}
+summary_table <- results |>
+  filter(!is.na(p)) |>
+  summarise(
+    proteins = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
+    fdr_sig = sum(fdr < 0.05), best_fdr = signif(min(fdr), 3),
+    .by = c(window, outcome)
+  ) |>
+  mutate(ratio = round(nominal / expected, 2)) |>
+  arrange(window, outcome)
+summary_table
+```
+
+Read `ratio` first. A value near 1 is what the test returns when nothing is there, whatever the
+smallest p happens to be.
+
+```{r figure-chance}
+#| fig-width: 8
+#| fig-height: 5
+chance_figure <- summary_table |>
+  mutate(
+    window = factor(window, c("training", "baseline", "acute")),
+    outcome = factor(outcome, rev(outcomes))
+  ) |>
+  ggplot(aes(ratio, outcome, fill = window)) +
+  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+  geom_col(position = position_dodge(width = 0.75), width = 0.7) +
+  scale_fill_manual(
+    values = c(training = "#B2182B", baseline = "grey55", acute = "#2166AC"),
+    name = NULL
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Nominal hits relative to chance, by outcome and window",
+    subtitle = "Spearman per protein, subjects pooled across arms",
+    x = "nominal hits / chance expectation", y = NULL,
+    caption = paste(
+      "Bar length is nominal hits (p < 0.05) over 5% of proteins tested. The vertical line is",
+      "chance. Table: c_data/03_phenotype.xlsx, summary."
+    )
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.y = element_blank(), legend.position = "top",
+    plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
+  )
+chance_figure
+```
+
+## Hit matrices
+
+Every protein nominal against at least one phenotype, one matrix per window. Fill is Spearman
+rho, size is −log10 p, a black ring marks BH < 0.05.
+
+```{r hit-matrices}
+label_of <- dal$annotation |>
+  mutate(label = if_else(
+    is.na(gene) | duplicated(gene) | duplicated(gene, fromLast = TRUE),
+    paste0(coalesce(gene, "?"), " (", uniprot_id, ")"), gene
+  )) |>
+  with(set_names(label, uniprot_id))
+save_figure <- function(figure, name, width = 11, height = 8.5) {
+  walk(c("png", "pdf"), \(extension) {
+    ggsave(file.path(figures, paste0(name, ".", extension)), figure,
+      width = width, height = height, dpi = 200, bg = "white"
+    )
+  })
+}
+hit_pages <- function(data, columns, title, subtitle, table, per_page = 75) {
+  ranked <- data |>
+    filter(!is.na(p)) |>
+    summarise(n_nominal = sum(p < 0.05), best = min(p), .by = label) |>
+    filter(n_nominal > 0) |>
+    arrange(desc(n_nominal), best)
+  page_of <- ceiling(seq_len(nrow(ranked)) / per_page)
+  map(seq_len(max(page_of, 0)), \(page) {
+    rows <- ranked$label[page_of == page]
+    shown <- data |>
+      filter(label %in% rows) |>
+      mutate(
+        label = factor(label, levels = rev(rows)),
+        column = factor(column, levels = columns),
+        nominal = !is.na(p) & p < 0.05
+      )
+    ggplot(shown, aes(column, label)) +
+      geom_point(data = filter(shown, !nominal), colour = "grey85", size = 0.6) +
+      geom_point(
+        data = filter(shown, nominal), aes(size = -log10(p), fill = effect),
+        shape = 21, colour = "grey30", stroke = 0.2
+      ) +
+      geom_point(
+        data = filter(shown, !is.na(fdr), fdr < 0.05), aes(size = -log10(p)),
+        shape = 21, colour = "black", stroke = 0.9, fill = NA
+      ) +
+      scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", limits = c(-1, 1)) +
+      scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
+      scale_x_discrete(drop = FALSE) +
+      labs(
+        title = sprintf("%s (%d/%d)", title, page, max(page_of)),
+        subtitle = sprintf(
+          "%s; %d proteins nominal in at least one column; rows %d-%d",
+          subtitle, nrow(ranked), min(which(page_of == page)), max(which(page_of == page))
+        ),
+        x = NULL, y = NULL, fill = "rho", size = "-log10 p",
+        caption = paste0(
+          "Rows: proteins at nominal p < 0.05 against at least one phenotype, most columns first, ",
+          "then by best p. Filled dot: nominal, fill = Spearman rho, size = -log10 p. Black ring: ",
+          "BH < 0.05. Grey speck: tested, not nominal. Table: ", table, "."
+        )
+      ) +
+      theme_minimal(base_size = 9) +
+      theme(
+        axis.text.x = element_text(angle = 35, hjust = 1),
+        axis.text.y = element_text(size = if (length(rows) > 30) 5.5 else 8),
+        plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
+      )
+  })
+}
+window_titles <- c(
+  training = "training change (T2 - T1)", baseline = "level at T1",
+  acute = "acute change (T3 - T2)"
+)
+hits <- imap(window_titles, \(title, window) {
+  hit_pages(
+    results |>
+      filter(window == .env$window) |>
+      transmute(label = label_of[protein], column = outcome, effect = r, p, fdr),
+    outcomes,
+    title = paste("Protein association hits,", title),
+    subtitle = "Spearman against each phenotype",
+    table = "c_data/03_phenotype.xlsx, correlations"
+  )
+})
+map_int(hits, length)
+```
+
+```{r write}
+save_figure(chance_figure, "01_chance_by_outcome", width = 8, height = 5)
+iwalk(hits, \(pages, window) {
+  iwalk(pages, \(page, i) save_figure(page, sprintf("02_hits_%s_%02d", window, i)))
+})
+writexl::write_xlsx(
+  list(summary = summary_table, correlations = arrange(results, fdr), by_arm = by_arm),
+  file.path(out, "03_phenotype.xlsx")
+)
+saveRDS(list(results = results, by_arm = by_arm, summary = summary_table),
+  file.path(out, "phenotype.rds"),
+  compress = "xz"
+)
+pages <- sort(list.files(figures, "^0[0-9]_.*[.]pdf$", full.names = TRUE))
+invisible(qpdf::pdf_combine(pages, file.path(figures, "03_phenotype_figures.pdf")))
+length(pages)
+```
+
+```{r session}
+sessionInfo()
+```

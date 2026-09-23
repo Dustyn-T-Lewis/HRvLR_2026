@@ -1,0 +1,499 @@
+---
+title: "02 · Differential expression"
+subtitle: "Nine contrasts on the protein matrix"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 150
+    fig-align: center
+execute:
+  message: false
+---
+
+proteoDA's sequence is `fit_limma_model`, `extract_DA_results`, `write_limma_plots`. Under it
+sit `duplicateCorrelation`, `lmFit` with the subject block, and `eBayes(robust = TRUE)`. The fit
+reads the unimputed matrix, so each protein is fitted on the samples where it was seen.
+
+```{r setup}
+library(here)
+library(proteoDA)
+library(limma)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(tibble)
+library(tidyr)
+library(writexl)
+
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+dal <- d$dal
+contrast_names <- colnames(dal$design$contrast_matrix)
+out <- here("02_Differential_Expression", "02_Differential", "c_data")
+figures <- here("02_Differential_Expression", "02_Differential", "b_reports")
+
+# Same samples in the same order. limma compares only the counts.
+stopifnot(identical(rownames(dal$design$design_matrix), colnames(dal$data)))
+```
+
+## Fit
+
+```{r fit}
+fit <- fit_limma_model(dal)
+res <- extract_DA_results(fit, pval_thresh = 0.05, lfc_thresh = 0, adj_method = "BH")
+eb <- fit$eBayes_fit
+# write_limma_plots() knits its own R Markdown, which cannot run inside this render, so it
+# gets a fresh R session.
+callr::r(\(res, figures) {
+  proteoDA::write_limma_plots(res,
+    grouping_column = "group", output_dir = figures,
+    table_columns = c("uniprot_id", "gene", "protein"), title_column = "gene", overwrite = TRUE
+  )
+}, args = list(res = res, figures = figures))
+c(within_subject_correlation = round(eb$correlation, 3))
+```
+
+`write_limma_plots()` writes one interactive report per contrast into `b_reports/`, with its
+static plots beside them. Neither is tracked.
+
+Effect size the primary contrast could detect at 80% power, two-sided 0.05. An empty contrast
+says nothing about effects below this.
+
+```{r detectable-effect}
+se <- eb$stdev.unscaled[, "Training_Interaction"] * sqrt(eb$s2.post)
+round(quantile(se * (qt(0.975, eb$df.total) + qt(0.80, eb$df.total)), c(0.5, 0.9),
+  na.rm = TRUE
+), 3)
+```
+
+## Results
+
+BH within each contrast, never across the nine. A protein with an empty cell in a contrast comes
+back NA there and is not tested, so each contrast has its own denominator.
+
+```{r results}
+annotation <- fit$annotation[, c("uniprot_id", "gene", "protein", "description")]
+stopifnot(identical(rownames(res$results[[1]]), rownames(annotation)))
+results <- res$results |>
+  map(\(r) bind_cols(annotation, r)) |>
+  list_rbind(names_to = "contrast") |>
+  as_tibble() |>
+  mutate(
+    pi_score = P.Value^abs(logFC),
+    sig_pi = case_when(
+      pi_score < 0.05 & logFC > 0 ~ 1L,
+      pi_score < 0.05 & logFC < 0 ~ -1L,
+      TRUE ~ 0L
+    )
+  )
+n_obs <- rowSums(!is.na(fit$data))
+
+contrast_summary <- results |>
+  summarise(
+    n_tested = sum(!is.na(P.Value)),
+    n_untested = sum(is.na(P.Value)),
+    n_nominal = sum(P.Value < 0.05, na.rm = TRUE),
+    n_pi = sum(sig_pi != 0L),
+    n_fdr_05 = sum(adj.P.Val < 0.05, na.rm = TRUE),
+    n_fdr_10 = sum(adj.P.Val < 0.10, na.rm = TRUE),
+    min_adj_p = min(adj.P.Val, na.rm = TRUE),
+    .by = contrast
+  ) |>
+  left_join(d$roles, by = "contrast")
+contrast_summary |> mutate(min_adj_p = signif(min_adj_p, 3))
+```
+
+## Is a contrast empty, or is it being tested conservatively
+
+`propTrueNull()` saturates at 1, so it cannot separate a flat null from a conservative one.
+Median |t| is 0.674 under a calibrated null and `p_below_0.2` is 0.2. Read the between-arm
+contrasts against `Baseline_HRvLR` rather than against theory.
+
+```{r null-calibration}
+null_calibration <- results |>
+  filter(!is.na(P.Value)) |>
+  summarise(
+    prop_true_null = round(propTrueNull(P.Value), 3),
+    median_abs_t = round(median(abs(t)), 3),
+    p_below_0.2 = round(mean(P.Value < 0.2), 3), .by = contrast
+  )
+null_calibration
+```
+
+```{r p-histogram}
+#| fig-height: 6
+p_histogram <- results |>
+  filter(!is.na(P.Value)) |>
+  mutate(contrast = factor(contrast, levels = contrast_names)) |>
+  ggplot(aes(P.Value)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
+  geom_hline(
+    aes(yintercept = h),
+    results |>
+      filter(!is.na(P.Value)) |>
+      summarise(h = n() / 20, .by = contrast) |>
+      mutate(contrast = factor(contrast, levels = contrast_names)),
+    linetype = 2, colour = "firebrick"
+  ) +
+  facet_wrap(~contrast) +
+  labs(
+    title = "P-value distribution per contrast",
+    subtitle = "limma via proteoDA, 20 bins", x = "p", y = "proteins",
+    caption = paste(
+      "Dashed line marks a flat null (tested / 20). A spike at zero is signal; a slope toward 1 is",
+      "a conservative test. Table: c_data/02_differential.xlsx, DEP_matrix."
+    )
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
+p_histogram
+```
+
+## Significant and large enough
+
+`treat()` tests against a fold-change floor fixed in advance at 1.15, and controls an error rate,
+unlike filtering on logFC afterwards. `robust = TRUE` matches the main fit.
+
+```{r treat}
+ft <- treat(eb, lfc = log2(1.15), robust = TRUE)
+treat_counts <- tibble(
+  contrast = contrast_names,
+  n_q_05 = map_int(contrast_names, \(cn) {
+    sum(topTreat(ft, coef = cn, number = Inf)$adj.P.Val < 0.05, na.rm = TRUE)
+  })
+)
+treat_counts
+```
+
+## The pi score
+
+`pi_score` is `P.Value^abs(logFC)`, the Xiao et al. (2014) score written inverted. It controls no
+error rate: it ranks within a contrast and selects nothing. Large fold changes come from sparsely
+observed proteins, so each row carries the number of samples the protein was seen in. Applied to
+the four within-arm contrasts only.
+
+```{r pi-ranking}
+pi_ranking <- results |>
+  filter(contrast %in% c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR")) |>
+  slice_min(pi_score, n = 10, by = contrast, with_ties = FALSE) |>
+  mutate(n_obs = n_obs[uniprot_id]) |>
+  select(contrast, uniprot_id, gene, logFC, adj.P.Val, pi_score, n_obs)
+pi_ranking
+```
+
+## Protein classification
+
+How well one protein separates two sets of samples. Eight tasks mirror the contrasts. The four
+within-arm tasks pair each subject with itself; the four between-arm tasks compare subjects on a
+level or on their own change. AUC comes from `pROC` with `direction = "<"` fixed, so above 0.5
+means higher in the later timepoint or in HR. The p comes from the Wilcoxon test, signed-rank
+when paired. A protein needs three observations per side.
+
+```{r tasks}
+meta <- fit$metadata
+by_subject <- function(mat, timepoint, arm = NULL) {
+  rows <- filter(meta, time == timepoint, is.null(arm) | responder %in% arm)
+  set_names(as.data.frame(mat[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
+}
+change <- function(mat, from, to) {
+  a <- by_subject(mat, from)
+  b <- by_subject(mat, to)
+  both <- intersect(colnames(a), colnames(b))
+  b[, both, drop = FALSE] - a[, both, drop = FALSE]
+}
+arm_of <- set_names(as.character(meta$responder), meta$subject)
+within_arm <- function(mat, from, to, arm) {
+  a <- by_subject(mat, from, arm)
+  b <- by_subject(mat, to, arm)
+  both <- intersect(colnames(a), colnames(b))
+  list(positive = b[, both, drop = FALSE], negative = a[, both, drop = FALSE], paired = TRUE)
+}
+between_arm <- function(values) {
+  list(
+    positive = values[, arm_of[colnames(values)] == "HR", drop = FALSE],
+    negative = values[, arm_of[colnames(values)] == "LR", drop = FALSE],
+    paired = FALSE
+  )
+}
+build_tasks <- function(mat) {
+  list(
+    Training_HR = within_arm(mat, "T1", "T2", "HR"),
+    Training_LR = within_arm(mat, "T1", "T2", "LR"),
+    Acute_HR = within_arm(mat, "T2", "T3", "HR"),
+    Acute_LR = within_arm(mat, "T2", "T3", "LR"),
+    Baseline_HRvLR = between_arm(by_subject(mat, "T1")),
+    Trained_HRvLR = between_arm(by_subject(mat, "T2")),
+    Training_change_HRvLR = between_arm(change(mat, "T1", "T2")),
+    Acute_change_HRvLR = between_arm(change(mat, "T2", "T3"))
+  )
+}
+
+classify_row <- function(pos, neg, paired) {
+  if (paired) {
+    ok <- !is.na(pos) & !is.na(neg)
+    pos <- pos[ok]
+    neg <- neg[ok]
+  } else {
+    pos <- pos[!is.na(pos)]
+    neg <- neg[!is.na(neg)]
+  }
+  if (min(length(pos), length(neg)) < 3) {
+    return(c(auc = NA, p = NA, n_positive = length(pos), n_negative = length(neg)))
+  }
+  roc <- pROC::roc(controls = neg, cases = pos, direction = "<", quiet = TRUE)
+  # Ties make wilcox.test fall back to its normal approximation and warn on every call.
+  p <- suppressWarnings(wilcox.test(pos, neg, paired = paired)$p.value)
+  c(auc = as.numeric(pROC::auc(roc)), p = p, n_positive = length(pos), n_negative = length(neg))
+}
+classify <- function(spec) {
+  fits <- vapply(seq_len(nrow(spec$positive)), \(i) {
+    classify_row(spec$positive[i, ], spec$negative[i, ], spec$paired)
+  }, numeric(4))
+  tibble(feature = rownames(spec$positive), paired = spec$paired, !!!as_tibble(t(fits)))
+}
+
+tasks <- build_tasks(fit$data)
+protein_auc <- imap(tasks, \(spec, name) mutate(classify(spec), task = name, .before = 1)) |>
+  list_rbind() |>
+  mutate(fdr = p.adjust(p, "BH"), .by = task) |>
+  left_join(select(annotation, feature = uniprot_id, gene), by = "feature") |>
+  relocate(gene, .after = feature)
+
+auc_summary <- protein_auc |>
+  summarise(
+    tested = sum(!is.na(p)), nominal = sum(p < 0.05, na.rm = TRUE),
+    expected = round(0.05 * sum(!is.na(p)), 1), fdr_sig = sum(fdr < 0.05, na.rm = TRUE),
+    .by = c(task, paired)
+  ) |>
+  mutate(ratio = round(nominal / expected, 2))
+auc_summary
+```
+
+## Hit matrices
+
+Every protein nominal in at least one column, as a dot matrix: fill is the effect, size is
+−log10 p, a black ring marks BH < 0.05. 75 rows to a page.
+
+```{r hit-matrices}
+labels <- annotation |>
+  mutate(label = if_else(
+    is.na(gene) | duplicated(gene) | duplicated(gene, fromLast = TRUE),
+    paste0(coalesce(gene, "?"), " (", uniprot_id, ")"), gene
+  ))
+label_of <- set_names(labels$label, labels$uniprot_id)
+
+save_figure <- function(figure, name, width = 11, height = 8.5) {
+  walk(c("png", "pdf"), \(extension) {
+    ggsave(file.path(figures, paste0(name, ".", extension)), figure,
+      width = width, height = height, dpi = 200, bg = "white"
+    )
+  })
+}
+hit_pages <- function(data, columns, title, subtitle, fill_label, table, midpoint = 0,
+                      per_page = 75) {
+  ranked <- data |>
+    filter(!is.na(p)) |>
+    summarise(n_nominal = sum(p < 0.05), best = min(p), .by = label) |>
+    filter(n_nominal > 0) |>
+    arrange(desc(n_nominal), best)
+  page_of <- ceiling(seq_len(nrow(ranked)) / per_page)
+  map(seq_len(max(page_of, 0)), \(page) {
+    rows <- ranked$label[page_of == page]
+    shown <- data |>
+      filter(label %in% rows) |>
+      mutate(
+        label = factor(label, levels = rev(rows)),
+        column = factor(column, levels = columns),
+        nominal = !is.na(p) & p < 0.05
+      )
+    ggplot(shown, aes(column, label)) +
+      geom_point(data = filter(shown, !nominal), colour = "grey85", size = 0.6) +
+      geom_point(
+        data = filter(shown, nominal), aes(size = -log10(p), fill = effect),
+        shape = 21, colour = "grey30", stroke = 0.2
+      ) +
+      geom_point(
+        data = filter(shown, !is.na(fdr), fdr < 0.05), aes(size = -log10(p)),
+        shape = 21, colour = "black", stroke = 0.9, fill = NA
+      ) +
+      scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", midpoint = midpoint) +
+      scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
+      scale_x_discrete(drop = FALSE) +
+      labs(
+        title = sprintf("%s (%d/%d)", title, page, max(page_of)),
+        subtitle = sprintf(
+          "%s; %d features nominal in at least one column; rows %d-%d",
+          subtitle, nrow(ranked), min(which(page_of == page)), max(which(page_of == page))
+        ),
+        x = NULL, y = NULL, fill = fill_label, size = "-log10 p",
+        caption = paste0(
+          "Rows: features at nominal p < 0.05 in at least one column, most columns first, then ",
+          "by best p. Filled dot: nominal, fill = ", fill_label, ", size = -log10 p. Black ring: ",
+          "BH < 0.05. Grey speck: tested, not nominal. Table: ", table, "."
+        )
+      ) +
+      theme_minimal(base_size = 9) +
+      theme(
+        axis.text.x = element_text(angle = 35, hjust = 1),
+        axis.text.y = element_text(size = if (length(rows) > 30) 5.5 else 8),
+        plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
+      )
+  })
+}
+
+contrast_hits <- hit_pages(
+  transmute(results,
+    label = label_of[uniprot_id], column = contrast,
+    effect = logFC, p = P.Value, fdr = adj.P.Val
+  ),
+  contrast_names,
+  title = "Protein contrast hits", subtitle = "limma via proteoDA, nominal p per contrast",
+  fill_label = "log2 FC", table = "c_data/02_differential.xlsx, DEP_matrix"
+)
+task_hits <- hit_pages(
+  transmute(protein_auc,
+    label = label_of[feature], column = task,
+    effect = auc, p = p, fdr = fdr
+  ),
+  names(tasks),
+  title = "Protein classification hits", subtitle = "pROC AUC, Wilcoxon p per task",
+  fill_label = "AUC", midpoint = 0.5, table = "c_data/02_differential.xlsx, protein_auc"
+)
+c(contrast_pages = length(contrast_hits), task_pages = length(task_hits))
+```
+
+## Outputs
+
+Written before the floor is checked, so a failure leaves the evidence on disk.
+
+```{r write}
+dep_matrix <- results |>
+  mutate(n_obs = n_obs[uniprot_id]) |>
+  select(uniprot_id, gene, n_obs, contrast, logFC, P.Value, adj.P.Val) |>
+  pivot_wider(
+    names_from = contrast, values_from = c(logFC, P.Value, adj.P.Val),
+    names_glue = "{contrast}_{.value}"
+  )
+
+saveRDS(res, file.path(out, "fit.rds"))
+save_figure(p_histogram, "01_p_histogram", height = 7)
+iwalk(contrast_hits, \(page, i) save_figure(page, sprintf("02_contrast_hits_%02d", i)))
+iwalk(task_hits, \(page, i) save_figure(page, sprintf("03_classification_hits_%02d", i)))
+```
+
+## Floor
+
+`Baseline_HRvLR` compares the arms before training. The count is printed, not asserted.
+
+```{r floor}
+floor_rows <- filter(results, contrast == d$floor)
+# sum(logical(0)) is zero, so a contrast name matching nothing would look like a clean floor.
+stopifnot(nrow(floor_rows) == nrow(fit$data))
+sum(floor_rows$adj.P.Val < 0.05, na.rm = TRUE)
+slice_min(floor_rows, P.Value, n = 5) |> select(uniprot_id, gene, logFC, P.Value, adj.P.Val)
+```
+
+## Appendix: V1 equivalence
+
+The fit reproduces V1's committed numbers. Skipped when the sibling V1 tree is absent.
+
+```{r v1}
+v1_book <- file.path(
+  dirname(here()), "HRvLR_V1", "03_Features", "01_Proteins", "c_data",
+  "05_results.xlsx"
+)
+v1_equivalence <- if (file.exists(v1_book)) {
+  map(contrast_names, \(cn) {
+    reference <- readxl::read_excel(v1_book, sheet = cn)
+    joined <- inner_join(
+      filter(results, contrast == cn),
+      transmute(reference, uniprot_id, ref_lfc = logFC, ref_p = P.Value, ref_bh = adj.P.Val),
+      by = "uniprot_id"
+    )
+    tibble(
+      contrast = cn, matched = nrow(joined),
+      max_abs_diff = max(abs(c(
+        joined$logFC - joined$ref_lfc, joined$P.Value - joined$ref_p,
+        joined$adj.P.Val - joined$ref_bh
+      )), na.rm = TRUE)
+    )
+  }) |>
+    list_rbind()
+} else {
+  tibble(contrast = character(), matched = integer(), max_abs_diff = numeric())
+}
+v1_equivalence
+```
+
+## Appendix: does one arm's training signature move in the other
+
+The proteins that responded in one arm, tested as a set in the other arm's contrast with `fry`.
+Only the mirrored within-arm pairs share no cell mean, so only they are tested. `fry` takes no
+missing value, so it runs on the imputed matrix with the same design, block and a correlation
+estimated on that matrix.
+
+```{r fry-concordance}
+imputed <- readRDS(here("01_Preprocess", "03_Imputation", "c_data", "DAList_imputed.rds"))
+abundance <- as.matrix(imputed$data)
+design <- fit$design$design_matrix
+stopifnot(identical(colnames(abundance), rownames(design)), !anyNA(abundance))
+fry_correlation <- duplicateCorrelation(abundance, design, block = meta$subject)$consensus
+
+member_rows <- function(cn, criterion, direction) {
+  r <- filter(results, contrast == cn)
+  sign_ok <- if (direction == "up") r$logFC > 0 else r$logFC < 0
+  hit <- switch(criterion,
+    pi = r$sig_pi == if (direction == "up") 1L else -1L,
+    bh = !is.na(r$adj.P.Val) & r$adj.P.Val < 0.05 & sign_ok,
+    nominal = !is.na(r$P.Value) & r$P.Value < 0.05 & sign_ok
+  )
+  which(rownames(abundance) %in% r$uniprot_id[coalesce(hit, FALSE)])
+}
+pairings <- tribble(
+  ~set_from, ~ranked_on,
+  "Training_HR", "Training_LR",
+  "Training_LR", "Training_HR",
+  "Acute_HR", "Acute_LR",
+  "Acute_LR", "Acute_HR"
+)
+fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
+  sets <- cross2(c("pi", "bh", "nominal"), c("up", "down")) |>
+    map(\(x) member_rows(set_from, x[[1]], x[[2]])) |>
+    set_names(map_chr(cross2(c("pi", "bh", "nominal"), c("up", "down")), paste, collapse = "_"))
+  sets <- keep(sets, \(rows) length(rows) >= 5)
+  if (!length(sets)) {
+    return(NULL)
+  }
+  fry(abundance,
+    index = sets, design = design, contrast = fit$design$contrast_matrix[, ranked_on],
+    block = meta$subject, correlation = fry_correlation
+  ) |>
+    as_tibble(rownames = "set") |>
+    transmute(set_from, ranked_on, set, n = NGenes, direction = Direction, p = PValue, fdr = FDR)
+}) |>
+  list_rbind()
+arrange(fry_concordance, p)
+```
+
+```{r write-workbook}
+write_xlsx(
+  list(
+    DEP_matrix = dep_matrix, contrast_summary = contrast_summary,
+    null_calibration = null_calibration, treat = treat_counts, pi_ranking = pi_ranking,
+    protein_auc = arrange(protein_auc, p), auc_summary = auc_summary,
+    v1_equivalence = v1_equivalence, fry_concordance = fry_concordance
+  ),
+  file.path(out, "02_differential.xlsx")
+)
+pages <- sort(list.files(figures, "^0[0-9]_.*[.]pdf$", full.names = TRUE))
+invisible(qpdf::pdf_combine(pages, file.path(figures, "02_differential_figures.pdf")))
+length(pages)
+```
+
+```{r session}
+sessionInfo()
+```

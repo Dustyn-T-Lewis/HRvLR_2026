@@ -1,0 +1,141 @@
+---
+title: "01 · Design"
+subtitle: "Design formula and the nine contrasts"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 150
+    fig-align: center
+execute:
+  message: false
+---
+
+proteoDA carries the design as a formula on the DAList and reads its terms from metadata column
+names. This notebook relabels the metadata, attaches the design and the nine contrasts, and
+checks both before anything is fitted.
+
+```{r setup}
+library(here)
+library(proteoDA)
+library(limma)
+library(dplyr)
+library(tibble)
+library(writexl)
+
+dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"))
+source_meta <- as.data.frame(dal$metadata)
+stopifnot(identical(source_meta$Col_ID, colnames(dal$data)))
+with(source_meta, table(Group, Timepoint))
+```
+
+## Design
+
+Six cell means, one per responder-and-timepoint combination, with subject as a random effect.
+HR and LR are different people, so a fixed subject term would absorb the between-arm contrasts;
+the random effect keeps them estimable and carries the repeated measures through
+`duplicateCorrelation()`.
+
+```{r design}
+group_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+meta <- data.frame(
+  sample_id = source_meta$Col_ID,
+  responder = factor(source_meta$Group, levels = c("HR", "LR")),
+  time = factor(source_meta$Timepoint, levels = c("T1", "T2", "T3")),
+  group = factor(source_meta$Group_Time, levels = group_levels),
+  subject = source_meta$Subject_ID
+)
+rownames(meta) <- meta$sample_id
+stopifnot(!anyNA(meta$group), !any(is.na(meta$subject) | meta$subject == ""))
+dal$metadata <- meta
+
+dal <- add_design(dal, "~ 0 + group + (1 | subject)")
+design <- dal$design$design_matrix
+
+# Rank deficiency would make the contrasts inestimable and surface as silent NAs.
+# add_contrasts() parses the contrast strings, so every column name must survive make.names().
+stopifnot(
+  qr(design)$rank == ncol(design),
+  identical(make.names(colnames(design)), colnames(design))
+)
+c(samples = nrow(design), coefficients = ncol(design), residual_df = nrow(design) - ncol(design))
+```
+
+## Contrasts
+
+```{r contrasts}
+contrast_vector <- c(
+  "Training_HR = HR_T2 - HR_T1",
+  "Training_LR = LR_T2 - LR_T1",
+  "Acute_HR = HR_T3 - HR_T2",
+  "Acute_LR = LR_T3 - LR_T2",
+  "Baseline_HRvLR = HR_T1 - LR_T1",
+  "Trained_HRvLR = HR_T2 - LR_T2",
+  "Acute_HRvLR = HR_T3 - LR_T3",
+  "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
+  "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
+)
+dal <- add_contrasts(dal, contrasts_vector = contrast_vector)
+contrast_names <- colnames(dal$design$contrast_matrix)
+dal$design$contrast_matrix
+```
+
+```{r roles}
+roles <- tibble(
+  contrast = contrast_names,
+  role = case_when(
+    contrast == "Training_Interaction" ~ "primary",
+    contrast == "Acute_Interaction" ~ "secondary",
+    contrast == "Baseline_HRvLR" ~ "floor",
+    TRUE ~ "descriptive"
+  )
+)
+roles
+```
+
+`Training_Interaction` is the **primary** comparison: does the training response differ between
+responder groups. `Acute_Interaction` asks the same of the acute bout. `Baseline_HRvLR` is the
+**floor**. It is not a true negative control: the label was cut from the training outcome, so a
+real baseline difference would be predictive. With no predictive signal it is empty, and it is
+read as the count a between-arm contrast returns when nothing is there. The six others are
+**descriptive**. `Training_Interaction` equals `Trained_HRvLR` minus `Baseline_HRvLR` exactly, so
+these are not nine independent questions.
+
+## Within-subject correlation
+
+`duplicateCorrelation()` on the normalised matrix, blocked by subject. `fit_limma_model()`
+estimates the same number internally and discards it.
+
+```{r correlation}
+strata <- tibble(
+  level = "within subject, subject random (unweighted matrix correlation)",
+  correlation = duplicateCorrelation(dal$data, design, block = meta$subject)$consensus.correlation
+)
+mutate(strata, correlation = round(correlation, 3))
+```
+
+## Outputs
+
+```{r write}
+out <- here("02_Differential_Expression", "01_Design", "c_data")
+saveRDS(
+  list(dal = dal, contrasts = contrast_vector, roles = roles, floor = "Baseline_HRvLR"),
+  file.path(out, "design.rds")
+)
+write_xlsx(
+  list(
+    contrasts = tibble(definition = contrast_vector, contrast = contrast_names) |>
+      left_join(roles, by = "contrast"),
+    correlation_strata = strata
+  ),
+  file.path(out, "01_design.xlsx")
+)
+```
+
+```{r session}
+sessionInfo()
+```
