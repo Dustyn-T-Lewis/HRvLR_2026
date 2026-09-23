@@ -79,7 +79,10 @@ make_volcano <- function(contrast, rank_by = "fdr") {
       slice_head(n = 5) |>
       pull(label)
     subtitle <- paste(
-      c(na.omit(contrast_subtitle[contrast]), "Labels ranked by pi-score; colours and counts use BH FDR"),
+      c(
+        na.omit(contrast_subtitle[contrast]),
+        "Labels ranked by pi-score; colours and counts use BH FDR"
+      ),
       collapse = "\n"
     )
   } else {

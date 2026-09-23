@@ -65,9 +65,8 @@ says nothing about effects below this.
 
 ```{r detectable-effect}
 se <- eb$stdev.unscaled[, "Training_Interaction"] * sqrt(eb$s2.post)
-round(quantile(se * (qt(0.975, eb$df.total) + qt(0.80, eb$df.total)), c(0.5, 0.9),
-  na.rm = TRUE
-), 3)
+detectable <- se * (qt(0.975, eb$df.total) + qt(0.80, eb$df.total))
+round(quantile(detectable, c(0.5, 0.9), na.rm = TRUE), 3)
 ```
 
 ## Results

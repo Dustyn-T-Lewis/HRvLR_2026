@@ -94,7 +94,7 @@ as_tibble(pca$x[, 1:2], rownames = "Col_ID") |>
   scale_colour_manual(values = c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")) +
   labs(
     title = "Samples after normalisation",
-    subtitle = sprintf("PCA of %d proteins, missing values median-filled for display", nrow(filled)),
+    subtitle = sprintf("PCA of %d proteins, gaps median-filled for display", nrow(filled)),
     x = sprintf("PC1 (%.1f%%)", 100 * components$variance_explained[1]),
     y = sprintf("PC2 (%.1f%%)", 100 * components$variance_explained[2])
   ) +

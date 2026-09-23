@@ -81,10 +81,9 @@ kme <- signedKME(t(abund), me,
   corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'"
 )
 colnames(kme) <- sub("^kME", "", colnames(kme))
+gene_of <- set_names(imputed$annotation$gene, imputed$annotation$uniprot_id)
 membership <- tibble(
-  uniprot_id = names(colours), gene = imputed$annotation$gene[match(names(colours),
-    imputed$annotation$uniprot_id)],
-  module = unname(colours)
+  uniprot_id = names(colours), gene = unname(gene_of[names(colours)]), module = unname(colours)
 ) |>
   mutate(kme = map2_dbl(uniprot_id, module, \(id, m) if (m == "grey") NA_real_ else kme[id, m]))
 
