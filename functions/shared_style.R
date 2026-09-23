@@ -50,6 +50,16 @@ FIG_THEME <- theme_bw(base_size = 10) +
 # Captions are long by design; wrap them to the page rather than by hand.
 caption <- function(...) str_wrap(paste0(...), width = 150)
 
+# MSigDB names are shouting snake case with a collection prefix; a label needs
+# neither.
+clean_set_name <- function(set, width = 50) {
+  set |>
+    str_remove("^(HALLMARK|REACTOME|GOBP|GOSLIM)_") |>
+    str_replace_all("_", " ") |>
+    str_to_sentence() |>
+    str_trunc(width)
+}
+
 # A packet is a contents page followed by one page per plot, merged into one
 # PDF. Each page carries its own title, subtitle (method and counts) and
 # caption (what each channel encodes, which table holds the data), so a page
