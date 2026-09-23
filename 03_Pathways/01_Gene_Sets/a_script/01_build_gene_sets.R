@@ -91,11 +91,11 @@ gene_sets <- list(
 
 clear_dir(OUT_DIR)
 saveRDS(gene_sets, file.path(OUT_DIR, "gene_sets.rds"))
-write_workbook(file.path(OUT_DIR, "gene_sets.xlsx"), list(
+openxlsx::write.xlsx(list(
   catalog = catalog,
   protein_map = protein_map,
   themes = count(filter(catalog, !is.na(.data$theme)), .data$theme, sort = TRUE)
-))
+), file.path(OUT_DIR, "gene_sets.xlsx"))
 
 print(count(catalog, .data$collection))
 message(sprintf(

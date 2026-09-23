@@ -28,6 +28,6 @@ screens[c("classify", "associate")] <- lapply(
 
 clear_dir(OUT_DIR)
 saveRDS(screens, file.path(OUT_DIR, "pathway_screens.rds"))
-write_workbook(file.path(OUT_DIR, "pathway_screens.xlsx"), screens)
+openxlsx::write.xlsx(screens, file.path(OUT_DIR, "pathway_screens.xlsx"))
 
 print(as.data.frame(screens$chance_classify), row.names = FALSE, digits = 3)

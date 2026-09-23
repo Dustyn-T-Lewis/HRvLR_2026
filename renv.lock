@@ -806,12 +806,8 @@
     "GSEABase": {
       "Package": "GSEABase",
       "Version": "1.74.0",
-      "Source": "Bioconductor",
-      "Type": "Package",
-      "Title": "Gene set enrichment data structures and methods",
-      "Authors@R": "c( person(\"Martin\", \"Morgan\", role = \"aut\"), person(\"Seth\", \"Falcon\", role = \"aut\"), person(\"Robert\", \"Gentleman\", role = \"aut\"), person(\"Paul\", \"Villafuerte\", role = \"ctb\", comment = \"'GSEABase' vignette translation from Sweave to Rmarkdown / HTML\"), person(\"Bioconductor Package Maintainer\", role = \"cre\", email = \"maintainer@bioconductor.org\" ))",
-      "Description": "This package provides classes and methods to support Gene Set Enrichment Analysis (GSEA).",
-      "License": "Artistic-2.0",
+      "Source": "Repository",
+      "Priority": null,
       "Depends": [
         "R (>= 2.6.0)",
         "BiocGenerics (>= 0.13.8)",
@@ -819,6 +815,13 @@
         "annotate (>= 1.45.3)",
         "methods",
         "graph (>= 1.37.2)"
+      ],
+      "Imports": [
+        "AnnotationDbi",
+        "XML"
+      ],
+      "LinkingTo": [
+        null
       ],
       "Suggests": [
         "hgu95av2.db",
@@ -831,22 +834,16 @@
         "knitr",
         "RUnit"
       ],
-      "Imports": [
-        "AnnotationDbi",
-        "XML"
+      "Enhances": [
+        null
       ],
-      "LazyLoad": "yes",
-      "Collate": "utilities.R AAA.R AllClasses.R AllGenerics.R getObjects.R methods-CollectionType.R methods-ExpressionSet.R methods-GeneColorSet.R methods-GeneIdentifierType.R methods-GeneSet.R methods-GeneSetCollection.R methods-OBOCollection.R",
-      "VignetteBuilder": "knitr",
-      "biocViews": "GeneExpression, GeneSetEnrichment, GraphAndNetwork, GO, KEGG",
-      "git_url": "https://git.bioconductor.org/packages/GSEABase",
-      "git_branch": "RELEASE_3_23",
-      "git_last_commit": "00ea6ba",
-      "git_last_commit_date": "2026-04-28",
-      "Repository": "Bioconductor 3.23",
+      "License": "Artistic-2.0",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
       "NeedsCompilation": "no",
-      "Author": "Martin Morgan [aut], Seth Falcon [aut], Robert Gentleman [aut], Paul Villafuerte [ctb] ('GSEABase' vignette translation from Sweave to Rmarkdown / HTML), Bioconductor Package Maintainer [cre]",
-      "Maintainer": "Bioconductor Package Maintainer <maintainer@bioconductor.org>"
+      "Repository": "BioCsoft",
+      "Type": "source"
     },
     "GenomicRanges": {
       "Package": "GenomicRanges",
@@ -1889,6 +1886,44 @@
       "Author": "Object-Oriented Programming Working Group [cph], Davis Vaughan [aut], Jim Hester [aut] (ORCID: <https://orcid.org/0000-0002-2739-7082>), Tomasz Kalinowski [aut], Will Landau [aut], Michael Lawrence [aut], Martin Maechler [aut] (ORCID: <https://orcid.org/0000-0002-8685-9910>), Luke Tierney [aut], Hadley Wickham [aut, cre] (ORCID: <https://orcid.org/0000-0003-4757-117X>)",
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "CRAN"
+    },
+    "STRINGdb": {
+      "Package": "STRINGdb",
+      "Version": "2.24.0",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        "R (>= 2.14.0)"
+      ],
+      "Imports": [
+        "png",
+        "sqldf",
+        "plyr",
+        "igraph",
+        "httr",
+        "methods",
+        "RColorBrewer",
+        "gplots",
+        "hash",
+        "plotrix"
+      ],
+      "LinkingTo": [
+        null
+      ],
+      "Suggests": [
+        "RUnit",
+        "BiocGenerics"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "GPL-2",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "no",
+      "Repository": "BioCsoft",
+      "Type": "source"
     },
     "Seqinfo": {
       "Package": "Seqinfo",
@@ -4287,10 +4322,8 @@
     "enrichplot": {
       "Package": "enrichplot",
       "Version": "1.32.0",
-      "Source": "Bioconductor",
-      "Title": "Visualization of Functional Enrichment Result",
-      "Authors@R": "c( person(given = \"Guangchuang\", family = \"Yu\", email = \"guangchuangyu@gmail.com\",   role  = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-6485-8781\")), person(given = \"Chun-Hui\", family = \"Gao\", email = \"gaospecial@gmail.com\", role = \"ctb\", comment = c(ORCID = \"0000-0002-1445-7939\")))",
-      "Description": "The 'enrichplot' package provides visualization methods for interpreting functional enrichment results from ORA or GSEA analyses.  It is designed to work with the 'clusterProfiler' ecosystem and builds on 'ggplot2' for flexible and extensible graphics.",
+      "Source": "Repository",
+      "Priority": null,
       "Depends": [
         "R (>= 4.2.0)"
       ],
@@ -4303,7 +4336,7 @@
         "ggnewscale",
         "ggplot2 (>= 3.5.0)",
         "ggrepel (>= 0.9.0)",
-        "ggtangle (>= 0.0.9)",
+        "ggtangle\n(>= 0.0.9)",
         "ggtree",
         "GOSemSim (>= 2.37.2)",
         "graphics",
@@ -4319,6 +4352,9 @@
         "tidydr",
         "utils",
         "yulab.utils (>= 0.2.2)"
+      ],
+      "LinkingTo": [
+        null
       ],
       "Suggests": [
         "AnnotationDbi",
@@ -4342,22 +4378,16 @@
         "tibble",
         "tidyr"
       ],
-      "VignetteBuilder": "quarto",
+      "Enhances": [
+        null
+      ],
       "License": "Artistic-2.0",
-      "URL": "https://yulab-smu.top/contribution-knowledge-mining/",
-      "BugReports": "https://github.com/GuangchuangYu/enrichplot/issues",
-      "biocViews": "Annotation, GeneSetEnrichment, GO, KEGG, Pathways, Software, Visualization",
-      "Encoding": "UTF-8",
-      "RoxygenNote": "7.3.3",
-      "Roxygen": "list(markdown = TRUE)",
-      "git_url": "https://git.bioconductor.org/packages/enrichplot",
-      "git_branch": "RELEASE_3_23",
-      "git_last_commit": "2961756",
-      "git_last_commit_date": "2026-04-28",
-      "Repository": "Bioconductor 3.23",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
       "NeedsCompilation": "no",
-      "Author": "Guangchuang Yu [aut, cre] (ORCID: <https://orcid.org/0000-0002-6485-8781>), Chun-Hui Gao [ctb] (ORCID: <https://orcid.org/0000-0002-1445-7939>)",
-      "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>"
+      "Repository": "BioCsoft",
+      "Type": "source"
     },
     "estimability": {
       "Package": "estimability",
@@ -7058,6 +7088,39 @@
       "RoxygenNote": "7.3.2",
       "Repository": "CRAN"
     },
+    "matrixTests": {
+      "Package": "matrixTests",
+      "Version": "0.2.3.1",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        "R (>= 3.2.2)"
+      ],
+      "Imports": [
+        "matrixStats"
+      ],
+      "LinkingTo": [
+        null
+      ],
+      "Suggests": [
+        "PMCMRplus",
+        "car",
+        "cosinor",
+        "cosinor2",
+        "moments",
+        "nortest"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "GPL-2",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "no",
+      "Repository": "CRAN",
+      "Type": "source"
+    },
     "mclust": {
       "Package": "mclust",
       "Version": "6.1.3",
@@ -7833,42 +7896,6 @@
       "Author": "Gábor Csárdi [aut, cre]",
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
       "Repository": "CRAN"
-    },
-    "pROC": {
-      "Package": "pROC",
-      "Version": "1.19.1",
-      "Source": "Repository",
-      "Priority": null,
-      "Depends": [
-        "R (>= 2.14)"
-      ],
-      "Imports": [
-        "methods",
-        "Rcpp (>= 0.11.1)"
-      ],
-      "LinkingTo": [
-        "Rcpp"
-      ],
-      "Suggests": [
-        "MASS",
-        "logcondens",
-        "testthat",
-        "vdiffr",
-        "ggplot2",
-        "rlang",
-        "knitr",
-        "rmarkdown"
-      ],
-      "Enhances": [
-        null
-      ],
-      "License": "GPL (>= 3)",
-      "License_is_FOSS": null,
-      "License_restricts_use": null,
-      "OS_type": null,
-      "NeedsCompilation": "yes",
-      "Repository": "CRAN",
-      "Type": "source"
     },
     "pacman": {
       "Package": "pacman",
@@ -8705,36 +8732,6 @@
       "Author": "Hadley Wickham [aut, cre] (ORCID: <https://orcid.org/0000-0003-4757-117X>), Lionel Henry [aut], Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)",
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "CRAN"
-    },
-    "qpdf": {
-      "Package": "qpdf",
-      "Version": "1.4.1",
-      "Source": "Repository",
-      "Priority": null,
-      "Depends": [
-        null
-      ],
-      "Imports": [
-        "Rcpp",
-        "askpass",
-        "curl"
-      ],
-      "LinkingTo": [
-        "Rcpp"
-      ],
-      "Suggests": [
-        "testthat"
-      ],
-      "Enhances": [
-        null
-      ],
-      "License": "Apache License 2.0",
-      "License_is_FOSS": null,
-      "License_restricts_use": null,
-      "OS_type": null,
-      "NeedsCompilation": "yes",
-      "Repository": "CRAN",
-      "Type": "source"
     },
     "quantreg": {
       "Package": "quantreg",

@@ -15,18 +15,72 @@ fixture <- function() {
   list(meta = meta, mat = mat)
 }
 
-test_that("auc_one reads above 0.5 as higher in the case group", {
-  hi <- auc_one(control = 1:5, case = 6:10, paired = FALSE)
-  lo <- auc_one(control = 6:10, case = 1:5, paired = FALSE)
-  expect_equal(unname(hi["auc"]), 1)
-  expect_equal(unname(lo["auc"]), 0)
-  expect_lt(hi["p"], 0.05)
+# Five subjects per arm at T1 only: `hi` separates the arms perfectly, `lo`
+# the other way round, and `sparse` is observed in two HR subjects.
+arm_fixture <- function() {
+  meta <- tibble::tibble(
+    subject = sprintf("S%02d", 1:10), timepoint = "T1",
+    arm = rep(c("HR", "LR"), each = 5)
+  )
+  meta$sample_id <- paste(meta$subject, "T1", sep = "_")
+  mat <- rbind(
+    hi = c(6:10, 1:5), lo = c(1:5, 6:10),
+    sparse = c(1, 2, rep(NA, 8))
+  )
+  colnames(mat) <- meta$sample_id
+  list(meta = meta, mat = mat)
+}
+
+test_that("AUC reads above 0.5 as higher in the case group", {
+  fx <- arm_fixture()
+  expect_warning(
+    res <- classify_features(
+      fx$mat, TASKS[TASKS$task == "Baseline_HRvLR", ], fx$meta
+    ),
+    "less than 1"
+  )
+  get <- function(f, col) res[[col]][res$feature == f]
+  expect_equal(get("hi", "auc"), 1)
+  expect_equal(get("lo", "auc"), 0)
+  expect_lt(get("hi", "p"), 0.05)
+  expect_equal(
+    get("hi", "p"),
+    wilcox.test(6:10, 1:5, exact = FALSE)$p.value
+  )
 })
 
-test_that("auc_one pairs on complete pairs and refuses tiny groups", {
-  out <- auc_one(c(1, 2, NA, 4, 5), c(2, 3, 9, 5, 6), paired = TRUE)
-  expect_equal(unname(out["auc"]), 11 / 16)
-  expect_true(all(is.na(auc_one(1:2, 3:4, paired = FALSE))))
+test_that("a feature with too few observations per group is not scored", {
+  fx <- arm_fixture()
+  expect_warning(
+    res <- classify_features(
+      fx$mat, TASKS[TASKS$task == "Baseline_HRvLR", ], fx$meta
+    ),
+    "less than 1"
+  )
+  expect_true(is.na(res$auc[res$feature == "sparse"]))
+  expect_true(is.na(res$p[res$feature == "sparse"]))
+  expect_equal(res$bh[1:2], p.adjust(res$p[1:2], "BH"))
+})
+
+test_that("paired tasks use complete pairs and the signed-rank p", {
+  meta <- tidyr::expand_grid(
+    subject = sprintf("S%02d", 1:5), timepoint = c("T1", "T2")
+  )
+  meta$arm <- "HR"
+  meta$sample_id <- paste(meta$subject, meta$timepoint, sep = "_")
+  t1 <- c(1, 2, NA, 4, 5)
+  t2 <- c(2, 3, 9, 5, 6)
+  mat <- matrix(c(rbind(t1, t2)),
+    nrow = 1,
+    dimnames = list("f", meta$sample_id)
+  )
+  res <- classify_features(mat, TASKS[TASKS$task == "Training_HR", ], meta)
+  expect_equal(res$auc, 11 / 16)
+  keep <- !is.na(t1)
+  expect_equal(
+    res$p,
+    wilcox.test(t2[keep], t1[keep], paired = TRUE, exact = FALSE)$p.value
+  )
 })
 
 test_that("a paired time task keeps one arm and matches subjects", {

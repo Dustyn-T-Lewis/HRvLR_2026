@@ -6,12 +6,13 @@
 # a subject's own change, one value per subject.
 #
 # The AUC is read as a direction as well as a size: above 0.5 means higher in
-# the case group (the later timepoint, or HR). The p comes from the Wilcoxon
-# test the AUC is a rescaling of, signed-rank when the samples pair. BH runs
-# within a task, never across tasks or feature levels, because each task is its
-# own question with its own null.
+# the case group (the later timepoint, or HR). It is the Mann-Whitney W over
+# n_case x n_control, so it comes out of the same matrixTests call as the
+# rank-sum p; paired tasks take their p from the signed-rank test instead. BH
+# runs within a task, never across tasks or feature levels, because each task
+# is its own question with its own null.
 
-pacman::p_load(here, dplyr, tibble, purrr, pROC)
+pacman::p_load(here, dplyr, tibble, purrr, matrixTests)
 
 source(here("functions", "association.R"))
 
@@ -32,20 +33,6 @@ ARM_WINDOW <- c(
 )
 
 MIN_PER_GROUP <- 3L
-
-auc_one <- function(control, case, paired) {
-  keep <- if (paired) !is.na(control) & !is.na(case) else TRUE
-  control <- control[keep & !is.na(control)]
-  case <- case[keep & !is.na(case)]
-  if (min(length(control), length(case)) < MIN_PER_GROUP) {
-    return(c(auc = NA_real_, p = NA_real_))
-  }
-  roc <- pROC::roc(
-    controls = control, cases = case, direction = "<", quiet = TRUE
-  )
-  test <- stats::wilcox.test(case, control, paired = paired, exact = FALSE)
-  c(auc = as.numeric(pROC::auc(roc)), p = test$p.value)
-}
 
 # Two feature-by-subject matrices, columns in matching subject order.
 task_matrices <- function(mat, task, meta) {
@@ -68,18 +55,28 @@ task_matrices <- function(mat, task, meta) {
 classify_features <- function(mat, task, meta = sample_metadata()) {
   m <- task_matrices(mat, task, meta)
   paired <- task$compare == "time"
-  stats <- vapply(
-    seq_len(nrow(mat)),
-    function(i) auc_one(m$control[i, ], m$case[i, ], paired),
-    numeric(2)
+  if (paired) {
+    incomplete <- is.na(m$case) | is.na(m$control)
+    m$case[incomplete] <- NA
+    m$control[incomplete] <- NA
+  }
+  ranks <- matrixTests::row_wilcoxon_twosample(
+    m$case, m$control,
+    exact = FALSE
   )
+  p <- if (paired) {
+    matrixTests::row_wilcoxon_paired(m$case, m$control, exact = FALSE)$pvalue
+  } else {
+    ranks$pvalue
+  }
+  too_few <- pmin(ranks$obs.x, ranks$obs.y) < MIN_PER_GROUP
   tibble(
     task = task$task,
     feature = rownames(mat),
     n_control = ncol(m$control),
     n_case = ncol(m$case),
-    auc = stats["auc", ],
-    p = stats["p", ]
+    auc = if_else(too_few, NA, ranks$statistic / (ranks$obs.x * ranks$obs.y)),
+    p = if_else(too_few, NA, p)
   ) |>
     mutate(bh = stats::p.adjust(.data$p, "BH"))
 }

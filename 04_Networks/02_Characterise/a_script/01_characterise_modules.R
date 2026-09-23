@@ -6,22 +6,19 @@
 # against the genome would reward any module for being muscle. BH runs within
 # each module.
 #
-# The STRING check asks whether a module's members share more high-confidence
-# edges (combined score >= 700) than the same number of proteins drawn from
-# this proteome at random. The null shuffles module labels over the proteins
-# STRING can map, so it inherits this dataset's detection bias rather than
-# STRING's own background.
+# The STRING check is STRINGdb's PPI enrichment at combined score >= 700, with
+# the background set to the detected proteins STRING can map, so a module is
+# compared with this proteome rather than the genome. STRINGdb's expected
+# edge count accounts for each member's degree, which a plain label shuffle
+# does not. Read from the local v12 files in 00_input/downloads.
 
-pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr, clusterProfiler)
+pacman::p_load(here, dplyr, tidyr, tibble, purrr, clusterProfiler, STRINGdb)
 
 source(here("functions", "shared_pathway_utils.R"))
 source(here("functions", "shared_utils.R"))
 
-set.seed(42)
-
 OUT_DIR <- here("04_Networks", "02_Characterise", "c_data")
 STRING_MIN_SCORE <- 700L
-N_PERM <- 999L
 N_HUBS <- 10L
 
 modules <- readRDS(here("04_Networks", "01_Modules", "c_data", "modules.rds"))
@@ -29,13 +26,13 @@ gs <- readRDS(here("03_Pathways", "01_Gene_Sets", "c_data", "gene_sets.rds"))
 members <- filter(modules$membership, .data$module != "grey")
 
 term2gene <- enframe(gs$sets, "set", "uniprot_id") |> unnest("uniprot_id")
-ora <- compareCluster(
+ora_fit <- compareCluster(
   split(members$uniprot_id, members$module),
   fun = "enricher", TERM2GENE = term2gene, universe = gs$universe,
   minGSSize = SET_FLOOR, maxGSSize = SET_CEILING,
   pvalueCutoff = 1, qvalueCutoff = 1
-) |>
-  as_tibble() |>
+)
+ora <- as_tibble(ora_fit) |>
   transmute(
     module = as.character(.data$Cluster), set = .data$ID,
     gene_ratio = .data$GeneRatio, bg_ratio = .data$BgRatio,
@@ -51,51 +48,27 @@ module_theme <- ora |>
   count(.data$module, .data$theme, name = "n_sets") |>
   slice_max(.data$n_sets, n = 1, by = "module", with_ties = FALSE)
 
-aliases <- read_tsv(
-  here("00_input", "downloads", "9606.protein.aliases.v12.0.txt.gz"),
-  col_names = c("string_id", "alias", "source"), comment = "#",
-  show_col_types = FALSE
-) |>
-  filter(
-    .data$source == "UniProt_AC",
-    .data$alias %in% modules$membership$uniprot_id
+string_db <- STRINGdb$new(
+  version = "12.0", species = 9606, score_threshold = STRING_MIN_SCORE,
+  network_type = "full", input_directory = here("00_input", "downloads")
+)
+mapped <- string_db$map(
+  as.data.frame(modules$membership), "uniprot_id",
+  removeUnmappedRows = TRUE
+)
+string_db$set_background(mapped$STRING_id)
+string_check <- mapped |>
+  filter(.data$module != "grey") |>
+  summarise(n_mapped = n(), ids = list(.data$STRING_id), .by = "module") |>
+  mutate(
+    enrichment = map(.data$ids, string_db$get_ppi_enrichment),
+    edges = map_dbl(.data$enrichment, "edges"),
+    expected = map_dbl(.data$enrichment, "lambda"),
+    ratio = .data$edges / .data$expected,
+    p = map_dbl(.data$enrichment, "enrichment"),
+    bh = p.adjust(.data$p, "BH")
   ) |>
-  distinct(.data$alias, .keep_all = TRUE)
-links <- read_delim(
-  here("00_input", "downloads", "9606.protein.links.v12.0.txt.gz"),
-  delim = " ", show_col_types = FALSE
-) |>
-  filter(
-    .data$combined_score >= STRING_MIN_SCORE,
-    .data$protein1 %in% aliases$string_id,
-    .data$protein2 %in% aliases$string_id,
-    .data$protein1 < .data$protein2
-  )
-
-mapped <- modules$membership |>
-  inner_join(aliases, by = c(uniprot_id = "alias"))
-label <- setNames(mapped$module, mapped$string_id)
-edges_i <- links$protein1
-edges_j <- links$protein2
-
-within_edges <- function(lab) {
-  same <- lab[edges_i] == lab[edges_j]
-  table(factor(lab[edges_i][same], levels = unique(members$module)))
-}
-observed <- within_edges(label)
-null <- replicate(N_PERM, within_edges(setNames(sample(label), names(label))))
-
-string_check <- tibble(
-  module = names(observed),
-  n_mapped = as.integer(table(label)[names(observed)]),
-  edges = as.integer(observed),
-  null_median = apply(null, 1, stats::median),
-  null_lo = apply(null, 1, stats::quantile, 0.025),
-  null_hi = apply(null, 1, stats::quantile, 0.975),
-  enrichment = .data$edges / .data$null_median,
-  p = (1 + rowSums(null >= as.integer(observed))) / (N_PERM + 1)
-) |>
-  mutate(bh = p.adjust(.data$p, "BH"))
+  select(-"ids", -"enrichment")
 
 top_set <- ora |>
   slice_min(.data$p, n = 1, by = "module", with_ties = FALSE) |>
@@ -108,21 +81,19 @@ labels <- count(members, .data$module, name = "n_proteins") |>
     by = "module"
   ) |>
   left_join(
-    select(string_check, "module",
-      string_enrichment = "enrichment", string_p = "p"
-    ),
+    select(string_check, "module", string_ratio = "ratio", string_bh = "bh"),
     by = "module"
   )
 
 clear_dir(OUT_DIR)
 characterisation <- list(
   labels = labels, ora = ora, hubs = hubs, string = string_check,
-  string_min_score = STRING_MIN_SCORE, n_perm = N_PERM
+  ora_fit = ora_fit, string_min_score = STRING_MIN_SCORE
 )
 saveRDS(characterisation, file.path(OUT_DIR, "module_characterisation.rds"))
-write_workbook(
-  file.path(OUT_DIR, "module_characterisation.xlsx"),
-  characterisation[c("labels", "ora", "hubs", "string")]
+openxlsx::write.xlsx(
+  characterisation[c("labels", "ora", "hubs", "string")],
+  file.path(OUT_DIR, "module_characterisation.xlsx")
 )
 
-print(as.data.frame(select(labels, -"hubs")), row.names = FALSE, digits = 3)
+print(as.data.frame(select(string_check, -"n_mapped")), digits = 3)

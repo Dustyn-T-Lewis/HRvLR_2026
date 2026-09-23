@@ -44,7 +44,7 @@ screens <- c(
 
 clear_dir(OUT_DIR)
 saveRDS(screens, file.path(OUT_DIR, "module_screens.rds"))
-write_workbook(file.path(OUT_DIR, "module_screens.xlsx"), screens)
+openxlsx::write.xlsx(screens, file.path(OUT_DIR, "module_screens.xlsx"))
 
 message(sprintf("eigengene within-subject correlation: %.3f", correlation))
 print(

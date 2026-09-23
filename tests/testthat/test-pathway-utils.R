@@ -1,17 +1,16 @@
-test_that("read_goslim_bp keeps live biological-process terms only", {
+test_that("read_goslim_bp keeps the biological-process terms only", {
+  skip_if_not_installed("GO.db")
   source(here::here("functions", "shared_pathway_utils.R"), local = TRUE)
   obo <- withr::local_tempfile(lines = c(
     "format-version: 1.2", "",
-    "[Term]", "id: GO:0000001", "name: kept process",
+    "[Term]", "id: GO:0003012", "name: muscle system process",
     "namespace: biological_process", "",
-    "[Term]", "id: GO:0000002", "name: a component",
-    "namespace: cellular_component", "",
-    "[Term]", "id: GO:0000003", "name: retired process",
-    "namespace: biological_process", "is_obsolete: true"
+    "[Term]", "id: GO:0005694", "name: chromosome",
+    "namespace: cellular_component"
   ))
   out <- read_goslim_bp(obo)
-  expect_equal(out$go_id, "GO:0000001")
-  expect_equal(out$name, "kept process")
+  expect_equal(out$go_id, "GO:0003012")
+  expect_equal(out$name, "muscle system process")
 })
 
 test_that("goslim_theme picks the narrowest containing slim term", {

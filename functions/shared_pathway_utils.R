@@ -11,22 +11,9 @@ SET_CEILING <- 500L
 # The biological-process terms of the GO Consortium's generic slim, read from
 # the tracked .obo rather than typed out, so the list moves with the release.
 read_goslim_bp <- function(obo = here("00_input", "goslim_generic.obo")) {
-  lines <- readLines(obo)
-  starts <- which(lines == "[Term]")
-  ends <- c(starts[-1] - 1L, length(lines))
-  stanzas <- Map(\(s, e) lines[s:e], starts, ends)
-  field <- function(st, key) {
-    hit <- grep(paste0("^", key, ": "), st, value = TRUE)
-    if (length(hit)) sub(paste0("^", key, ": "), "", hit[1]) else NA_character_
-  }
-  tibble(
-    go_id = vapply(stanzas, field, "", key = "id"),
-    name = vapply(stanzas, field, "", key = "name"),
-    namespace = vapply(stanzas, field, "", key = "namespace"),
-    obsolete = vapply(stanzas, \(st) any(st == "is_obsolete: true"), NA)
-  ) |>
-    filter(.data$namespace == "biological_process", !.data$obsolete) |>
-    select("go_id", "name")
+  ids <- GSEABase::ids(GSEABase::getOBOCollection(obo))
+  ids <- ids[AnnotationDbi::Ontology(ids) %in% "BP"]
+  tibble(go_id = ids, name = unname(AnnotationDbi::Term(ids)))
 }
 
 # Each GO term's theme is its most specific slim ancestor: of the slim terms

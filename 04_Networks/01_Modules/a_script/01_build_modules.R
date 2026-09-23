@@ -66,12 +66,12 @@ modules <- list(
 
 clear_dir(OUT_DIR)
 saveRDS(modules, file.path(OUT_DIR, "modules.rds"))
-write_workbook(file.path(OUT_DIR, "modules.xlsx"), list(
+openxlsx::write.xlsx(list(
   membership = membership,
   eigengenes = as_tibble(t(eigengenes), rownames = "sample_id"),
   subject_icc = icc,
   soft_threshold = wg$sft$fitIndices
-))
+), file.path(OUT_DIR, "modules.xlsx"))
 
 message(sprintf(
   "power %d (signed R2 = %.3f, mean k = %.1f); %d modules, %d grey of %d",

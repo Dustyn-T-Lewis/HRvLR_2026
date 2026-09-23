@@ -6,10 +6,8 @@
 # label. Scored on the missForest matrix because a rank needs every protein
 # present; the sets are the same 15-to-500 detected-member sets fry tested.
 
-pacman::p_load(here, dplyr, purrr)
+pacman::p_load(here, dplyr, purrr, singscore, GSEABase)
 
-source(here("functions", "shared_singscore.R"))
-source(here("functions", "shared_pathway_utils.R"))
 source(here("functions", "association.R"))
 
 OUT_DIR <- here("03_Pathways", "03_Set_Scores", "c_data")
@@ -24,7 +22,10 @@ imputed <- readRDS(here(
 abund <- as.matrix(imputed$data)
 stopifnot(identical(colnames(abund), proteins$meta$sample_id))
 
-scores <- score_singscore(abund, gs$sets, min_size = SET_FLOOR)
+collection <- GeneSetCollection(
+  imap(gs$sets, \(ids, name) GeneSet(ids, setName = name))
+)
+scores <- multiScore(rankGenes(abund), upSetColc = collection)$Scores
 stopifnot(identical(rownames(scores), gs$catalog$set))
 
 set_scores <- list(

@@ -116,22 +116,19 @@ saveRDS(
   ),
   file.path(OUT_DIR, "set_tests.rds")
 )
-write_workbook(
-  file.path(OUT_DIR, "set_tests.xlsx"),
-  c(
-    list(summary = set_tests |>
-      summarise(
-        n_sets = n(),
-        fry_nominal = sum(.data$fry_p < 0.05),
-        fry_expected = 0.05 * n(),
-        fry_fdr05 = sum(.data$fry_fdr < 0.05),
-        fgsea_padj05 = sum(.data$fgsea_padj < 0.05, na.rm = TRUE),
-        fgsea_main = sum(.data$main, na.rm = TRUE),
-        .by = c("contrast", "collection")
-      )),
-    split(set_tests, set_tests$contrast)
-  )
-)
+openxlsx::write.xlsx(c(
+  list(summary = set_tests |>
+    summarise(
+      n_sets = n(),
+      fry_nominal = sum(.data$fry_p < 0.05),
+      fry_expected = 0.05 * n(),
+      fry_fdr05 = sum(.data$fry_fdr < 0.05),
+      fgsea_padj05 = sum(.data$fgsea_padj < 0.05, na.rm = TRUE),
+      fgsea_main = sum(.data$main, na.rm = TRUE),
+      .by = c("contrast", "collection")
+    )),
+  split(set_tests, set_tests$contrast)
+), file.path(OUT_DIR, "set_tests.xlsx"))
 
 message(sprintf("within-subject correlation, imputed: %.3f", correlation))
 print(
