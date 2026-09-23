@@ -2,7 +2,7 @@
 # they move, then the contrasts and the two screens.
 # Reads only 04_Networks c_data. Pages describe; none of them concludes.
 
-pacman::p_load(here, dplyr, tidyr, forcats, ggplot2, patchwork)
+pacman::p_load(here, dplyr, tidyr, forcats, purrr, ggplot2, patchwork)
 
 source(here("functions", "contrasts.R"))
 source(here("functions", "screen_pages.R"))
@@ -74,74 +74,69 @@ p_sizes <- ggplot(size_icc, aes(.data$n_proteins, .data$module)) +
       "Modules are defined on within-subject-centred data so that subject ",
       "identity cannot build them; a high ICC here means the scored ",
       "eigengene still differs between people. ",
-      "Data: 04_Networks/01_Modules/c_data/modules.xlsx, sheet subject_icc."
+      "Hubs (highest kME): ",
+      paste(
+        sprintf("%s: %s", char$labels$module, char$labels$hubs),
+        collapse = "; "
+      ),
+      ". Data: 04_Networks/01_Modules/c_data/modules.xlsx, sheet subject_icc."
     )
   ) +
   FIG_THEME
 
-ora_top <- char$ora |>
-  filter(.data$bh < 0.05) |>
-  slice_min(.data$p, n = 4, by = "module", with_ties = FALSE) |>
-  left_join(select(char$labels, "module", "hubs"), by = "module") |>
-  mutate(
-    strip = sprintf("%s: %s", .data$module, stringr::str_trunc(.data$hubs, 60)),
-    strip = factor(.data$strip, levels = unique(.data$strip[order(match(
-      .data$module, module_levels
-    ))])),
-    label = clean_set_name(.data$set, 45)
-  )
-p_ora <- ggplot(ora_top, aes(-log10(.data$bh), fct_rev(.data$label))) +
-  geom_segment(aes(x = 0, xend = -log10(.data$bh)), colour = "grey75") +
-  geom_point(aes(size = .data$count, colour = .data$collection)) +
-  facet_wrap(~strip, scales = "free_y", ncol = 2) +
-  scale_colour_manual(values = DB_COLORS) +
+p_ora <- char$ora_fit |>
+  clusterProfiler::filter(.data$p.adjust < 0.05) |>
+  enrichplot::dotplot(showCategory = 3, label_format = 50, font.size = 7) +
   labs(
-    title = "What each module is: enrichment and hubs",
+    title = "What each module is: enrichment",
     subtitle = sprintf(
-      "clusterProfiler ORA, universe %d proteins; top 4 at BH < 0.05",
-      length(unique(modules$membership$uniprot_id))
+      "clusterProfiler ORA, universe %d; top 3 sets per module, BH < 0.05",
+      nrow(modules$membership)
     ),
-    x = "-log10 BH", y = NULL, size = "Members", colour = "Collection",
     caption = caption(
-      "Panel title: module and its ten highest-kME proteins (hubs). Points: ",
-      "the four most enriched sets per module at BH < 0.05 (BH within ",
-      "module); modules with none are absent. ",
+      "enrichplot::dotplot of the compareCluster result. Columns: modules ",
+      "(members with a set in brackets). Dot: one of the three sets with the ",
+      "smallest p in that module at BH < 0.05; size = gene ratio, colour = ",
+      "BH within module; modules with none are absent. Hubs per module: ",
+      "caption of the module-size page. ",
       "Data: 04_Networks/02_Characterise/c_data/module_characterisation.xlsx, ",
-      "sheets ora and hubs."
+      "sheet ora."
     )
   ) +
-  FIG_THEME +
   theme(
-    axis.text.y = element_text(size = 6),
-    strip.text = element_text(size = 7, hjust = 0)
+    plot.caption = element_text(hjust = 0, size = 8, colour = "grey25"),
+    plot.caption.position = "plot"
   )
 
 p_string <- char$string |>
   mutate(module = factor(.data$module, levels = rev(module_levels))) |>
   ggplot(aes(y = .data$module)) +
-  geom_linerange(
-    aes(xmin = .data$null_lo, xmax = .data$null_hi),
-    colour = "grey75", linewidth = 3
+  geom_segment(
+    aes(x = .data$expected, xend = .data$edges, yend = .data$module),
+    colour = "grey70"
   ) +
-  geom_point(aes(x = .data$null_median), shape = 124, size = 4) +
+  geom_point(aes(x = .data$expected), shape = 124, size = 4) +
   geom_point(aes(x = .data$edges, fill = .data$module), shape = 21, size = 3) +
+  geom_text(
+    aes(x = .data$edges, label = sprintf("%.1fx", .data$ratio)),
+    hjust = -0.4, size = 2.8
+  ) +
   scale_fill_manual(values = module_colours, guide = "none") +
-  scale_x_log10() +
+  scale_x_log10(expand = expansion(mult = c(0.05, 0.15))) +
   labs(
     title = "STRING edges within each module",
     subtitle = sprintf(
-      "STRING v12, combined score >= %d; null of %d module-label shuffles",
-      char$string_min_score, char$n_perm
+      "STRINGdb PPI enrichment, v12, score >= %d; detected background",
+      char$string_min_score
     ),
     x = "Within-module edges (log scale)", y = NULL,
     caption = caption(
       "Point: observed high-confidence STRING edges among a module's ",
-      "members. Grey bar: the null's central 95% (2.5th to 97.5th ",
-      "percentile); tick: its median. The null reassigns module labels at ",
-      "random over the ",
-      "proteins STRING maps, preserving module sizes. ",
-      "Data: 04_Networks/02_Characterise/c_data/module_characterisation.xlsx, ",
-      "sheet string."
+      "members. Tick: edges STRINGdb expects from the members' degrees in ",
+      "the detected background. Label: observed / expected. Modules at ",
+      "BH < 0.05: ", sum(char$string$bh < 0.05), " of ", nrow(char$string),
+      ". Data: 04_Networks/02_Characterise/c_data/",
+      "module_characterisation.xlsx, sheet string."
     )
   ) +
   FIG_THEME
@@ -216,15 +211,18 @@ p_auc <- auc_page(screens$classify, "Module", SCREENS)
 p_assoc <- association_page(screens$chance_associate, "Module", SCREENS)
 
 write_packet(
-  list(
-    "Soft-threshold choice" = p_sft,
-    "Module sizes and subject dependence" = p_sizes,
-    "What each module is: enrichment and hubs" = p_ora,
-    "STRING edges within each module" = p_string,
-    "Eigengene trajectories" = p_traj,
-    "Module eigengenes across the nine contrasts" = p_contrasts,
-    "Module AUC per classification task" = p_auc,
-    "Module association with phenotype" = p_assoc
+  c(
+    list(
+      "Soft-threshold choice" = p_sft,
+      "Module sizes and subject dependence" = p_sizes,
+      "What each module is: enrichment" = p_ora,
+      "STRING edges within each module" = p_string,
+      "Eigengene trajectories" = p_traj,
+      "Module eigengenes across the nine contrasts" = p_contrasts,
+      "Module AUC per classification task" = p_auc,
+      "Module association with phenotype" = p_assoc
+    ),
+    screen_hit_pages(screens, "Module", SCREENS)
   ),
   stage("04_Packet", "b_reports", "04_Networks_packet.pdf"),
   title = "HRvLR 04 Networks"

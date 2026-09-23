@@ -1,7 +1,7 @@
 # The protein packet: contrasts, their calibration, then the two screens.
 # Reads only 02_Proteins c_data. Pages describe; none of them concludes.
 
-pacman::p_load(here, dplyr, tidyr, readr, ggplot2)
+pacman::p_load(here, dplyr, tidyr, readr, purrr, ggplot2)
 
 source(here("functions", "contrasts.R"))
 source(here("functions", "screen_pages.R"))
@@ -101,13 +101,47 @@ SCREENS <- "02_Proteins/02_Classify_Associate/c_data/protein_screens.xlsx"
 p_auc <- auc_page(screens$classify, "Protein", SCREENS)
 p_assoc <- association_page(screens$chance_associate, "Protein", SCREENS)
 
+# Gene symbols label the hit pages; a symbol two proteins share keeps its
+# accession so the rows stay distinct.
+gene_label <- dep |>
+  distinct(.data$uniprot_id, .data$gene) |>
+  mutate(label = if_else(
+    is.na(.data$gene) | duplicated(.data$gene) |
+      duplicated(.data$gene, fromLast = TRUE),
+    paste0(coalesce(.data$gene, "?"), " (", .data$uniprot_id, ")"),
+    .data$gene
+  ))
+label_of <- \(id) gene_label$label[match(id, gene_label$uniprot_id)]
+
+contrast_hits <- hit_pages(
+  dep |>
+    transmute(
+      label = label_of(.data$uniprot_id), column = .data$contrast,
+      effect = .data$logFC, p = .data$P.Value, bh = .data$adj.P.Val
+    ),
+  CONTRAST_NAMES,
+  title = "Protein contrast hits",
+  subtitle = "limma via proteoDA, nominal p per contrast",
+  effect_label = "log2 FC",
+  data_note = "02_Proteins/01_Differential/c_data/01_dep_results.xlsx"
+)
+
 write_packet(
-  list(
-    "Proteins called per contrast" = p_counts,
-    "Volcano per contrast" = p_volcano,
-    "P-value distribution per contrast" = p_hist,
-    "Protein AUC per classification task" = p_auc,
-    "Protein association with phenotype" = p_assoc
+  c(
+    list(
+      "Proteins called per contrast" = p_counts,
+      "Volcano per contrast" = p_volcano,
+      "P-value distribution per contrast" = p_hist
+    ),
+    list_flatten(
+      list("Protein contrast hits" = contrast_hits),
+      name_spec = "{outer} ({inner})"
+    ),
+    list(
+      "Protein AUC per classification task" = p_auc,
+      "Protein association with phenotype" = p_assoc
+    ),
+    screen_hit_pages(screens, "Protein", SCREENS, label_of)
   ),
   here("02_Proteins", "03_Packet", "b_reports", "02_Proteins_packet.pdf"),
   title = "HRvLR 02 Proteins"

@@ -1,8 +1,6 @@
 # Palettes, theme and the packet writer every stage's last step uses.
 
-pacman::p_load(here, ggplot2, scales, stringr, qpdf)
-
-source(here("functions", "shared_utils.R"))
+pacman::p_load(here, ggplot2, scales, stringr)
 
 # Two blue/red mappings coexist and must not be conflated: GROUP_COLORS encode
 # responder (HR dark blue, LR dark red); DIR_COLORS encode direction (up light
@@ -60,17 +58,15 @@ clean_set_name <- function(set, width = 50) {
     str_trunc(width)
 }
 
-# A packet is a contents page followed by one page per plot, merged into one
-# PDF. Each page carries its own title, subtitle (method and counts) and
-# caption (what each channel encodes, which table holds the data), so a page
-# pulled out of the packet still explains itself.
+# A packet is a contents page followed by one page per plot, drawn on one
+# multi-page PDF device. Each page carries its own title, subtitle (method and
+# counts) and caption (what each channel encodes, which table holds the data),
+# so a page pulled out of the packet still explains itself.
 write_packet <- function(pages, path, title, width = 280, height = 200) {
-  page_dir <- file.path(dirname(path), "pages")
-  clear_dir(page_dir)
   contents <- ggplot() +
     annotate(
       "text",
-      x = 0, y = -seq_along(pages), hjust = 0, size = 4,
+      x = 0, y = -seq_along(pages), hjust = 0, size = 3.4,
       label = sprintf("%2d   %s", seq_along(pages) + 1L, names(pages))
     ) +
     scale_x_continuous(limits = c(0, 1)) +
@@ -81,15 +77,8 @@ write_packet <- function(pages, path, title, width = 280, height = 200) {
       plot.title = element_text(face = "bold", size = 16),
       plot.margin = margin(20, 20, 20, 20)
     )
-  pages <- c(list(contents), pages)
-  files <- file.path(page_dir, sprintf("p%02d.pdf", seq_along(pages)))
-  for (i in seq_along(pages)) {
-    ggsave(files[i], pages[[i]],
-      width = width, height = height, units = "mm", device = "pdf",
-      bg = "white"
-    )
-  }
-  qpdf::pdf_combine(files, path)
-  unlink(page_dir, recursive = TRUE)
+  grDevices::pdf(path, width = width / 25.4, height = height / 25.4)
+  on.exit(grDevices::dev.off())
+  for (page in c(list(contents), pages)) print(page)
   invisible(path)
 }

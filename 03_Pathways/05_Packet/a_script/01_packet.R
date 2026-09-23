@@ -2,7 +2,7 @@
 # nine contrasts, per-sample scores, then the two screens.
 # Reads only 03_Pathways c_data. Pages describe; none of them concludes.
 
-pacman::p_load(here, dplyr, tidyr, forcats, ggplot2, patchwork)
+pacman::p_load(here, dplyr, tidyr, forcats, purrr, ggplot2, patchwork)
 
 source(here("functions", "contrasts.R"))
 source(here("functions", "screen_pages.R"))
@@ -189,15 +189,51 @@ p_assoc <- association_page(
   chance_table(screens$associate, "window", "phenotype"), "Pathway", SCREENS
 )
 
+# Set labels carry a collection tag, so a Reactome and a GO:BP set with the
+# same wording stay on separate rows.
+COLLECTION_TAG <- c(
+  Hallmark = "[H]", Reactome = "[R]", "GO:BP" = "[GO]", "GO Slim" = "[Slim]"
+)
+set_label <- gs$catalog |>
+  transmute(
+    set = .data$set,
+    label = paste(
+      COLLECTION_TAG[.data$collection], clean_set_name(.data$set, 55)
+    )
+  )
+label_of <- \(set) set_label$label[match(set, set_label$set)]
+
+fry_hits <- hit_pages(
+  tests |>
+    transmute(
+      label = label_of(.data$set), column = .data$contrast,
+      effect = .data$nes, p = .data$fry_p, bh = .data$fry_fdr
+    ),
+  CONTRAST_NAMES,
+  title = "Pathway contrast hits (fry)",
+  subtitle = "fry p per contrast, filled by fgsea NES for direction",
+  effect_label = "NES",
+  data_note = "03_Pathways/02_Set_Tests/c_data/set_tests.xlsx"
+)
+
 write_packet(
-  list(
-    "Gene-set universe and GO-Slim themes" = p_catalog,
-    "fry set tests per contrast and collection" = p_fry,
-    "Leading non-redundant sets by fgsea" = p_nes,
-    "Theme-level direction per contrast" = p_theme,
-    "Samples in pathway-score space" = p_pca,
-    "Pathway AUC per classification task" = p_auc,
-    "Pathway association with phenotype" = p_assoc
+  c(
+    list(
+      "Gene-set universe and GO-Slim themes" = p_catalog,
+      "fry set tests per contrast and collection" = p_fry
+    ),
+    list_flatten(
+      list("Pathway contrast hits (fry)" = fry_hits),
+      name_spec = "{outer} ({inner})"
+    ),
+    list(
+      "Leading non-redundant sets by fgsea" = p_nes,
+      "Theme-level direction per contrast" = p_theme,
+      "Samples in pathway-score space" = p_pca,
+      "Pathway AUC per classification task" = p_auc,
+      "Pathway association with phenotype" = p_assoc
+    ),
+    screen_hit_pages(screens, "Pathway", SCREENS, label_of)
   ),
   stage("05_Packet", "b_reports", "03_Pathways_packet.pdf"),
   title = "HRvLR 03 Pathways"

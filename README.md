@@ -56,13 +56,14 @@ singscore gives the set × sample matrix the screens read.
 subject and scored on raw abundance (`functions/shared_wgcna.R`): power 8, 12
 modules, 265 proteins unassigned. Each module is characterised by
 clusterProfiler ORA against the 03 sets (universe the 1900 detected proteins),
-its ten highest-kME hubs, its dominant GO-Slim theme, and its STRING v12
-edge density against a null that shuffles module labels. Eigengenes are then
+its ten highest-kME hubs, its dominant GO-Slim theme, and STRINGdb's PPI
+enrichment against the detected proteins as background. Eigengenes are then
 fitted on the nine contrasts with the protein design.
 
 **The screens** (`functions/classify.R`, the same code at all three levels):
 
-- *Classification.* Per-feature AUC (pROC) and Wilcoxon p on seven tasks that
+- *Classification.* Per-feature Mann-Whitney AUC and Wilcoxon p
+  (`matrixTests` row tests) on seven tasks that
   mirror the contrasts: T2 vs T1 and T3 vs T2 within each arm (paired), and HR
   vs LR on the T1 level, the training change and the acute change.
 - *Association.* limma with a continuous predictor, one row per subject, on
@@ -88,10 +89,10 @@ No sweep-level correction is applied; results are exploratory.
   metabolism up) and Hallmark heme metabolism in Acute_LR, Acute_HRvLR and
   Acute_Interaction. The one association is Reactome basal-body anchoring
   against the acute change and `comp_hypertrophy`.
-- **Modules.** Six modules share more STRING edges than the null (BH < 0.05):
-  magenta (translation, 16×), tan (respiratory chain, 19×), pink (striated
-  muscle contraction, 11×), purple (translation initiation), yellow (aerobic
-  respiration) and brown (cytoskeleton). The one association is greenyellow,
+- **Modules.** All 12 modules share more STRING edges than STRINGdb expects
+  from their members' degrees (BH < 0.05), from 1.1× (turquoise) to 10× (pink,
+  striated muscle contraction); tan (respiratory chain, 4.2×), magenta
+  (translation, 2.6×) and brown (cytoskeleton, 2.4×) follow. The one association is greenyellow,
   the extracellular-matrix module, against the acute change and `d_mcsa`
   (BH 0.037 across 12 modules). An ECM module against whole-muscle CSA was
   also the closest result in the earlier continuous design; see History.
@@ -119,9 +120,22 @@ Rscript setup.R      # restore the renv library once
 Rscript run_all.R    # 01 to 04, one R session per step, about 3 minutes
 ```
 
-`run_all.R` logs each step to `.runlogs/`. The packets land in
-`02_Proteins/03_Packet/b_reports/`, `03_Pathways/05_Packet/b_reports/` and
-`04_Networks/04_Packet/b_reports/`. Tests: `Rscript tests/testthat.R`.
+`run_all.R` logs each step to `.runlogs/`. Tests: `Rscript tests/testthat.R`.
+
+## The packets
+
+One PDF per stage, tracked in git, each opening on a contents page:
+
+- `02_Proteins/03_Packet/b_reports/02_Proteins_packet.pdf`
+- `03_Pathways/05_Packet/b_reports/03_Pathways_packet.pdf`
+- `04_Networks/04_Packet/b_reports/04_Networks_packet.pdf`
+
+Summary pages come first (counts against chance, calibration, the set
+universe, module construction). Hit pages follow: every feature reaching
+nominal p < 0.05 anywhere, drawn as a dot matrix against the nine contrasts,
+the seven classification tasks, and the ten phenotypes in each window, 75
+rows to a page. Dot fill is the effect, size is −log10 p, and a black ring
+marks BH < 0.05. Each caption names the workbook sheet holding the numbers.
 
 STRING v12 (`9606.protein.links` and `.aliases`) is read from
 `00_input/downloads/`, which git ignores; download both from string-db.org

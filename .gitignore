@@ -35,6 +35,8 @@ docs/
 # in c_data/ stay tracked so a clone builds figures without re-running upstream.
 **/b_reports/**/*.png
 **/b_reports/**/*.pdf
+# The stage packets are the readable record of each stage, so they are kept.
+!**/b_reports/*_packet.pdf
 
 # 01_run_dep_imputed.R writes a combined_results_pi.csv for each arm. Only the
 # missforest one is read again -- test-pi-score.R uses it as its equivalence
