@@ -1,7 +1,7 @@
 # 04 · Network
 
 Finds proteins that move together in this data, whether or not a curated database groups them,
-and asks the same questions of those groups that `02` and `03` asked of proteins and sets.
+and puts those groups through the tests `02` and `03` applied to proteins and sets.
 
 | Step | Runs | Writes |
 |---|---|---|
@@ -20,12 +20,12 @@ has the command.
 
 ## Results
 
-Twelve modules at soft power 8; 265 of 1,900 proteins stay unassigned. Several modules name a
-clear biology: pink is striated muscle contraction (hubs TTN, NEB, TPM1), tan and yellow are
-respiratory chain and aerobic respiration, magenta and purple are translation, greenyellow is
-extracellular matrix. All twelve share more STRING edges than their degrees predict (1.1 to 10.1
-times; FDR < 0.05).
+Twelve modules at soft power 8; 285 of 1,900 proteins stay unassigned. Eight modules have a top set at
+FDR < 0.05: purple is striated muscle contraction (hubs TTN, NEB, TPM1), tan respiratory electron
+transport, blue oxidative phosphorylation, brown glycolysis, red mRNA metabolism, greenyellow rRNA
+processing, magenta translation initiation, pink epithelial-mesenchymal transition. All twelve
+share more STRING edges than their degrees predict (1.1 to 10.1 times; FDR < 0.05).
 
 No module clears BH in any contrast, classification task or phenotype association. Nominal hits
 sit at chance: 5 of 108 contrast tests against 5.4 expected, 6 of 96 task tests against 4.8, and
-10 of 360 association tests against 18.
+12 of 360 association tests against 18.

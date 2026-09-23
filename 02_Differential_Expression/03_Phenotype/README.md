@@ -19,15 +19,18 @@ two thirds of the window's subjects observed it.
 | training | d_1rm_ext | 1.96 | 0 |
 | training | d_mcsa | 0.95 | 1 (RPS4X, rho 0.91, n 14) |
 | baseline | d_1rm_ext | 2.36 | 0 |
-| baseline | d_1rm_legpress | 1.22 | 1 (ACSL3, rho −0.87, n 15) |
-| acute | comp_hypertrophy | 1.78 | 0 |
+| baseline | d_1rm_legpress | 1.25 | 1 (ACSL3, rho −0.87, n 15) |
+| baseline | volume_load | 1.46 | 0 |
+| acute | comp_hypertrophy | 1.86 | 0 |
+| acute | d_mcsa | 1.52 | 0 |
 
-The other 25 cells sit between 0.43 and 1.42. The full table is the workbook's `summary` sheet.
-With 14 or 15 subjects the resolvable correlation is about 0.7, so this is a null at that
-resolution, with two isolated exceptions.
+The other 23 cells sit between 0.44 and 1.18. The full table is the workbook's `summary` sheet.
+With 14 or 15 subjects a correlation needs to reach about 0.7 to be detected at 80% power, so the
+screen is null at that resolution apart from RPS4X and ACSL3.
 
 `cor.test`'s "exact" Spearman p is an Edgeworth series above nine observations and returns 0 in
 the far tail, which put two proteins at FDR 0. The t approximation replaces it.
 
 Figures: nominal hits over chance by outcome and window, then one hit matrix per window.
-`by_arm` in the workbook repeats the training correlations inside each arm, descriptively.
+`by_arm` in the workbook repeats the correlations inside each arm and window, descriptively; each
+correlation rests on 4 to 8 subjects.

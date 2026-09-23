@@ -3,7 +3,7 @@
 `RBC_proteome_reference.tsv` is the mature-erythrocyte protein list `01_Filtering` reports beside
 every protein call. Erythrocytes are enucleate, so no transcriptomic atlas (including HPA's
 single-cell erythrocyte RNA) represents their proteome; the membrane skeleton, including band 3 (`SLC4A1`),
-spectrins and protein 4.2, is invisible to RNA and only recognisable from red-cell mass spectrometry.
+spectrins and protein 4.2, is not captured by RNA atlases and is recognisable only from red-cell mass spectrometry.
 The reference collapses five published sources into one lookup.
 
 ## Sources
@@ -17,14 +17,14 @@ protein and `n_sources` how many agree.
 | RESPIRE | Téletchéa et al. 2019, *PLOS ONE* 14(2):e0211043 (PMID 30794542). Repository of Enriched Structures of Proteins Involved in the Red Blood Cell Environment. | 736 curated red-cell proteins |
 | Uniprot | UniProt "Erythrocyte" annotation query (UniProtKB, retrieved 2026-07-23). | 597 erythrocyte-annotated entries |
 | JPR2017 | Bryk & Wiśniewski 2017, *J Proteome Res* 16(8):2752–2761 (doi:10.1021/acs.jproteome.7b00025). Quantitative RBC proteome with copy numbers. | 2,577 quantified proteins |
-| CB2019 | Ravenhill et al. 2019, *Commun Biol* 2:350 (doi:10.1038/s42003-019-0596-y). Erythrocyte surface proteome by plasma-membrane profiling. | 1,534 surface/membrane proteins |
+| CB2019 | Ravenhill et al. 2019, *Commun Biol* 2:350 (doi:10.1038/s42003-019-0596-y). Erythrocyte surface proteome by plasma-membrane profiling. | 1,559 surface/membrane proteins |
 | This study | Bai et al. 2026, *Sci Data* 13 (doi:10.1038/s41597-026-06792-5); ProteomeXchange PXD067677. Mature-RBC membrane + cytoplasm proteome. | 5,264 proteins, largest to date |
 
 Union: 8,011 entries (6,452 with accession, 7,937 with gene); 2,089 backed by two or more sources.
 
 ## Why membership never removes on its own
 
-A deep red-cell proteome shares roughly 70% of any skeletal-muscle proteome (glycolysis, tubulins,
+A deep red-cell proteome shares about two thirds of a skeletal-muscle proteome (glycolysis, tubulins,
 ferritins, chaperones) because both cell types carry the same cytosolic housekeeping program.
 Membership therefore removes nothing. `01_Filtering` reports it as `in_rbc` beside every call,
 and the erythrocyte members of the curated blood list were drawn from it.
@@ -55,9 +55,9 @@ number cannot work:
 
 | observations | proteins | 99.9% null &#124;rho&#124; |
 |---|---|---|
-| 15–25 | 234 | 0.705 |
-| 26–40 | 488 | 0.563 |
-| 41–48 | 1368 | 0.466 |
+| 15–25 | 234 | 0.707 |
+| 26–40 | 488 | 0.560 |
+| 41–48 | 1368 | 0.479 |
 
 A protein seen in 15 samples and one seen in 48 do not draw |rho| from the same distribution.
 One flat cut over-removed the sparse end and under-removed the dense end.
@@ -71,13 +71,13 @@ Protein identity, not covariation. Every member is one of:
 | plasma | 41 | secreted plasma protein (ALB, TF, APO*, SERPIN*, FG*, ITIH*, complementary carriers) |
 | immunoglobulin | 20 | heavy, light and variable chains, plus J chain |
 | erythrocyte | 19 | mature red-cell proteome: band 3, band 4.1, band 4.2, band 7, spectrin α/β, ankyrin-1, CA1, CA2, BPGM, ALAD, PRDX2, BLVRB, PNP, GLUT1, SNCA, CAT, TALDO1, PGD |
-| complement | 10 | C1q–C9, factors B and H, C1 inhibitor |
+| complement | 10 | C1QC, C3, C4B, C5, C8B, C8G, C9, factors B and H, C1 inhibitor |
 | leukocyte | 5 | LYZ, S100A8, S100A9, DEFA3, LCP1 |
 
 Each row carries its `reason`, plus the `blood_cor`, `ery` and `myo` values it had when the list
 was built. Those three columns are evidence only; nothing was included because of them.
 
-## What was deliberately excluded
+## Excluded
 
 Sixteen proteins the old threshold removed are **not** on the list, because covariation with the
 haemoglobin index was their only evidence and they are expressed in myonuclei: RBMX (358
@@ -106,9 +106,9 @@ Downloaded 2026-08-19 from
 <https://current.geneontology.org/ontology/subsets/goslim_generic.obo>.
 The file records its own release in the header: `go/releases/2026-07-26`.
 
-140 terms, of which 129 are GO: 72 biological process, 28 cellular component,
-40 molecular function. The remaining 11 sit in the `external` namespace and are
-cross-references to other ontologies, not GO terms; they are dropped on read.
+140 GO terms: 72 biological process, 28 cellular component, 40 molecular function. The file also
+carries 11 `[Typedef]` stanzas, relation definitions rather than terms. `00_build_gene_sets` builds
+sets from the biological-process terms.
 
 ## Where it lives
 

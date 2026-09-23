@@ -1,6 +1,6 @@
 # 03 · Pathway Enrichment
 
-Tests whether proteins that work together moved together, then scores every sample on every set.
+Tests each gene set on each contrast, then scores every sample on every set and tests the scores.
 
 | Step | Runs | Writes |
 |---|---|---|
@@ -25,7 +25,8 @@ state the encodings and the source table. Findings live here, not on the figures
 ## Methods
 
 **fgsea** is competitive: does a set sit at one end of the protein ranking? **fry** is
-self-contained: did the set move at all under the fitted design? Both run on the same 1,378 sets.
+self-contained: did the set move at all under the fitted design? fry tests all 1,378 sets; fgsea
+tests 1,369 to 1,374 per contrast, since a protein untested in a contrast leaves that ranking.
 fgsea assumes proteins are exchangeable, and co-regulated sets break that; fry does not assume it,
 and takes the subject block and the within-subject correlation. fry reads the imputed matrix,
 because it cannot take a missing value.
@@ -34,7 +35,8 @@ because it cannot take a missing value.
 p-value, never sees a contrast, and a sample's score does not change with the cohort.
 
 **Order: pool, test, then collapse.** All sets are tested and each method's own BH corrects within
-each contrast. `collapsePathways` then marks non-redundant fgsea hits in the `main` column and
+each contrast, pooling the five collections. Set classification and association (step 05) correct
+within collection instead, so each collection keeps its own chance line. `collapsePathways` then marks non-redundant fgsea hits in the `main` column and
 deletes nothing. No set is excluded by name.
 
 ## Results
@@ -52,8 +54,7 @@ deletes nothing. No set is excluded by name.
 | Baseline_HRvLR *(floor)* | 60 | 26 | 0 |
 
 fry finds nothing in any contrast. fgsea calls 60 sets on the floor, more than on the primary
-contrast, so its counts here measure its gene-permutation null rather than biology. None of the
-fgsea lists is a finding.
+contrast, so its counts track its gene-permutation null, and no fgsea list is a finding.
 
 **Classification by set score**, nominal hits over chance, per collection:
 
@@ -68,14 +69,15 @@ fgsea lists is a finding.
 | HR vs LR, training change | 1.18 | 1.94 | 0.30 | 0.47 | 1.03 |
 | HR vs LR, acute change | 1.18 | 0.97 | 0.37 | 0.98 | 0.34 |
 
-The acute bout clears chance in every collection in both arms; training does not; no between-arm
-task does. No set survives BH in any task. With 7 or 8 pairs, the paired Wilcoxon cannot go below
-p = 0.0078, so BH over hundreds of sets is out of reach by construction.
+The acute bout clears chance in every collection in both arms; no other task does so across
+collections. No set survives BH in any task. The paired Wilcoxon has a floor set by the number of
+pairs: 6 pairs (HR training) cannot go below p = 0.031, 7 (HR acute) below 0.016, 8 (LR) below
+0.0078. BH over hundreds of sets is out of reach by construction.
 
 **Association.** Four set-outcome pairs survive BH within collection: peroxisomal protein import
 (Reactome) and peroxisome (KEGG) against `volume_load` over training, GO Slim DNA replication
 against baseline `d_1rm_ext`, and Reactome basal-body anchoring against `comp_hypertrophy` over the
 acute bout. Baseline level against `d_1rm_ext` runs at 3.4 times chance across collections.
 
-**Concordance.** HR and LR NES correlate at rho 0.34 over all sets for training and 0.35 for the
-acute bout. The overlap is weaker than in BFR's two training arms (0.83).
+**Concordance.** HR and LR NES correlate at rho 0.34 over 1,369 sets for training and 0.35 over
+1,370 for the acute bout. The overlap is weaker than in BFR's two training arms (0.83).

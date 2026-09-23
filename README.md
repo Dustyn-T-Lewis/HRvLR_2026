@@ -64,7 +64,7 @@ effect, because HR and LR are different people and a fixed subject term would ab
 between-arm contrast.
 
 The fitted matrix stays unimputed: limma fits each protein on the samples where it was seen. A
-missForest copy is read only by the three methods that need a complete matrix: `fry`, singscore and
+missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and
 WGCNA.
 
 Every screen reports its nominal count beside the count chance predicts, and BH runs within each
@@ -72,10 +72,11 @@ contrast, task, window or collection, never across them.
 
 ## Dependencies
 
-Pinned in `renv.lock`. `proteoDA`, `limma`, `missForest`, `here`, `dplyr`, `tidyr`, `tibble`,
-`purrr`, `ggplot2`, `patchwork`, `writexl`, `readxl`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`,
-`GO.db`, `GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`, `qpdf` and `enrichVolcano` (not on CRAN;
-`renv::hydrate("enrichVolcano")` links a local install). Stage 04 adds `WGCNA`, `lme4`,
+Pinned in `renv.lock`. Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `lme4`, `pROC`,
+`callr`, `qpdf`, `here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`,
+`readxl`, `ggplot2`, `patchwork`, `writexl`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
+`GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano` (not on CRAN;
+`renv::hydrate("enrichVolcano")` links a local install). Stage 04 adds `WGCNA`,
 `clusterProfiler`, `enrichplot` and `STRINGdb`. Rendering needs Quarto.
 
 Earlier designs of this project, a continuous phenotype sweep and a blind subtype search, are in

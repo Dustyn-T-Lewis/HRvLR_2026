@@ -5,7 +5,7 @@ Fits the model, writes the results, and classifies every protein on eight tasks.
 | | |
 |---|---|
 | **Script** | `a_script/02_differential.qmd` |
-| **Reads** | `01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (appendix only) |
+| **Reads** | `01_Design/c_data/design.rds`; for the appendices, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` and, when present, V1's `05_results.xlsx` |
 | **Writes** | `c_data/fit.rds`, `c_data/02_differential.xlsx`, `b_reports/02_differential_figures.pdf` |
 
 ```sh
@@ -52,14 +52,20 @@ there, so each contrast has its own denominator (1,877 to 1,892).
 
 | Contrast | prop. true null | median \|t\| | p < 0.2 |
 |---|---:|---:|---:|
-| Training_HR | 0.90 | 0.79 | 0.25 |
-| Acute_HR | 0.85 | 0.85 | 0.30 |
-| Baseline_HRvLR *(floor)* | 1.00 | 0.61 | 0.16 |
 | Training_Interaction *(primary)* | 1.00 | 0.64 | 0.16 |
+| Acute_Interaction *(secondary)* | 0.96 | 0.73 | 0.24 |
+| Baseline_HRvLR *(floor)* | 1.00 | 0.61 | 0.16 |
+| Training_HR | 0.90 | 0.79 | 0.25 |
+| Training_LR | 1.00 | 0.64 | 0.18 |
+| Acute_HR | 0.85 | 0.85 | 0.30 |
+| Acute_LR | 0.98 | 0.69 | 0.24 |
+| Trained_HRvLR | 1.00 | 0.63 | 0.17 |
+| Acute_HRvLR | 0.94 | 0.76 | 0.24 |
 
-Under a calibrated null these sit at 1, 0.674 and 0.200. The within-arm contrasts carry some
-signal below the BH line; the between-arm contrasts sit at or below the null, the floor among
-them. `treat()` at 1.15-fold returns nothing anywhere.
+Under a calibrated null these sit at 1, 0.674 and 0.200. Five contrasts sit above the null on all
+three: Training_HR, Acute_HR, Acute_LR, Acute_HRvLR and Acute_Interaction. None reaches a BH hit.
+The rest, the floor and the primary contrast among them, sit at or below it. `treat()` at 1.15-fold returns
+nothing anywhere.
 
 ## Classification
 

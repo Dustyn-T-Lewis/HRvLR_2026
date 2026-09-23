@@ -1,7 +1,7 @@
 # 02 · Differential Expression
 
-Takes the normalised DAList and asks what happened to the proteins. Three sub-stages, so a design
-problem surfaces before anything is fitted.
+Fits the normalised DAList and tests each protein. Three sub-stages, so a design problem surfaces
+before anything is fitted.
 
 ```
 01_Preprocess/02_Normalization/c_data/DAList_normalized.rds
@@ -33,12 +33,12 @@ nine independent questions.
 ## Notes
 
 **No contrast has a BH hit.** The lowest adjusted p across all nine is 0.071 (Acute_HR). The
-primary contrast could detect a median effect of 1.04 log2 units at 80% power, so an empty
-interaction says nothing about effects smaller than about twofold.
+primary contrast could detect a median effect of 1.04 log2 units at 80% power, so the empty
+interaction cannot exclude effects smaller than about twofold.
 
 **The floor is not a negative control.** The HR/LR label was cut from the training outcome, so a
-real baseline difference would be predictive. It returns nothing, and its null-calibration numbers
-are what a between-arm contrast looks like with no signal.
+real baseline difference would be predictive. It has no hits, and its null-calibration numbers are
+the between-arm null reference.
 
 **Subject is a random effect.** HR and LR are different people, so a fixed subject term would
 absorb every between-arm contrast. The within-subject correlation is 0.189.

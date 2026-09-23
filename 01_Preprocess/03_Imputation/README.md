@@ -15,5 +15,7 @@ quarto render 01_Preprocess/03_Imputation/a_script/03_impute.qmd --output-dir ..
 missForest with the ranger backend named, 10 iterations, 100 trees, seed 42, rows sorted before
 the fit. Out-of-bag NRMSE 0.151.
 
-Read by `03_Pathway_Enrichment/01` (`fry`), `03_Pathway_Enrichment/04` (singscore) and
-`04_Network/01` (WGCNA). The differential fit never sees an imputed value.
+Read by `03_Pathway_Enrichment/01` (`fry`), `03_Pathway_Enrichment/04` (singscore),
+`04_Network/01` (WGCNA) and the `fry` concordance appendix of `02_Differential`.
+`03_Pathway_Enrichment/05` reads only its sample sheet. The differential fit never sees an imputed
+value.

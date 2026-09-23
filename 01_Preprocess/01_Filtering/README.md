@@ -45,8 +45,10 @@ Each verdict pools the curated list and the HPA rules that reach the same class.
 nothing. Its old cut (0.45) rested on a permutation null that recomputes to 0.59 and depends on
 how many samples a protein was seen in. The last section of the notebook shows this.
 
-**The T3 biopsies carry more blood in LR.** On the log2 haemoglobin index the arm-by-T3 term is
-b = −1.21 (p = 0.032). The confound does not cancel in the interaction contrasts.
+**The T3 biopsies carry more blood in LR.** In a mixed model on the log2 haemoglobin index, LR's
+rise at T3 exceeds HR's by 1.21 (t = 2.22, subject-label permutation p = 0.023); on the blood
+panel's share of signal the same term gives p = 0.36. The notebook computes both. The confound does
+not cancel in the interaction contrasts.
 
 **One proteoDA function is bypassed.** `filter_proteins_by_annotation()` errors on every real
 DAList, so contaminant removal is a plain subset.

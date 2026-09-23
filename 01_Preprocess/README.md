@@ -21,8 +21,8 @@ Run them in order: each reads the previous one's `.rds`. All three render in und
 
 `DAList_normalized.rds` is the matrix the model is fitted to: 1,900 proteins by 45 samples,
 12.3% missing. It stays unimputed, because limma fits each protein on the samples where it was
-seen. `DAList_imputed.rds` fills those gaps for `fry`, singscore and WGCNA, and is read by
-nothing else.
+seen. `DAList_imputed.rds` fills those gaps for the methods that need a complete matrix: `fry`,
+singscore and WGCNA.
 
 ## Two orderings
 

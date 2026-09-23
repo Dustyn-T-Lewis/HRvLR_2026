@@ -14,17 +14,20 @@ each module.
 **Hubs.** The ten members with the highest kME.
 
 **STRING.** `STRINGdb$get_ppi_enrichment()` at combined score ≥ 700, background set to the
-measured proteins STRING maps. Its expected edge count comes from each member's degree, so a
-module of well-studied proteins is not rewarded for being well studied. Nearly any co-expression
-module passes this test; the observed-over-expected ratio carries the information.
+measured proteins STRING maps. The expected edge count comes from each member's degree, so
+well-studied proteins do not inflate a module's enrichment. Nearly any co-expression
+module passes; compare modules by the observed-over-expected ratio.
 
-| Module | Top set | STRING ratio |
-|---|---|---:|
-| pink | Reactome striated muscle contraction | 10.1 |
-| tan | Reactome respiratory electron transport | 4.2 |
-| magenta | Reactome GCN2 response to amino acid deficiency | 2.6 |
-| brown | GO Slim cytoskeleton organization | 2.4 |
-| yellow | Reactome aerobic respiration and electron transport | 2.0 |
-| greenyellow | Hallmark epithelial-mesenchymal transition | 2.0 |
+| Module | Top set | FDR | STRING ratio |
+|---|---|---:|---:|
+| purple | Reactome striated muscle contraction | 7e-27 | 10.1 |
+| tan | Reactome respiratory electron transport | 9e-19 | 4.4 |
+| pink | Hallmark epithelial-mesenchymal transition | 0.006 | 3.1 |
+| red | GO Slim mRNA metabolic process | 1e-4 | 2.8 |
+| greenyellow | Reactome rRNA processing | 3e-24 | 2.6 |
+| blue | Hallmark oxidative phosphorylation | 1e-15 | 1.9 |
+| brown | Hallmark glycolysis | 0.006 | 1.8 |
+| magenta | Reactome eukaryotic translation initiation | 3e-4 | 1.7 |
 
-The full table, with every module's hubs, is the workbook's `labels` sheet.
+Turquoise, yellow, green and black have no set at FDR < 0.05. The workbook's `labels` sheet holds
+every module's top set, top GO Slim term and hubs.
