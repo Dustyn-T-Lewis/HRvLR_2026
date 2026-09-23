@@ -161,3 +161,21 @@ test_that("the tracked inputs load with the columns the screens need", {
   expect_true(all(PHENOTYPES %in% names(pheno)))
   expect_equal(names(phenotype_vector(pheno, "d_mcsa")), pheno$subject)
 })
+
+test_that("associate leaves sparse features untested and out of BH", {
+  set.seed(42)
+  y <- setNames(rnorm(12), paste0("S", 1:12))
+  feat <- rbind(
+    dense = y + rnorm(12, sd = 0.5),
+    sparse = c(1, 5, rep(NA, 10)),
+    noise = rnorm(12)
+  )
+  colnames(feat) <- names(y)
+  res <- associate(feat, y, min_obs = 10)
+  sparse <- res[res$feature == "sparse", ]
+  expect_equal(sparse$n_obs, 2)
+  expect_true(is.na(sparse$p))
+  expect_true(is.na(sparse$bh))
+  kept <- res[res$feature != "sparse", ]
+  expect_equal(kept$bh, p.adjust(kept$p, "BH"))
+})

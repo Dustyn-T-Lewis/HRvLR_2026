@@ -87,12 +87,20 @@ subject_window <- function(mat, window, meta = sample_metadata()) {
 # moderated variance is the reason to use it over a per-feature lm at n = 14:
 # it borrows strength across features instead of trusting each one's own
 # residual.
-associate <- function(feat, y) {
+#
+# A feature observed in fewer than two thirds of the subjects (10 of 14 or 15
+# here) is not tested. Without the floor a protein seen in two subjects fits a
+# line through two points, limma returns a huge t on almost no residual df,
+# and it tops the ranking.
+associate <- function(feat, y, min_obs = NULL) {
   shared <- intersect(colnames(feat), names(y))
   y <- y[shared]
   keep <- !is.na(y)
   y <- y[keep]
   feat <- feat[, shared[keep], drop = FALSE]
+  min_obs <- min_obs %||% ceiling(2 * length(y) / 3)
+  n_obs <- rowSums(!is.na(feat))
+  feat[n_obs < min_obs, ] <- NA
   fit <- limma::eBayes(limma::lmFit(feat, stats::model.matrix(~y)))
   res <- limma::topTable(
     fit,
@@ -100,8 +108,9 @@ associate <- function(feat, y) {
   ) |>
     tibble::rownames_to_column("feature") |>
     transmute(
-      feature = .data$feature, slope = .data$logFC, t = .data$t,
-      p = .data$P.Value, bh = .data$adj.P.Val
+      feature = .data$feature, n_obs = unname(n_obs[.data$feature]),
+      slope = .data$logFC, t = .data$t, p = .data$P.Value,
+      bh = .data$adj.P.Val
     )
   attr(res, "n") <- length(y)
   res
