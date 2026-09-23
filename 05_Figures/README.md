@@ -1,12 +1,9 @@
-# 05_Figures
+# 05 · Figures
 
-Planned. Nothing here until the protein, pathway and network packets settle.
+**Planned.** No code yet.
 
-Figures read only `c_data/` from `02_Proteins`, `03_Pathways` and `04_Networks`.
-They never refit anything. When a figure unit is added it follows the house
-layout: `setup.R`, `01_run_<name>.R`, `composite.R`, `panels/`, with its
-source-data workbook in `c_data/`.
+Intent: manuscript figures for a reader who will never run the pipeline, assembled from outputs
+the earlier stages already write. Diagnostics stay in each stage's `b_reports/`.
 
-The six finished units from the earlier continuous and classification designs
-sit in `archive/04_Figures_continuous/` and `archive/04_Figures_classification/`.
-They are reference only; they read paths that no longer exist.
+Panel choice waits until the paper's scope is settled. The finished figure units from the earlier
+continuous and classification designs sit in the untracked `archive/`, as reference only.
