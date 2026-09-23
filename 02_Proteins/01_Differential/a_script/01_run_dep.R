@@ -10,9 +10,12 @@
 # this project reads one DAList, and a stage that cannot rebuild its own input
 # is a stage nobody can check.
 
-pacman::p_load(here, dplyr, tibble, readr, limma, proteoDA, openxlsx)
+pacman::p_load(
+  here, dplyr, tidyr, tibble, readr, purrr, limma, proteoDA, openxlsx
+)
 
 source(here("functions", "contrasts.R"))
+source(here("functions", "association.R"))
 
 OUT_DIR <- here("02_Proteins", "01_Differential", "c_data")
 RPT_DIR <- here("02_Proteins", "01_Differential", "b_reports")
@@ -104,6 +107,38 @@ write.xlsx(
   ),
   file.path(OUT_DIR, "01_dep_results.xlsx")
 )
+
+proteoDA::write_limma_plots(
+  res,
+  grouping_column = "group", output_dir = RPT_DIR,
+  table_columns = c("uniprot_id", "gene", "protein"), title_column = "gene",
+  overwrite = TRUE
+)
+
+# The handoff every later protein-level step reads. Statistics come as protein
+# by contrast matrices so a pathway or network stage can index them without
+# re-deriving the fit; the three subject windows are the inputs the
+# classification and association screens share across feature levels.
+stat_matrix <- function(col) {
+  combined |>
+    select("uniprot_id", "contrast", value = all_of(col)) |>
+    pivot_wider(names_from = "contrast", values_from = "value") |>
+    tibble::column_to_rownames("uniprot_id") |>
+    as.matrix()
+}
+abund <- as.matrix(fit$data)
+sample_meta <- sample_metadata()
+stopifnot(identical(sample_meta$sample_id, colnames(abund)))
+proteins <- list(
+  abund = abund,
+  meta = sample_meta,
+  annotation = annotation,
+  stats = set_names(c("logFC", "t", "P.Value", "adj.P.Val")) |>
+    map(stat_matrix),
+  windows = set_names(c("T1", "training", "acute")) |>
+    map(\(w) subject_window(abund, w, sample_meta))
+)
+saveRDS(proteins, file.path(OUT_DIR, "proteins.rds"))
 
 print(as.data.frame(contrast_summary), row.names = FALSE, digits = 3)
 message(

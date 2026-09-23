@@ -13,7 +13,7 @@
 # is spent forming the difference, and for a level window only one timepoint
 # enters.
 
-pacman::p_load(here, dplyr, tidyr, tibble, readr, limma)
+pacman::p_load(here, dplyr, tidyr, tibble, readr, purrr, limma)
 
 # Six views of the same proteome. The three levels ask a between-person
 # question: do people whose module sits higher at this timepoint adapt more.
@@ -87,25 +87,13 @@ subject_window <- function(mat, window, meta = sample_metadata()) {
 # moderated variance is the reason to use it over a per-feature lm at n = 14:
 # it borrows strength across features instead of trusting each one's own
 # residual.
-#
-# `adjust` is a subject-by-covariate matrix entering the design beside the
-# phenotype, leaving coef 2 as the phenotype slope. Biopsy composition is the
-# intended caller: at T2 the myofibre fraction correlates -0.81 with change in
-# whole-muscle CSA and the blood fraction +0.71, so a level-window association
-# with that phenotype is partly a statement about what the needle collected.
-associate <- function(feat, y, adjust = NULL) {
+associate <- function(feat, y) {
   shared <- intersect(colnames(feat), names(y))
   y <- y[shared]
   keep <- !is.na(y)
   y <- y[keep]
   feat <- feat[, shared[keep], drop = FALSE]
-  design <- if (is.null(adjust)) {
-    stats::model.matrix(~y)
-  } else {
-    cov <- adjust[colnames(feat), , drop = FALSE]
-    stats::model.matrix(~ y + cov)
-  }
-  fit <- limma::eBayes(limma::lmFit(feat, design))
+  fit <- limma::eBayes(limma::lmFit(feat, stats::model.matrix(~y)))
   res <- limma::topTable(
     fit,
     coef = 2, number = Inf, adjust.method = "BH", sort.by = "none"
@@ -125,4 +113,45 @@ phenotype_table <- function() {
 
 phenotype_vector <- function(pheno, name) {
   setNames(pheno[[name]], pheno$subject)
+}
+
+PHENOTYPES <- c(
+  "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_fcsa_mixed",
+  "d_nfibre_mixed", "d_nfibre_I", "d_mcsa", "d_1rm_legpress", "d_1rm_ext",
+  "volume_load"
+)
+
+# The screen the three feature levels share: every window crossed with every
+# phenotype, BH inside each cell.
+associate_all <- function(mat, meta = sample_metadata(),
+                          pheno = phenotype_table(),
+                          windows = c("T1", "training", "acute"),
+                          phenotypes = PHENOTYPES) {
+  cells <- tidyr::expand_grid(window = windows, phenotype = phenotypes)
+  purrr::pmap(cells, function(window, phenotype) {
+    feat <- subject_window(mat, window, meta)
+    res <- associate(feat, phenotype_vector(pheno, phenotype))
+    mutate(res,
+      window = window, phenotype = phenotype, n = attr(res, "n"),
+      .before = 1
+    )
+  }) |>
+    purrr::list_rbind()
+}
+
+min_or_na <- function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
+
+# Nominal hits against the count noise alone would give at alpha, per cell.
+# A ratio near one is what a screen with nothing in it looks like.
+chance_table <- function(res, ..., alpha = 0.05) {
+  res |>
+    summarise(
+      n_tested = sum(!is.na(.data$p)),
+      n_nominal = sum(.data$p < alpha, na.rm = TRUE),
+      n_expected = alpha * .data$n_tested,
+      ratio = .data$n_nominal / .data$n_expected,
+      n_bh = sum(.data$bh < alpha, na.rm = TRUE),
+      min_bh = min_or_na(.data$bh),
+      .by = c(...)
+    )
 }

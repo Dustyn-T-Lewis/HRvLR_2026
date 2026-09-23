@@ -16,8 +16,6 @@ fixture_matrix <- function(meta) {
 }
 
 test_that("subject_window subtracts in the stated direction", {
-  source(here::here("functions", "association.R"))
-
   meta <- tibble::tribble(
     ~sample_id, ~subject, ~timepoint,
     "S01_T1", "S01", "T1", "S01_T2", "S01", "T2"
@@ -32,7 +30,6 @@ test_that("subject_window subtracts in the stated direction", {
 })
 
 test_that("subject_window drops subjects missing a needed timepoint", {
-  source(here::here("functions", "association.R"))
   meta <- fixture_meta()
   mat <- fixture_matrix(meta)
 
@@ -48,7 +45,6 @@ test_that("subject_window drops subjects missing a needed timepoint", {
 })
 
 test_that("a level window returns the value itself, not a difference", {
-  source(here::here("functions", "association.R"))
   meta <- fixture_meta()
   mat <- fixture_matrix(meta)
 
@@ -66,7 +62,6 @@ test_that("a level window returns the value itself, not a difference", {
 })
 
 test_that("total change equals training plus acute where both exist", {
-  source(here::here("functions", "association.R"))
   meta <- fixture_meta()
   mat <- fixture_matrix(meta)
 
@@ -78,8 +73,6 @@ test_that("total change equals training plus acute where both exist", {
 })
 
 test_that("subject_window pairs each subject with its own timepoints", {
-  source(here::here("functions", "association.R"))
-
   # Rows deliberately out of subject order, so a positional pairing would
   # silently subtract one subject's T1 from another's T2.
   meta <- tibble::tribble(
@@ -101,7 +94,6 @@ test_that("subject_window pairs each subject with its own timepoints", {
 })
 
 test_that("subject_window rejects an unknown window", {
-  source(here::here("functions", "association.R"))
   meta <- fixture_meta()
   expect_error(
     subject_window(fixture_matrix(meta), "nonsense", meta), "unknown window"
@@ -109,8 +101,6 @@ test_that("subject_window rejects an unknown window", {
 })
 
 test_that("associate recovers a slope it was given", {
-  source(here::here("functions", "association.R"))
-
   set.seed(42)
   y <- setNames(rnorm(20), paste0("S", 1:20))
   feat <- rbind(
@@ -128,8 +118,6 @@ test_that("associate recovers a slope it was given", {
 })
 
 test_that("associate drops subjects with a missing phenotype", {
-  source(here::here("functions", "association.R"))
-
   y <- c(S1 = 1, S2 = 2, S3 = NA, S4 = 4, S5 = 5, S6 = 6, S7 = 7)
   feat <- matrix(rnorm(14),
     nrow = 2, dimnames = list(c("f1", "f2"), names(y))
@@ -140,8 +128,6 @@ test_that("associate drops subjects with a missing phenotype", {
 })
 
 test_that("associate aligns on names, not column order", {
-  source(here::here("functions", "association.R"))
-
   set.seed(1)
   y <- setNames(seq_len(12), paste0("S", 1:12))
   feat <- rbind(sloped = 3 * unname(y))
@@ -153,4 +139,25 @@ test_that("associate aligns on names, not column order", {
     associate(shuffled, y)$slope,
     tolerance = 1e-10
   )
+})
+
+test_that("subject_window stops when no subject covers the window", {
+  meta <- tibble::tribble(
+    ~sample_id, ~subject, ~timepoint,
+    "S01_T1", "S01", "T1", "S02_T2", "S02", "T2"
+  )
+  mat <- matrix(1:4, nrow = 2, dimnames = list(c("f1", "f2"), meta$sample_id))
+  expect_error(subject_window(mat, "training", meta), "no subject")
+})
+
+test_that("the tracked inputs load with the columns the screens need", {
+  skip_if_not(file.exists(here::here(
+    "01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"
+  )))
+  meta <- sample_metadata()
+  expect_named(meta, c("sample_id", "subject", "arm", "timepoint"))
+  expect_setequal(unique(meta$arm), c("HR", "LR"))
+  pheno <- phenotype_table()
+  expect_true(all(PHENOTYPES %in% names(pheno)))
+  expect_equal(names(phenotype_vector(pheno, "d_mcsa")), pheno$subject)
 })
