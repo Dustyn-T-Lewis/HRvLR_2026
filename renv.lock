@@ -3489,6 +3489,57 @@
       "Maintainer": "Achim Zeileis <Achim.Zeileis@R-project.org>",
       "Repository": "CRAN"
     },
+    "covr": {
+      "Package": "covr",
+      "Version": "3.6.5",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        "R (>= 3.1.0)",
+        "methods"
+      ],
+      "Imports": [
+        "digest",
+        "stats",
+        "utils",
+        "jsonlite",
+        "rex",
+        "httr",
+        "cli",
+        "withr (>=\n1.0.2)",
+        "yaml"
+      ],
+      "LinkingTo": [
+        null
+      ],
+      "Suggests": [
+        "R6",
+        "S7 (>= 0.2.0)",
+        "curl",
+        "knitr",
+        "rmarkdown",
+        "htmltools",
+        "DT (>=\n0.2)",
+        "testthat (>= 3.0.0)",
+        "rlang",
+        "rstudioapi (>= 0.2)",
+        "xml2 (>=\n1.0.0)",
+        "parallel",
+        "memoise",
+        "covr",
+        "box (>= 1.2.0)"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "MIT + file LICENSE",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN",
+      "Type": "source"
+    },
     "cowplot": {
       "Package": "cowplot",
       "Version": "1.2.0",
@@ -7783,6 +7834,42 @@
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
       "Repository": "CRAN"
     },
+    "pROC": {
+      "Package": "pROC",
+      "Version": "1.19.1",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        "R (>= 2.14)"
+      ],
+      "Imports": [
+        "methods",
+        "Rcpp (>= 0.11.1)"
+      ],
+      "LinkingTo": [
+        "Rcpp"
+      ],
+      "Suggests": [
+        "MASS",
+        "logcondens",
+        "testthat",
+        "vdiffr",
+        "ggplot2",
+        "rlang",
+        "knitr",
+        "rmarkdown"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "GPL (>= 3)",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN",
+      "Type": "source"
+    },
     "pacman": {
       "Package": "pacman",
       "Version": "0.5.1",
@@ -8618,6 +8705,36 @@
       "Author": "Hadley Wickham [aut, cre] (ORCID: <https://orcid.org/0000-0003-4757-117X>), Lionel Henry [aut], Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)",
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "CRAN"
+    },
+    "qpdf": {
+      "Package": "qpdf",
+      "Version": "1.4.1",
+      "Source": "Repository",
+      "Priority": null,
+      "Depends": [
+        null
+      ],
+      "Imports": [
+        "Rcpp",
+        "askpass",
+        "curl"
+      ],
+      "LinkingTo": [
+        "Rcpp"
+      ],
+      "Suggests": [
+        "testthat"
+      ],
+      "Enhances": [
+        null
+      ],
+      "License": "Apache License 2.0",
+      "License_is_FOSS": null,
+      "License_restricts_use": null,
+      "OS_type": null,
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN",
+      "Type": "source"
     },
     "quantreg": {
       "Package": "quantreg",

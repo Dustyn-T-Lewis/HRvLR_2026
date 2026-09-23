@@ -1,296 +1,155 @@
 # HRvLR_V2
 
-Maps the skeletal-muscle proteome onto training adaptation continuously. No
-responder groups, no cut points, no baseline contrast.
-
-The original study labelled subjects High and Low Responder by median-splitting
-a composite hypertrophy score. V1 tested that label at four levels and found
-nothing. This project drops the label and asks the question the label was
-standing in for: **does the proteome track how much a subject adapted?**
+Skeletal-muscle proteome of 16 subjects, 8 labelled High and 8 Low Responder by
+a median split of a composite hypertrophy score, biopsied at baseline (T1),
+after training (T2) and after an acute bout (T3). This project asks whether the
+proteome separates the two arms, and whether it tracks how much each subject
+adapted, at three feature levels: proteins, pathways and co-expression modules.
 
 ## Layout
 
 ```
-00_input/          raw matrix, sample metadata, phenotype table
-01_Filtering/      protein filtering
-02_Normalization/  cycloess, imputation, per-sample pathway scores
-03_Features/       modules, GO annotation, the sweep, its calibration
-04_Figures/        F01_phenotype, F02_association, F03_modules
+00_input/          raw matrix, sample metadata, phenotype table, GO-Slim .obo
+01_Preprocess/     proteoDA filtering, cycloess normalization, missForest
+02_Proteins/       the nine contrasts, protein screens, protein packet
+03_Pathways/       gene sets and themes, fry and fgsea, singscore, screens, packet
+04_Networks/       WGCNA modules, their characterisation, screens, packet
+05_Figures/        planned; reads only c_data from 02-04
 functions/         shared code, flat
+run_all.R          rebuilds 01 to 04 in order
 ```
 
-Every stage carries `a_script/` `b_reports/` `c_data/`; pipeline steps are
-numbered `NN_*.R` and figure units use `setup.R` + `01_run_<name>.R` +
-`composite.R` + `panels/`. `c_data/` is tracked, `b_reports/` renders are not,
-paths go through `here::here()`, and any stochastic step is seeded.
+Each stage builds its matrices first, runs its tests on them, and ends in a
+captioned PDF packet. Every unit carries `a_script/` `b_reports/` `c_data/`.
+`c_data/` is tracked and holds one handoff `.rds` and one `.xlsx`; renders in
+`b_reports/` are not. Paths go through `here::here()` and every stochastic step
+is seeded with 42.
 
-## The design
+## Pipeline
 
-Each subject contributes one column: a feature's value at a timepoint, or how
-much it moved over a window. That column is regressed on the subject's
-adaptation. Nobody is cut into a group, so no cut point has to be defended and
-no composite can separate its own ingredients.
+**01_Preprocess.** proteoDA end to end, as in YvO: `DAList` →
+`zero_to_missing` → a four-method outlier consensus (drops S29_T1, S28_T2,
+S28_T3) → `filter_proteins_by_group` → `filter_samples` → `write_norm_report`
+→ `normalize_data(norm_method = "cycloess")`. Contaminants are removed by
+protein identity (HPA tissue, a curated blood list). The result is 1900
+proteins × 45 samples. missForest fills that matrix for the steps that need it
+complete (fry, singscore, WGCNA); nothing else reads the imputed values.
 
-- **Windows.** Six. Three levels (the value at T1, T2 or T3) and three changes
-  (training T2−T1, acute T3−T2, total T3−T1). Levels ask a between-person
-  question, changes a within-person one; the two families are reported apart
-  and never pooled.
-- **Levels.** Proteins (1900), WGCNA module eigengenes (12), singscore
-  pathways (57).
-- **Estimator.** `limma` with a continuous predictor. One row per subject means
-  no repeated measures inside the fit, so no blocking and no
-  `duplicateCorrelation` — the within-subject structure is spent forming the
-  difference. The moderated variance is why limma beats a per-feature `lm` at
-  n = 14.
+**02_Proteins.** `add_design("~ 0 + group + (1 | subject)")`,
+`add_contrasts()`, `fit_limma_model()`, `extract_DA_results()`,
+`write_limma_plots()`. Nine contrasts: four within-arm changes (training
+T2−T1 and acute T3−T2, per arm), the arm difference at each timepoint, and two
+interactions. The fit reproduces V1's committed numbers to 5.6e-12
+(`02_verify_v1.R`). The handoff `proteins.rds` carries protein × contrast
+matrices of logFC, t, p and BH, the abundance matrix, and three subject
+windows (T1 level, training change, acute change).
 
-3 feature levels × 6 windows × 10 phenotypes = **180 cells**. BH within each
-cell, then a second correction across all 180.
+**03_Pathways.** MSigDB 2026.1 Hallmark, Reactome and GO:BP plus one set per
+GO-Slim generic term, rewritten to protein ids and kept at 15 to 500 detected
+members: 1596 sets. Each GO:BP set is themed by its most specific GO-Slim
+ancestor (657 of 1156 fall under one). `limma::fry` tests every set in every
+contrast on the protein design and subject block; fgsea on the moderated t
+supplies NES for display, with `collapsePathways` marking non-redundant sets.
+singscore gives the set × sample matrix the screens read.
+
+**04_Networks.** WGCNA, signed, bicor, defined on abundance centred within
+subject and scored on raw abundance (`functions/shared_wgcna.R`): power 8, 12
+modules, 265 proteins unassigned. Each module is characterised by
+clusterProfiler ORA against the 03 sets (universe the 1900 detected proteins),
+its ten highest-kME hubs, its dominant GO-Slim theme, and its STRING v12
+edge density against a null that shuffles module labels. Eigengenes are then
+fitted on the nine contrasts with the protein design.
+
+**The screens** (`functions/classify.R`, the same code at all three levels):
+
+- *Classification.* Per-feature AUC (pROC) and Wilcoxon p on seven tasks that
+  mirror the contrasts: T2 vs T1 and T3 vs T2 within each arm (paired), and HR
+  vs LR on the T1 level, the training change and the acute change.
+- *Association.* limma with a continuous predictor, one row per subject, on
+  the three windows × ten phenotypes.
+
+BH runs within each task, window × phenotype cell, or collection, never across
+them. Every table reports the nominal count beside the count chance predicts.
+No sweep-level correction is applied; results are exploratory.
+
+## Current results
+
+| Level | Contrasts, BH < 0.05 | Classification, BH < 0.05 | Association, BH < 0.05 |
+|---|---|---|---|
+| Proteins (1900) | 0 of 9 contrasts; lowest q 0.071 (Acute_HR) | 0 | 0 |
+| Pathways (1596, fry) | 8 set-contrast pairs, all acute | 0 | 1 |
+| Modules (12) | 0 | 0 | 1 |
+
+- **Proteins.** 959 nominal and 464 pi-score calls across the nine contrasts,
+  against roughly 95 nominal per contrast expected by chance. The
+  within-subject correlation is 0.189.
+- **Pathways.** fry calls five sets in Acute_HR (Hallmark G2M checkpoint and
+  MYC targets up, fatty-acid metabolism and adipogenesis down, GO-Slim mRNA
+  metabolism up) and Hallmark heme metabolism in Acute_LR, Acute_HRvLR and
+  Acute_Interaction. The one association is Reactome basal-body anchoring
+  against the acute change and `comp_hypertrophy`.
+- **Modules.** Six modules share more STRING edges than the null (BH < 0.05):
+  magenta (translation, 16×), tan (respiratory chain, 19×), pink (striated
+  muscle contraction, 11×), purple (translation initiation), yellow (aerobic
+  respiration) and brown (cytoskeleton). The one association is greenyellow,
+  the extracellular-matrix module, against the acute change and `d_mcsa`
+  (BH 0.037 across 12 modules). An ECM module against whole-muscle CSA was
+  also the closest result in the earlier continuous design; see History.
+
+Twelve modules make BH a much weaker filter than 1900 proteins do. Under a
+global null each of the 30 association cells has about a 5% chance of at least
+one BH hit, so about 1.5 cells with a hit are expected by chance; one was
+observed at the module level and one at the pathway level. Each packet states
+its own chance line.
 
 ## Phenotypes
 
-Ten, up from the five V1 used. The additions were already in the input and no
-stage had read them.
-
-- `comp_hypertrophy`, the composite the original label was cut from.
-- `d_fcsa_I`, `d_fcsa_II`, `d_fcsa_mixed`, fibre cross-sectional area.
-- `d_nfibre_mixed`, `d_nfibre_I`, the MyoVision columns. These are **fibre
-  counts, not areas**, despite carrying "fCSA" in their meta names; the source
-  workbook calls them "Number of fCSA - Mixed (MyoVision)". They run 142-1119
-  where the areas run 3800-10700 and move against area, because larger fibres
-  pack fewer into the imaged field.
-- `d_mcsa`, whole-muscle cross-sectional area.
-- `d_1rm_legpress`, `d_1rm_ext`, strength.
-- `volume_load`, total kilograms lifted, one value per subject, spanning
-  3.5-fold. The only variable describing what a subject did rather than what
-  happened to them.
-
-They are not ten independent questions. Three fibre-area measures correlate
-above 0.9 with each other and 0.85 with the composite; the two fibre counts
-correlate 0.94 with each other and −0.5 to −0.7 with area. That leaves roughly
-five independent axes: fibre size, whole-muscle CSA, each 1RM, and volume load.
-F01 panel B is that structure.
-
-Whole-muscle CSA and both strength measures rose over training (d = 1.13 to
-1.48). No fibre-area or fibre-count measure moved at all, every interval
-covering zero. Phenotype exists at T1 and T2 only, so with no comparator arm
-and no repeat baseline, true individual response cannot be separated from
-measurement error within this study (Atkinson & Batterham 2015, *Exp Physiol*
-100:577).
-
-## What it found
-
-**Nothing survives the sweep-level correction.** Three of 180 cells clear BH
-inside themselves, all against change in whole-muscle CSA. After correcting the
-per-cell permutation p across the sweep, none has q below 1.
-
-Every count runs below its own null:
-
-| | observed | expected under the null |
-|---|---|---|
-| Cells with permutation p < 0.05 | 3 | 9 |
-| Cells with ≥1 BH hit | 3 | 8.9 |
-| Total BH hits | 6 | 24.4 |
-| Surviving BH across the 180 cells | **0** | — |
-
-The expectation is built per cell, by shuffling the phenotype across subjects
-999 times. It has to be: BH over 12 module eigengenes is a far weaker filter
-than the same alpha over 1900 proteins, so a single rate applied 180 times
-would be wrong in both directions.
-
-### The one that came closest
-
-Module **greenyellow** against change in whole-muscle CSA, at the T2 level.
-It passes every check applied to itself and still fails the sweep.
-
-- BH = 0.0009 within its cell; **0.0058** after adjusting for the biopsy
-  composition panels that confound the phenotype.
-- Spearman rho = 0.59, p = 0.021, so a rank test sees it.
-- Refit dropping each subject in turn, it holds in **14 of 15** folds.
-- Its own permutation p is 0.020 — but **q = 1** across the sweep, and three
-  cells at p < 0.05 out of 180 is fewer than the nine noise alone produces.
-
-Those first three checks ask whether an association is internally consistent
-given that you are looking at it. They do not ask whether you should have been
-looking. The sweep-level correction asks that, and answers no.
-
-greenyellow is the **extracellular matrix** module (interstitial matrix
-q = 1.6e-06, ECM structural constituent q = 2.3e-05, ECM organization
-q = 0.011; hubs LUM, FBLN2, ASPN, CALD1, TAGLN, MYH11). The direction is
-mechanically coherent, since whole-muscle CSA includes interstitium while fibre
-CSA does not, and the two are uncorrelated here at r = 0.03. Coherence is not
-evidence, and this one did not clear the bar.
-
-Its fit also rests on LR_S14, the highest subject on both axes — the same
-subject V1's `06_mcsa_axis` result rested on, and a subject labelled Low
-Responder despite the largest whole-muscle gain in the cohort.
-
-### Biopsy composition is a real confound
-
-At T2 the myofibre fraction correlates **−0.81** with change in whole-muscle
-CSA and the blood fraction **+0.71**. Subjects who gained more muscle gave
-less fibre-pure biopsies, which will induce proteome-wide differences tracking
-that phenotype for reasons that are about the needle. Adjusting for the two
-confounding panels removed four of the six within-cell hits, including
-`HALLMARK_COAGULATION` — a blood signature that had appeared as a result.
-
-## Why continuous, and not groups
-
-The design is not a preference. Before drawing any partition, five methods were
-run on five feature spaces to ask whether group structure exists at all
-(`06_clusterability.R`). Two of them can return "no clusters" as an answer.
-
-| Space | n | p | dip p | gap k | max silhouette |
-|---|---|---|---|---|---|
-| Subjects, baseline modules | 15 | 12 | 0.47 | 1 | 0.32 |
-| Subjects, T2 modules | 15 | 12 | 0.29 | 1 | 0.19 |
-| Subjects, baseline proteins | 15 | 931 | 0.35 | 1 | 0.20 |
-| All 45 samples, proteins | 45 | 931 | 0.95 | 1 | 0.13 |
-| Subjects, ten phenotypes | 15 | 10 | 0.53 | 1 | 0.30 |
-
-No space rejects unimodality, every gap statistic selects k = 1, and every
-silhouette falls in the "weak, could be artificial" band below 0.5. The one
-variable that comes close to two modes is `comp_hypertrophy` itself, the
-composite the original HR/LR label was cut from (dip p = 0.071, and a mclust
-bootstrap LRT of p = 0.035 whose two-component solution recovers the given
-label exactly).
-
-Only mclust disagrees, and it is reported to be contradicted. At p = 1902 with
-K = 2 even its most constrained covariance family estimates thousands of
-parameters from sixteen observations, and it drops unfittable models from the
-BIC table silently rather than warning, so the curve spans only the
-degenerate-but-estimable subset (Bouveyron & Brunet-Saumard 2014). Its own
-simulated null assigns more than one component to structureless data in 49 to
-67 percent of draws at n = 15.
-
-### Known limitations of the clustering that was run
-
-Three choices in the clusterability work are weaker than the alternatives, and
-are recorded rather than defended:
-
-- **PCA before clustering** is *tandem analysis*, and the reduction optimises
-  variance reconstruction rather than cluster separation. Chang (1983) built a
-  mixture whose leading components carry no cluster information; Yeung & Ruzzo
-  (2001) found it "does not necessarily improve, and often degrades, cluster
-  quality". Reduced or factorial k-means (Markos et al. 2019, `clustrd`)
-  optimise both under one criterion. At n = 15 the covariance has rank at most
-  14, so no number of retained components is defensible anyway.
-- **The top-variance filter** is the ad-hoc step sparse clustering was written
-  to replace: real clusters "differ only with respect to a small fraction of
-  the features, and will be missed if one clusters the observations using the
-  full set" (Witten & Tibshirani 2010).
-- **The single-Gaussian null** implements SigClust's logic (Liu et al. 2008)
-  with a different statistic rather than the canonical test.
-
-None of this changes the conclusion. Six independent reads agree, including
-the dip test that methodologists recommend for exactly this question
-(Adolfsson, Ackerman & Brownstein 2019).
-
-### What the field does at 100x this sample size
-
-Stokes et al., *A network-based atlas of human skeletal muscle aging*
-(medRxiv, 17 Feb 2026, doi:10.64898/2026.02.15.26346348, not peer reviewed),
-assembles 1,675 muscle transcriptomes. With that sample they still **never
-cluster subjects**: modules are built on genes with MEGENA, and responder
-status is assigned from the phenotype outcome, not discovered. Their stated
-floor for reliably estimating a pairwise correlation is 30 to 150 samples,
-citing Schonbrodt & Perugini (2013), and their smallest network is n = 47.
-
-They also reject WGCNA, which this project uses, on the grounds that it "has no
-robust statistical thresholding" and that "module membership can be indistinct
-from random". That criticism is live and unaddressed here. It changes no
-conclusion, because no module result survived the sweep, but a writeup that
-leans on the modules should answer it.
-
-## Reading the null
-
-Nothing in this proteome tracks how much these subjects adapted, at any of
-three feature levels, in any of six windows, against any of ten phenotypes. The
-sweep returned fewer hits than chance predicts on every count, and no cell
-survives correction across it.
-
-That is a calibrated negative rather than an absence of evidence. Each stage
-carries its own null, so "we found nothing" and "there was nothing to find" are
-distinguishable here.
+Ten, all T2−T1 changes except `volume_load`: `comp_hypertrophy`, fibre CSA
+(`d_fcsa_I`, `d_fcsa_II`, `d_fcsa_mixed`), MyoVision fibre counts
+(`d_nfibre_mixed`, `d_nfibre_I`, counts despite "fCSA" in their source names),
+whole-muscle CSA (`d_mcsa`), 1RM (`d_1rm_legpress`, `d_1rm_ext`), and total
+kilograms lifted (`volume_load`). They form roughly five independent axes. The
+HR/LR label is the exact median split of `comp_hypertrophy`, so it separates
+that composite's fibre-CSA ingredients by construction.
 
 ## Running it
 
-```r
-source("setup.R")
-for (f in list.files("03_Features/a_script", "[.]R$", full.names = TRUE)) {
-  source(f)
-}
-for (f in list.files("04_Figures", "^01_run_.*[.]R$",
-                     recursive = TRUE, full.names = TRUE)) {
-  source(f)
-}
+```sh
+Rscript setup.R      # restore the renv library once
+Rscript run_all.R    # 01 to 04, one R session per step, about 3 minutes
 ```
 
-`03_confirm_hits.R` permutes all 180 cells and takes about two hours.
-Everything else runs in under a minute.
+`run_all.R` logs each step to `.runlogs/`. The packets land in
+`02_Proteins/03_Packet/b_reports/`, `03_Pathways/05_Packet/b_reports/` and
+`04_Networks/04_Packet/b_reports/`. Tests: `Rscript tests/testthat.R`.
 
-## Archived
+STRING v12 (`9606.protein.links` and `.aliases`) is read from
+`00_input/downloads/`, which git ignores; download both from string-db.org
+before running 04.
 
-`archive/` holds the classification work this project started as: a sweep of
-ten candidate group labels across three contrasts, an unsupervised subtype
-search, and their figures. It is untracked and superseded. Its conclusions ran
-the same way — the label separates the one measure that never changed, the
-proteome carries no subtype structure that beats a no-cluster null, and 2 of 24
-label cells cleared BH against 2.6 expected.
+## History
 
-`fgsea` was dropped with it. On this proteome a random relabelling of the same
-subjects produced a median of 102 significant sets against 98 observed
-(p = 0.52), because its preranked null permutes gene labels and so treats
-co-regulated proteins as exchangeable. Pathway work here goes through
-singscore, which scores each sample independently and is fitted through the
-same estimator the proteins use.
+V1 tested HR versus LR at four levels and found nothing. V2 has since tried
+three framings before this one, each recorded in git history with its code and
+figures in the untracked `archive/`:
+
+- **Classification** (`f4de361` to `0fd4175`): ten candidate labels and a blind
+  subtype search. The label separates only its own ingredients, and no
+  clustering beat a no-cluster null.
+- **Continuous** (`5e9211b` to `158ec3d`): 3 levels × 6 windows × 10
+  phenotypes. No cell survived correction across the sweep; the closest result
+  was an ECM module against change in whole-muscle CSA.
+- **Tertiles** (`f61e280`): three response groups. This pass also caught
+  sparse proteins producing false hits, which the missingness filter now
+  handles.
+
+The current spine restarts on the nine contrasts (`6c93f0d`) and adds the
+classification and association screens at every level.
 
 ## References
-
-Adolfsson A, Ackerman M, Brownstein NC (2019). To cluster, or not to cluster:
-an analysis of clusterability methods. *Pattern Recognition* 88:13-26.
 
 Atkinson G, Batterham AM (2015). True and false interindividual differences in
 the physiological response to an intervention. *Exp Physiol* 100:577-588.
 
-Bouveyron C, Brunet-Saumard C (2014). Model-based clustering of
-high-dimensional data: a review. *Comput Stat Data Anal* 71:52-78.
-
-Chang WC (1983). On using principal components before separating a mixture of
-two multivariate normal distributions. *J R Stat Soc C* 32:267-275.
-
-Cohen J (1983). The cost of dichotomization. *Appl Psychol Meas* 7:249-253.
-
-Hartigan JA, Hartigan PM (1985). The dip test of unimodality. *Ann Stat*
-13:70-84.
-
-Liu Y, Hayes DN, Nobel A, Marron JS (2008). Statistical significance of
-clustering for high-dimension, low-sample size data. *JASA* 103:1281-1293.
-
-Markos A, Iodice D'Enza A, van de Velden M (2019). Beyond tandem analysis:
-joint dimension reduction and clustering in R. *J Stat Softw* 91(10).
-
-Neufeld A, Gao LL, Witten D (2024). Inference after latent variable estimation
-for single-cell RNA sequencing data. *Biostatistics* 25:270-287.
-
-Royston P, Altman DG, Sauerbrei W (2006). Dichotomizing continuous predictors
-in multiple regression: a bad idea. *Stat Med* 25:127-141.
-
-Scrucca L, Fop M, Murphy TB, Raftery AE (2016). mclust 5: clustering,
-classification and density estimation using Gaussian finite mixture models.
-*R Journal* 8(1):289-317.
-
-Senbabaoglu Y, Michailidis G, Li JZ (2014). Critical limitations of consensus
-clustering in class discovery. *Sci Rep* 4:6207.
-
-Stokes T, Lim C, Ali M, et al. (2026). A network-based atlas of human skeletal
-muscle aging. *medRxiv* doi:10.64898/2026.02.15.26346348. Preprint, not peer
-reviewed.
-
-Tibshirani R, Walther G, Hastie T (2001). Estimating the number of clusters in
-a data set via the gap statistic. *J R Stat Soc B* 63:411-423.
-
-Ullmann T, Hennig C, Boulesteix AL (2023). Validation of cluster analysis
-results on validation data. *PLOS Comput Biol* 19:e1010820.
-
-Witten DM, Tibshirani R (2010). A framework for feature selection in
-clustering. *JASA* 105:713-726.
+Xiao Y, Hsiao TH, Suresh U, et al. (2014). A novel significance score for gene
+selection and ranking. *Bioinformatics* 30:801-807.

@@ -61,3 +61,6 @@ downloads/
 renv/library/
 renv/staging/
 renv/local/
+
+# run_all.R writes one log per step per run.
+.runlogs/
