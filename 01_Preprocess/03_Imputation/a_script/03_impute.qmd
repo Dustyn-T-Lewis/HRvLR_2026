@@ -1,0 +1,71 @@
+---
+title: "03 · Imputation"
+subtitle: "missForest, for the methods that need a complete matrix"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 150
+    fig-align: center
+execute:
+  message: false
+---
+
+The differential fit reads the unimputed matrix. Three later methods cannot: `fry` rotates
+residuals and takes no missing value, singscore ranks every protein in a sample, and WGCNA
+correlates complete columns. They read this file. Nothing else does.
+
+```{r setup}
+library(here)
+library(missForest)
+library(tibble)
+library(writexl)
+
+dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"))
+out <- here("01_Preprocess", "03_Imputation", "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+mat <- as.matrix(dal$data)
+c(proteins = nrow(mat), samples = ncol(mat), pct_missing = round(100 * mean(is.na(mat)), 1))
+```
+
+## Impute
+
+Random-forest imputation (Stekhoven & Bühlmann 2012). Rows are sorted before the stochastic fit
+so the result reproduces. The backend is named: missForest 1.6.1 made ranger the default, which
+is not the randomForest engine the paper describes.
+
+```{r impute}
+set.seed(42)
+ord <- order(rownames(mat))
+mf <- missForest(t(mat[ord, ]), maxiter = 10, ntree = 100, verbose = FALSE, backend = "ranger")
+imputed <- t(mf$ximp)[rownames(mat), ]
+dimnames(imputed) <- dimnames(mat)
+stopifnot(!anyNA(imputed), identical(dim(imputed), dim(mat)))
+c(oob_nrmse = round(unname(mf$OOBerror[1]), 4))
+```
+
+## Outputs
+
+```{r write}
+dal$data <- imputed
+dal$imputation <- list(
+  method = "missForest", backend = "ranger", maxiter = 10, ntree = 100,
+  oob_error = unname(mf$OOBerror[1])
+)
+saveRDS(dal, file.path(out, "DAList_imputed.rds"))
+write_xlsx(
+  list(imputation = tibble(
+    method = "missForest", backend = "ranger", maxiter = 10, ntree = 100,
+    pct_imputed = 100 * mean(is.na(mat)), oob_nrmse = unname(mf$OOBerror[1])
+  )),
+  file.path(out, "03_impute.xlsx")
+)
+```
+
+```{r session}
+sessionInfo()
+```

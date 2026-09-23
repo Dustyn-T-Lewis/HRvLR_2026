@@ -1,68 +1,40 @@
+docs/
+
+# Too large for git, or superseded; see 00_Input/README.md.
+00_Input/downloads/
+archive/
+
+# proteoDA writes one HTML report per contrast, 21 MB in all, and a folder of static plots
+# behind them. write_limma_plots() regenerates both.
+**/*_DA_report.html
+**/b_reports/static_plots/
+# WGCNA's modulePreservation checkpoints
+*.RData
+
+# editor and build cruft
 .DS_Store
 **/.DS_Store
-.RData
-# WGCNA::modulePreservation drops permutedStats-*.RData checkpoints in the
-# working directory; they are resumable scratch, not results.
-*.RData
-**/.Rhistory
-**/.Rapp.history
-.Rproj.user/
-
-# Credentials
-.Renviron
-.httr-oauth
-*.pem
-*.key
-
-.here
-# Untracked leftovers only: 156 MB of renders and an archived targets store that
-# git never held. Delete the directory to retire this rule.
-archive/
+*~
 ~$*
 *.tmp
 *.log
 Rplots.pdf
-docs/
-
-# proteoDA writes one boilerplate HTML report per contrast, 21 MB in all, and
-# nothing reads them. The blanket *.html rule this replaces existed to hide
-# rendered .qmd output, which no longer exists.
-**/*_DA_report.html
-**/*_files/
+.Rhistory
+.Rapp.history
+.RData
+.Rproj.user/
+.Renviron
+.httr-oauth
+*.pem
+*.key
+.here
+.quarto/
 **/*_cache/
-
-# Figure and QC renders are regenerated from the scripts; the data intermediates
-# in c_data/ stay tracked so a clone builds figures without re-running upstream.
-**/b_reports/**/*.png
-**/b_reports/**/*.pdf
-# The stage packets are the readable record of each stage, so they are kept.
-!**/b_reports/*_packet.pdf
-
-# 01_run_dep_imputed.R writes a combined_results_pi.csv for each arm. Only the
-# missforest one is read again -- test-pi-score.R uses it as its equivalence
-# fixture -- so it stays tracked. The other three are write-only and would just be
-# 13 MB no clone reads. The QC figure reads the sensitivity and concordance
-# summaries beside them, and the figures read DAList_imputed_missforest.rds.
-
-# proteoDA's write_limma_tables always writes the nine per-contrast slices and
-# has no switch to skip them. Nothing reads them any more -- dep_contrasts.csv
-# carries the same numbers in one table, and every former reader now takes them
-# from there -- so they are 13 MB of derivative no clone needs.
-
-# t0: experimental targets prediction pipeline (WIP). Track the source and the
-# outputs/ skeleton; the store and materialized outputs regenerate from tar_make().
-
-# Saved reading, not part of the pipeline.
-downloads/
-
-# Design references regenerate from build_reference_*.R, like every other render.
-04_Figures/shared/reference/**/*.png
-04_Figures/shared/reference/**/*.pdf
+**/*_files/
+**/a_script/*.rmarkdown
+**/*.quarto_ipynb
 
 # renv library is machine-local; the lockfile is the record
 renv/library/
 renv/staging/
 renv/local/
-
-# run_all.R writes one log per step per run.
-.runlogs/
