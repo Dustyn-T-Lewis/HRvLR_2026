@@ -13,7 +13,7 @@ rbc_reference <- build_rbc_reference(here("00_input", "RBC_proteins.xlsx"))
 write_tsv(rbc_reference, here("00_input", "RBC_proteome_reference.tsv"))
 
 cat(sprintf(
-  "RBC_proteome_reference.tsv: %d proteins (%d with accession, %d with gene); %d backed by >=2 sources\n",
+  "RBC_proteome_reference.tsv: %d proteins (%d with accession, %d with gene); %d backed by >=2 sources\n", # nolint: line_length_linter.
   nrow(rbc_reference), sum(!is.na(rbc_reference$acc)),
   sum(!is.na(rbc_reference$gene)),
   sum(rbc_reference$n_sources >= 2)

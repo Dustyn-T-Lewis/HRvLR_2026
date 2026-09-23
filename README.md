@@ -1,4 +1,4 @@
-# A_HRvLR_2026_V2
+# HRvLR_V2
 
 Maps the skeletal-muscle proteome onto training adaptation continuously. No
 responder groups, no cut points, no baseline contrast.

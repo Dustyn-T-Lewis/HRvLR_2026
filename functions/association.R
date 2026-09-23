@@ -15,17 +15,13 @@
 
 pacman::p_load(here, dplyr, tidyr, tibble, readr, limma)
 
-source(here("functions", "feature_levels.R"))
-
 # Six views of the same proteome. The three levels ask a between-person
 # question: do people whose module sits higher at this timepoint adapt more.
 # The three changes ask a within-person one: does a shift track a shift. They
 # are different questions and are reported apart, never pooled.
 #
 # The three levels are close to one question rather than three, because a
-# subject's proteome at T1, T2 and T3 is largely the same proteome. The window
-# redundancy table in 02_run_association.R measures that rather than assuming
-# it.
+# subject's proteome at T1, T2 and T3 is largely the same proteome.
 WINDOWS <- c(
   T1 = "level at T1",
   T2 = "level at T2",
@@ -50,11 +46,14 @@ window_timepoints <- function(window) {
 }
 
 sample_metadata <- function() {
-  dal <- readRDS(here("02_Normalization", "c_data", "DAList_normalized.rds"))
+  dal <- readRDS(here(
+    "01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"
+  ))
   m <- as.data.frame(dal$metadata)
   tibble(
     sample_id = m$Col_ID,
     subject = m$Subject_ID,
+    arm = m$Group,
     timepoint = m$Timepoint
   )
 }
@@ -126,30 +125,4 @@ phenotype_table <- function() {
 
 phenotype_vector <- function(pheno, name) {
   setNames(pheno[[name]], pheno$subject)
-}
-
-# Per-sample tissue composition from the filtering stage, as a subject-by-panel
-# matrix for one window. Levels take the fraction at that timepoint; changes
-# take the difference, so the covariate matches what the feature matrix holds.
-composition_matrix <- function(window, meta = sample_metadata()) {
-  ci <- read_csv(
-    here("01_Filtering", "c_data", "contamination_index.csv"),
-    show_col_types = FALSE
-  )
-  wide <- ci |>
-    dplyr::select(sample_id = "Col_ID", panel, pct_signal) |>
-    tidyr::pivot_wider(names_from = "panel", values_from = "pct_signal")
-  mat <- t(as.matrix(wide[, setdiff(names(wide), "sample_id")]))
-  colnames(mat) <- wide$sample_id
-  t(subject_window(mat, window, meta))
-}
-
-# The three levels the project already fits, all keyed by the 45 sample ids so
-# subject_window() treats them identically.
-feature_matrices <- function() {
-  list(
-    proteins = protein_matrix(),
-    modules = module_matrix(),
-    pathways = pathway_matrix()
-  )
 }
