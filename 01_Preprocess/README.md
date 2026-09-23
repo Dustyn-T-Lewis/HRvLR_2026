@@ -24,7 +24,7 @@ Run them in order: each reads the previous one's `.rds`. All three render in und
 seen. `DAList_imputed.rds` fills those gaps for `fry`, singscore and WGCNA, and is read by
 nothing else.
 
-## Two orderings that matter
+## Two orderings
 
 Contaminants go **before** normalisation, because cyclic loess estimates each sample's reference
 from its own intensity distribution.

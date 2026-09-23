@@ -30,7 +30,7 @@ quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd 
 `Training_Interaction` equals `Trained_HRvLR` minus `Baseline_HRvLR` exactly, so these are not
 nine independent questions.
 
-## Three things that matter
+## Notes
 
 **No contrast has a BH hit.** The lowest adjusted p across all nine is 0.071 (Acute_HR). The
 primary contrast could detect a median effect of 1.04 log2 units at 80% power, so an empty

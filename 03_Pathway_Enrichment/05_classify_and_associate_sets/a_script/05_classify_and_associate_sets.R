@@ -317,8 +317,8 @@ draw_roc_figure <- function(task_name, index) {
     sprintf("01_roc_%02d_%s", index, task_name), nrow(hits), columns
   )
 }
-# The floor is tested and reported in chance_expectation, but gets no figure: it says what the
-# method returns when nothing is there, which is a number to read rather than a panel to present.
+# The floor gets no figure. It shows what the method returns when nothing is there, so
+# chance_expectation reports it as a number.
 drawn_tasks <- setdiff(names(tasks), "Baseline_HRvLR")
 roc_drawn <- imap_int(set_names(drawn_tasks), \(task_name, i) {
   draw_roc_figure(task_name, match(task_name, drawn_tasks))

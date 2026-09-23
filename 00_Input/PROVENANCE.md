@@ -1,9 +1,9 @@
-# Red-cell proteome reference — provenance
+# Red-cell proteome reference: provenance
 
 `RBC_proteome_reference.tsv` is the mature-erythrocyte protein list `01_Filtering` reports beside
 every protein call. Erythrocytes are enucleate, so no transcriptomic atlas (including HPA's
-single-cell erythrocyte RNA) represents their proteome; the membrane skeleton — band 3 (`SLC4A1`),
-spectrins, protein 4.2 — is invisible to RNA and only recognisable from red-cell mass spectrometry.
+single-cell erythrocyte RNA) represents their proteome; the membrane skeleton, including band 3 (`SLC4A1`),
+spectrins and protein 4.2, is invisible to RNA and only recognisable from red-cell mass spectrometry.
 The reference collapses five published sources into one lookup.
 
 ## Sources
@@ -24,8 +24,8 @@ Union: 8,011 entries (6,452 with accession, 7,937 with gene); 2,089 backed by tw
 
 ## Why membership never removes on its own
 
-A deep red-cell proteome shares roughly 70% of any skeletal-muscle proteome — glycolysis, tubulins,
-ferritins, chaperones — because both cell types carry the same cytosolic housekeeping program.
+A deep red-cell proteome shares roughly 70% of any skeletal-muscle proteome (glycolysis, tubulins,
+ferritins, chaperones) because both cell types carry the same cytosolic housekeeping program.
 Membership therefore removes nothing. `01_Filtering` reports it as `in_rbc` beside every call,
 and the erythrocyte members of the curated blood list were drawn from it.
 
@@ -39,7 +39,7 @@ Reads `RBC_proteins.xlsx`, rewrites `RBC_proteome_reference.tsv`. Rerun only whe
 
 ---
 
-# Curated blood contaminant list — provenance
+# Curated blood contaminant list: provenance
 
 `blood_contaminants.csv`, 95 proteins. Read by `01_Preprocess/01_Filtering/a_script/01_filter.qmd`
 and bound onto the curated contaminant table, so removal is by accession and final: the muscle
@@ -75,12 +75,12 @@ Protein identity, not covariation. Every member is one of:
 | leukocyte | 5 | LYZ, S100A8, S100A9, DEFA3, LCP1 |
 
 Each row carries its `reason`, plus the `blood_cor`, `ery` and `myo` values it had when the list
-was built. Those three columns are evidence, not criteria — nothing was included because of them.
+was built. Those three columns are evidence only; nothing was included because of them.
 
 ## What was deliberately excluded
 
 Sixteen proteins the old threshold removed are **not** on the list, because covariation with the
-haemoglobin index was their only evidence and they carry real myonuclei expression: RBMX (358
+haemoglobin index was their only evidence and they are expressed in myonuclei: RBMX (358
 nCPM), SYNE2 (303), HNRNPA3 (213), DDI2 (179), GDI2 (75), STK38 (47), CPNE3 (46), CCS (39),
 FBXO7 (36), LXN (23), ARF1 (21), ANP32E (21), SEPTIN6 (7), RAN (6), DNAJB4 (4), FLOT1 (0.4).
 They are back in the analysed matrix.
@@ -94,7 +94,7 @@ an input change, render `01_filter.qmd` and join the `protein_calls` sheet of `0
 
 ---
 
-# GO Slim generic — provenance
+# GO Slim generic: provenance
 
 `goslim_generic.obo`, the Gene Ontology Consortium's species-neutral slim: a
 curated subset of high-level GO terms meant to summarise an annotation set

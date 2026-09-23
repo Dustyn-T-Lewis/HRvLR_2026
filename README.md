@@ -53,7 +53,7 @@ for s in 01_build_modules 02_characterise_modules 03_classify_and_associate_modu
 done
 ```
 
-Everything above takes about ten minutes.
+Everything above takes about five minutes.
 
 ## Approach
 
@@ -64,7 +64,7 @@ effect, because HR and LR are different people and a fixed subject term would ab
 between-arm contrast.
 
 The fitted matrix stays unimputed: limma fits each protein on the samples where it was seen. A
-missForest copy serves only the three methods that need a complete matrix: `fry`, singscore and
+missForest copy is read only by the three methods that need a complete matrix: `fry`, singscore and
 WGCNA.
 
 Every screen reports its nominal count beside the count chance predicts, and BH runs within each
