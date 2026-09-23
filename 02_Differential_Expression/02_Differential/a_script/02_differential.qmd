@@ -331,12 +331,12 @@ hit_pages <- function(data, columns, title, subtitle, fill_label, table, midpoin
       labs(
         title = sprintf("%s (%d/%d)", title, page, max(page_of)),
         subtitle = sprintf(
-          "%s; %d features nominal in at least one column; rows %d-%d",
+          "%s; %d proteins nominal in at least one column; rows %d-%d",
           subtitle, nrow(ranked), min(which(page_of == page)), max(which(page_of == page))
         ),
         x = NULL, y = NULL, fill = fill_label, size = "-log10 p",
         caption = paste0(
-          "Rows: features at nominal p < 0.05 in at least one column, most columns first, then ",
+          "Rows: proteins at nominal p < 0.05 in at least one column, most columns first, then ",
           "by best p. Filled dot: nominal, fill = ", fill_label, ", size = -log10 p. Black ring: ",
           "BH < 0.05. Grey speck: tested, not nominal. Table: ", table, "."
         )

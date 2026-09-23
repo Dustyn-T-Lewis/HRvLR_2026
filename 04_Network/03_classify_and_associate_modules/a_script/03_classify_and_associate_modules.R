@@ -4,7 +4,7 @@
 # The contrasts reuse the protein fit's design and subject block, with the within-subject
 # correlation re-estimated on the eigengenes, so a module is tested as a protein was apart from
 # that correlation.
-# Twelve features make BH a far weaker filter than 1,900 proteins; each table reports the count
+# Twelve modules make BH a far weaker filter than 1,900 proteins; each table reports the count
 # chance would give beside it.
 
 suppressPackageStartupMessages({
