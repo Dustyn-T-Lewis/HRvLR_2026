@@ -1,25 +1,15 @@
 # 04_test_modules
 
-The modules on the nine contrasts, by eigengene and by fry, and each module's membership against
-protein-level significance.
+Tests the modules on the nine contrasts, by eigengene and by fry, and reads each module's
+membership against protein-level significance.
 
 | | |
 |---|---|
-| Reads | `modules.rds`, `design.rds`, `fit.rds`, `phenotype.rds`, `DAList_imputed.rds` |
-| Writes | `module_tests.rds`, `04_test_modules.xlsx`, 5 figures |
+| Reads | `01_build_modules/c_data/modules.rds`, `02_Differential_Expression/01_Design/c_data/design.rds`, `02_Differential_Expression/02_Differential/c_data/fit.rds`, `02_Differential_Expression/03_Phenotype/c_data/phenotype.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` |
+| Writes | `c_data/04_test_modules.xlsx`, `b_reports/04_test_modules_figures.pdf` |
+| Run | `Rscript 04_Network/04_test_modules/a_script/04_test_modules.R` |
+| Cost | about 5 s |
 
-The eigengene test is `lmFit()` with the protein design and subject block, correlation re-estimated on the
-eigengenes (0.095), `eBayes(robust = TRUE)`, BH within contrast. 5 of 108 tests are nominal
-against 5.4 expected, none at BH < 0.05.
-
-fry tests each module as a protein set on the imputed matrix, with the same design and block and
-a correlation estimated on that matrix (0.176). fry's FDR runs over the twelve modules within each contrast. 7 of
-108 are nominal; red rising in Acute_LR is the one at FDR < 0.05 (0.045).
-
-Membership against significance (WGCNA's MM against GS) is, within each module, the Spearman
-correlation between a member's kME and its moderated t per contrast, and its rho with each phenotype over training. On
-the primary contrast blue (rho 0.32) and green (0.32) run positive and pink negative (−0.32).
-Members share a module, so these correlations are descriptive, not tests.
-
-Figures: eigengene contrasts, fry contrasts, membership against each contrast and each phenotype,
-and kME against moderated t for Training_Interaction in every module.
+The figure PDF holds eigengene and fry tiles across the nine contrasts, membership against each
+contrast and each phenotype, and kME against moderated t for `Training_Interaction` in every
+module.

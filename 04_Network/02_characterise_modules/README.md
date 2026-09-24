@@ -1,36 +1,15 @@
 # 02_characterise_modules
 
-What each module is.
+Names each module by its enriched sets, hubs and STRING edges.
 
 | | |
 |---|---|
-| Reads | `modules.rds`, `gene_sets.rds`, STRING v12 files in `00_Input/downloads/` |
-| Writes | `module_characterisation.rds`, `02_characterise_modules.xlsx`, 3 figures over 5 pages |
+| Reads | `01_build_modules/c_data/modules.rds`, `03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds`, `00_Input/downloads/9606.protein.links.v12.0.min700.txt.gz`, `9606.protein.aliases.v12.0.txt.gz`, `9606.protein.info.v12.0.txt.gz` |
+| Writes | `c_data/02_characterise_modules.xlsx`, `b_reports/02_characterise_modules_figures.pdf` |
+| Run | `Rscript 04_Network/02_characterise_modules/a_script/02_characterise_modules.R` |
+| Cost | about 15 s with the STRING files on disk |
 
-Enrichment is `clusterProfiler::compareCluster(fun = "enricher")` against the 1,378 sets of
-`03_Pathway_Enrichment/00_build_gene_sets`, with the 1,900 measured genes as universe and BH within
-each module. Hubs are the ten members with the highest kME.
-
-The STRING check is `STRINGdb$get_ppi_enrichment()` at combined score ≥ 700, background set to the
-measured proteins STRING maps. The expected edge count comes from each member's degree, so
-well-studied proteins do not inflate a module's enrichment. Nearly any co-expression module
-passes; compare modules by the observed-over-expected ratio.
-
-| Module | Top set | FDR | STRING ratio |
-|---|---|---:|---:|
-| purple | Reactome striated muscle contraction | 7e-27 | 10.1 |
-| tan | Reactome respiratory electron transport | 9e-19 | 4.4 |
-| pink | Hallmark epithelial-mesenchymal transition | 0.006 | 3.1 |
-| red | GO Slim mRNA metabolic process | 1e-4 | 2.8 |
-| greenyellow | Reactome rRNA processing | 3e-24 | 2.6 |
-| blue | Hallmark oxidative phosphorylation | 1e-15 | 1.9 |
-| brown | Hallmark glycolysis | 0.006 | 1.8 |
-| magenta | Reactome eukaryotic translation initiation | 3e-4 | 1.7 |
-
-Turquoise, yellow, green and black have no set at FDR < 0.05. The workbook's `labels` sheet holds
-every module's top set, top GO Slim term and hubs.
-
-`03_hub_networks.pdf` draws each module's 25 highest-kME members and the STRING edges among them,
-four modules to a page. Greenyellow (209 edges), tan (202) and purple (167) are dense; turquoise,
-green and black have two to four edges among their hubs. Node fill is kME, size the degree among
-the drawn hubs; the seeded layout carries no meaning. The edges are in the `hub_edges` sheet.
+The figure PDF holds the enrichment dot plot, observed against expected STRING edges, and three
+pages of hub networks: each module's 25 highest-kME members and the STRING edges among them, four
+modules to a page. The seeded layout carries no meaning. The `labels` sheet holds each module's top
+set, top GO Slim term and hubs.

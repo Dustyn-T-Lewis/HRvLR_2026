@@ -24,33 +24,37 @@ library(here)
 library(proteoDA)
 library(dplyr)
 library(tibble)
+library(limma)
 library(ggplot2)
 library(writexl)
 
-dal <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "DAList_filtered.rds"))
+inputs <- c(filtered = "01_Preprocess/01_Filtering/c_data/DAList_filtered.rds")
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["filtered"]])
 out <- here("01_Preprocess", "02_Normalization", "c_data")
 reports <- here("01_Preprocess", "02_Normalization", "b_reports")
-dir.create(out, recursive = TRUE, showWarnings = FALSE)
+for (path in c(out, reports)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 c(proteins = nrow(dal$data), samples = ncol(dal$data))
 ```
 
-## Compare, then normalise
+## proteoDA compares the methods, then cyclic loess runs
 
 `write_norm_report()` draws every method proteoDA offers against the grouping; the QC reports
 bracket the chosen one. All three PDFs land in `b_reports/`.
 
 ```{r normalise}
 write_norm_report(dal,
-  grouping_column = "Group_Time", output_dir = reports,
+  grouping_column = "group", output_dir = reports,
   filename = "norm_comparison.pdf", overwrite = TRUE
 )
 write_qc_report(dal,
-  color_column = "Group_Time", output_dir = reports,
+  color_column = "group", output_dir = reports,
   filename = "qc_pre.pdf", overwrite = TRUE
 )
 dal <- normalize_data(dal, norm_method = "cycloess")
 write_qc_report(dal,
-  color_column = "Group_Time", output_dir = reports,
+  color_column = "group", output_dir = reports,
   filename = "qc_post.pdf", overwrite = TRUE
 )
 ```
@@ -59,21 +63,17 @@ Cyclic loess here is `limma::normalizeCyclicLoess(method = "fast")`. Its span is
 in the formals: `adaptive.span = TRUE` replaces it with `chooseLowessSpan(nrow)`, so the span
 moves whenever filtering changes the protein count.
 
-## What drives the matrix
+## PC1 carries 11.6% of the variance after normalisation
 
-Share of each protein's variance explained by the six Group_Time cells (eta squared), and the
-leading components after normalisation.
+Share of each protein's variance explained by the six group cells (eta squared, 1 minus the
+residual over the total sum of squares), and the leading components after normalisation.
 
 ```{r structure}
-group <- dal$metadata$Group_Time[match(colnames(dal$data), dal$metadata$Col_ID)]
-eta2 <- apply(dal$data, 1, \(x) {
-  ok <- !is.na(x)
-  if (sum(ok) < 4) {
-    return(NA_real_)
-  }
-  fit <- summary(aov(x[ok] ~ group[ok]))[[1]]
-  fit[1, 2] / sum(fit[, 2])
-})
+stopifnot(identical(dal$metadata$sample_id, colnames(dal$data)))
+cell_fit <- lmFit(dal$data, model.matrix(~group, dal$metadata))
+total_ss <- apply(dal$data, 1, \(x) sum((x - mean(x, na.rm = TRUE))^2, na.rm = TRUE))
+eta2 <- 1 - cell_fit$sigma^2 * cell_fit$df.residual / total_ss
+eta2[rowSums(!is.na(dal$data)) < 4] <- NA
 filled <- apply(dal$data, 2, \(x) replace(x, is.na(x), median(x, na.rm = TRUE)))
 pca <- prcomp(t(filled), center = TRUE, scale. = TRUE)
 components <- tibble(
@@ -87,9 +87,9 @@ summary(eta2)
 ```{r fig-pca}
 #| fig-width: 6
 #| fig-height: 4.5
-as_tibble(pca$x[, 1:2], rownames = "Col_ID") |>
-  left_join(dal$metadata, by = "Col_ID") |>
-  ggplot(aes(PC1, PC2, colour = Timepoint, shape = Group)) +
+pca_scores <- as_tibble(pca$x[, 1:2], rownames = "sample_id") |>
+  left_join(dal$metadata, by = "sample_id")
+pca_figure <- ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm)) +
   geom_point(size = 2.2) +
   scale_colour_manual(values = c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")) +
   labs(
@@ -99,25 +99,38 @@ as_tibble(pca$x[, 1:2], rownames = "Col_ID") |>
     y = sprintf("PC2 (%.1f%%)", 100 * components$variance_explained[2])
   ) +
   theme_minimal(base_size = 10)
+pca_figure
 ```
 
-## Outputs
+## Writes DAList_normalized.rds, the workbook and the figure PDF
 
 ```{r write}
-saveRDS(dal, file.path(out, "DAList_normalized.rds"))
-write_xlsx(
-  list(
-    normalized = bind_cols(
-      as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
-      as_tibble(dal$data)
-    ),
-    components = components,
-    eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2))
+saveRDS(dal, file.path(out, "DAList_normalized.rds"), compress = "xz")
+pdf(file.path(reports, "02_normalize_figures.pdf"), width = 11, height = 8.5)
+print(pca_figure)
+invisible(dev.off())
+sheets <- list(
+  normalized = bind_cols(
+    as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
+    as_tibble(dal$data)
   ),
-  file.path(out, "02_normalize.xlsx")
+  components = components,
+  pca_scores = select(pca_scores, sample_id, subject, arm, timepoint, PC1, PC2),
+  eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2)),
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+  ),
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-```
-
-```{r session}
-sessionInfo()
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "Cyclic-loess log2 abundance, one row per protein.",
+  "Variance explained by the first four principal components.",
+  "Each sample's PC1 and PC2 score.",
+  "Share of each protein's variance explained by the six group cells.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "02_normalize.xlsx"))
 ```

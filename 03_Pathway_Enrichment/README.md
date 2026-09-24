@@ -1,46 +1,45 @@
 # 03 · Pathway Enrichment
 
-Tests each gene set on each contrast, then scores every sample on every set and tests the scores.
+Tests each gene set on each contrast, scores every sample on every set, and tests the scores.
 
 | Step | Runs | Writes |
 |---|---|---|
 | [`00_build_gene_sets`](00_build_gene_sets/README.md) | frozen MSigDB snapshot, protein-to-gene map, size filter, GO Slim sets | `gene_sets.rds` |
-| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | fgsea and fry per contrast, `collapsePathways` | `set_tests.rds`, dot plots, hit matrices |
+| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | fgsea and fry per contrast, `collapsePathways` | `set_tests.rds` |
 | [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | 8 volcanoes |
 | [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | HR NES against LR NES, training and acute | 4 composites |
-| [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds`, 2 figures |
-| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, ROC and association pages for every nominal set, chance figure |
+| [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds` |
+| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | every nominal set drawn |
 
-```sh
-for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
-         03_enrich_scatter_fgsea 04_run_singscore 05_classify_and_associate_sets; do
-  Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
-done
-```
+## 1,378 sets pass the size filter
 
-About three minutes in total, most of it drawing the `05_` pages. Each substage writes every
-figure as PDF, and a PNG when the figure is one page, and bundles the PDFs into one
-`<substage>_figures.pdf`. Titles name the figure, subtitles give method and counts, captions
-state the encodings and the source table. Findings live here, not on the figures.
+The first run fetches four MSigDB collections (release 2026.1.Hs) and writes an RDS with an md5 to
+`00_build_gene_sets/c_data/cache/`. Later runs verify the checksum and need no network. Restore the
+RDS and its `.md5` together; move both aside to rebuild. `goslim_generic.obo` sits beside it with
+its own `.md5`; the script does not fetch it. `00_Input/PROVENANCE.md` has its source and refresh
+steps.
 
-## Methods
+A set is tested with 15 to 500 source genes and at least 15 measured. Each GO Slim set holds every
+measured gene annotated to the slim term or any GO:BP term below it, and its size rule reads
+measured size. All 1,900 proteins carry one distinct symbol, so every protein represents its gene.
 
-fgsea is competitive: does a set sit at one end of the protein ranking? fry is
-self-contained: did the set move at all under the fitted design? fry tests all 1,378 sets; fgsea
-tests 1,369 to 1,374 per contrast, since a protein untested in a contrast leaves that ranking.
-fgsea assumes proteins are exchangeable, and co-regulated sets break that; fry does not assume it,
-and takes the subject block and the within-subject correlation. fry reads the imputed matrix,
-because it cannot take a missing value.
+| Collection | In source | Tested | Median measured |
+|---|---:|---:|---:|
+| Hallmark | 50 | 33 | 34 |
+| KEGG_Legacy | 186 | 62 | 23.5 |
+| Reactome | 1,839 | 328 | 33 |
+| GOBP | 7,538 | 897 | 25 |
+| GO_Slim | 71 | 58 | 97 |
+| Total | 9,684 | 1,378 | |
 
-singscore gives one rank-based score per set per sample, on the imputed matrix. It carries no
-p-value, never sees a contrast, and a sample's score does not change with the cohort.
+## fry finds nothing; fgsea calls more sets on the floor than on the primary contrast
 
-The order is pool, test, then collapse. All sets are tested and each method's own BH corrects within
-each contrast, pooling the five collections. Set classification and association (step 05) correct
-within collection instead, so each collection keeps its own chance line. `collapsePathways` then marks non-redundant fgsea hits in the `main` column and
-deletes nothing. No set is excluded by name.
-
-## Results
+fgsea asks whether a set sits at one end of the protein ranking (moderated t, seeded). fry asks
+whether the set moved at all under the fitted design, subject block and within-subject correlation
+(0.176, estimated on the imputed matrix, since fry takes no missing value). fry tests all 1,378
+sets; fgsea tests 1,369 to 1,374 per contrast, because a protein untested in a contrast leaves that
+ranking. Each method's own BH runs within each contrast over the five collections pooled.
+`collapsePathways` then marks non-redundant fgsea hits in the `main` column and deletes nothing.
 
 | Contrast | fgsea | after collapse | fry |
 |---|---:|---:|---:|
@@ -54,12 +53,34 @@ deletes nothing. No set is excluded by name.
 | Acute_HRvLR | 175 | 58 | 0 |
 | Baseline_HRvLR *(floor)* | 60 | 26 | 0 |
 
-fry finds nothing in any contrast. fgsea calls 60 sets on the floor, more than on the primary
-contrast, so its counts track its gene-permutation null, and no fgsea list is a finding.
+fgsea calls 60 sets on the floor and 27 on the primary contrast, so no fgsea list is a finding.
 
-Nominal hits over chance for classification by set score, per collection:
+HR and LR NES correlate at rho 0.34 over 1,369 sets for training and 0.35 over 1,370 for the acute
+bout.
 
-| Task | Hallmark | KEGG | Reactome | GO:BP | GO Slim |
+| Pair | Population | Sets | rho | Significant | Discordant |
+|---|---|---:|---:|---:|---:|
+| training | all collections | 1,369 | 0.34 | 176 | 15 |
+| training | collapse survivors | 38 | 0.66 | 38 | 6 |
+| training | Hallmark and GO Slim | 90 | 0.28 | 11 | 3 |
+| acute | all collections | 1,370 | 0.35 | 287 | 53 |
+| acute | collapse survivors | 95 | 0.58 | 95 | 19 |
+| acute | Hallmark and GO Slim | 90 | 0.49 | 43 | 10 |
+
+A set is discordant when its two NES differ in sign. Hallmark and GO Slim are paired because their
+sets do not nest.
+
+## Set classification clears chance only on the acute bout
+
+singscore gives one rank-based score per set per sample on the imputed matrix. It carries no
+p-value and never sees a contrast. Subject dominates raw scores: PC1 carries 25.6% of the variance,
+of which subject explains 0.68, so step 05 reads within-subject change as well as levels.
+
+Step 05 puts each score through the eight classification tasks of `02_Differential` and the
+Spearman association in three windows, with BH within collection and task (classification) or
+collection, window and outcome (association). Nominal hits over chance for classification:
+
+| Task | Hallmark | KEGG_Legacy | Reactome | GOBP | GO_Slim |
 |---|---:|---:|---:|---:|---:|
 | training, HR | 0.59 | 1.29 | 0.79 | 0.60 | 1.72 |
 | training, LR | 0.00 | 0.65 | 0.12 | 0.56 | 0.34 |
@@ -73,12 +94,9 @@ Nominal hits over chance for classification by set score, per collection:
 The acute bout clears chance in every collection in both arms; no other task does so across
 collections. No set survives BH in any task. The paired Wilcoxon has a floor set by the number of
 pairs: 6 pairs (HR training) cannot go below p = 0.031, 7 (HR acute) below 0.016, 8 (LR) below
-0.0078. BH over hundreds of sets is out of reach by construction.
+0.0078.
 
-Four set-outcome pairs survive BH within collection: peroxisomal protein import
-(Reactome) and peroxisome (KEGG) against `volume_load` over training, GO Slim DNA replication
-against baseline `d_1rm_ext`, and Reactome basal-body anchoring against `comp_hypertrophy` over the
-acute bout. Baseline level against `d_1rm_ext` runs at 3.4 times chance across collections.
-
-HR and LR NES correlate at rho 0.34 over 1,369 sets for training and 0.35 over
-1,370 for the acute bout. The overlap is weaker than in BFR's two training arms (0.83).
+Four set-outcome pairs survive BH within collection: peroxisomal protein import (Reactome) and
+peroxisome (KEGG) against `volume_load` over training, GO Slim DNA replication against baseline
+`d_1rm_ext`, and Reactome basal-body anchoring against `comp_hypertrophy` over the acute bout.
+Baseline level against `d_1rm_ext` runs at 3.4 times chance across collections.

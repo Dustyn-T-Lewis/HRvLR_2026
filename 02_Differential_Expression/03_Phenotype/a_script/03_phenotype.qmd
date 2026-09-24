@@ -25,8 +25,9 @@ phenotypes, all T2 − T1 changes except `volume_load`. Training change is the w
 the phenotypes; the baseline level asks whether a starting proteome predicts adaptation, and the
 acute change whether the bout response does.
 
-Up to 1,900 proteins per cell mean about 95 nominal hits at p < 0.05 by chance, so nothing here
-is read at nominal p. BH within each window and outcome is the reported quantity.
+At most 1,574 proteins pass the two-thirds floor per cell, so chance gives up to 79 nominal hits
+at p < 0.05. BH within each window and outcome is the reported quantity; `ratio` compares the
+nominal count with chance.
 
 ```{r setup}
 library(here)
@@ -35,24 +36,26 @@ library(purrr)
 library(tibble)
 library(ggplot2)
 
-dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"))
-phenotype <- readr::read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
+inputs <- c(
+  proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds",
+  phenotype = "00_Input/phenotype.csv"
+)
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["proteins"]])
+phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 out <- here("02_Differential_Expression", "03_Phenotype", "c_data")
 figures <- here("02_Differential_Expression", "03_Phenotype", "b_reports")
-bundle <- file.path(figures, "03_phenotype_figures.pdf")
-# Clear last render's figures and bundle so the bundle holds only this render's pages.
-unlink(c(list.files(figures, "^0[0-9]_.*[.](png|pdf)$", full.names = TRUE), bundle))
-dir.create(out, recursive = TRUE, showWarnings = FALSE)
+for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 ```
 
-## Windows
+## Windows hold 14 or 15 subjects
 
-A subject contributes to a window only when every timepoint it needs was acquired. S29 has no
-T1 and S28 no T2 or T3, so the windows hold 14 or 15 subjects.
+A subject contributes to a window only when every timepoint it needs was acquired. HR_S29 has no
+T1 and HR_S28 no T2 or T3, so the windows hold 14 or 15 subjects.
 
 ```{r windows}
-meta <- as_tibble(dal$metadata) |>
-  select(sample_id = Col_ID, subject = Subject_ID, arm = Group, timepoint = Timepoint)
+meta <- as_tibble(dal$metadata)
 by_subject <- function(mat, timepoint) {
   rows <- filter(meta, timepoint == .env$timepoint)
   set_names(as.data.frame(mat[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
@@ -71,35 +74,39 @@ windows <- list(
 map_int(windows, ncol)
 ```
 
-## Correlations
+## Spearman p comes from the t approximation
 
 Spearman throughout. A protein is tested in a window only when at least two thirds of that
 window's subjects observed it: a protein seen in two subjects fits a rank correlation through two
-points. The p comes from the t approximation (`exact = FALSE`). Above nine observations
-`cor.test`'s "exact" p is an Edgeworth series, and in the far tail it returns exactly 0: RPS4X
-against `d_mcsa`, rho 0.91 on 14 subjects, came back p = 0 and topped the BH list.
+points. The p comes from the t approximation, the one `cor.test(exact = FALSE)` uses, computed
+for every protein at once. Above nine observations `cor.test`'s "exact" p is an Edgeworth series,
+and in the far tail it returns exactly 0: RPS4X against `d_mcsa`, rho 0.91 on 14 subjects, came
+back p = 0 and topped the BH list.
 
 ```{r correlate}
 outcomes <- c(
   "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_fcsa_mixed", "d_nfibre_mixed",
   "d_nfibre_I", "d_mcsa", "d_1rm_legpress", "d_1rm_ext", "volume_load"
 )
+# cor.test(exact = FALSE)'s p, step for step: S statistic, rho back from S, then the t tail.
+spearman_p <- function(rho, n) {
+  s <- (n^3 - n) * (1 - rho) / 6
+  r <- 1 - s / ((n * (n^2 - 1)) / 6)
+  t <- r / sqrt((1 - r^2) / (n - 2))
+  pmin(2 * if_else(s > (n^3 - n) / 6, pt(t, n - 2), pt(t, n - 2, lower.tail = FALSE)), 1)
+}
+# cor() re-ranks each protein on the subjects where it was seen.
 spearman_by_row <- function(values, outcome) {
   usable <- !is.na(outcome)
   values <- values[, usable, drop = FALSE]
-  outcome <- outcome[usable]
-  min_obs <- ceiling(2 * length(outcome) / 3)
-  fits <- apply(values, 1, \(row) {
-    seen <- !is.na(row)
-    if (sum(seen) < min_obs) {
-      return(c(r = NA, p = NA, n = sum(seen)))
-    }
-    test <- stats::cor.test(row[seen], outcome[seen], method = "spearman", exact = FALSE)
-    c(r = unname(test$estimate), p = test$p.value, n = sum(seen))
-  })
+  n <- rowSums(!is.na(values))
+  rho <- suppressWarnings(
+    cor(t(values), outcome[usable], method = "spearman", use = "pairwise.complete.obs")[, 1]
+  )
+  rho[n < ceiling(2 * sum(usable) / 3)] <- NA
   tibble(
-    protein = rownames(values), n = unname(fits["n", ]),
-    r = unname(fits["r", ]), p = unname(fits["p", ])
+    uniprot_id = rownames(values), n_subjects = unname(n), rho = unname(rho),
+    p = spearman_p(rho, n)
   )
 }
 outcome_of <- function(name, subjects) {
@@ -114,16 +121,16 @@ results <- imap(windows, \(values, window) {
 }) |>
   list_rbind() |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome)) |>
-  left_join(tibble(protein = dal$annotation$uniprot_id, gene = dal$annotation$gene),
-    by = "protein"
+  left_join(tibble(uniprot_id = dal$annotation$uniprot_id, gene = dal$annotation$gene),
+    by = "uniprot_id"
   ) |>
-  relocate(window, outcome, protein, gene)
+  relocate(window, outcome, uniprot_id, gene)
 ```
 
 The same correlation inside each arm and window, descriptive only: 4 to 8 subjects per correlation.
 
 ```{r by-arm}
-arm_of <- set_names(phenotype$group_arm, phenotype$subject)
+arm_of <- set_names(phenotype$arm, phenotype$subject)
 by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   imap(windows, \(values, window) {
     kept <- values[, arm_of[colnames(values)] == arm, drop = FALSE]
@@ -137,17 +144,18 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   filter(!is.na(p))
 ```
 
-## What survives
+## Two protein-outcome pairs survive BH
 
 ```{r chance}
 chance_expectation <- results |>
   filter(!is.na(p)) |>
   summarise(
-    tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05), .by = c(window, outcome)
+    n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
+    .by = c(window, outcome)
   ) |>
   transmute(
-    analysis = paste0("association: ", window), comparison = outcome, tested, nominal,
-    expected = 0.05 * tested, ratio = round(nominal / expected, 2), fdr_sig
+    analysis = paste0("association: ", window), comparison = outcome, n_tested, n_nominal,
+    n_expected = 0.05 * n_tested, ratio = round(n_nominal / n_expected, 2), n_fdr_05
   )
 chance_expectation
 ```
@@ -187,7 +195,7 @@ chance_figure <- chance_expectation |>
 chance_figure
 ```
 
-## Hit matrices
+## Every nominal protein goes in a dot matrix, one per window
 
 Every protein nominal against at least one phenotype, one matrix per window. Fill is Spearman
 rho, size is −log10 p, a black ring marks BH < 0.05.
@@ -199,22 +207,6 @@ label_of <- dal$annotation |>
     paste0(coalesce(gene, "?"), " (", uniprot_id, ")"), gene
   )) |>
   with(set_names(label, uniprot_id))
-save_figure <- function(figure, name, width = 11, height = 8.5) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figures, paste0(name, ".", extension)), figure,
-      width = width, height = height, dpi = 200, bg = "white"
-    )
-  })
-}
-# A paged figure is one PDF; a single-page one also gets a PNG.
-save_pages <- function(pages, name, width = 11, height = 8.5) {
-  if (length(pages) == 1) save_figure(pages[[1]], name, width, height)
-  if (length(pages) > 1) {
-    pdf(file.path(figures, paste0(name, ".pdf")), width = width, height = height, bg = "white")
-    walk(pages, print)
-    invisible(dev.off())
-  }
-}
 hit_pages <- function(data, columns, title, subtitle, table, per_page = 75) {
   ranked <- data |>
     filter(!is.na(p)) |>
@@ -273,7 +265,7 @@ hits <- imap(window_titles, \(title, window) {
   hit_pages(
     results |>
       filter(window == .env$window) |>
-      transmute(label = label_of[protein], column = outcome, effect = r, p, fdr),
+      transmute(label = label_of[uniprot_id], column = outcome, effect = rho, p, fdr),
     outcomes,
     title = paste("Protein association hits,", title),
     subtitle = "Spearman against each phenotype",
@@ -284,36 +276,27 @@ map_int(hits, length)
 ```
 
 ```{r write}
-save_figure(chance_figure, "01_chance_expectation", width = 8, height = 5)
-iwalk(hits, \(pages, window) save_pages(pages, sprintf("02_hits_%s", window)))
-inputs <- c(
-  proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds",
-  phenotype = "00_Input/phenotype.csv"
-)
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(map_chr(inputs, here)))
-)
+pdf(file.path(figures, "03_phenotype_figures.pdf"), width = 11, height = 8.5)
+walk(c(list(chance_figure), list_flatten(unname(hits))), print)
+invisible(dev.off())
+saveRDS(list(protein_association = results), file.path(out, "phenotype.rds"), compress = "xz")
 # by_arm runs to tens of thousands of rows; the workbook keeps the nominal ones.
-writexl::write_xlsx(
-  list(
-    chance_expectation = chance_expectation, protein_association = arrange(results, fdr),
-    protein_by_arm = filter(by_arm, p < 0.05), input_manifest = manifest
+sheets <- list(
+  chance_expectation = chance_expectation, protein_association = arrange(results, fdr),
+  protein_by_arm = filter(by_arm, p < 0.05),
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "03_phenotype.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-saveRDS(
-  list(
-    protein_association = results, by_arm = by_arm, chance_expectation = chance_expectation,
-    provenance = list(created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE), inputs = manifest)
-  ),
-  file.path(out, "phenotype.rds"),
-  compress = "xz"
-)
-pages <- sort(list.files(figures, "^0[0-9]_.*[.]pdf$", full.names = TRUE))
-invisible(qpdf::pdf_combine(pages, bundle))
-length(pages)
-```
-
-```{r session}
-sessionInfo()
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "Nominal hits against chance, per window and outcome. Read first.",
+  "Spearman rho, p and BH FDR per protein, window and outcome, subjects pooled.",
+  "Within-arm correlations with p < 0.05.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "03_phenotype.xlsx"))
 ```

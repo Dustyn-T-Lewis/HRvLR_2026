@@ -17,7 +17,7 @@ execute:
 
 The differential fit reads the unimputed matrix. Three later methods cannot: `fry` rotates
 residuals and takes no missing value, singscore ranks every protein in a sample, and WGCNA
-correlates complete columns. They read this file. Nothing else does.
+correlates complete columns. `03_Pathway_Enrichment/05` reads the sample sheet from it.
 
 ```{r setup}
 library(here)
@@ -25,18 +25,21 @@ library(missForest)
 library(tibble)
 library(writexl)
 
-dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"))
+inputs <- c(normalized = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds")
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["normalized"]])
 out <- here("01_Preprocess", "03_Imputation", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 mat <- as.matrix(dal$data)
 c(proteins = nrow(mat), samples = ncol(mat), pct_missing = round(100 * mean(is.na(mat)), 1))
 ```
 
-## Impute
+## missForest on ranger, rows sorted, seed 42
 
 Random-forest imputation (Stekhoven & Bühlmann 2012). Rows are sorted before the stochastic fit
 so the result reproduces. The backend is ranger, named rather than left to the default, so a
-change in missForest's default cannot swap engines between runs. The paper used randomForest.
+change in missForest's default cannot swap engines between runs.
 
 ```{r impute}
 params <- list(method = "missForest", backend = "ranger", maxiter = 10, ntree = 100)
@@ -52,21 +55,28 @@ stopifnot(!anyNA(imputed), identical(dim(imputed), dim(mat)))
 c(oob_nrmse = round(unname(mf$OOBerror[1]), 4))
 ```
 
-## Outputs
+## Writes DAList_imputed.rds and the workbook
 
 ```{r write}
 dal$data <- imputed
 dal$imputation <- c(params, oob_error = unname(mf$OOBerror[1]))
-saveRDS(dal, file.path(out, "DAList_imputed.rds"))
-write_xlsx(
-  list(imputation = as_tibble(c(
+saveRDS(dal, file.path(out, "DAList_imputed.rds"), compress = "xz")
+sheets <- list(
+  imputation = as_tibble(c(
     params,
     pct_imputed = 100 * mean(is.na(mat)), oob_nrmse = unname(mf$OOBerror[1])
-  ))),
-  file.path(out, "03_impute.xlsx")
+  )),
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+  ),
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    dplyr::select(package, version = loadedversion, source)
 )
-```
-
-```{r session}
-sessionInfo()
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "missForest settings, share of values imputed, out-of-bag error.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "03_impute.xlsx"))
 ```

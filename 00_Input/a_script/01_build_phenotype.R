@@ -1,5 +1,5 @@
-# Build phenotype.csv, one row per subject, from the sample sheet. Every trait except
-# volume_load is a T2 - T1 change.
+# Build phenotype.csv, one row per subject, from the sample sheet. Each trait is computed as
+# T2 - T1, except comp_hypertrophy (the source's composite, read from the T2 row) and volume_load.
 #
 # The MyoVision columns are fibre counts, not areas, although their names say "fCSA": the
 # source workbook calls them "Number of fCSA - Mixed (MyoVision)". They run 142-1119 where
@@ -41,7 +41,7 @@ deltas <- at("T2") |>
   )
 
 phenotype <- meta |>
-  distinct(subject = Subject_ID, group_arm = Group) |>
+  distinct(subject = Subject_ID, arm = Group) |>
   left_join(
     meta |>
       filter(Timepoint == "T2") |>

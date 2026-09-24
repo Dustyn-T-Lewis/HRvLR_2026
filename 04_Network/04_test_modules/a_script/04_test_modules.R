@@ -9,7 +9,7 @@
 # Membership against significance (WGCNA's MM against GS): within each module, Spearman between a
 # member's kME and its protein-level moderated t per contrast, and its Spearman rho with each
 # phenotype over the training window. A positive value means the module's most central proteins
-# are the ones moving. Members share a module, so these correlations are descriptive, not tests.
+# moved up most. Members share a module, so these correlations are descriptive, not tests.
 
 suppressPackageStartupMessages({
   library(here)
@@ -25,7 +25,6 @@ stage <- here("04_Network", "04_test_modules")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(
   modules = "04_Network/01_build_modules/c_data/modules.rds",
@@ -46,9 +45,6 @@ d <- readRDS(paths[["design"]])
 fit <- readRDS(paths[["fit"]])
 phenotype <- readRDS(paths[["phenotype"]])$protein_association
 imputed <- readRDS(paths[["imputed"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
 
 me <- modules$eigengenes
 design <- d$dal$design$design_matrix
@@ -93,7 +89,7 @@ fry_tests <- map(contrast_names, \(contrast) {
     block = subject, correlation = fry_correlation, sort = "none"
   ) |>
     rownames_to_column("module") |>
-    transmute(contrast, module, n = NGenes, direction = Direction, p = PValue, fdr = FDR)
+    transmute(contrast, module, n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR)
 }) |>
   list_rbind()
 message(
@@ -110,7 +106,7 @@ member_rho <- function(data, value) {
   data |>
     filter(!is.na(.data[[value]])) |>
     summarise(
-      n = n(),
+      n_members = n(),
       test = list(cor.test(kme, .data[[value]], method = "spearman", exact = FALSE)),
       .by = c(module, any_of(c("contrast", "outcome")))
     ) |>
@@ -121,21 +117,14 @@ membership_contrast <- members |>
   member_rho("t")
 membership_phenotype <- members |>
   inner_join(
-    filter(phenotype, window == "training") |> select(uniprot_id = protein, outcome, r),
+    filter(phenotype, window == "training") |> select(uniprot_id, outcome, association = rho),
     by = "uniprot_id", relationship = "one-to-many"
   ) |>
-  member_rho("r")
+  member_rho("association")
 
 
 # ---- figures -------------------------------------------------------------------------------
 
-save_figure <- function(figure, name, width, height) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
-      width = width, height = height, dpi = 200, bg = "white"
-    )
-  })
-}
 figure_theme <- theme_minimal(base_size = 10) +
   theme(
     axis.text.x = element_text(angle = 35, hjust = 1),
@@ -168,60 +157,48 @@ module_tiles <- function(data, columns, fill_label, limits, title, subtitle, cap
     figure_theme
 }
 
-save_figure(
-  module_tiles(
-    rename(eigengene_tests, column = contrast, effect = t), contrast_names, "moderated t", NULL,
-    "Module eigengenes across the nine contrasts",
-    sprintf(
-      "limma on eigengenes, protein design, subject block (correlation %.3f); BH within contrast",
-      me_correlation
-    ),
-    "Fill: moderated t of each eigengene in each contrast."
+eigengene_figure <- module_tiles(
+  rename(eigengene_tests, column = contrast, effect = t), contrast_names, "moderated t", NULL,
+  "Module eigengenes across the nine contrasts",
+  sprintf(
+    "limma on eigengenes, protein design, subject block (correlation %.3f); BH within contrast",
+    me_correlation
   ),
-  "01_eigengene_contrasts", 9, 5.5
+  "Fill: moderated t of each eigengene in each contrast."
 )
 fry_signed <- fry_tests |>
   mutate(effect = -log10(p) * if_else(direction == "Up", 1, -1))
-save_figure(
-  module_tiles(
-    rename(fry_signed, column = contrast), contrast_names, "signed\n-log10 p", NULL,
-    "Modules as protein sets across the nine contrasts",
-    sprintf(
-      "limma::fry on the imputed matrix, protein design, subject block (correlation %.3f)",
-      fry_correlation
-    ),
-    paste(
-      "Fill: -log10 fry p, positive when the module moved up. fry's FDR runs over the",
-      nrow(me), "modules within each contrast."
-    )
+fry_figure <- module_tiles(
+  rename(fry_signed, column = contrast), contrast_names, "signed\n-log10 p", NULL,
+  "Modules as protein sets across the nine contrasts",
+  sprintf(
+    "limma::fry on the imputed matrix, protein design, subject block (correlation %.3f)",
+    fry_correlation
   ),
-  "02_fry_contrasts", 9, 5.5
+  paste(
+    "Fill: -log10 fry p, positive when the module moved up. fry's FDR runs over the",
+    nrow(me), "modules within each contrast."
+  )
 )
-save_figure(
-  module_tiles(
-    rename(membership_contrast, column = contrast, effect = rho) |> mutate(fdr = NA_real_),
-    contrast_names, "Spearman\nrho", c(-1, 1),
-    "Module membership against protein significance",
-    "Spearman between each member's kME and its protein-level moderated t, per module and contrast",
-    paste(
-      "Fill: rho; positive when the module's most central proteins moved up most. Members share",
-      "a module, so the p describes rather than tests."
-    )
-  ),
-  "03_membership_contrasts", 9, 5.5
+membership_contrast_figure <- module_tiles(
+  rename(membership_contrast, column = contrast, effect = rho) |> mutate(fdr = NA_real_),
+  contrast_names, "Spearman\nrho", c(-1, 1),
+  "Module membership against protein significance",
+  "Spearman between each member's kME and its protein-level moderated t, per module and contrast",
+  paste(
+    "Fill: rho; positive when the module's most central proteins moved up most. Members share",
+    "a module, so the p describes rather than tests."
+  )
 )
-save_figure(
-  module_tiles(
-    rename(membership_phenotype, column = outcome, effect = rho) |> mutate(fdr = NA_real_),
-    outcomes, "Spearman\nrho", c(-1, 1),
-    "Module membership against phenotype association",
-    "Spearman between each member's kME and its protein rho with the phenotype over training",
-    paste(
-      "Fill: rho; positive when central proteins track the phenotype most positively.",
-      "Descriptive, as above."
-    )
-  ),
-  "04_membership_phenotype", 9, 5.5
+membership_phenotype_figure <- module_tiles(
+  rename(membership_phenotype, column = outcome, effect = rho) |> mutate(fdr = NA_real_),
+  outcomes, "Spearman\nrho", c(-1, 1),
+  "Module membership against phenotype association",
+  "Spearman between each member's kME and its protein rho with the phenotype over training",
+  paste(
+    "Fill: rho; positive when central proteins track the phenotype most positively.",
+    "Descriptive, as above."
+  )
 )
 
 primary <- members |>
@@ -234,56 +211,52 @@ primary <- members |>
   mutate(module = factor(module, levels = module_order)) |>
   arrange(module) |>
   mutate(panel = sprintf("%s  rho %+.2f", module, rho), panel = factor(panel, unique(panel)))
-save_figure(
-  ggplot(primary, aes(kme, t)) +
-    geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
-    geom_point(aes(fill = module), shape = 21, colour = "grey30", size = 1.3, alpha = 0.8) +
-    geom_smooth(method = "lm", formula = y ~ x, se = FALSE, colour = "grey20", linewidth = 0.4) +
-    facet_wrap(~panel, ncol = 4) +
-    scale_fill_identity() +
-    labs(
-      x = "kME (membership in the module)", y = "moderated t, Training_Interaction",
-      title = "Membership against the primary contrast",
-      subtitle = "one point per module member; Spearman rho in each header",
-      caption = paste(
-        "Line: least-squares fit, for reference.",
-        "Table: c_data/04_test_modules.xlsx, membership_contrast."
-      )
-    ) +
-    figure_theme +
-    theme(axis.text.x = element_text(angle = 0, hjust = 0.5)),
-  "05_membership_primary", 10, 8
-)
-
-packages <- c("here", "limma", "dplyr", "purrr", "ggplot2")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
-saveRDS(
-  list(
-    eigengene_tests = eigengene_tests, fry_tests = fry_tests,
-    membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
-    correlation = c(eigengenes = me_correlation, imputed = fry_correlation),
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions
+primary_figure <- ggplot(primary, aes(kme, t)) +
+  geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
+  geom_point(aes(fill = module), shape = 21, colour = "grey30", size = 1.3, alpha = 0.8) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, colour = "grey20", linewidth = 0.4) +
+  facet_wrap(~panel, ncol = 4) +
+  scale_fill_identity() +
+  labs(
+    x = "kME (membership in the module)", y = "moderated t, Training_Interaction",
+    title = "Membership against the primary contrast",
+    subtitle = "one point per module member; Spearman rho in each header",
+    caption = paste(
+      "Line: least-squares fit, for reference.",
+      "Table: c_data/04_test_modules.xlsx, membership_contrast."
     )
+  ) +
+  figure_theme +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
+
+pdf(file.path(figure_dir, "04_test_modules_figures.pdf"), width = 11, height = 8.5)
+walk(list(
+  eigengene_figure, fry_figure, membership_contrast_figure, membership_phenotype_figure,
+  primary_figure
+), print)
+invisible(dev.off())
+
+sheets <- list(
+  eigengene_tests = eigengene_tests, fry_tests = fry_tests,
+  membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
+  correlation = tibble(
+    matrix = c("eigengenes", "imputed"), correlation = c(me_correlation, fry_correlation)
   ),
-  file.path(out, "module_tests.rds"),
-  compress = "xz"
-)
-writexl::write_xlsx(
-  list(
-    eigengene_tests = eigengene_tests, fry_tests = fry_tests,
-    membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
-    input_manifest = manifest, package_versions = versions
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "04_test_modules.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-combined <- file.path(figure_dir, "04_test_modules_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message(
-  "wrote module_tests.rds, 04_test_modules.xlsx and ", length(pages),
-  " figures bundled into ", qpdf::pdf_length(combined), " pages"
-)
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "limma on module eigengenes: logFC, moderated t, p and BH FDR per contrast.",
+  "fry on each module as a protein set: direction, p and FDR per contrast.",
+  "Spearman rho between member kME and protein moderated t, per module and contrast.",
+  "Spearman rho between member kME and protein rho with each phenotype over training.",
+  "Within-subject correlation on the eigengenes and on the imputed matrix.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "04_test_modules.xlsx"))
+message("wrote 04_test_modules.xlsx and 5 figures")

@@ -1,33 +1,17 @@
 # 05_classify_and_associate_modules
 
-The eigengenes on the eight classification tasks and the ten phenotypes.
+Puts the eigengenes through the eight classification tasks and the ten phenotypes.
 
 | | |
 |---|---|
-| Reads | `modules.rds`, `00_Input/phenotype.csv` |
-| Writes | `module_results.rds`, `05_classify_and_associate_modules.xlsx`, 5 figures over 7 pages |
+| Reads | `01_build_modules/c_data/modules.rds`, `00_Input/phenotype.csv` |
+| Writes | `c_data/05_classify_and_associate_modules.xlsx`, `b_reports/05_classify_and_associate_modules_figures.pdf` |
+| Run | `Rscript 04_Network/05_classify_and_associate_modules/a_script/05_classify_and_associate_modules.R` |
+| Cost | about 6 s |
 
-The eight tasks are those of `02_Differential` and `03_Pathway_Enrichment/05`: pROC AUC with
-`direction = "<"`, Wilcoxon p, paired within arm. Associations are Spearman, t approximation, in
-the training, baseline and acute windows, pooled and within each arm. Eigengenes have no missing
-values, so no observation floor applies.
-
-| Analysis | Tests | Expected at p < 0.05 | Nominal | BH < 0.05 |
-|---|---:|---:|---:|---:|
-| classification | 96 | 4.8 | 6 | 0 |
-| association | 360 | 18 | 12 | 0 |
-
-BH over twelve modules is lenient; no module passes it. Figures: every module and task as tiles,
-every module and phenotype per window as tiles, an ROC panel for each nominal module-task pair
-(floor excluded), a scatter for each nominal module-outcome pair, and nominal hits over chance.
-
-The workbook opens on `read_me`. Its sheets follow the set level without `set_catalog` and
-`set_scores`; `chance_expectation` has the same columns less `database`, and the same task labels:
-
-```r
-mr <- readRDS("04_Network/05_classify_and_associate_modules/c_data/module_results.rds")
-mr$chance_expectation # nominal against chance, per task and per window and outcome
-mr$module_auc         # module x task: AUC, p, BH
-mr$module_association # module x outcome x window, pooled
-mr$by_arm             # correlations within each arm; the workbook keeps p < 0.05
-```
+The tasks, AUC and tests are those of `02_Differential` and `03_Pathway_Enrichment/05`. Eigengenes
+have no missing values, so no observation floor applies. The figure PDF holds nominal hits over
+chance, every module and task as tiles, every module and phenotype per window as tiles, an ROC
+panel for each nominal module-task pair (floor excluded) and a scatter for each nominal
+module-outcome pair. `module_by_arm` holds every within-arm
+correlation.

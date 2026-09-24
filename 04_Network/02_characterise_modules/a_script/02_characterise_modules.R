@@ -7,7 +7,8 @@
 #
 # The STRING check is STRINGdb's PPI enrichment at combined score >= 700, with the background set
 # to the measured proteins STRING can map. Its expected edge count accounts for each member's
-# degree. Read from the local v12 files in 00_Input/downloads.
+# degree. STRINGdb reads the local v12 files in 00_Input/downloads; at this threshold it takes
+# the min700 links file.
 #
 # The hub drawings show each module's 25 highest-kME members and the STRING edges among them.
 
@@ -27,13 +28,11 @@ stage <- here("04_Network", "02_characterise_modules")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-# Clear last run's figures so the bundle holds only this run's pages.
-unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(
   modules = "04_Network/01_build_modules/c_data/modules.rds",
   gene_sets = "03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds",
-  string_links = "00_Input/downloads/9606.protein.links.v12.0.txt.gz",
+  string_links = "00_Input/downloads/9606.protein.links.v12.0.min700.txt.gz",
   string_aliases = "00_Input/downloads/9606.protein.aliases.v12.0.txt.gz",
   string_info = "00_Input/downloads/9606.protein.info.v12.0.txt.gz"
 )
@@ -46,9 +45,6 @@ if (!all(file.exists(paths))) {
 }
 modules <- readRDS(paths[["modules"]])
 gs <- readRDS(paths[["gene_sets"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
 members <- filter(modules$membership, module != "grey")
 string_min_score <- 700L
 hubs_per_module <- 10L
@@ -62,9 +58,9 @@ ora_fit <- compareCluster(
 ora <- as_tibble(ora_fit) |>
   transmute(
     module = as.character(Cluster), set_id = ID, gene_ratio = GeneRatio, bg_ratio = BgRatio,
-    count = Count, p = pvalue, fdr = p.adjust
+    n_overlap = Count, p = pvalue, fdr = p.adjust
   ) |>
-  left_join(select(gs$set_catalog, set_id, database, pathway), by = "set_id")
+  left_join(select(gs$set_catalog, set_id, collection, pathway), by = "set_id")
 
 hubs <- members |>
   slice_max(kme, n = hubs_per_module, by = module, with_ties = FALSE)
@@ -83,15 +79,15 @@ string_check <- mapped |>
   summarise(n_mapped = n(), ids = list(STRING_id), .by = module) |>
   mutate(
     enrichment = map(ids, string_db$get_ppi_enrichment),
-    edges = map_dbl(enrichment, "edges"),
-    expected = map_dbl(enrichment, "lambda"),
-    ratio = edges / expected,
+    n_edges = map_dbl(enrichment, "edges"),
+    n_expected = map_dbl(enrichment, "lambda"),
+    ratio = n_edges / n_expected,
     p = map_dbl(enrichment, "enrichment"),
     fdr = p.adjust(p, "BH")
   ) |>
   select(-ids, -enrichment)
 
-labels <- count(members, module, name = "proteins") |>
+labels <- count(members, module, name = "n_proteins") |>
   left_join(
     ora |>
       slice_min(p, n = 1, by = module, with_ties = FALSE) |>
@@ -100,78 +96,65 @@ labels <- count(members, module, name = "proteins") |>
   ) |>
   left_join(
     ora |>
-      filter(database == "GO_Slim") |>
+      filter(collection == "GO_Slim") |>
       slice_min(p, n = 1, by = module, with_ties = FALSE) |>
       select(module, top_go_slim = pathway, go_slim_fdr = fdr),
     by = "module"
   ) |>
   left_join(summarise(hubs, hubs = paste(gene, collapse = ", "), .by = module), by = "module") |>
   left_join(select(string_check, module, string_ratio = ratio, string_fdr = fdr), by = "module") |>
-  arrange(desc(proteins))
-print(as.data.frame(select(labels, module, proteins, top_set, top_set_fdr, string_ratio)),
+  arrange(desc(n_proteins))
+print(as.data.frame(select(labels, module, n_proteins, top_set, top_set_fdr, string_ratio)),
   digits = 3
 )
 
 
 # ---- figures -------------------------------------------------------------------------------
 
-save_figure <- function(figure, name, width, height) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
-      width = width, height = height, dpi = 200, bg = "white"
-    )
-  })
-}
 caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
 
-save_figure(
-  ora_fit |>
-    clusterProfiler::filter(p.adjust < 0.05) |>
-    enrichplot::dotplot(showCategory = 3, label_format = 50, font.size = 7) +
-    labs(
-      title = "Module enrichment",
-      subtitle = sprintf(
-        "clusterProfiler ORA, universe %d measured genes; top 3 sets per module at BH < 0.05",
-        length(gs$gene_universe)
-      ),
-      caption = paste(
-        "enrichplot::dotplot of the compareCluster result. Columns: modules, members carrying a",
-        "set in brackets. Size is gene ratio, colour BH within module; modules with no set at",
-        "BH < 0.05 are absent. Table: c_data/02_characterise_modules.xlsx, ora."
-      )
-    ) +
-    caption_theme,
-  "01_module_enrichment", 10, 8
-)
+enrichment_figure <- ora_fit |>
+  clusterProfiler::filter(p.adjust < 0.05) |>
+  enrichplot::dotplot(showCategory = 3, label_format = 50, font.size = 7) +
+  labs(
+    title = "Module enrichment",
+    subtitle = sprintf(
+      "clusterProfiler ORA, universe %d measured genes; top 3 sets per module at BH < 0.05",
+      length(gs$gene_universe)
+    ),
+    caption = paste(
+      "enrichplot::dotplot of the compareCluster result. Columns: modules, members carrying a",
+      "set in brackets. Size is gene ratio, colour BH within module; modules with no set at",
+      "BH < 0.05 are absent. Table: c_data/02_characterise_modules.xlsx, ora."
+    )
+  ) +
+  caption_theme
 
 module_colours <- set_names(string_check$module, string_check$module)
-save_figure(
-  string_check |>
-    mutate(module = factor(module, levels = rev(labels$module))) |>
-    ggplot(aes(y = module)) +
-    geom_segment(aes(x = expected, xend = edges, yend = module), colour = "grey70") +
-    geom_point(aes(x = expected), shape = 124, size = 4) +
-    geom_point(aes(x = edges, fill = module), shape = 21, size = 3) +
-    geom_text(aes(x = edges, label = sprintf("%.1fx", ratio)), hjust = -0.4, size = 2.8) +
-    scale_fill_manual(values = module_colours, guide = "none") +
-    scale_x_log10(expand = expansion(mult = c(0.05, 0.15))) +
-    labs(
-      x = "within-module edges (log scale)", y = NULL,
-      title = "STRING edges within each module",
-      subtitle = sprintf(
-        "STRINGdb PPI enrichment, v12, score >= %d, background the mapped measured proteins",
-        string_min_score
-      ),
-      caption = paste(
-        "Point: observed high-confidence edges among a module's members. Tick: edges STRINGdb",
-        "expects from the members' degrees in the background. Label: observed over expected.",
-        "Table: c_data/02_characterise_modules.xlsx, string."
-      )
-    ) +
-    theme_minimal(base_size = 10) +
-    caption_theme,
-  "02_string_edges", 8, 5
-)
+string_figure <- string_check |>
+  mutate(module = factor(module, levels = rev(labels$module))) |>
+  ggplot(aes(y = module)) +
+  geom_segment(aes(x = n_expected, xend = n_edges, yend = module), colour = "grey70") +
+  geom_point(aes(x = n_expected), shape = 124, size = 4) +
+  geom_point(aes(x = n_edges, fill = module), shape = 21, size = 3) +
+  geom_text(aes(x = n_edges, label = sprintf("%.1fx", ratio)), hjust = -0.4, size = 2.8) +
+  scale_fill_manual(values = module_colours, guide = "none") +
+  scale_x_log10(expand = expansion(mult = c(0.05, 0.15))) +
+  labs(
+    x = "within-module edges (log scale)", y = NULL,
+    title = "STRING edges within each module",
+    subtitle = sprintf(
+      "STRINGdb PPI enrichment, v12, score >= %d, background the mapped measured proteins",
+      string_min_score
+    ),
+    caption = paste(
+      "Point: observed high-confidence edges among a module's members. Tick: edges STRINGdb",
+      "expects from the members' degrees in the background. Label: observed over expected.",
+      "Table: c_data/02_characterise_modules.xlsx, string."
+    )
+  ) +
+  theme_minimal(base_size = 10) +
+  caption_theme
 
 # Each module's highest-kME members and the STRING edges among them, at the same score threshold
 # as the enrichment test. Node fill is kME, size the node's degree among the drawn hubs. The
@@ -239,47 +222,34 @@ hub_pages <- labels$module |>
         )
       )
   })
-# Paged, so PDF only.
-pdf(file.path(figure_dir, "03_hub_networks.pdf"), width = 11, height = 10, bg = "white")
-walk(hub_pages, print)
+pdf(file.path(figure_dir, "02_characterise_modules_figures.pdf"), width = 11, height = 8.5)
+walk(c(list(enrichment_figure, string_figure), unname(hub_pages)), print)
 invisible(dev.off())
-message("drew 03_hub_networks: ", length(hub_pages), " pages")
 
-packages <- c(
-  "here", "clusterProfiler", "enrichplot", "STRINGdb", "igraph", "tidygraph", "ggraph",
-  "patchwork", "dplyr", "purrr", "ggplot2"
-)
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
-saveRDS(
-  list(
-    labels = labels, ora = ora, ora_fit = ora_fit, hubs = hubs, string = string_check,
-    hub_edges = hub_edges,
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions
-    )
+sheets <- list(
+  labels = labels, ora = arrange(ora, module, p), hubs = hubs, string = string_check,
+  hub_edges = left_join(hub_edges,
+    select(hub_nodes, from = STRING_id, from_gene = gene),
+    by = "from"
+  ) |>
+    left_join(select(hub_nodes, to = STRING_id, to_gene = gene), by = "to"),
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "module_characterisation.rds"),
-  compress = "xz"
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "One row per module: size, top set, top GO Slim term, hubs, STRING enrichment.",
+  "clusterProfiler ORA of every module against the 00_build_gene_sets sets, BH within module.",
+  "The ten highest-kME members of each module.",
+  "STRINGdb PPI enrichment per module: observed and expected edges at score >= 700.",
+  "STRING edges among each module's 25 highest-kME members, as drawn.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
 writexl::write_xlsx(
-  list(
-    labels = labels, ora = arrange(ora, module, p), hubs = hubs, string = string_check,
-    hub_edges = left_join(hub_edges,
-      select(hub_nodes, from = STRING_id, from_gene = gene),
-      by = "from"
-    ) |>
-      left_join(select(hub_nodes, to = STRING_id, to_gene = gene), by = "to"),
-    input_manifest = manifest, package_versions = versions
-  ),
-  file.path(out, "02_characterise_modules.xlsx")
+  c(list(read_me = read_me), sheets), file.path(out, "02_characterise_modules.xlsx")
 )
-combined <- file.path(figure_dir, "02_characterise_modules_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message(
-  "wrote module_characterisation.rds, 02_characterise_modules.xlsx and ",
-  length(pages), " figures bundled into ", qpdf::pdf_length(combined), " pages"
-)
+message("wrote 02_characterise_modules.xlsx and ", 2 + length(hub_pages), " figure pages")

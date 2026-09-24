@@ -1,4 +1,4 @@
-subject,group_arm,comp_hypertrophy,d_fcsa_I,d_fcsa_II,d_fcsa_mixed,d_nfibre_mixed,d_nfibre_I,d_mcsa,d_1rm_legpress,d_1rm_ext,volume_load
+subject,arm,comp_hypertrophy,d_fcsa_I,d_fcsa_II,d_fcsa_mixed,d_nfibre_mixed,d_nfibre_I,d_mcsa,d_1rm_legpress,d_1rm_ext,volume_load
 HR_S03,HR,9.43,874.3100000000004,517.3400000000001,651.6000000000004,-218,-109,1.7059999999999995,54,5,71412
 HR_S10,HR,20.73,1757.71,1517.8500000000004,1721.3400000000001,-259,-112,4.2180000000000035,83,14,104501
 HR_S16,HR,13.69,1924.7699999999995,2790.83,2503.0499999999993,98,33,1.5779999999999994,90,4,152817

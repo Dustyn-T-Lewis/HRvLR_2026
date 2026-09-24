@@ -16,7 +16,7 @@ execute:
 ---
 
 proteoDA carries the design as a formula on the DAList and reads its terms from metadata column
-names. This notebook relabels the metadata, attaches the design and the nine contrasts, and
+names. This notebook sets the factor levels, attaches the design and the nine contrasts, and
 checks both before anything is fitted.
 
 ```{r setup}
@@ -27,28 +27,29 @@ library(dplyr)
 library(tibble)
 library(writexl)
 
-dal <- readRDS(here("01_Preprocess", "02_Normalization", "c_data", "DAList_normalized.rds"))
-source_meta <- as.data.frame(dal$metadata)
-stopifnot(identical(source_meta$Col_ID, colnames(dal$data)))
-with(source_meta, table(Group, Timepoint))
+inputs <- c(normalized = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds")
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["normalized"]])
+stopifnot(identical(dal$metadata$sample_id, colnames(dal$data)))
+with(dal$metadata, table(arm, timepoint))
 ```
 
-## Design
+## Six cell means, subject random
 
-Six cell means, one per responder-and-timepoint combination, with subject as a random effect.
+Six cell means, one per arm-and-timepoint combination, with subject as a random effect.
 HR and LR are different people, so a fixed subject term would absorb the between-arm contrasts;
 the random effect keeps them estimable and carries the repeated measures through
 `duplicateCorrelation()`.
 
 ```{r design}
 group_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-meta <- data.frame(
-  sample_id = source_meta$Col_ID,
-  responder = factor(source_meta$Group, levels = c("HR", "LR")),
-  time = factor(source_meta$Timepoint, levels = c("T1", "T2", "T3")),
-  group = factor(source_meta$Group_Time, levels = group_levels),
-  subject = source_meta$Subject_ID
-)
+meta <- dal$metadata |>
+  mutate(
+    arm = factor(arm, levels = c("HR", "LR")),
+    timepoint = factor(timepoint, levels = c("T1", "T2", "T3")),
+    group = factor(group, levels = group_levels)
+  )
 rownames(meta) <- meta$sample_id
 stopifnot(!anyNA(meta$group), !any(is.na(meta$subject) | meta$subject == ""))
 dal$metadata <- meta
@@ -65,7 +66,7 @@ stopifnot(
 c(samples = nrow(design), coefficients = ncol(design), residual_df = nrow(design) - ncol(design))
 ```
 
-## Contrasts
+## Nine contrasts, one primary
 
 ```{r contrasts}
 contrast_vector <- c(
@@ -97,18 +98,16 @@ roles <- tibble(
 roles
 ```
 
-`Training_Interaction` is the **primary** comparison: does the training response differ between
-responder groups. `Acute_Interaction` asks the same of the acute bout. `Baseline_HRvLR` is the
-**floor**. It is not a true negative control: the label was cut from the training outcome, so a
-real baseline difference would be predictive. It is empty and is the null reference for a between-arm
-contrast. The six others are
-**descriptive**. `Training_Interaction` equals `Trained_HRvLR` minus `Baseline_HRvLR` exactly, so
-these are not nine independent questions.
+`Training_Interaction` is the primary comparison: does the training response differ between arms.
+`Acute_Interaction` asks the same of the acute bout. `Baseline_HRvLR` is the floor. It is not a
+negative control: the label was cut from the training outcome, so a real baseline difference would
+be predictive. The six others are descriptive. `Training_Interaction` equals `Trained_HRvLR` minus
+`Baseline_HRvLR` exactly.
 
-## Within-subject correlation
+## Within-subject correlation is 0.189
 
 `duplicateCorrelation()` on the normalised matrix, blocked by subject. `fit_limma_model()`
-estimates the same number internally and discards it.
+estimates the same number internally.
 
 ```{r correlation}
 strata <- tibble(
@@ -118,25 +117,32 @@ strata <- tibble(
 mutate(strata, correlation = round(correlation, 3))
 ```
 
-## Outputs
+## Writes design.rds and the workbook
 
 ```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 saveRDS(
   list(dal = dal, contrasts = contrast_vector, roles = roles, floor = "Baseline_HRvLR"),
-  file.path(out, "design.rds")
+  file.path(out, "design.rds"),
+  compress = "xz"
 )
-write_xlsx(
-  list(
-    contrasts = tibble(definition = contrast_vector, contrast = contrast_names) |>
-      left_join(roles, by = "contrast"),
-    correlation_strata = strata
+sheets <- list(
+  contrasts = tibble(definition = contrast_vector, contrast = contrast_names) |>
+    left_join(roles, by = "contrast"),
+  correlation_strata = strata,
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "01_design.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-```
-
-```{r session}
-sessionInfo()
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "The nine contrasts, their definitions and roles.",
+  "Within-subject correlation from duplicateCorrelation, blocked by subject.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_design.xlsx"))
 ```

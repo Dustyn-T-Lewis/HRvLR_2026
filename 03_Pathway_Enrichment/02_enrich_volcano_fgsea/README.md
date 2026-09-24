@@ -1,16 +1,15 @@
 # 02_enrich_volcano_fgsea
 
-Protein volcanoes with collapse-surviving pathways ringed. Computes nothing.
+Draws the protein volcanoes with up to eight collapse-surviving fgsea sets ringed.
 
 | | |
 |---|---|
-| Reads | `set_tests.rds` |
-| Writes | 8 volcanoes |
+| Reads | `01_run_fgsea_and_fry/c_data/set_tests.rds` |
+| Writes | `c_data/02_enrich_volcano_fgsea.xlsx`, `b_reports/02_enrich_volcano_fgsea_figures.pdf` |
+| Run | `Rscript 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.R` |
+| Cost | about 6 s |
 
-Point colour reads protein BH FDR; the ring reads set fgsea FDR. Red is up, blue down. Six FDR
-panels (both interactions and the four within-arm contrasts) and two pi-ranked repeats for the
-training contrasts. The floor is not drawn. No protein reaches BH < 0.05, so the FDR panels carry
-no protein labels and every point is grey.
-
-Leading-edge genes are translated to point labels before drawing. When two ringed sets reduce to
-one display name, the collection is appended.
+Six FDR panels (both interactions and the four within-arm contrasts), then the two training
+contrasts again with pi-ranked labels. The floor is not drawn. Point colour reads protein BH FDR;
+the ring reads set fgsea FDR. No protein reaches BH < 0.05, so the FDR panels carry no protein
+labels.

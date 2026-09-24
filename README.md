@@ -9,28 +9,25 @@ The primary comparison is the training interaction: whether the proteome changed
 training in HR than in LR. The study also asks whether any protein, pathway or co-expression module
 tracks how much a subject adapted, across ten phenotypes.
 
-## Stages
+## Five stages pass data through disk
 
-| Stage | Contents | State |
+| Stage | Runs | Writes |
 |---|---|---|
-| `00_Input/` | study data, two builders for derived inputs | ready |
-| `01_Preprocess/` | protein report to a normalised DAList, and an imputed copy | ready |
-| `02_Differential_Expression/` | model fitting, nine contrasts, protein classification, protein against phenotype | ready |
-| `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
-| `04_Network/` | co-expression modules, their preservation between arms, and the same tests on them | ready |
-| `05_Figures/` | manuscript panels | planned |
+| [`00_Input/`](00_Input/README.md) | study data, two builders for derived inputs | `phenotype.csv`, `RBC_proteome_reference.tsv` |
+| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, missForest | `DAList_normalized.rds`, `DAList_imputed.rds` |
+| [`02_Differential_Expression/`](02_Differential_Expression/README.md) | design, nine contrasts, protein classification, protein against phenotype | `design.rds`, `fit.rds`, `phenotype.rds` |
+| [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | gene set tests, per-sample set scores, set classification and association | `gene_sets.rds`, `set_tests.rds`, `singscore.rds` |
+| [`04_Network/`](04_Network/README.md) | co-expression modules, preservation between arms, the same tests on modules | `modules.rds` |
+| [`05_Figures/`](05_Figures/README.md) | manuscript figures, planned | |
 
-Each sub-stage holds `a_script/` (code), `b_reports/` (HTML reports or figures) and `c_data/`
-(outputs), with a README. Stages 01 and 02 are Quarto notebooks; stages 03 and 04 are plain R
-scripts. Data passes through disk, so any sub-stage re-runs on its own. "Planned" means only a
-README exists.
+Each sub-stage holds `a_script/` (code), `b_reports/` (`<step>_figures.pdf` where the step draws,
+and the rendered HTML report for notebooks, which git ignores), `c_data/` (one workbook per step,
+plus the `.rds` a later step reads) and a README. Every workbook opens on a
+`read_me` sheet and ends with `input_manifest` and `package_versions`. Stages 01 and 02 are Quarto
+notebooks; stages 03 and 04 are R scripts. Data passes through disk, so any sub-stage re-runs on its
+own once its inputs exist.
 
-## Data
-
-The protein report, sample sheet and phenotype table are committed in `00_Input/`. The STRING v12
-files `04_Network` reads are too large for git; `00_Input/README.md` has the download command.
-
-## Running the pipeline
+## One command per step, in order
 
 ```sh
 Rscript -e 'renv::restore()'
@@ -54,31 +51,45 @@ for s in 01_build_modules 02_characterise_modules 03_preserve_modules 04_test_mo
 done
 ```
 
-Everything above takes about ten minutes, three of them in `04_Network/03_preserve_modules`.
+Stages 01 to 04 take about ten minutes. `04_Network/02` needs the STRING files;
+`00_Input/README.md` has the download command.
 
-## Approach
+## proteoDA fits the unimputed matrix
 
 Preprocessing and the fit use proteoDA: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
 `filter_samples`, `normalize_data("cycloess")`, then `add_design`, `add_contrasts`,
 `fit_limma_model` and `extract_DA_results`. The design is six cell means with subject as a random
-effect, because HR and LR are different people and a fixed subject term would absorb every
-between-arm contrast.
+effect.
 
 The fitted matrix stays unimputed: limma fits each protein on the samples where it was seen. A
 missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and
 WGCNA.
 
-Every screen reports its nominal count beside the count chance predicts, and BH runs within each
-contrast, task, window or collection, never across them.
+Every classification and association screen reports its nominal count beside the count chance
+predicts. BH runs within each contrast, task or window. Set tests pool the five collections within
+a contrast; set classification and association split by collection.
 
-## Dependencies
+## renv.lock pins every package
 
-Pinned in `renv.lock`. Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `lme4`, `pROC`,
-`callr`, `qpdf`, `here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`,
-`readxl`, `ggplot2`, `patchwork`, `writexl`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
-`GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano` (not on CRAN;
-`renv::hydrate("enrichVolcano")` links a local install). Stage 04 adds `WGCNA`,
-`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Rendering needs Quarto.
+Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`,
+`here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`,
+`patchwork`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
+`GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
+`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Rendering needs
+Quarto.
 
-Earlier designs of this project, a continuous phenotype sweep and a blind subtype search, are in
-git history.
+`enrichVolcano` 0.3.0.9000 is recorded in `renv.lock` without a remote, so `renv::restore()`
+cannot fetch it. To move to the GitHub release, install it and snapshot, then rerun stage 03 and
+check its figures:
+
+```r
+renv::install("Dustyn-T-Lewis/enrichVolcano")
+renv::snapshot()
+```
+
+The code calls only its exported `volcano_ring()`, `volcano_ring_theme()` and `ev_clean_label()`.
+
+## Version 1 is the tag legacy-v1
+
+The first version of this project, with its prediction screen (F06), `functions/`, `tests/` and
+`archive/`, is the git tag `legacy-v1`.

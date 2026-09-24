@@ -1,30 +1,14 @@
 # 05_classify_and_associate_sets
 
-How well each set's score separates study groups, and whether it tracks the phenotype.
+Tests how well each set score separates the eight tasks and whether it tracks the ten phenotypes.
 
 | | |
 |---|---|
-| Reads | `gene_sets.rds`, `set_tests.rds`, `singscore.rds`, `DAList_imputed.rds`, `phenotype.csv` |
-| Writes | `set_results.rds`, `05_classify_and_associate_sets.xlsx`, figures |
+| Reads | `00_build_gene_sets/c_data/gene_sets.rds`, `01_run_fgsea_and_fry/c_data/set_tests.rds`, `04_run_singscore/c_data/singscore.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (sample sheet), `00_Input/phenotype.csv` |
+| Writes | `c_data/05_classify_and_associate_sets.xlsx`, `b_reports/05_classify_and_associate_sets_figures.pdf` |
+| Run | `Rscript 03_Pathway_Enrichment/05_classify_and_associate_sets/a_script/05_classify_and_associate_sets.R` |
+| Cost | about 90 s, most of it drawing |
 
-Eight tasks. Training (T1 to T2) and the acute bout (T2 to T3) within each arm are paired, with the
-p from the Wilcoxon signed-rank test. HR against LR at T1, at T2, in training change and in acute
-change are unpaired, with the rank-sum test. AUC comes from `pROC` with `direction = "<"` fixed.
-Associations are Spearman (t approximation) in three windows: training change, T1 level and acute
-change, with subjects pooled and again within each arm.
-
-Each collection is read against its own chance count (5% of its sets), with BH within collection
-and task. The tables are in `../README.md`.
-
-Figures: an ROC panel for every set reaching nominal p on each task (floor excluded), a scatter
-for every set-outcome pair reaching nominal p in each window, and nominal hits over chance by
-collection. Panels run 16 to a page, by collection then p, with BH q in each header; paged figures
-are PDF only. Most nominal hits are expected by chance; read them against the chance figure.
-
-```r
-sr <- readRDS("03_Pathway_Enrichment/05_classify_and_associate_sets/c_data/set_results.rds")
-sr$chance_expectation # nominal against chance, per collection
-sr$set_auc            # set x task: AUC, p, BH
-sr$set_association    # set x outcome x window, pooled
-sr$by_arm             # correlations within each arm; the workbook keeps p < 0.05
-```
+The figure PDF opens on nominal hits over chance by collection, then an ROC panel for every set
+reaching nominal p on each task (floor excluded) and a scatter for every set-outcome pair reaching
+nominal p in each window, 12 panels to a page, by collection then p. `set_by_arm` keeps the within-arm correlations with p < 0.05.

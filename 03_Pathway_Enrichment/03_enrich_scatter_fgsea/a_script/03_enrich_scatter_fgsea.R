@@ -16,8 +16,6 @@ stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
 figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
-# Clear last run's figures so the bundle holds only this run's pages.
-unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
@@ -25,48 +23,45 @@ if (!all(file.exists(paths))) {
   stop("Run 01_run_fgsea_and_fry first. Missing: ", inputs[["set_tests"]])
 }
 fg <- readRDS(paths[["set_tests"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
 
-run_pair <- function(x_contrast, y_contrast, tag, prefix) {
+run_pair <- function(x_contrast, y_contrast, tag) {
   paired <- fg$set_tests |>
     filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
     mutate(contrast = if_else(contrast == x_contrast, "x", "y")) |>
     pivot_wider(
-      id_cols = c(set_id, database, pathway),
-      names_from = contrast, values_from = c(n, NES, padj, main)
+      id_cols = c(set_id, collection, pathway),
+      names_from = contrast, values_from = c(n_proteins, nes, fdr, main)
     ) |>
     mutate(
       # A protein untested in one contrast leaves that ranking, so a set's measured size can
       # differ by one or two between arms; the point is sized by the larger.
-      n = pmax(n_x, n_y),
+      n_proteins = pmax(n_proteins_x, n_proteins_y),
       significance = case_when(
-        padj_x < 0.05 & padj_y < 0.05 ~ "Both",
-        padj_x < 0.05 ~ x_contrast,
-        padj_y < 0.05 ~ y_contrast,
+        fdr_x < 0.05 & fdr_y < 0.05 ~ "Both",
+        fdr_x < 0.05 ~ x_contrast,
+        fdr_y < 0.05 ~ y_contrast,
         .default = "NS"
       ) |> factor(c("Both", x_contrast, y_contrast, "NS")),
       # Opposite signs in the two arms, whichever arm, if either, is significant.
-      discordant = sign(NES_x) != sign(NES_y),
+      discordant = sign(nes_x) != sign(nes_y),
       survivor = main_x | main_y,
       label = enrichVolcano::ev_clean_label(pathway)
     )
   # A set near the size floor can drop out of one arm entirely. Only sets scored in both are
   # compared.
-  paired <- filter(paired, !is.na(NES_x), !is.na(NES_y))
+  paired <- filter(paired, !is.na(nes_x), !is.na(nes_y))
   stopifnot(nrow(paired) > 0)
 
   concordance <- function(data) {
     # A quadrant panel can hold one or two sets, too few for cor.test.
     test <- if (nrow(data) >= 3) {
-      cor.test(data$NES_x, data$NES_y, method = "spearman", exact = FALSE)
+      cor.test(data$nes_x, data$nes_y, method = "spearman", exact = FALSE)
     } else {
       list(estimate = NA_real_, p.value = NA_real_)
     }
     hits <- filter(data, significance != "NS")
     tibble(
-      sets = nrow(data), significant = nrow(hits), discordant = sum(hits$discordant),
+      n_sets = nrow(data), n_significant = nrow(hits), n_discordant = sum(hits$discordant),
       rho = round(unname(test$estimate), 3), p = test$p.value,
       same_sign = round(mean(!hits$discordant), 3)
     )
@@ -79,17 +74,17 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
   # One panel builder for all six panels. `labelled` is the subset that gets names, so a dense
   # cloud and a zoomed handful of sets differ only in what is passed in.
   nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
-    span <- range(c(data$NES_x, data$NES_y))
+    span <- range(c(data$nes_x, data$nes_y))
     limit <- span + c(-1, 1) * diff(span) * pad
     shown <- filter(data, significance != "NS")
     stats <- concordance(data)
     # A panel reports rho only with 30 or more sets.
     caption <- sprintf(
-      "%d set%s | %d significant%s | %d discordant", stats$sets, if (stats$sets == 1) "" else "s",
-      stats$significant,
-      if (stats$sets >= 30) sprintf(" | rho %.2f", stats$rho) else "", stats$discordant
+      "%d set%s | %d significant%s | %d discordant", stats$n_sets,
+      if (stats$n_sets == 1) "" else "s", stats$n_significant,
+      if (stats$n_sets >= 30) sprintf(" | rho %.2f", stats$rho) else "", stats$n_discordant
     )
-    ggplot(data, aes(NES_x, NES_y)) +
+    ggplot(data, aes(nes_x, nes_y)) +
       geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
       geom_vline(xintercept = 0, colour = "grey85", linewidth = 0.3) +
       geom_abline(slope = 1, linetype = "dashed", colour = "grey45", linewidth = 0.4) +
@@ -97,7 +92,7 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
         data = filter(data, significance == "NS"),
         colour = "grey82", size = 0.45, alpha = 0.3
       ) +
-      geom_point(aes(colour = significance, size = n), data = shown, alpha = 0.85) +
+      geom_point(aes(colour = significance, size = n_proteins), data = shown, alpha = 0.85) +
       ggrepel::geom_text_repel(
         data = labelled, aes(label = label), size = 2.3, colour = "grey15",
         segment.colour = "grey60", segment.size = 0.25, min.segment.length = 0,
@@ -105,8 +100,8 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
       ) +
       scale_colour_manual(values = set_colours, name = "significant in", drop = FALSE) +
       scale_size_continuous(
-        range = c(1, 4.5), name = "genes",
-        limits = range(paired$n), breaks = c(50, 150, 300)
+        range = c(1, 4.5), name = "proteins",
+        limits = range(paired$n_proteins), breaks = c(50, 150, 300)
       ) +
       coord_fixed(xlim = limit, ylim = limit) +
       labs(
@@ -118,15 +113,6 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
         plot.title = element_text(face = "bold", size = 10),
         plot.subtitle = element_text(size = 7.5, colour = "grey30")
       )
-  }
-
-  save_composite <- function(figure, name, width, height) {
-    walk(c("png", "pdf"), \(extension) {
-      ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
-        width = width, height = height, dpi = 300, bg = "white"
-      )
-    })
-    message("wrote ", name)
   }
 
   page_labels <- function(title, subtitle, caption) {
@@ -159,18 +145,17 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
         "One point per gene set, scored in both", tag, "contrasts. Dashed line is identity;",
         "grey points reach neither threshold. Discordant sets are significant in at least one",
         "arm and sit on opposite sides of zero. Panel C rescales them.",
-        "Table: c_data/nes_scatter.csv."
+        "Table: c_data/03_enrich_scatter_fgsea.xlsx, nes_scatter."
       )
     ) +
     plot_layout(guides = "collect") &
     theme(legend.position = "bottom")
-  save_composite(composite_all, paste0(prefix, "_nes_concordance_all_", tag), 13, 6)
 
   # Composite two: the two collections whose members do not nest, then each concordant quadrant
   # scaled to its own points so every set can be named.
-  curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
+  curated <- filter(paired, collection %in% c("Hallmark", "GO_Slim"))
   quadrant <- function(direction) {
-    rows <- filter(curated, significance != "NS", !discordant, (NES_x > 0) == direction)
+    rows <- filter(curated, significance != "NS", !discordant, (nes_x > 0) == direction)
     # Panel A carries the colour key; a quadrant missing a category would draw a second one.
     nes_panel(rows, if (direction) "Up in both" else "Down in both", labelled = rows, pad = 0.22) +
       guides(colour = "none")
@@ -179,7 +164,7 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
     nes_panel(
       curated, "Hallmark and GO Slim",
       labelled = slice_min(
-        filter(curated, significance != "NS"), padj_x + padj_y,
+        filter(curated, significance != "NS"), fdr_x + fdr_y,
         n = 8, with_ties = FALSE
       )
     ) | (quadrant(TRUE) / quadrant(FALSE))
@@ -189,13 +174,13 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
       sprintf("fgsea NES per contrast, %d non-nesting sets, BH within contrast", nrow(curated)),
       paste(
         "Panel A is every Hallmark and GO Slim set; B and C rescale the significant sets with the",
-        "same sign in both arms, so each can be named. Point size is gene count, colour the",
-        "contrast a set reached FDR 0.05 in. Table: c_data/nes_scatter.csv."
+        "same sign in both arms, so each can be named. Point size is protein count, colour the",
+        "contrast a set reached FDR 0.05 in. Table: c_data/03_enrich_scatter_fgsea.xlsx,",
+        "nes_scatter."
       )
     ) +
     plot_layout(guides = "collect") &
     theme(legend.position = "bottom")
-  save_composite(composite_curated, paste0(prefix, "_nes_concordance_curated_", tag), 12, 7)
 
   summary_table <- bind_rows(
     mutate(concordance(paired), population = "all collections"),
@@ -205,41 +190,46 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
     relocate(population)
   export <- paired |>
     transmute(
-      pair = tag, x_contrast, y_contrast, set_id, database, pathway, label,
-      genes = n,
-      nes_x = round(NES_x, 3), nes_y = round(NES_y, 3),
-      padj_x = signif(padj_x, 4), padj_y = signif(padj_y, 4),
+      pair = tag, x_contrast, y_contrast, set_id, collection, pathway, label, n_proteins,
+      nes_x = round(nes_x, 3), nes_y = round(nes_y, 3),
+      fdr_x = signif(fdr_x, 4), fdr_y = signif(fdr_y, 4),
       significance = as.character(significance), discordant, survivor
     ) |>
     arrange(significance, desc(abs(nes_x) + abs(nes_y)))
-  list(summary = mutate(summary_table, pair = tag, .before = 1), export = export)
+  list(
+    summary = mutate(summary_table, pair = tag, .before = 1), export = export,
+    figures = list(composite_all, composite_curated)
+  )
 }
 
 pairs <- list(
-  run_pair("Training_HR", "Training_LR", "training", "01"),
-  run_pair("Acute_HR", "Acute_LR", "acute", "02")
+  run_pair("Training_HR", "Training_LR", "training"),
+  run_pair("Acute_HR", "Acute_LR", "acute")
 )
 summary_table <- list_rbind(map(pairs, "summary"))
 export <- list_rbind(map(pairs, "export"))
 print(as.data.frame(summary_table))
 
-packages <- c("here", "dplyr", "tidyr", "ggplot2", "ggrepel", "patchwork", "enrichVolcano")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
-readr::write_csv(export, file.path(out, "nes_scatter.csv"))
-writexl::write_xlsx(
-  list(
-    concordance = summary_table,
-    discordant = filter(export, discordant, significance != "NS"),
-    nes_scatter = export, input_manifest = manifest, package_versions = versions
+pdf(file.path(figure_dir, "03_enrich_scatter_fgsea_figures.pdf"), width = 11, height = 8.5)
+walk(list_flatten(map(pairs, "figures")), print)
+invisible(dev.off())
+sheets <- list(
+  concordance = summary_table,
+  nes_scatter = export,
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "03_enrich_scatter_fgsea.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-combined <- file.path(figure_dir, "03_enrich_scatter_fgsea_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message(
-  "wrote 03_enrich_scatter_fgsea.xlsx and ", length(pages),
-  " figures bundled into ", qpdf::pdf_length(combined), " pages"
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "Spearman rho of HR against LR NES, and significant and discordant counts, per population.",
+  "One row per set scored in both arms: both NES, both FDR, significance and discordance.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+writexl::write_xlsx(
+  c(list(read_me = read_me), sheets), file.path(out, "03_enrich_scatter_fgsea.xlsx")
 )
+message("wrote 03_enrich_scatter_fgsea.xlsx and 4 composites")

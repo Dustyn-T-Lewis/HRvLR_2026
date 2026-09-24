@@ -1,12 +1,8 @@
-docs/
-
-# Too large for git, or superseded; see 00_Input/README.md.
+# STRING v12 files, too large for git; 00_Input/README.md has the download command.
 00_Input/downloads/
-archive/
 
-# proteoDA writes one HTML report per contrast, 21 MB in all, and a folder of static plots
-# behind them. write_limma_plots() regenerates both.
-**/*_DA_report.html
+# Rendered notebooks and proteoDA's per-contrast reports; each render rewrites them.
+**/b_reports/*.html
 **/b_reports/static_plots/
 # WGCNA's modulePreservation checkpoints
 *.RData
@@ -21,7 +17,6 @@ archive/
 Rplots.pdf
 .Rhistory
 .Rapp.history
-.RData
 .Rproj.user/
 .Renviron
 .httr-oauth

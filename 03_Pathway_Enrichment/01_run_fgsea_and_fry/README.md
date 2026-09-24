@@ -4,24 +4,14 @@ Tests every set on every contrast with fgsea and fry, and marks non-redundant fg
 
 | | |
 |---|---|
-| Reads | `gene_sets.rds`, `fit.rds`, `design.rds`, `DAList_imputed.rds` |
-| Writes | `set_tests.rds`, `set_tests.csv`, `01_run_fgsea_and_fry.xlsx`, dot plots, hit matrices |
+| Reads | `00_build_gene_sets/c_data/gene_sets.rds`, `02_Differential_Expression/02_Differential/c_data/fit.rds`, `02_Differential_Expression/01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` |
+| Writes | `c_data/set_tests.rds`, `c_data/01_run_fgsea_and_fry.xlsx`, `b_reports/01_run_fgsea_and_fry_figures.pdf` |
+| Run | `Rscript 03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and_fry.R` |
+| Cost | about 55 s |
 
-`topTable()` rebuilds the nine contrasts from the saved fit, keeping `02_Differential`'s BH.
-fgsea ranks proteins by moderated t, seeded; a protein untested in a contrast has no t and leaves
-that ranking. `collapsePathways` re-tests each significant set against a stronger set's leading
-edge; survivors carry `main = TRUE`. fry reads the imputed matrix with the fit's design, the
-subject block and a within-subject correlation estimated on that matrix (0.176).
-
-The floor contrast prints first. `set_summary` gives, per contrast, the sets each method tested
-(fry all 1,378, fgsea those with at least 15 measured proteins in that ranking) and the counts called.
-
-## Outputs
-
-`set_tests` has one row per set, contrast and method. `NES`, `leadingEdge` and `main` are
-fgsea-only. `leadingEdge` holds gene symbols; it is a list column in the RDS and `;`-joined in the
-CSV.
-
-`b_reports/` has one folder per collection plus `all_db/`, one dot plot per drawn contrast (the
-ten strongest collapse survivors), and `hits/03_set_hits.pdf`: every set nominal under fry in
-at least one contrast, as a dot matrix filled by fgsea NES, 75 sets to a page.
+`set_tests.rds` holds `set_tests`, one row per set, contrast and method (`nes`, `leading_edge` and
+`main` are fgsea-only), and `protein_results`, the nine contrasts rebuilt from the fit with
+`topTable()`. The workbook keeps the sets at FDR < 0.05. The figure PDF holds a dot plot of the ten
+strongest collapse survivors per contrast over all collections, the before-and-after collapse
+counts, the same dot plot per collection, and every set nominal under fry as a dot matrix, 75 to a
+page.

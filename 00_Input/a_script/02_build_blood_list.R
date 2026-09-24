@@ -1,8 +1,6 @@
 # Collapse the five published red-cell proteome sources in RBC_proteins.xlsx into one lookup:
-# one row per protein, the sources listing it, and how many agree. Mature erythrocytes have
-# no nucleus, so no transcript atlas covers their proteome; these mass-spectrometry references
-# are the only annotation that recognises the red-cell membrane skeleton. Sources are listed
-# in PROVENANCE.md.
+# one row per protein, the sources listing it, and how many agree. Sources and rationale are in
+# PROVENANCE.md.
 
 suppressPackageStartupMessages({
   library(here)

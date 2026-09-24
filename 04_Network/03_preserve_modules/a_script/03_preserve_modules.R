@@ -21,7 +21,6 @@ stage <- here("04_Network", "03_preserve_modules")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(
   imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
@@ -33,9 +32,6 @@ if (!all(file.exists(paths))) {
 }
 imputed <- readRDS(paths[["imputed"]])
 modules <- readRDS(paths[["modules"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
 disableWGCNAThreads()
 
 abund <- as.matrix(imputed$data)
@@ -56,7 +52,8 @@ centred_arm <- function(arm) {
 expr <- map(set_names(c("HR", "LR")), centred_arm)
 message("samples per arm: ", paste(names(expr), map_int(expr, nrow), collapse = ", "))
 
-# The same construction as 01, arm by arm. The WGCNA FAQ's signed table gives the fallback power.
+# The same construction as 01, arm by arm: pickSoftThreshold's estimate, with the WGCNA FAQ's
+# signed table as the fallback power.
 build_arm <- function(data) {
   sft <- pickSoftThreshold(data,
     powerVector = 1:20, networkType = "signed",
@@ -94,7 +91,9 @@ preservation <- modulePreservation(
 # Each arm module's best-overlapping full-cohort module, for reading the names side by side.
 full <- set_names(modules$membership$module, modules$membership$uniprot_id)
 best_match <- imap(arm_modules, \(built, arm) {
-  tibble(protein = names(built$colours), arm_module = built$colours, full_module = full[protein]) |>
+  tibble(
+    uniprot_id = names(built$colours), arm_module = built$colours, full_module = full[uniprot_id]
+  ) |>
     filter(arm_module != "grey") |>
     count(arm_module, full_module) |>
     mutate(share = n / sum(n), .by = arm_module) |>
@@ -110,7 +109,7 @@ preservation_table <- map(c(HR = "LR", LR = "HR"), \(test) {
   rank <- preservation$preservation$observed[[pair]]
   tibble(
     reference = reference, test = test, module = rownames(z),
-    size = z$moduleSize, z_summary = z$Zsummary.pres, median_rank = rank$medianRank.pres
+    n_proteins = z$moduleSize, z_summary = z$Zsummary.pres, median_rank = rank$medianRank.pres
   )
 }) |>
   list_rbind() |>
@@ -125,82 +124,68 @@ print(as.data.frame(preservation_table), digits = 3)
 
 # ---- figures -------------------------------------------------------------------------------
 
-save_figure <- function(figure, name, width, height) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
-      width = width, height = height, dpi = 200, bg = "white"
-    )
-  })
-}
 plot_data <- preservation_table |>
   mutate(direction = paste(reference, "modules tested in", test)) |>
   select(
-    direction, module, size, full_module,
+    direction, module, n_proteins, full_module,
     `Zsummary` = z_summary, `median rank` = median_rank
   ) |>
   pivot_longer(c(Zsummary, `median rank`), names_to = "statistic")
-save_figure(
-  ggplot(plot_data, aes(size, value)) +
-    geom_hline(
-      data = tibble(statistic = "Zsummary", y = c(2, 10)), aes(yintercept = y),
-      linetype = "dashed", colour = "grey55"
-    ) +
-    geom_point(aes(fill = module), shape = 21, size = 3, colour = "grey30") +
-    ggrepel::geom_text_repel(
-      aes(label = paste0(module, "\n(", full_module, ")")),
-      size = 2.2, lineheight = 0.85, seed = 1, colour = "grey25", min.segment.length = 0
-    ) +
-    facet_grid(statistic ~ direction, scales = "free_y") +
-    scale_fill_identity() +
-    scale_x_log10() +
-    labs(
-      x = "module size (log scale)", y = NULL, title = "Module preservation between arms",
-      subtitle = sprintf(
-        "WGCNA modulePreservation, signed bicor, subject-centred, %d permutations", permutations
-      ),
-      caption = stringr::str_wrap(width = 160, paste(
-        "Each point is a module built in one arm and tested in the other; the label gives its",
-        "best-overlapping full-cohort module from 01_build_modules. Dashed lines mark Zsummary 2",
-        "and 10. A lower median rank means stronger preservation. Table:",
-        "c_data/03_preserve_modules.xlsx, preservation."
-      ))
-    ) +
-    theme_minimal(base_size = 10) +
-    theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)),
-  "01_preservation", 11, 8
-)
+preservation_figure <- ggplot(plot_data, aes(n_proteins, value)) +
+  geom_hline(
+    data = tibble(statistic = "Zsummary", y = c(2, 10)), aes(yintercept = y),
+    linetype = "dashed", colour = "grey55"
+  ) +
+  geom_point(aes(fill = module), shape = 21, size = 3, colour = "grey30") +
+  ggrepel::geom_text_repel(
+    aes(label = paste0(module, "\n(", full_module, ")")),
+    size = 2.2, lineheight = 0.85, seed = 1, colour = "grey25", min.segment.length = 0
+  ) +
+  facet_grid(statistic ~ direction, scales = "free_y") +
+  scale_fill_identity() +
+  scale_x_log10() +
+  labs(
+    x = "module size (log scale)", y = NULL, title = "Module preservation between arms",
+    subtitle = sprintf(
+      "WGCNA modulePreservation, signed bicor, subject-centred, %d permutations", permutations
+    ),
+    caption = stringr::str_wrap(width = 160, paste(
+      "Each point is a module built in one arm and tested in the other; the label gives its",
+      "best-overlapping full-cohort module from 01_build_modules. Dashed lines mark Zsummary 2",
+      "and 10. A lower median rank means stronger preservation. Table:",
+      "c_data/03_preserve_modules.xlsx, preservation."
+    ))
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
+pdf(file.path(figure_dir, "03_preserve_modules_figures.pdf"), width = 11, height = 8.5)
+print(preservation_figure)
+invisible(dev.off())
 
-packages <- c("here", "WGCNA", "dplyr", "purrr", "ggplot2", "ggrepel")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
-saveRDS(
-  list(
-    preservation = preservation_table, arm_modules = map(arm_modules, "colours"),
-    powers = map_int(arm_modules, "power"),
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions
-    )
+sheets <- list(
+  preservation = preservation_table,
+  arm_networks = tibble(
+    arm = names(arm_modules), n_samples = map_int(expr, nrow),
+    power = map_int(arm_modules, "power"),
+    n_modules = map_int(arm_modules, \(x) n_distinct(setdiff(x$colours, "grey")))
   ),
-  file.path(out, "module_preservation.rds"),
-  compress = "xz"
-)
-writexl::write_xlsx(
-  list(
-    preservation = preservation_table,
-    arm_membership = imap(arm_modules, \(x, arm) {
-      tibble(arm = arm, uniprot_id = names(x$colours), module = x$colours)
-    }) |>
-      list_rbind(),
-    input_manifest = manifest, package_versions = versions
+  arm_membership = imap(arm_modules, \(x, arm) {
+    tibble(arm = arm, uniprot_id = names(x$colours), module = x$colours)
+  }) |>
+    list_rbind(),
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "03_preserve_modules.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-combined <- file.path(figure_dir, "03_preserve_modules_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message(
-  "wrote module_preservation.rds, 03_preserve_modules.xlsx and ", length(pages),
-  " figures bundled into ", qpdf::pdf_length(combined), " pages"
-)
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "Zsummary and median rank of each arm's modules tested in the other arm.",
+  "Samples, soft power and module count of each arm's network.",
+  "Every protein's module in each arm's network.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "03_preserve_modules.xlsx"))
+message("wrote 03_preserve_modules.xlsx and 1 figure")

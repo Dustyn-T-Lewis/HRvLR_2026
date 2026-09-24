@@ -1,6 +1,6 @@
 # Freeze one MSigDB release, map the protein matrix onto gene symbols, and keep the sets large
-# enough to test. Writes the set list that 01_run_fgsea_and_fry, 04_run_singscore and
-# 04_Network/02 all read, so membership is decided once.
+# enough to test. Writes the set list that 01_run_fgsea_and_fry, 04_run_singscore,
+# 05_classify_and_associate_sets and 04_Network/02 all read, so membership is decided once.
 
 suppressPackageStartupMessages({
   library(here)
@@ -25,9 +25,6 @@ if (!all(file.exists(paths))) {
   )
 }
 proteins <- readRDS(paths[["proteins"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
 
 # Membership shifts between MSigDB releases, so one release is pinned. The first run fetches it
 # and writes a snapshot with an md5; later runs verify that snapshot and need no network.
@@ -83,7 +80,7 @@ if (!file.exists(checksum_file) || !identical(
   stop("MSigDB cache checksum missing or mismatched. Restore the RDS and its .md5 together.")
 }
 frozen <- readRDS(cache_file)
-membership <- frozen$membership
+membership <- rename(frozen$membership, collection = database)
 stopifnot(identical(frozen$collections, collections))
 message(
   "frozen: ", frozen$db_version, ", ", n_distinct(membership$set_id), " sets, ",
@@ -96,7 +93,7 @@ message(
 protein_map <- proteins$annotation |>
   as_tibble() |>
   transmute(
-    protein = uniprot_id, n_seq,
+    uniprot_id, n_seq,
     mean_obs = rowSums(!is.na(proteins$data))[uniprot_id],
     gene = trimws(gene),
     mapping_status = case_when(
@@ -108,12 +105,12 @@ protein_map <- proteins$annotation |>
   )
 representatives <- protein_map |>
   filter(mapping_status == "candidate") |>
-  arrange(gene, desc(mean_obs), desc(n_seq), protein) |>
+  arrange(gene, desc(mean_obs), desc(n_seq), uniprot_id) |>
   distinct(gene, .keep_all = TRUE) |>
-  pull(protein)
+  pull(uniprot_id)
 protein_map <- protein_map |>
   mutate(
-    selected = protein %in% representatives,
+    selected = uniprot_id %in% representatives,
     mapping_status = case_when(
       selected ~ "representative",
       mapping_status == "candidate" ~ "duplicate_gene",
@@ -121,16 +118,16 @@ protein_map <- protein_map |>
     ),
     # Accessions distinguish duplicate symbols in protein-level plot labels.
     label = if_else(
-      is.na(gene), protein,
+      is.na(gene), uniprot_id,
       if_else(duplicated(gene) | duplicated(gene, fromLast = TRUE),
-        paste0(gene, " (", protein, ")"), gene
+        paste0(gene, " (", uniprot_id, ")"), gene
       )
     )
   )
 gene_map <- filter(protein_map, selected)
 gene_universe <- gene_map$gene
 stopifnot(!anyDuplicated(protein_map$label))
-mapping_summary <- count(protein_map, mapping_status, name = "proteins")
+mapping_summary <- count(protein_map, mapping_status, name = "n_proteins")
 print(mapping_summary)
 message("measured gene universe: ", length(gene_universe))
 
@@ -141,7 +138,7 @@ sets_full <- split(set_members$gene, set_members$set_id)
 sets_measured <- map(sets_full, intersect, y = gene_universe)
 
 set_catalog <- membership |>
-  distinct(set_id, database, pathway, source_id, description) |>
+  distinct(set_id, collection, pathway, source_id, description) |>
   mutate(
     source_size = lengths(sets_full)[set_id],
     measured_size = lengths(sets_measured)[set_id],
@@ -167,7 +164,7 @@ slim_offspring <- slim_offspring[!is.na(slim_offspring)]
 # taken from the full frozen membership so a gene is not lost when its GO:BP set falls outside
 # the size filter. The 15-to-500 rule reads measured size, since a slim term is broad by design.
 go_genes <- membership |>
-  filter(database == "GOBP") |>
+  filter(collection == "GOBP") |>
   with(split(gene, source_id))
 slim_sets <- imap(slim_offspring, function(descendants, slim_id) {
   covered <- intersect(c(slim_id, descendants), names(go_genes))
@@ -180,7 +177,7 @@ slim_catalog <- tibble(
 ) |>
   transmute(
     set_id = paste("GO_Slim", toupper(gsub("[^A-Za-z0-9]+", "_", pathway)), sep = "|"),
-    database = "GO_Slim", pathway, source_id = theme_id,
+    collection = "GO_Slim", pathway, source_id = theme_id,
     description = "GO Slim term: every measured gene under it in the GO:BP hierarchy",
     source_size = measured_size, measured_size,
     qualifies = measured_size >= 15 & measured_size <= 500
@@ -193,40 +190,41 @@ message("GO Slim sets: ", sum(slim_catalog$qualifies), " of ", nrow(slim_catalog
 
 collection_summary <- set_catalog |>
   summarise(
-    in_msigdb = n(), qualifying = sum(qualifies),
-    median_measured = median(measured_size[qualifies]), .by = database
+    n_in_source = n(), n_qualifying = sum(qualifies),
+    median_measured = median(measured_size[qualifies]), .by = collection
   ) |>
-  arrange(match(database, c(collections, "GO_Slim")))
+  arrange(match(collection, c(collections, "GO_Slim")))
 print(collection_summary)
 message("qualifying sets: ", length(sets))
 
-packages <- c("here", "msigdbr", "AnnotationDbi", "GO.db", "GSEABase", "dplyr", "purrr")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
 saveRDS(
   list(
     sets = sets, set_catalog = set_catalog, protein_map = protein_map,
-    gene_universe = gene_universe,
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions,
-      msigdb_cache_md5 = unname(tools::md5sum(cache_file)),
-      goslim_md5 = unname(tools::md5sum(slim_file))
-    )
+    gene_universe = gene_universe
   ),
   file.path(out, "gene_sets.rds"),
   compress = "xz"
 )
-writexl::write_xlsx(
-  list(
-    collection_summary = collection_summary,
-    set_catalog = set_catalog,
-    protein_gene_map = protein_map,
-    mapping_summary = mapping_summary,
-    input_manifest = manifest,
-    package_versions = versions
+inputs <- c(inputs, msigdb = sub(paste0(here(), "/"), "", cache_file, fixed = TRUE))
+sheets <- list(
+  collection_summary = collection_summary,
+  set_catalog = set_catalog,
+  protein_gene_map = protein_map,
+  mapping_summary = mapping_summary,
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(here(inputs)))
   ),
-  file.path(out, "00_build_gene_sets.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "Sets per collection in the source, sets that qualify, median measured size.",
+  "Every set with its source and measured size and whether it qualifies (15 to 500).",
+  "Every protein, its gene symbol, and the representative chosen per symbol.",
+  "Proteins per mapping status.",
+  "Files read, with md5, including the frozen MSigDB snapshot.",
+  "Packages loaded at run time."
+))
+writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "00_build_gene_sets.xlsx"))
 message("wrote gene_sets.rds and 00_build_gene_sets.xlsx")

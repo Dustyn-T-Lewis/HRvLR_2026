@@ -10,7 +10,8 @@
 # imputed one.
 #
 # Parameters follow the WGCNA FAQ's two recommended departures from default, a signed network and
-# biweight midcorrelation, and are otherwise package defaults.
+# biweight midcorrelation. minModuleSize is 30 against a default of min(20, n/2), and maxBlockSize
+# 2500 keeps all 1,900 proteins in one block; the rest are package defaults.
 
 suppressPackageStartupMessages({
   library(here)
@@ -26,8 +27,6 @@ stage <- here("04_Network", "01_build_modules")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-# Clear last run's figures so the bundle holds only this run's pages.
-unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds")
 paths <- map_chr(inputs, here)
@@ -35,13 +34,10 @@ if (!all(file.exists(paths))) {
   stop("Run 01_Preprocess first. Missing: ", paste(inputs[!file.exists(paths)], collapse = ", "))
 }
 imputed <- readRDS(paths[["imputed"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
 
 abund <- as.matrix(imputed$data)
 meta <- as_tibble(imputed$metadata) |>
-  select(sample_id = Col_ID, subject = Subject_ID, arm = Group, timepoint = Timepoint)
+  select(sample_id, subject, arm, timepoint)
 stopifnot(identical(colnames(abund), meta$sample_id))
 disableWGCNAThreads()
 
@@ -54,7 +50,7 @@ repeated <- meta |>
 centred <- t(apply(abund[, repeated$sample_id], 1, \(x) x - ave(x, repeated$subject)))
 expr <- t(centred)
 
-# The power is the lowest whose signed scale-free fit clears pickSoftThreshold's default 0.85.
+# The power is pickSoftThreshold's estimate: the lowest whose scale-free fit R2 clears 0.85.
 # The WGCNA FAQ's signed table (under 20 samples 18, 20-30 16, 31-40 14, over 40 12) is the
 # fallback when no power clears it.
 sft <- pickSoftThreshold(expr,
@@ -64,7 +60,7 @@ sft <- pickSoftThreshold(expr,
 faq_power <- c(18L, 16L, 14L, 12L)[findInterval(nrow(expr), c(20, 31, 41)) + 1]
 power <- coalesce(sft$powerEstimate, faq_power)
 fit_indices <- as_tibble(sft$fitIndices) |>
-  mutate(signed_r2 = -sign(slope) * SFT.R.sq)
+  mutate(signed_r2 = -sign(slope) * SFT.R.sq, chosen = Power == power)
 
 # randomSeed seeds the clustering; a set.seed() here would be overridden.
 net <- do.call(blockwiseModules, c(
@@ -110,9 +106,9 @@ subject_icc <- eigengene_long |>
     },
     .by = module
   )
-module_summary <- count(filter(membership, module != "grey"), module, name = "proteins") |>
+module_summary <- count(filter(membership, module != "grey"), module, name = "n_proteins") |>
   left_join(subject_icc, by = "module") |>
-  arrange(desc(proteins))
+  arrange(desc(n_proteins))
 print(as.data.frame(module_summary), digits = 3)
 message(sprintf(
   "power %d (signed R2 %.3f, mean k %.1f); %d modules, %d of %d proteins unassigned; %s",
@@ -124,124 +120,109 @@ message(sprintf(
 
 # ---- figures -------------------------------------------------------------------------------
 
-save_figure <- function(figure, name, width, height) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
-      width = width, height = height, dpi = 200, bg = "white"
-    )
-  })
-}
 caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
 
-save_figure(
-  fit_indices |>
-    select(Power, `signed scale-free R2` = signed_r2, `mean connectivity` = mean.k.) |>
-    pivot_longer(-Power) |>
-    ggplot(aes(Power, value)) +
-    geom_line(colour = "grey60") +
-    geom_point(aes(colour = Power == power), size = 2) +
-    geom_hline(
-      data = tibble(name = "signed scale-free R2", y = 0.85), aes(yintercept = y),
-      linetype = "dashed"
-    ) +
-    facet_wrap(~name, scales = "free_y") +
-    scale_colour_manual(values = c(`FALSE` = "grey30", `TRUE` = "#B2182B"), guide = "none") +
-    labs(
-      x = "soft power", y = NULL, title = "Soft-threshold choice",
-      subtitle = sprintf("WGCNA signed network, bicor, subject-centred matrix; power %d", power),
-      caption = paste(
-        "Left: mean connectivity at each power. Right: signed scale-free fit; the dashed line is",
-        "the 0.85 criterion and the red point the lowest power that clears it.",
-        "Table: c_data/01_build_modules.xlsx, soft_threshold."
-      )
-    ) +
-    theme_minimal(base_size = 10) +
-    caption_theme,
-  "01_soft_threshold", 9, 4
-)
+threshold_figure <- fit_indices |>
+  select(Power, `signed scale-free R2` = signed_r2, `mean connectivity` = mean.k.) |>
+  pivot_longer(-Power) |>
+  ggplot(aes(Power, value)) +
+  geom_line(colour = "grey60") +
+  geom_point(aes(colour = Power == power), size = 2) +
+  geom_hline(
+    data = tibble(name = "signed scale-free R2", y = 0.85), aes(yintercept = y),
+    linetype = "dashed"
+  ) +
+  facet_wrap(~name, scales = "free_y") +
+  scale_colour_manual(values = c(`FALSE` = "grey30", `TRUE` = "#B2182B"), guide = "none") +
+  labs(
+    x = "soft power", y = NULL, title = "Soft-threshold choice",
+    subtitle = sprintf("WGCNA signed network, bicor, subject-centred matrix; power %d", power),
+    caption = paste(
+      "Left: mean connectivity at each power. Right: signed scale-free fit; the dashed line is",
+      "the 0.85 criterion and the red point the chosen power.",
+      "Table: c_data/01_build_modules.xlsx, soft_threshold."
+    )
+  ) +
+  theme_minimal(base_size = 10) +
+  caption_theme
 
 module_colours <- set_names(module_summary$module, module_summary$module)
-save_figure(
-  module_summary |>
-    mutate(module = factor(module, levels = rev(module))) |>
-    ggplot(aes(proteins, module, fill = module)) +
-    geom_col(colour = "grey30", linewidth = 0.2) +
-    geom_text(aes(label = sprintf("ICC %.2f", icc)), hjust = -0.15, size = 3) +
-    scale_fill_manual(values = module_colours, guide = "none") +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.2))) +
-    labs(
-      x = "proteins", y = NULL, title = "Module sizes and subject dependence",
-      subtitle = sprintf(
-        "%d modules; %d of %d proteins unassigned", nrow(module_summary),
-        sum(colours == "grey"), length(colours)
-      ),
-      caption = paste(
-        "Bars: proteins per module. Label: intraclass correlation of the eigengene across a",
-        "subject's biopsies (lme4, 1 | subject): the share of eigengene variance between subjects.",
-        "Table: c_data/01_build_modules.xlsx, module_summary."
-      )
-    ) +
-    theme_minimal(base_size = 10) +
-    caption_theme,
-  "02_module_sizes", 7, 5
-)
+size_figure <- module_summary |>
+  mutate(module = factor(module, levels = rev(module))) |>
+  ggplot(aes(n_proteins, module, fill = module)) +
+  geom_col(colour = "grey30", linewidth = 0.2) +
+  geom_text(aes(label = sprintf("ICC %.2f", icc)), hjust = -0.15, size = 3) +
+  scale_fill_manual(values = module_colours, guide = "none") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.2))) +
+  labs(
+    x = "proteins", y = NULL, title = "Module sizes and subject dependence",
+    subtitle = sprintf(
+      "%d modules; %d of %d proteins unassigned", nrow(module_summary),
+      sum(colours == "grey"), length(colours)
+    ),
+    caption = paste(
+      "Bars: proteins per module. Label: intraclass correlation of the eigengene across a",
+      "subject's biopsies (lme4, 1 | subject): the share of eigengene variance between subjects.",
+      "Table: c_data/01_build_modules.xlsx, module_summary."
+    )
+  ) +
+  theme_minimal(base_size = 10) +
+  caption_theme
 
 trajectory <- eigengene_long |>
   summarise(
     mean = mean(eigengene), se = sd(eigengene) / sqrt(n()),
     .by = c(module, arm, timepoint)
   )
-save_figure(
-  ggplot(trajectory, aes(timepoint, mean, colour = arm, group = arm)) +
-    geom_line(
-      data = eigengene_long, aes(y = eigengene, group = subject),
-      alpha = 0.2, linewidth = 0.3
-    ) +
-    geom_line(linewidth = 0.8) +
-    geom_pointrange(aes(ymin = mean - se, ymax = mean + se), size = 0.25) +
-    facet_wrap(~ factor(module, levels = module_summary$module), nrow = 3) +
-    scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
-    labs(
-      x = NULL, y = "eigengene", title = "Eigengene trajectories",
-      subtitle = "module eigengene per biopsy, scored on raw abundance",
-      caption = paste(
-        "Thin lines: one subject's biopsies. Thick line and range: arm mean and standard error",
-        "at each timepoint. Table: c_data/01_build_modules.xlsx, eigengenes."
-      )
-    ) +
-    theme_minimal(base_size = 10) +
-    caption_theme,
-  "03_trajectories", 11, 7
-)
+trajectory_figure <- ggplot(trajectory, aes(timepoint, mean, colour = arm, group = arm)) +
+  geom_line(
+    data = eigengene_long, aes(y = eigengene, group = subject),
+    alpha = 0.2, linewidth = 0.3
+  ) +
+  geom_line(linewidth = 0.8) +
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se), size = 0.25) +
+  facet_wrap(~ factor(module, levels = module_summary$module), nrow = 3) +
+  scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
+  labs(
+    x = NULL, y = "eigengene", title = "Eigengene trajectories",
+    subtitle = "module eigengene per biopsy, scored on raw abundance",
+    caption = paste(
+      "Thin lines: one subject's biopsies. Thick line and range: arm mean and standard error",
+      "at each timepoint. Table: c_data/01_build_modules.xlsx, eigengenes."
+    )
+  ) +
+  theme_minimal(base_size = 10) +
+  caption_theme
 
-packages <- c("here", "WGCNA", "lme4", "dplyr", "purrr", "ggplot2")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
+pdf(file.path(figure_dir, "01_build_modules_figures.pdf"), width = 11, height = 8.5)
+walk(list(threshold_figure, size_figure, trajectory_figure), print)
+invisible(dev.off())
+
 saveRDS(
   list(
-    eigengenes = eigengenes, membership = membership, meta = meta,
-    module_summary = module_summary, power = power, soft_threshold = fit_indices,
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions
-    )
+    eigengenes = eigengenes, membership = membership, meta = meta, module_summary = module_summary
   ),
   file.path(out, "modules.rds"),
   compress = "xz"
 )
-writexl::write_xlsx(
-  list(
-    module_summary = module_summary, membership = membership,
-    eigengenes = as_tibble(t(eigengenes), rownames = "sample_id"),
-    soft_threshold = fit_indices, input_manifest = manifest, package_versions = versions
+sheets <- list(
+  module_summary = module_summary, membership = membership,
+  eigengenes = as_tibble(t(eigengenes), rownames = "sample_id"),
+  soft_threshold = fit_indices,
+  input_manifest = tibble(
+    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
-  file.path(out, "01_build_modules.xlsx")
+  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+    as_tibble() |>
+    select(package, version = loadedversion, source)
 )
-combined <- file.path(figure_dir, "01_build_modules_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message(
-  "wrote modules.rds, 01_build_modules.xlsx and ", length(pages),
-  " figures bundled into ", qpdf::pdf_length(combined), " pages"
-)
+read_me <- tibble(sheet = names(sheets), holds = c(
+  "Proteins per module and the subject ICC of its eigengene.",
+  "Every protein's module and its kME in that module.",
+  "Module eigengene per sample, scored on raw abundance.",
+  "pickSoftThreshold fit indices per power; chosen marks the power used.",
+  "Files read, with md5.",
+  "Packages loaded at run time."
+))
+writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_build_modules.xlsx"))
+message("wrote modules.rds, 01_build_modules.xlsx and 3 figures")

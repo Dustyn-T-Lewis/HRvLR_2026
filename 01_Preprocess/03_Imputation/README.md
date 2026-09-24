@@ -1,21 +1,13 @@
-# 01_Preprocess / 03_Imputation
+# 03_Imputation
 
-Fills the normalised matrix for the three methods that need it complete.
+Fills the normalised matrix with missForest for the methods that need it complete.
 
 | | |
 |---|---|
-| Script | `a_script/03_impute.qmd` |
 | Reads | `02_Normalization/c_data/DAList_normalized.rds` |
 | Writes | `c_data/DAList_imputed.rds`, `c_data/03_impute.xlsx` |
+| Run | `quarto render 01_Preprocess/03_Imputation/a_script/03_impute.qmd --output-dir ../b_reports` |
+| Cost | about 30 s |
 
-```sh
-quarto render 01_Preprocess/03_Imputation/a_script/03_impute.qmd --output-dir ../b_reports
-```
-
-missForest with the ranger backend named, 10 iterations, 100 trees, seed 42, rows sorted before
-the fit. Out-of-bag NRMSE 0.151.
-
-Read by `03_Pathway_Enrichment/01` (`fry`), `03_Pathway_Enrichment/04` (singscore),
-`04_Network/01` (WGCNA) and the `fry` concordance appendix of `02_Differential`.
-`03_Pathway_Enrichment/05` reads only its sample sheet. The differential fit never sees an imputed
-value.
+Read by `02_Differential` (the `fry` appendix), `03_Pathway_Enrichment/01`, `/04` and `/05` (the
+sample sheet only), and `04_Network/01`, `/03` and `/04`.
