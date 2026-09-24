@@ -4,9 +4,9 @@ Removes contaminant proteins by identity, drops outlier samples, then filters on
 
 | | |
 |---|---|
-| **Script** | `a_script/01_filter.qmd` |
-| **Reads** | `00_Input/HRvLR_raw.xlsx`, `HRvLR_meta.csv`, `blood_contaminants.csv`, `HPA_annotations_full.tsv`, `RBC_proteome_reference.tsv` |
-| **Writes** | `c_data/DAList_filtered.rds`, `c_data/01_filter.xlsx` |
+| Script | `a_script/01_filter.qmd` |
+| Reads | `00_Input/HRvLR_raw.xlsx`, `HRvLR_meta.csv`, `blood_contaminants.csv`, `HPA_annotations_full.tsv`, `RBC_proteome_reference.tsv` |
+| Writes | `c_data/DAList_filtered.rds`, `c_data/01_filter.xlsx` |
 
 ```sh
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports
@@ -41,14 +41,14 @@ Each verdict pools the curated list and the HPA rules that reach the same class.
 
 ## Notes
 
-**Removal is by identity, not covariation.** `blood_cor` is reported beside every call and gates
+Removal is by identity, not covariation. `blood_cor` is reported beside every call and gates
 nothing. Its old cut (0.45) rested on a permutation null that recomputes to 0.59 and depends on
 how many samples a protein was seen in. The last section of the notebook shows this.
 
-**The T3 biopsies carry more blood in LR.** In a mixed model on the log2 haemoglobin index, LR's
+The T3 biopsies carry more blood in LR. In a mixed model on the log2 haemoglobin index, LR's
 rise at T3 exceeds HR's by 1.21 (t = 2.22, subject-label permutation p = 0.023); on the blood
 panel's share of signal the same term gives p = 0.36. The notebook computes both. The confound does
 not cancel in the interaction contrasts.
 
-**One proteoDA function is bypassed.** `filter_proteins_by_annotation()` errors on every real
+One proteoDA function is bypassed. `filter_proteins_by_annotation()` errors on every real
 DAList, so contaminant removal is a plain subset.

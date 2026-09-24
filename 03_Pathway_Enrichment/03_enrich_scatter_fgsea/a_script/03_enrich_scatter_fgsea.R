@@ -233,4 +233,7 @@ writexl::write_xlsx(
 combined <- file.path(figure_dir, "03_enrich_scatter_fgsea_figures.pdf")
 pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
 invisible(qpdf::pdf_combine(sort(pages), combined))
-message("wrote 03_enrich_scatter_fgsea.xlsx and a ", length(pages), "-page figure PDF")
+message(
+  "wrote 03_enrich_scatter_fgsea.xlsx and ", length(pages),
+  " figures bundled into ", qpdf::pdf_length(combined), " pages"
+)

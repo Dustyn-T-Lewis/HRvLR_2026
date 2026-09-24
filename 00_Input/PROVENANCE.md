@@ -79,7 +79,7 @@ was built. Those three columns are evidence only; nothing was included because o
 
 ## Excluded
 
-Sixteen proteins the old threshold removed are **not** on the list, because covariation with the
+Sixteen proteins the old threshold removed are not on the list, because covariation with the
 haemoglobin index was their only evidence and they are expressed in myonuclei: RBMX (358
 nCPM), SYNE2 (303), HNRNPA3 (213), DDI2 (179), GDI2 (75), STK38 (47), CPNE3 (46), CCS (39),
 FBXO7 (36), LXN (23), ARF1 (21), ANP32E (21), SEPTIN6 (7), RAN (6), DNAJB4 (4), FLOT1 (0.4).

@@ -17,7 +17,7 @@ tracks how much a subject adapted, across ten phenotypes.
 | `01_Preprocess/` | protein report to a normalised DAList, and an imputed copy | ready |
 | `02_Differential_Expression/` | model fitting, nine contrasts, protein classification, protein against phenotype | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
-| `04_Network/` | co-expression modules, what they are, and the same tests on them | ready |
+| `04_Network/` | co-expression modules, their preservation between arms, and the same tests on them | ready |
 | `05_Figures/` | manuscript panels | planned |
 
 Each sub-stage holds `a_script/` (code), `b_reports/` (HTML reports or figures) and `c_data/`
@@ -48,16 +48,17 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
 
-for s in 01_build_modules 02_characterise_modules 03_classify_and_associate_modules; do
+for s in 01_build_modules 02_characterise_modules 03_preserve_modules 04_test_modules \
+         05_classify_and_associate_modules; do
   Rscript 04_Network/$s/a_script/$s.R
 done
 ```
 
-Everything above takes about five minutes.
+Everything above takes about ten minutes, three of them in `04_Network/03_preserve_modules`.
 
 ## Approach
 
-Preprocessing and the fit use **proteoDA**: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
+Preprocessing and the fit use proteoDA: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
 `filter_samples`, `normalize_data("cycloess")`, then `add_design`, `add_contrasts`,
 `fit_limma_model` and `extract_DA_results`. The design is six cell means with subject as a random
 effect, because HR and LR are different people and a fixed subject term would absorb every
@@ -77,7 +78,7 @@ Pinned in `renv.lock`. Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `lme
 `readxl`, `ggplot2`, `patchwork`, `writexl`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
 `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano` (not on CRAN;
 `renv::hydrate("enrichVolcano")` links a local install). Stage 04 adds `WGCNA`,
-`clusterProfiler`, `enrichplot` and `STRINGdb`. Rendering needs Quarto.
+`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Rendering needs Quarto.
 
 Earlier designs of this project, a continuous phenotype sweep and a blind subtype search, are in
 git history.

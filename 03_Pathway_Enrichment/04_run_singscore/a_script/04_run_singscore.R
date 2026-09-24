@@ -188,6 +188,6 @@ combined <- file.path(figures, "04_run_singscore_figures.pdf")
 pages <- setdiff(list.files(figures, "[.]pdf$", full.names = TRUE), combined)
 invisible(qpdf::pdf_combine(sort(pages), combined))
 message(
-  "wrote singscore.rds, 04_run_singscore.xlsx, set_scores.csv and a ",
-  length(pages), "-page figure PDF"
+  "wrote singscore.rds, 04_run_singscore.xlsx, set_scores.csv and ",
+  length(pages), " figures bundled into ", qpdf::pdf_length(combined), " pages"
 )

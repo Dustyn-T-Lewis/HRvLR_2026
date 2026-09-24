@@ -4,8 +4,8 @@ Protein volcanoes with collapse-surviving pathways ringed. Computes nothing.
 
 | | |
 |---|---|
-| **Reads** | `set_tests.rds` |
-| **Writes** | 8 volcanoes |
+| Reads | `set_tests.rds` |
+| Writes | 8 volcanoes |
 
 Point colour reads protein BH FDR; the ring reads set fgsea FDR. Red is up, blue down. Six FDR
 panels (both interactions and the four within-arm contrasts) and two pi-ranked repeats for the

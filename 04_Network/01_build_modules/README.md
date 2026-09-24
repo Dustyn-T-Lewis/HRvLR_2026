@@ -4,10 +4,10 @@ WGCNA modules and their eigengenes.
 
 | | |
 |---|---|
-| **Reads** | `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` |
-| **Writes** | `modules.rds`, `01_build_modules.xlsx`, 3 figures |
+| Reads | `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` |
+| Writes | `modules.rds`, `01_build_modules.xlsx`, 3 figures |
 
-Modules are **defined** on abundance centred within subject and **scored** on raw abundance. On
+Modules are defined on abundance centred within subject and scored on raw abundance. On
 raw abundance subject identity drives the leading components, so modules built there would encode
 who a biopsy came from. Centring leaves how proteins move together inside a person; scoring on raw
 abundance keeps between-arm differences testable. HR_S28 has one biopsy after outlier removal and

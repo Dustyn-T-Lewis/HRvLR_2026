@@ -8,6 +8,8 @@
 # The STRING check is STRINGdb's PPI enrichment at combined score >= 700, with the background set
 # to the measured proteins STRING can map. Its expected edge count accounts for each member's
 # degree. Read from the local v12 files in 00_Input/downloads.
+#
+# The hub drawings show each module's 25 highest-kME members and the STRING edges among them.
 
 suppressPackageStartupMessages({
   library(here)
@@ -18,6 +20,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(clusterProfiler)
   library(STRINGdb)
+  library(patchwork)
 })
 
 stage <- here("04_Network", "02_characterise_modules")
@@ -170,13 +173,89 @@ save_figure(
   "02_string_edges", 8, 5
 )
 
-packages <- c("here", "clusterProfiler", "enrichplot", "STRINGdb", "dplyr", "purrr", "ggplot2")
+# Each module's highest-kME members and the STRING edges among them, at the same score threshold
+# as the enrichment test. Node fill is kME, size the node's degree among the drawn hubs. The
+# layout is seeded; its geometry carries no meaning.
+hubs_drawn <- 25L
+hub_nodes <- mapped |>
+  filter(module != "grey") |>
+  slice_max(kme, n = hubs_drawn, by = module, with_ties = FALSE)
+hub_edges <- string_db$get_interactions(hub_nodes$STRING_id) |>
+  distinct(from, to, .keep_all = TRUE) |>
+  inner_join(select(hub_nodes, from = STRING_id, module), by = "from") |>
+  inner_join(select(hub_nodes, to = STRING_id, to_module = module), by = "to") |>
+  filter(module == to_module) |>
+  select(module, from, to, combined_score)
+max_degree <- max(table(c(hub_edges$from, hub_edges$to)))
+draw_hub_network <- function(which_module) {
+  nodes <- hub_nodes |>
+    filter(module == which_module) |>
+    transmute(name = STRING_id, gene, kme)
+  edges <- hub_edges |>
+    filter(module == which_module) |>
+    transmute(from, to, score = combined_score / 1000)
+  graph <- nodes |>
+    tidygraph::tbl_graph(edges = edges, directed = FALSE, node_key = "name") |>
+    tidygraph::activate(nodes) |>
+    mutate(degree = tidygraph::centrality_degree()) |>
+    filter(degree > 0)
+  isolated <- nrow(nodes) - igraph::vcount(graph)
+  set.seed(42)
+  ggraph::ggraph(graph, layout = "fr") +
+    ggraph::geom_edge_link(aes(edge_width = score), colour = "grey70", alpha = 0.6) +
+    ggraph::geom_node_point(aes(size = degree, fill = kme), shape = 21, colour = "grey30") +
+    ggraph::geom_node_text(aes(label = gene), size = 2.2, repel = TRUE, max.overlaps = Inf) +
+    ggraph::scale_edge_width(range = c(0.2, 1.2), guide = "none") +
+    scale_fill_viridis_c(option = "mako", direction = -1, limits = c(0.4, 1), name = "kME") +
+    scale_size_continuous(range = c(1.5, 5), limits = c(1, max_degree), name = "degree") +
+    labs(title = sprintf(
+      "%s: %d edges among %d hubs, %d without an edge", which_module, nrow(edges), nrow(nodes),
+      isolated
+    )) +
+    theme_void(base_size = 9) +
+    theme(plot.title = element_text(face = "bold", size = 10), legend.position = "right")
+}
+hub_pages <- labels$module |>
+  map(draw_hub_network) |>
+  split(ceiling(seq_along(labels$module) / 4)) |>
+  imap(\(panels, page) {
+    wrap_plots(panels, ncol = 2, guides = "collect") +
+      plot_annotation(
+        title = "Module hub networks",
+        subtitle = sprintf(
+          "top %d members by kME per module, STRING v12 edges at score >= %d; page %s of %d",
+          hubs_drawn, string_min_score, page, ceiling(length(labels$module) / 4)
+        ),
+        caption = stringr::str_wrap(width = 190, paste(
+          "Nodes: a module's highest-kME members with at least one edge among them, fill = kME,",
+          "size = degree among the drawn hubs; the title counts those without an edge. Edges:",
+          "STRING combined score, width = score. Layout is force-directed and seeded; its",
+          "geometry carries no meaning. Table: c_data/02_characterise_modules.xlsx, hub_edges."
+        )),
+        theme = theme(
+          plot.title = element_text(face = "bold", size = 13),
+          plot.subtitle = element_text(size = 9, colour = "grey30"),
+          plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40")
+        )
+      )
+  })
+# Paged, so PDF only.
+pdf(file.path(figure_dir, "03_hub_networks.pdf"), width = 11, height = 10, bg = "white")
+walk(hub_pages, print)
+invisible(dev.off())
+message("drew 03_hub_networks: ", length(hub_pages), " pages")
+
+packages <- c(
+  "here", "clusterProfiler", "enrichplot", "STRINGdb", "tidygraph", "ggraph", "dplyr", "purrr",
+  "ggplot2"
+)
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
 )
 saveRDS(
   list(
     labels = labels, ora = ora, ora_fit = ora_fit, hubs = hubs, string = string_check,
+    hub_edges = hub_edges,
     provenance = list(
       created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
       inputs = manifest, packages = versions
@@ -188,6 +267,11 @@ saveRDS(
 writexl::write_xlsx(
   list(
     labels = labels, ora = arrange(ora, module, p), hubs = hubs, string = string_check,
+    hub_edges = left_join(hub_edges,
+      select(hub_nodes, from = STRING_id, from_gene = gene),
+      by = "from"
+    ) |>
+      left_join(select(hub_nodes, to = STRING_id, to_gene = gene), by = "to"),
     input_manifest = manifest, package_versions = versions
   ),
   file.path(out, "02_characterise_modules.xlsx")
@@ -196,6 +280,6 @@ combined <- file.path(figure_dir, "02_characterise_modules_figures.pdf")
 pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
 invisible(qpdf::pdf_combine(sort(pages), combined))
 message(
-  "wrote module_characterisation.rds, 02_characterise_modules.xlsx and a ",
-  length(pages), "-page figure PDF"
+  "wrote module_characterisation.rds, 02_characterise_modules.xlsx and ",
+  length(pages), " figures bundled into ", qpdf::pdf_length(combined), " pages"
 )

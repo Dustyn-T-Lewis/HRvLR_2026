@@ -4,9 +4,9 @@ Fills the normalised matrix for the three methods that need it complete.
 
 | | |
 |---|---|
-| **Script** | `a_script/03_impute.qmd` |
-| **Reads** | `02_Normalization/c_data/DAList_normalized.rds` |
-| **Writes** | `c_data/DAList_imputed.rds`, `c_data/03_impute.xlsx` |
+| Script | `a_script/03_impute.qmd` |
+| Reads | `02_Normalization/c_data/DAList_normalized.rds` |
+| Writes | `c_data/DAList_imputed.rds`, `c_data/03_impute.xlsx` |
 
 ```sh
 quarto render 01_Preprocess/03_Imputation/a_script/03_impute.qmd --output-dir ../b_reports

@@ -4,13 +4,13 @@ Correlates each protein with the ten adaptation measures.
 
 | | |
 |---|---|
-| **Script** | `a_script/03_phenotype.qmd` |
-| **Reads** | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `00_Input/phenotype.csv` |
-| **Writes** | `c_data/phenotype.rds`, `c_data/03_phenotype.xlsx`, `b_reports/03_phenotype_figures.pdf` |
+| Script | `a_script/03_phenotype.qmd` |
+| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `00_Input/phenotype.csv` |
+| Writes | `c_data/phenotype.rds`, `c_data/03_phenotype.xlsx`, `b_reports/03_phenotype_figures.pdf` |
 
 A contrast compares group means and cannot use a per-subject outcome, so this is a separate
-question. Each subject contributes one value per protein in three windows: **training** change
-(T2 − T1, the window the phenotypes share), **baseline** level (T1) and **acute** change
+question. Each subject contributes one value per protein in three windows: training change
+(T2 − T1, the window the phenotypes share), baseline level (T1) and acute change
 (T3 − T2). Spearman, t approximation; BH within window and outcome. A protein is tested only when
 two thirds of the window's subjects observed it.
 

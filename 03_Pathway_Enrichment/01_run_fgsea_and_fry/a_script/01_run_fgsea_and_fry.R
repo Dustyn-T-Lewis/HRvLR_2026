@@ -292,8 +292,7 @@ ranked_hits <- hit_data |>
   filter(n_nominal > 0) |>
   arrange(desc(n_nominal), best)
 page_of <- ceiling(seq_len(nrow(ranked_hits)) / 75)
-hit_dir <- file.path(figure_root, "hits")
-dir.create(hit_dir, recursive = TRUE, showWarnings = FALSE)
+hit_plots <- list()
 for (page in seq_len(max(page_of, 0))) {
   rows <- ranked_hits$label[page_of == page]
   page_data <- hit_data |>
@@ -302,43 +301,45 @@ for (page in seq_len(max(page_of, 0))) {
       label = factor(label, levels = rev(rows)),
       contrast = factor(contrast, levels = contrast_names), nominal = p < 0.05
     )
-  save_figure(
+  hit_plots[[page]] <-
     ggplot(page_data, aes(contrast, label)) +
-      geom_point(data = filter(page_data, !nominal), colour = "grey85", size = 0.6) +
-      geom_point(
-        data = filter(page_data, nominal), aes(size = -log10(p), fill = effect),
-        shape = 21, colour = "grey30", stroke = 0.2
-      ) +
-      geom_point(
-        data = filter(page_data, fdr < 0.05), aes(size = -log10(p)),
-        shape = 21, colour = "black", stroke = 0.9, fill = NA
-      ) +
-      scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
-      scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
-      labs(
-        title = sprintf("Set contrast hits, fry (%d/%d)", page, max(page_of)),
-        subtitle = sprintf(
-          "fry p per contrast, filled by fgsea NES; %d sets nominal in at least one contrast",
-          nrow(ranked_hits)
-        ),
-        x = NULL, y = NULL, fill = "NES", size = "-log10 p",
-        caption = paste(
-          "Rows: sets at fry p < 0.05 in at least one contrast, most contrasts first, then by",
-          "best p. Filled dot: nominal, fill = fgsea NES, size = -log10 fry p. Black ring: fry",
-          "FDR < 0.05. Grey speck: not nominal. Table: c_data/set_tests.csv."
-        )
-      ) +
-      theme_minimal(base_size = 9) +
-      theme(
-        axis.text.x = element_text(angle = 35, hjust = 1),
-        axis.text.y = element_text(size = if (length(rows) > 30) 5.5 else 8),
-        plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
+    geom_point(data = filter(page_data, !nominal), colour = "grey85", size = 0.6) +
+    geom_point(
+      data = filter(page_data, nominal), aes(size = -log10(p), fill = effect),
+      shape = 21, colour = "grey30", stroke = 0.2
+    ) +
+    geom_point(
+      data = filter(page_data, fdr < 0.05), aes(size = -log10(p)),
+      shape = 21, colour = "black", stroke = 0.9, fill = NA
+    ) +
+    scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
+    scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
+    labs(
+      title = sprintf("Set contrast hits, fry (%d/%d)", page, max(page_of)),
+      subtitle = sprintf(
+        "fry p per contrast, filled by fgsea NES; %d sets nominal in at least one contrast",
+        nrow(ranked_hits)
       ),
-    file.path(hit_dir, sprintf("03_set_hits_%02d", page)),
-    width = 11, height = 8.5
-  )
+      x = NULL, y = NULL, fill = "NES", size = "-log10 p",
+      caption = paste(
+        "Rows: sets at fry p < 0.05 in at least one contrast, most contrasts first, then by",
+        "best p. Filled dot: nominal, fill = fgsea NES, size = -log10 fry p. Black ring: fry",
+        "FDR < 0.05. Grey speck: not nominal. Table: c_data/set_tests.csv."
+      )
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(
+      axis.text.x = element_text(angle = 35, hjust = 1),
+      axis.text.y = element_text(size = if (length(rows) > 30) 5.5 else 8),
+      plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
+    )
 }
-message("drew ", max(page_of, 0), " hit-matrix pages")
+# Paged, so one PDF and no PNG.
+dir.create(file.path(figure_root, "hits"), showWarnings = FALSE)
+pdf(file.path(figure_root, "hits", "03_set_hits.pdf"), width = 11, height = 8.5, bg = "white")
+walk(hit_plots, print)
+invisible(dev.off())
+message("drew ", length(hit_plots), " hit-matrix pages")
 
 packages <- c("here", "limma", "fgsea", "dplyr", "purrr", "enrichVolcano")
 versions <- tibble(
@@ -374,6 +375,6 @@ combined <- file.path(figure_root, "01_run_fgsea_and_fry_figures.pdf")
 pages <- setdiff(list.files(figure_root, "[.]pdf$", recursive = TRUE, full.names = TRUE), combined)
 invisible(qpdf::pdf_combine(sort(pages), combined))
 message(
-  "wrote set_tests.rds, 01_run_fgsea_and_fry.xlsx, set_tests.csv and a ",
-  length(pages), "-page figure PDF"
+  "wrote set_tests.rds, 01_run_fgsea_and_fry.xlsx, set_tests.csv and ",
+  length(pages), " figures bundled into ", qpdf::pdf_length(combined), " pages"
 )

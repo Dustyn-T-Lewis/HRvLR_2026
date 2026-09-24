@@ -4,8 +4,8 @@ Each set's HR NES against its LR NES, once for training and once for the acute b
 
 | | |
 |---|---|
-| **Reads** | `set_tests.rds` |
-| **Writes** | 4 composites, `nes_scatter.csv`, `03_enrich_scatter_fgsea.xlsx` |
+| Reads | `set_tests.rds` |
+| Writes | 4 composites, `nes_scatter.csv`, `03_enrich_scatter_fgsea.xlsx` |
 
 | Pair | Population | Sets | rho | Significant | Discordant |
 |---|---|---:|---:|---:|---:|

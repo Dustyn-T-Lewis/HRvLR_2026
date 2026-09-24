@@ -1,6 +1,6 @@
 # 05 · Figures
 
-**Planned.** No code yet.
+Planned. No code yet.
 
 Intent: manuscript figures for a reader who will never run the pipeline, assembled from outputs
 the earlier stages already write. Diagnostics stay in each stage's `b_reports/`.

@@ -4,19 +4,17 @@ What each module is.
 
 | | |
 |---|---|
-| **Reads** | `modules.rds`, `gene_sets.rds`, STRING v12 files in `00_Input/downloads/` |
-| **Writes** | `module_characterisation.rds`, `02_characterise_modules.xlsx`, 2 figures |
+| Reads | `modules.rds`, `gene_sets.rds`, STRING v12 files in `00_Input/downloads/` |
+| Writes | `module_characterisation.rds`, `02_characterise_modules.xlsx`, 3 figures over 5 pages |
 
-**Enrichment.** `clusterProfiler::compareCluster(fun = "enricher")` against the 1,378 sets of
-`03_Pathway_Enrichment/00_build_gene_sets`, with the 1,900 measured genes as universe. BH within
-each module.
+Enrichment is `clusterProfiler::compareCluster(fun = "enricher")` against the 1,378 sets of
+`03_Pathway_Enrichment/00_build_gene_sets`, with the 1,900 measured genes as universe and BH within
+each module. Hubs are the ten members with the highest kME.
 
-**Hubs.** The ten members with the highest kME.
-
-**STRING.** `STRINGdb$get_ppi_enrichment()` at combined score ≥ 700, background set to the
+The STRING check is `STRINGdb$get_ppi_enrichment()` at combined score ≥ 700, background set to the
 measured proteins STRING maps. The expected edge count comes from each member's degree, so
-well-studied proteins do not inflate a module's enrichment. Nearly any co-expression
-module passes; compare modules by the observed-over-expected ratio.
+well-studied proteins do not inflate a module's enrichment. Nearly any co-expression module
+passes; compare modules by the observed-over-expected ratio.
 
 | Module | Top set | FDR | STRING ratio |
 |---|---|---:|---:|
@@ -31,3 +29,8 @@ module passes; compare modules by the observed-over-expected ratio.
 
 Turquoise, yellow, green and black have no set at FDR < 0.05. The workbook's `labels` sheet holds
 every module's top set, top GO Slim term and hubs.
+
+`03_hub_networks.pdf` draws each module's 25 highest-kME members and the STRING edges among them,
+four modules to a page. Greenyellow (209 edges), tan (202) and purple (167) are dense; turquoise,
+green and black have two to four edges among their hubs. Node fill is kME, size the degree among
+the drawn hubs; the seeded layout carries no meaning. The edges are in the `hub_edges` sheet.

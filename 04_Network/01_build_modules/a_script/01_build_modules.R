@@ -177,8 +177,8 @@ save_figure(
       ),
       caption = paste(
         "Bars: proteins per module. Label: intraclass correlation of the eigengene across a",
-        "subject's biopsies (lme4, 1 | subject). A high value means the scored eigengene still",
-        "differs between people. Table: c_data/01_build_modules.xlsx, module_summary."
+        "subject's biopsies (lme4, 1 | subject): the share of eigengene variance between subjects.",
+        "Table: c_data/01_build_modules.xlsx, module_summary."
       )
     ) +
     theme_minimal(base_size = 10) +
@@ -241,4 +241,7 @@ writexl::write_xlsx(
 combined <- file.path(figure_dir, "01_build_modules_figures.pdf")
 pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
 invisible(qpdf::pdf_combine(sort(pages), combined))
-message("wrote modules.rds, 01_build_modules.xlsx and a ", length(pages), "-page figure PDF")
+message(
+  "wrote modules.rds, 01_build_modules.xlsx and ", length(pages),
+  " figures bundled into ", qpdf::pdf_length(combined), " pages"
+)

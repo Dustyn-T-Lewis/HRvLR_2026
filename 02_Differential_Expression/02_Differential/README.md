@@ -4,9 +4,9 @@ Fits the model, writes the results, and classifies every protein on eight tasks.
 
 | | |
 |---|---|
-| **Script** | `a_script/02_differential.qmd` |
-| **Reads** | `01_Design/c_data/design.rds`; for the appendices, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` and, when present, V1's `05_results.xlsx` |
-| **Writes** | `c_data/fit.rds`, `c_data/02_differential.xlsx`, `b_reports/02_differential_figures.pdf` |
+| Script | `a_script/02_differential.qmd` |
+| Reads | `01_Design/c_data/design.rds`; for the appendices, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` and, when present, V1's `05_results.xlsx` |
+| Writes | `c_data/fit.rds`, `c_data/02_differential.xlsx`, `b_reports/02_differential_figures.pdf` |
 
 ```sh
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
@@ -80,8 +80,8 @@ every protein nominal in any task, as dot matrices 75 rows to a page.
 
 ## Appendices
 
-**V1 equivalence.** The nine contrasts reproduce V1 to at most 5.5e-12. Skipped when the sibling
-V1 tree is absent.
+The V1 equivalence appendix reproduces V1's nine contrasts to at most 5.5e-12. It is skipped
+when the sibling V1 tree is absent.
 
-**fry concordance.** The proteins that responded in one arm, tested as a set in the other arm's
-contrast. Two of sixteen set-ranking tests are concordant at FDR < 0.05.
+The fry concordance appendix tests the proteins that responded in one arm as a set in the other
+arm's contrast. Two of sixteen set-ranking tests are concordant at FDR < 0.05.

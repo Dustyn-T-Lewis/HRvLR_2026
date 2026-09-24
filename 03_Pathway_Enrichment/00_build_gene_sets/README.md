@@ -5,8 +5,8 @@ this one list.
 
 | | |
 |---|---|
-| **Reads** | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `c_data/cache/goslim_generic.obo` |
-| **Writes** | `gene_sets.rds`, `00_build_gene_sets.xlsx`, `c_data/cache/` |
+| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `c_data/cache/goslim_generic.obo` |
+| Writes | `gene_sets.rds`, `00_build_gene_sets.xlsx`, `c_data/cache/` |
 
 ## Snapshot
 
@@ -26,7 +26,7 @@ the checksum (`00_Input/PROVENANCE.md`).
 | Reactome | 1,839 | 328 | 33 |
 | GO:BP | 7,538 | 897 | 25 |
 | GO Slim | 71 | 58 | 97 |
-| **Total** | **9,684** | **1,378** | |
+| Total | 9,684 | 1,378 | |
 
 A set is tested with 15 to 500 source genes and at least 15 measured. GO Slim sets are built here:
 each holds every measured gene annotated to the slim term or any GO:BP term below it, taken from

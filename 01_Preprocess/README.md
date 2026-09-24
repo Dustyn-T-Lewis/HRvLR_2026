@@ -26,8 +26,8 @@ singscore and WGCNA.
 
 ## Two orderings
 
-Contaminants go **before** normalisation, because cyclic loess estimates each sample's reference
+Contaminants go before normalisation, because cyclic loess estimates each sample's reference
 from its own intensity distribution.
 
-Detection filtering runs **after** outlier removal, so no discarded sample counts toward a
+Detection filtering runs after outlier removal, so no discarded sample counts toward a
 protein's detections.

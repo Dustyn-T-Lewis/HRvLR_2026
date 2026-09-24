@@ -4,8 +4,8 @@ One singscore per set per sample.
 
 | | |
 |---|---|
-| **Reads** | `gene_sets.rds`, `DAList_imputed.rds` |
-| **Writes** | `singscore.rds`, `set_scores.csv`, `04_run_singscore.xlsx`, 2 figures |
+| Reads | `gene_sets.rds`, `DAList_imputed.rds` |
+| Writes | `singscore.rds`, `set_scores.csv`, `04_run_singscore.xlsx`, 2 figures |
 
 singscore ranks proteins within each sample, so a score does not depend on the cohort. Ranks need
 every protein in every sample, so this reads the imputed matrix.

@@ -206,6 +206,15 @@ save_figure <- function(figure, name, width = 11, height = 8.5) {
     )
   })
 }
+# A paged figure is one PDF; a single-page one also gets a PNG.
+save_pages <- function(pages, name, width = 11, height = 8.5) {
+  if (length(pages) == 1) save_figure(pages[[1]], name, width, height)
+  if (length(pages) > 1) {
+    pdf(file.path(figures, paste0(name, ".pdf")), width = width, height = height, bg = "white")
+    walk(pages, print)
+    invisible(dev.off())
+  }
+}
 hit_pages <- function(data, columns, title, subtitle, table, per_page = 75) {
   ranked <- data |>
     filter(!is.na(p)) |>
@@ -276,9 +285,7 @@ map_int(hits, length)
 
 ```{r write}
 save_figure(chance_figure, "01_chance_by_outcome", width = 8, height = 5)
-iwalk(hits, \(pages, window) {
-  iwalk(pages, \(page, i) save_figure(page, sprintf("02_hits_%s_%02d", window, i)))
-})
+iwalk(hits, \(pages, window) save_pages(pages, sprintf("02_hits_%s", window)))
 writexl::write_xlsx(
   list(summary = summary_table, correlations = arrange(results, fdr), by_arm = by_arm),
   file.path(out, "03_phenotype.xlsx")

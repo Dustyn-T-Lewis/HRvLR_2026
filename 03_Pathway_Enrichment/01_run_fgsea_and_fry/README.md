@@ -4,8 +4,8 @@ Tests every set on every contrast with fgsea and fry, and marks non-redundant fg
 
 | | |
 |---|---|
-| **Reads** | `gene_sets.rds`, `fit.rds`, `design.rds`, `DAList_imputed.rds` |
-| **Writes** | `set_tests.rds`, `set_tests.csv`, `01_run_fgsea_and_fry.xlsx`, dot plots, hit matrices |
+| Reads | `gene_sets.rds`, `fit.rds`, `design.rds`, `DAList_imputed.rds` |
+| Writes | `set_tests.rds`, `set_tests.csv`, `01_run_fgsea_and_fry.xlsx`, dot plots, hit matrices |
 
 `topTable()` rebuilds the nine contrasts from the saved fit, keeping `02_Differential`'s BH.
 fgsea ranks proteins by moderated t, seeded; a protein untested in a contrast has no t and leaves
@@ -22,5 +22,5 @@ fgsea-only. `leadingEdge` holds gene symbols; it is a list column in the RDS and
 CSV.
 
 `b_reports/` has one folder per collection plus `all_db/`, one dot plot per drawn contrast (the
-ten strongest collapse survivors), and `hits/`: every set nominal under fry in at least one
-contrast, as a dot matrix filled by fgsea NES.
+ten strongest collapse survivors), and `hits/03_set_hits.pdf`: every set nominal under fry in
+at least one contrast, as a dot matrix filled by fgsea NES, 75 sets to a page.

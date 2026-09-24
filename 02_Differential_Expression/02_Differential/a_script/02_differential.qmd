@@ -298,6 +298,15 @@ save_figure <- function(figure, name, width = 11, height = 8.5) {
     )
   })
 }
+# A paged figure is one PDF; a single-page one also gets a PNG.
+save_pages <- function(pages, name, width = 11, height = 8.5) {
+  if (length(pages) == 1) save_figure(pages[[1]], name, width, height)
+  if (length(pages) > 1) {
+    pdf(file.path(figures, paste0(name, ".pdf")), width = width, height = height, bg = "white")
+    walk(pages, print)
+    invisible(dev.off())
+  }
+}
 hit_pages <- function(data, columns, title, subtitle, fill_label, table, midpoint = 0,
                       per_page = 75) {
   ranked <- data |>
@@ -387,8 +396,8 @@ dep_matrix <- results |>
 
 saveRDS(res, file.path(out, "fit.rds"))
 save_figure(p_histogram, "01_p_histogram", height = 7)
-iwalk(contrast_hits, \(page, i) save_figure(page, sprintf("02_contrast_hits_%02d", i)))
-iwalk(task_hits, \(page, i) save_figure(page, sprintf("03_classification_hits_%02d", i)))
+save_pages(contrast_hits, "02_contrast_hits")
+save_pages(task_hits, "03_classification_hits")
 ```
 
 ## Floor

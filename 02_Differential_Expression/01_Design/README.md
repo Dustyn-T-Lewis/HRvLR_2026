@@ -5,9 +5,9 @@ the random effect carries. Separate from the fit so a design problem surfaces in
 
 | | |
 |---|---|
-| **Script** | `a_script/01_design.qmd` |
-| **Reads** | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds` |
-| **Writes** | `c_data/design.rds`, `c_data/01_design.xlsx` |
+| Script | `a_script/01_design.qmd` |
+| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds` |
+| Writes | `c_data/design.rds`, `c_data/01_design.xlsx` |
 
 ```sh
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd --output-dir ../b_reports

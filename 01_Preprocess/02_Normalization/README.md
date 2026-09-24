@@ -4,9 +4,9 @@ Compares normalisation methods and applies cyclic loess.
 
 | | |
 |---|---|
-| **Script** | `a_script/02_normalize.qmd` |
-| **Reads** | `01_Filtering/c_data/DAList_filtered.rds` |
-| **Writes** | `c_data/DAList_normalized.rds`, `c_data/02_normalize.xlsx`, three proteoDA PDFs in `b_reports/` |
+| Script | `a_script/02_normalize.qmd` |
+| Reads | `01_Filtering/c_data/DAList_filtered.rds` |
+| Writes | `c_data/DAList_normalized.rds`, `c_data/02_normalize.xlsx`, three proteoDA PDFs in `b_reports/` |
 
 ```sh
 quarto render 01_Preprocess/02_Normalization/a_script/02_normalize.qmd --output-dir ../b_reports

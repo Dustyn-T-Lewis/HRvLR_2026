@@ -9,7 +9,7 @@ Tests each gene set on each contrast, then scores every sample on every set and 
 | [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | 8 volcanoes |
 | [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | HR NES against LR NES, training and acute | 4 composites |
 | [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds`, 2 figures |
-| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, ROC, association, chance and hit-matrix figures |
+| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, ROC and association pages for every nominal set, chance figure |
 
 ```sh
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
@@ -18,23 +18,24 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-About two minutes in total. Each substage writes every figure as PNG and PDF and bundles them into
-one `<substage>_figures.pdf`. Titles name the figure, subtitles give method and counts, captions
+About three minutes in total, most of it drawing the `05_` pages. Each substage writes every
+figure as PDF, and a PNG when the figure is one page, and bundles the PDFs into one
+`<substage>_figures.pdf`. Titles name the figure, subtitles give method and counts, captions
 state the encodings and the source table. Findings live here, not on the figures.
 
 ## Methods
 
-**fgsea** is competitive: does a set sit at one end of the protein ranking? **fry** is
+fgsea is competitive: does a set sit at one end of the protein ranking? fry is
 self-contained: did the set move at all under the fitted design? fry tests all 1,378 sets; fgsea
 tests 1,369 to 1,374 per contrast, since a protein untested in a contrast leaves that ranking.
 fgsea assumes proteins are exchangeable, and co-regulated sets break that; fry does not assume it,
 and takes the subject block and the within-subject correlation. fry reads the imputed matrix,
 because it cannot take a missing value.
 
-**singscore** gives one rank-based score per set per sample, on the imputed matrix. It carries no
+singscore gives one rank-based score per set per sample, on the imputed matrix. It carries no
 p-value, never sees a contrast, and a sample's score does not change with the cohort.
 
-**Order: pool, test, then collapse.** All sets are tested and each method's own BH corrects within
+The order is pool, test, then collapse. All sets are tested and each method's own BH corrects within
 each contrast, pooling the five collections. Set classification and association (step 05) correct
 within collection instead, so each collection keeps its own chance line. `collapsePathways` then marks non-redundant fgsea hits in the `main` column and
 deletes nothing. No set is excluded by name.
@@ -56,7 +57,7 @@ deletes nothing. No set is excluded by name.
 fry finds nothing in any contrast. fgsea calls 60 sets on the floor, more than on the primary
 contrast, so its counts track its gene-permutation null, and no fgsea list is a finding.
 
-**Classification by set score**, nominal hits over chance, per collection:
+Nominal hits over chance for classification by set score, per collection:
 
 | Task | Hallmark | KEGG | Reactome | GO:BP | GO Slim |
 |---|---:|---:|---:|---:|---:|
@@ -74,10 +75,10 @@ collections. No set survives BH in any task. The paired Wilcoxon has a floor set
 pairs: 6 pairs (HR training) cannot go below p = 0.031, 7 (HR acute) below 0.016, 8 (LR) below
 0.0078. BH over hundreds of sets is out of reach by construction.
 
-**Association.** Four set-outcome pairs survive BH within collection: peroxisomal protein import
+Four set-outcome pairs survive BH within collection: peroxisomal protein import
 (Reactome) and peroxisome (KEGG) against `volume_load` over training, GO Slim DNA replication
 against baseline `d_1rm_ext`, and Reactome basal-body anchoring against `comp_hypertrophy` over the
 acute bout. Baseline level against `d_1rm_ext` runs at 3.4 times chance across collections.
 
-**Concordance.** HR and LR NES correlate at rho 0.34 over 1,369 sets for training and 0.35 over
+HR and LR NES correlate at rho 0.34 over 1,369 sets for training and 0.35 over
 1,370 for the acute bout. The overlap is weaker than in BFR's two training arms (0.83).

@@ -39,12 +39,12 @@ red-cell sources and why the curated blood list replaced a correlation cut.
 
 ## Notes
 
-**The HR/LR label is a median split.** `Group` in `HRvLR_meta.csv` is the exact median split of
+The HR/LR label is a median split. `Group` in `HRvLR_meta.csv` is the exact median split of
 `COMP.HYPERTROPHY`: top 8 HR, bottom 8 LR. It separates that composite's fibre-area ingredients by
 construction.
 
-**The MyoVision columns count fibres.** Their names say "fCSA", but the source workbook calls them
+The MyoVision columns count fibres. Their names say "fCSA", but the source workbook calls them
 "Number of fCSA". `phenotype.csv` names them `d_nfibre_mixed` and `d_nfibre_I`.
 
-**Phenotype exists at T1 and T2 only.** Every trait in `phenotype.csv` is a T2 − T1 change except
+Phenotype exists at T1 and T2 only. Every trait in `phenotype.csv` is a T2 − T1 change except
 `volume_load`, total kilograms lifted, recorded once per subject.
