@@ -1,6 +1,6 @@
 # The module eigengenes put through the classification tasks and phenotype association the
 # proteins and sets answered: eight tasks mirroring the contrasts, and Spearman against the ten
-# phenotypes in three windows. Twelve modules make BH a far weaker filter than 1,900 proteins;
+# phenotypes in three windows. A dozen modules make BH a far weaker filter than 1,900 proteins;
 # each table reports the count chance would give beside it. The contrasts are in 04_test_modules.
 
 suppressPackageStartupMessages({
@@ -32,6 +32,7 @@ manifest <- tibble(
   input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
 )
 me <- modules$eigengenes
+n_modules <- nrow(me)
 
 
 # ---- the eight classification tasks --------------------------------------------------------
@@ -69,11 +70,11 @@ between_arm <- function(values, label) {
   )
 }
 tasks <- list(
-  Training_HR = within_arm("T1", "T2", "HR", "Training, HR"),
-  Training_LR = within_arm("T1", "T2", "LR", "Training, LR"),
-  Acute_HR = within_arm("T2", "T3", "HR", "Acute bout, HR"),
-  Acute_LR = within_arm("T2", "T3", "LR", "Acute bout, LR"),
-  Baseline_HRvLR = between_arm(windows$baseline, "HR vs LR at T1"),
+  Training_HR = within_arm("T1", "T2", "HR", "Training, HR (T1 to T2)"),
+  Training_LR = within_arm("T1", "T2", "LR", "Training, LR (T1 to T2)"),
+  Acute_HR = within_arm("T2", "T3", "HR", "Acute bout, HR (T2 to T3)"),
+  Acute_LR = within_arm("T2", "T3", "LR", "Acute bout, LR (T2 to T3)"),
+  Baseline_HRvLR = between_arm(windows$baseline, "HR vs LR at T1 (floor)"),
   Trained_HRvLR = between_arm(by_subject(me, "T2"), "HR vs LR at T2"),
   Training_change_HRvLR = between_arm(windows$training, "HR vs LR, training change"),
   Acute_change_HRvLR = between_arm(windows$acute, "HR vs LR, acute change")
@@ -84,7 +85,10 @@ fit_roc <- function(positive, negative) {
 # direction = "<" pins pROC's orientation, so AUC above 0.5 means higher in the later timepoint
 # or in HR.
 module_auc <- imap(tasks, \(spec, name) {
-  tibble(module = rownames(me), task = name, paired = spec$paired) |>
+  tibble(
+    task = name, task_label = spec$label, paired = spec$paired, module = rownames(me),
+    n_positive = ncol(spec$positive), n_negative = ncol(spec$negative)
+  ) |>
     mutate(
       auc = map_dbl(module, \(m) {
         as.numeric(pROC::auc(fit_roc(spec$positive[m, ], spec$negative[m, ])))
@@ -137,9 +141,9 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
 chance_expectation <- bind_rows(
   summarise(module_auc,
     tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05),
-    .by = task
+    .by = task_label
   ) |>
-    transmute(analysis = "classification", comparison = task, tested, nominal, fdr_sig),
+    transmute(analysis = "classification", comparison = task_label, tested, nominal, fdr_sig),
   summarise(module_association,
     tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05), .by = c(window, outcome)
   ) |>
@@ -284,7 +288,9 @@ if (nrow(roc_hits)) {
         caption = stringr::str_wrap(width = 150, paste(
           "Every module reaching nominal p on a task, by task then p; the floor is excluded.",
           "Red separates higher at the later timepoint or in HR, blue lower. p from the Wilcoxon",
-          "test (signed-rank within arm), q from BH over the twelve modules within the task."
+          sprintf("test (signed-rank within arm), q from BH over the %d modules within the task.",
+            n_modules
+          )
         ))
       )
   }, "03_roc_nominal", strip = 0.6))
@@ -334,8 +340,8 @@ if (nrow(association_hits)) {
         subtitle = "Spearman, subjects pooled across arms",
         caption = stringr::str_wrap(width = 150, paste(
           "Every module-outcome pair reaching nominal p, by window then p. Lines are fitted within",
-          "each arm; the header r is the pooled correlation, q from BH over the twelve modules",
-          "within window and outcome."
+          "each arm; the header r is the pooled correlation, q from BH over the", n_modules,
+          "modules within window and outcome."
         ))
       )
   }, "04_association_nominal", scales = "free", panel = 3.1, header = 2.4))
@@ -356,7 +362,7 @@ save_pages(list(
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
       title = "Module nominal hits relative to chance",
-      subtitle = "twelve modules, uncorrected p",
+      subtitle = paste(n_modules, "modules, uncorrected p"),
       caption = paste(
         "Bar length is nominal hits over 5% of tests. Red clears 1, grey does not.",
         "Table: c_data/05_classify_and_associate_modules.xlsx, chance_expectation."
@@ -364,7 +370,7 @@ save_pages(list(
     ) +
     figure_theme +
     theme(panel.grid.major.y = element_blank())
-), "05_chance", width = 7, height = 3.5)
+), "05_chance_expectation", width = 7, height = 3.5)
 
 
 packages <- c("here", "pROC", "dplyr", "purrr", "ggplot2")
@@ -373,7 +379,7 @@ versions <- tibble(
 )
 saveRDS(
   list(
-    auc = module_auc, association = module_association, by_arm = by_arm,
+    module_auc = module_auc, module_association = module_association, by_arm = by_arm,
     chance_expectation = chance_expectation,
     provenance = list(
       created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
@@ -383,12 +389,27 @@ saveRDS(
   file.path(out, "module_results.rds"),
   compress = "xz"
 )
+sheets <- list(
+  chance_expectation = chance_expectation,
+  module_auc = arrange(module_auc, p),
+  module_association = arrange(module_association, p),
+  module_by_arm = filter(by_arm, p < 0.05),
+  input_manifest = manifest,
+  package_versions = versions
+)
+descriptions <- c(
+  chance_expectation = "Nominal hits against chance, per task and per window-outcome. Read first.",
+  module_auc = "How well each eigengene separates each task. AUC from ranks, p from Wilcoxon.",
+  module_association = "Eigengene against each phenotype, per window, subjects pooled.",
+  module_by_arm = "Within-arm correlations with p < 0.05. Every row is in module_results.rds.",
+  input_manifest = "Which files were read and their checksums.",
+  package_versions = "Package versions at the time of the run."
+)
+read_me <- tibble(
+  sheet = names(sheets), rows = map_int(sheets, nrow), holds = unname(descriptions[names(sheets)])
+)
 writexl::write_xlsx(
-  list(
-    chance_expectation = chance_expectation, classification = arrange(module_auc, p),
-    association = arrange(module_association, p), by_arm = by_arm,
-    input_manifest = manifest, package_versions = versions
-  ),
+  c(list(read_me = read_me), sheets),
   file.path(out, "05_classify_and_associate_modules.xlsx")
 )
 combined <- file.path(figure_dir, "05_classify_and_associate_modules_figures.pdf")

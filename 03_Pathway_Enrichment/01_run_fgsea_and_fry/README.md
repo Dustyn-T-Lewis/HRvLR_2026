@@ -13,7 +13,8 @@ that ranking. `collapsePathways` re-tests each significant set against a stronge
 edge; survivors carry `main = TRUE`. fry reads the imputed matrix with the fit's design, the
 subject block and a within-subject correlation estimated on that matrix (0.176).
 
-The floor contrast prints first.
+The floor contrast prints first. `set_summary` gives, per contrast, the sets each method tested
+(fry all 1,378, fgsea those with at least 15 measured proteins in that ranking) and the counts called.
 
 ## Outputs
 

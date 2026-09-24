@@ -54,7 +54,7 @@ centred_arm <- function(arm) {
   apply(abund[, kept$sample_id], 1, \(x) x - ave(x, kept$subject))
 }
 expr <- map(set_names(c("HR", "LR")), centred_arm)
-map_int(expr, nrow)
+message("samples per arm: ", paste(names(expr), map_int(expr, nrow), collapse = ", "))
 
 # The same construction as 01, arm by arm. The WGCNA FAQ's signed table gives the fallback power.
 build_arm <- function(data) {
@@ -77,9 +77,10 @@ build_arm <- function(data) {
   ))
   list(power = power, colours = set_names(net$colors, colnames(data)))
 }
-set.seed(42)
 arm_modules <- map(expr, build_arm)
-map(arm_modules, \(x) c(power = x$power, modules = n_distinct(setdiff(x$colours, "grey"))))
+iwalk(arm_modules, \(x, arm) {
+  message(arm, ": power ", x$power, ", ", n_distinct(setdiff(x$colours, "grey")), " modules")
+})
 
 preservation <- modulePreservation(
   multiData = map(expr, \(data) list(data = data)),

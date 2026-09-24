@@ -139,7 +139,7 @@ qc_panels <- list(
     "ATP2A1", "DES"
   )
 )
-c(curated = nrow(contaminants))
+c(contaminant_list = nrow(contaminants))
 ```
 
 The 95 blood proteins come from `blood_contaminants.csv`, chosen by identity: immunoglobulins,
@@ -170,6 +170,7 @@ keep_row <- tibble(
   pull(i)
 annotation <- annotation[keep_row, ]
 intensity <- intensity[keep_row, ]
+n_dedup <- length(keep_row)
 c(proteins = nrow(intensity), samples = ncol(intensity))
 ```
 
@@ -321,13 +322,13 @@ dal <- filter_proteins_by_group(dal,
 )
 removed <- count(filter(protein_calls, contaminant), verdict, name = "n_removed")
 filter_log <- tibble(
-  step = c("raw input", removed$verdict, "outlier samples", "detection"),
-  n_removed = c(NA, removed$n_removed, 0L, n_before - nrow(dal$data))
+  step = c("raw input", "duplicate accession", removed$verdict, "outlier samples", "detection"),
+  n_removed = c(NA, n_raw - n_dedup, removed$n_removed, 0L, n_before - nrow(dal$data))
 ) |>
   mutate(
     n_after = n_raw - cumsum(coalesce(n_removed, 0L)),
     pct_of_raw = round(100 * n_after / n_raw, 1),
-    n_samples = c(rep(nrow(metadata), nrow(removed) + 1), rep(ncol(dal$data), 2))
+    n_samples = c(rep(nrow(metadata), nrow(removed) + 2), rep(ncol(dal$data), 2))
   )
 filter_log
 ```
@@ -403,9 +404,10 @@ blood_data <- dal$metadata |>
   mutate(
     Group = factor(Group, c("HR", "LR")),
     log2_index = unname(blood_index[Col_ID]),
-    pct_signal = filter(qc_index, panel == "blood")$pct_signal[
-      match(Col_ID, filter(qc_index, panel == "blood")$Col_ID)
-    ]
+  ) |>
+  left_join(
+    filter(qc_index, panel == "blood") |> select(Col_ID, pct_signal),
+    by = "Col_ID"
   )
 arm_by_t3 <- function(data, response) {
   fit <- suppressMessages(lme4::lmer(
@@ -450,16 +452,13 @@ null_rho <- replicate(300, abs(as.vector(suppressWarnings(cor(
   t(tested), sample(blood_index),
   method = "spearman", use = "pairwise.complete.obs"
 )))))
-n_obs <- rowSums(!is.na(tested))
-tibble(
-  observations = c("15-25", "26-40", "41-48", "all"),
-  proteins = c(sum(n_obs <= 25), sum(n_obs > 25 & n_obs <= 40), sum(n_obs > 40), length(n_obs)),
-  null_999 = round(c(
-    quantile(null_rho[n_obs <= 25, ], 0.999, na.rm = TRUE),
-    quantile(null_rho[n_obs > 25 & n_obs <= 40, ], 0.999, na.rm = TRUE),
-    quantile(null_rho[n_obs > 40, ], 0.999, na.rm = TRUE),
-    quantile(null_rho, 0.999, na.rm = TRUE)
-  ), 3)
+n_obs <- cut(rowSums(!is.na(tested)), c(0, 25, 40, Inf), c("15-25", "26-40", "41-48"))
+null_999 <- \(rows) round(quantile(null_rho[rows, ], 0.999, na.rm = TRUE, names = FALSE), 3)
+bind_rows(
+  map(levels(n_obs), \(bin) {
+    tibble(observations = bin, proteins = sum(n_obs == bin), null_999 = null_999(n_obs == bin))
+  }),
+  tibble(observations = "all", proteins = length(n_obs), null_999 = null_999(TRUE))
 )
 ```
 

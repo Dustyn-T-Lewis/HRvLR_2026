@@ -235,7 +235,7 @@ hub_pages <- labels$module |>
         theme = theme(
           plot.title = element_text(face = "bold", size = 13),
           plot.subtitle = element_text(size = 9, colour = "grey30"),
-          plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40")
+          plot.caption = element_text(hjust = 0, size = 7, colour = "grey45")
         )
       )
   })
@@ -246,8 +246,8 @@ invisible(dev.off())
 message("drew 03_hub_networks: ", length(hub_pages), " pages")
 
 packages <- c(
-  "here", "clusterProfiler", "enrichplot", "STRINGdb", "tidygraph", "ggraph", "dplyr", "purrr",
-  "ggplot2"
+  "here", "clusterProfiler", "enrichplot", "STRINGdb", "igraph", "tidygraph", "ggraph",
+  "patchwork", "dplyr", "purrr", "ggplot2"
 )
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))

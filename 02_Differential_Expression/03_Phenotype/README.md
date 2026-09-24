@@ -24,7 +24,8 @@ two thirds of the window's subjects observed it.
 | acute | comp_hypertrophy | 1.86 | 0 |
 | acute | d_mcsa | 1.52 | 0 |
 
-The other 23 cells sit between 0.44 and 1.18. The full table is the workbook's `summary` sheet.
+The other 23 cells sit between 0.44 and 1.18. The full table is the workbook's `chance_expectation`
+sheet; every correlation is in `protein_association`.
 With 14 or 15 subjects a correlation needs to reach about 0.7 to be detected at 80% power, so the
 screen is null at that resolution apart from RPS4X and ACSL3.
 
@@ -32,5 +33,6 @@ screen is null at that resolution apart from RPS4X and ACSL3.
 the far tail, which put two proteins at FDR 0. The t approximation replaces it.
 
 Figures: nominal hits over chance by outcome and window, then one hit matrix per window.
-`by_arm` in the workbook repeats the correlations inside each arm and window, descriptively; each
-correlation rests on 4 to 8 subjects.
+`by_arm` repeats the correlations inside each arm and window, descriptively; each correlation
+rests on 4 to 8 subjects. The workbook's `protein_by_arm` keeps the rows with p < 0.05;
+`phenotype.rds` keeps them all.

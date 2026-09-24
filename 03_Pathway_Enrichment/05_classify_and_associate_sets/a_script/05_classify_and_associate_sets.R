@@ -119,14 +119,14 @@ fit_roc <- function(positive, negative) {
 }
 classify <- function(spec) {
   tibble(
-    feature = rownames(spec$positive), n_positive = ncol(spec$positive),
+    set_id = rownames(spec$positive), n_positive = ncol(spec$positive),
     n_negative = ncol(spec$negative)
   ) |>
     mutate(
-      auc = map_dbl(seq_along(feature), \(i) {
+      auc = map_dbl(seq_along(set_id), \(i) {
         as.numeric(pROC::auc(fit_roc(spec$positive[i, ], spec$negative[i, ])))
       }),
-      p_value = map_dbl(seq_along(feature), \(i) {
+      p = map_dbl(seq_along(set_id), \(i) {
         suppressWarnings(stats::wilcox.test(
           spec$positive[i, ], spec$negative[i, ],
           paired = spec$paired
@@ -141,23 +141,8 @@ set_auc <- imap(tasks, function(spec, name) {
     mutate(task = name, task_label = spec$label, paired = spec$paired, .before = 1)
 }) |>
   list_rbind() |>
-  rename(set_id = feature) |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
-  mutate(fdr = p.adjust(p_value, "BH"), .by = c(task, database))
-
-auc_counts <- set_auc |>
-  summarise(
-    features = n(), nominal = sum(p_value < 0.05), expected = round(n() * 0.05, 1),
-    fdr_sig = sum(fdr < 0.05), max_auc = round(max(auc), 2),
-    .by = c(task, task_label, database, n_positive)
-  ) |>
-  mutate(analysis = "classification", .before = 1)
-print(as.data.frame(
-  auc_counts |>
-    mutate(ratio = round(nominal / expected, 2)) |>
-    select(task, database, features, nominal, expected, ratio, fdr_sig) |>
-    arrange(task, database)
-))
+  mutate(fdr = p.adjust(p, "BH"), .by = c(task, database))
 
 
 # ---- phenotype association -----------------------------------------------------------------
@@ -180,7 +165,7 @@ spearman_by_row <- function(values, outcome) {
     c(r = unname(test$estimate), p = test$p.value)
   })
   tibble(
-    feature = rownames(values), n = length(outcome),
+    set_id = rownames(values), n = length(outcome),
     r = unname(fits["r", ]), p = unname(fits["p", ])
   )
 }
@@ -190,7 +175,6 @@ set_association <- imap(windows, \(values, window) {
     mutate(window = window, .before = 1)
 }) |>
   list_rbind() |>
-  rename(set_id = feature) |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome, database))
 
@@ -203,26 +187,30 @@ by_arm <- map(set_names(c("HR", "LR")), function(arm) {
   }) |>
     list_rbind()
 }) |>
-  list_rbind(names_to = "arm") |>
-  rename(set_id = feature)
+  list_rbind(names_to = "arm")
 
 chance_expectation <- bind_rows(
-  select(auc_counts, analysis,
-    comparison = task_label, database, n = n_positive,
-    features, nominal, expected, fdr_sig
-  ),
-  set_association |>
-    summarise(
-      features = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
-      fdr_sig = sum(fdr < 0.05), .by = c(window, outcome, database, n)
+  set_auc |>
+    summarise(tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05),
+      .by = c(task_label, database)
     ) |>
-    transmute(
-      analysis = paste0("association: ", window), comparison = outcome, database, n,
-      features, nominal, expected, fdr_sig
+    transmute(analysis = "classification", comparison = task_label, database, tested, nominal,
+      fdr_sig
+    ),
+  set_association |>
+    summarise(tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05),
+      .by = c(window, outcome, database)
+    ) |>
+    transmute(analysis = paste0("association: ", window), comparison = outcome, database,
+      tested, nominal, fdr_sig
     )
 ) |>
-  mutate(ratio = round(nominal / expected, 2)) |>
-  relocate(ratio, .after = expected)
+  mutate(expected = 0.05 * tested, ratio = round(nominal / expected, 2), .after = tested)
+print(as.data.frame(
+  chance_expectation |>
+    filter(analysis == "classification") |>
+    select(comparison, database, tested, nominal, ratio, fdr_sig)
+))
 
 
 # ---- figures: every nominal result, 16 panels to a page -------------------------------------
@@ -284,13 +272,13 @@ chance_line <- paste0(
 draw_roc_figure <- function(task_name) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
-    filter(task == task_name, p_value < 0.05) |>
-    arrange(database, p_value)
+    filter(task == task_name, p < 0.05) |>
+    arrange(database, p)
   if (!nrow(hits)) {
     message("no set reaches nominal p for ", task_name)
     return(0L)
   }
-  curves <- pmap(hits, function(set_id, database, pathway, auc, p_value, fdr, ...) {
+  curves <- pmap(hits, function(set_id, database, pathway, auc, p, fdr, ...) {
     coordinates <- pROC::coords(fit_roc(spec$positive[set_id, ], spec$negative[set_id, ]), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
@@ -298,7 +286,7 @@ draw_roc_figure <- function(task_name) {
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = paste0(
         database, ": ", enrichVolcano::ev_clean_label(pathway),
-        "\nAUC ", sprintf("%.2f", auc), "   p ", signif(p_value, 2), "   q ", signif(fdr, 2)
+        "\nAUC ", sprintf("%.2f", auc), "   p ", signif(p, 2), "   q ", signif(fdr, 2)
       )
     )
   }) |>
@@ -403,10 +391,10 @@ association_drawn <- map_int(set_names(names(window_titles)), draw_association_f
 
 # Every set reaching nominal p on a drawn task or window has a panel.
 stopifnot(
-  all(map_lgl(drawn_tasks, \(task_name) {
-    roc_drawn[[task_name]] == sum(set_auc$task == task_name & set_auc$p_value < 0.05)
-  })),
-  all(association_drawn > 0)
+  roc_drawn == map_int(drawn_tasks, \(task_name) sum(set_auc$task == task_name & set_auc$p < 0.05)),
+  association_drawn == map_int(names(window_titles), \(w) {
+    sum(set_association$window == w & set_association$p < 0.05)
+  })
 )
 
 # Whether a collection clears chance gets its own panel, not just a sheet.
@@ -417,7 +405,7 @@ save_pages(
   list(ggplot(chance_figure, aes(ratio, database, fill = ratio > 1)) +
     geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
     geom_col(width = 0.65) +
-    geom_text(aes(label = sprintf("%d of %d", nominal, features)),
+    geom_text(aes(label = sprintf("%d of %d", nominal, tested)),
       hjust = -0.12, size = 2.5, colour = "grey25"
     ) +
     facet_wrap(~comparison, ncol = 2) +
@@ -435,7 +423,7 @@ save_pages(
     ) +
     figure_theme +
     theme(panel.grid.major.y = element_blank())),
-  "03_chance_by_database",
+  "03_chance_expectation",
   width = 10, height = 9
 )
 
@@ -457,9 +445,9 @@ set_detail <- catalog |>
 
 sheets <- list(
   chance_expectation = chance_expectation,
-  set_auc = arrange(set_auc, p_value),
+  set_auc = arrange(set_auc, p),
   set_association = arrange(set_association, p),
-  set_by_arm = by_arm,
+  set_by_arm = filter(by_arm, p < 0.05),
   set_catalog = set_detail,
   set_scores = rownames_to_column(as.data.frame(set_score), "set_id"),
   input_manifest = manifest,
@@ -469,7 +457,7 @@ descriptions <- c(
   chance_expectation = "Nominal hits against chance, per collection. Read this first.",
   set_auc = "How well each set separates each task. AUC from ranks, p from the Wilcoxon test.",
   set_association = "Set score against each phenotype, per window, subjects pooled.",
-  set_by_arm = "The same correlation computed inside HR and inside LR, descriptive.",
+  set_by_arm = "Within-arm correlations with p < 0.05. Every row is in set_results.rds.",
   set_catalog = "Every tested set with its collection and Training_Interaction NES.",
   set_scores = "The set by sample score matrix the analyses above were computed on.",
   input_manifest = "Which files were read and their checksums.",

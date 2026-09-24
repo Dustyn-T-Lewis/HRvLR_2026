@@ -139,17 +139,17 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
 
 ## What survives
 
-```{r summary}
-summary_table <- results |>
+```{r chance}
+chance_expectation <- results |>
   filter(!is.na(p)) |>
   summarise(
-    proteins = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
-    fdr_sig = sum(fdr < 0.05), best_fdr = signif(min(fdr), 3),
-    .by = c(window, outcome)
+    tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05), .by = c(window, outcome)
   ) |>
-  mutate(ratio = round(nominal / expected, 2)) |>
-  arrange(window, outcome)
-summary_table
+  transmute(
+    analysis = paste0("association: ", window), comparison = outcome, tested, nominal,
+    expected = 0.05 * tested, ratio = round(nominal / expected, 2), fdr_sig
+  )
+chance_expectation
 ```
 
 Read `ratio` first. A ratio near 1 is the null count, whatever the smallest p.
@@ -157,10 +157,10 @@ Read `ratio` first. A ratio near 1 is the null count, whatever the smallest p.
 ```{r figure-chance}
 #| fig-width: 8
 #| fig-height: 5
-chance_figure <- summary_table |>
+chance_figure <- chance_expectation |>
   mutate(
-    window = factor(window, c("training", "baseline", "acute")),
-    outcome = factor(outcome, rev(outcomes))
+    window = factor(sub("association: ", "", analysis), c("training", "baseline", "acute")),
+    outcome = factor(comparison, rev(outcomes))
   ) |>
   ggplot(aes(ratio, outcome, fill = window)) +
   geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
@@ -176,7 +176,7 @@ chance_figure <- summary_table |>
     x = "nominal hits / chance expectation", y = NULL,
     caption = paste(
       "Bar length is nominal hits (p < 0.05) over 5% of proteins tested. The vertical line is",
-      "chance. Table: c_data/03_phenotype.xlsx, summary."
+      "chance. Table: c_data/03_phenotype.xlsx, chance_expectation."
     )
   ) +
   theme_minimal(base_size = 10) +
@@ -277,20 +277,35 @@ hits <- imap(window_titles, \(title, window) {
     outcomes,
     title = paste("Protein association hits,", title),
     subtitle = "Spearman against each phenotype",
-    table = "c_data/03_phenotype.xlsx, correlations"
+    table = "c_data/03_phenotype.xlsx, protein_association"
   )
 })
 map_int(hits, length)
 ```
 
 ```{r write}
-save_figure(chance_figure, "01_chance_by_outcome", width = 8, height = 5)
+save_figure(chance_figure, "01_chance_expectation", width = 8, height = 5)
 iwalk(hits, \(pages, window) save_pages(pages, sprintf("02_hits_%s", window)))
+inputs <- c(
+  proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds",
+  phenotype = "00_Input/phenotype.csv"
+)
+manifest <- tibble(
+  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(map_chr(inputs, here)))
+)
+# by_arm runs to tens of thousands of rows; the workbook keeps the nominal ones.
 writexl::write_xlsx(
-  list(summary = summary_table, correlations = arrange(results, fdr), by_arm = by_arm),
+  list(
+    chance_expectation = chance_expectation, protein_association = arrange(results, fdr),
+    protein_by_arm = filter(by_arm, p < 0.05), input_manifest = manifest
+  ),
   file.path(out, "03_phenotype.xlsx")
 )
-saveRDS(list(results = results, by_arm = by_arm, summary = summary_table),
+saveRDS(
+  list(
+    protein_association = results, by_arm = by_arm, chance_expectation = chance_expectation,
+    provenance = list(created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE), inputs = manifest)
+  ),
   file.path(out, "phenotype.rds"),
   compress = "xz"
 )

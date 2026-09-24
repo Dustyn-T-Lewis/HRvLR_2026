@@ -66,7 +66,7 @@ power <- coalesce(sft$powerEstimate, faq_power)
 fit_indices <- as_tibble(sft$fitIndices) |>
   mutate(signed_r2 = -sign(slope) * SFT.R.sq)
 
-set.seed(42)
+# randomSeed seeds the clustering; a set.seed() here would be overridden.
 net <- do.call(blockwiseModules, c(
   list(expr,
     power = power, networkType = "signed", TOMType = "signed",

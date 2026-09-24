@@ -153,9 +153,8 @@ if (!length(sets)) stop("No gene sets passed the size filters.")
 
 # GO Slim sets come from the GO Consortium's generic slim, frozen with an md5 like the MSigDB
 # snapshot.
-slim_file <- file.path(cache_dir, "goslim_generic.obo")
+slim_file <- paths[["goslim"]]
 stopifnot(
-  file.exists(slim_file),
   identical(unname(tools::md5sum(slim_file)), readLines(paste0(slim_file, ".md5"), warn = FALSE))
 )
 slim_offspring <- AnnotationDbi::mget(
@@ -201,7 +200,7 @@ collection_summary <- set_catalog |>
 print(collection_summary)
 message("qualifying sets: ", length(sets))
 
-packages <- c("here", "proteoDA", "msigdbr", "GO.db", "GSEABase", "dplyr", "purrr")
+packages <- c("here", "msigdbr", "AnnotationDbi", "GO.db", "GSEABase", "dplyr", "purrr")
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
 )

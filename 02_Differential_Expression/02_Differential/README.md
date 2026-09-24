@@ -6,7 +6,7 @@ Fits the model, writes the results, and classifies every protein on eight tasks.
 |---|---|
 | Script | `a_script/02_differential.qmd` |
 | Reads | `01_Design/c_data/design.rds`; for the appendices, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` and, when present, V1's `05_results.xlsx` |
-| Writes | `c_data/fit.rds`, `c_data/02_differential.xlsx`, `b_reports/02_differential_figures.pdf` |
+| Writes | `c_data/fit.rds`, `c_data/differential.rds`, `c_data/02_differential.xlsx`, `b_reports/02_differential_figures.pdf` |
 
 ```sh
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
@@ -37,11 +37,13 @@ not tracked.
 | `null_calibration` | `propTrueNull`, median \|t\|, share of p < 0.2 |
 | `treat` | BH < 0.05 against a 1.15-fold floor |
 | `pi_ranking` | top ten by pi-score in the four within-arm contrasts |
-| `protein_auc`, `auc_summary` | the eight classification tasks |
+| `protein_auc` | AUC, Wilcoxon p and BH per protein and task |
+| `chance_expectation` | nominal hits against chance per task, with the set and module levels' columns and labels |
 | `v1_equivalence` | maximum difference from V1's committed results |
 | `fry_concordance` | one arm's training signature tested in the other |
 
-`fit.rds` is the full proteoDA result, including the limma fit.
+`fit.rds` is the full proteoDA result, including the limma fit. `differential.rds` holds every
+sheet above except `DEP_matrix` and `v1_equivalence`, with provenance.
 
 ## Multiple testing
 

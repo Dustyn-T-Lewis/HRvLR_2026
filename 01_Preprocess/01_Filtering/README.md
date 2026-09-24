@@ -27,6 +27,7 @@ protein's call, the contamination panels and the outlier flags.
 | Step | Removed | Left |
 |---|---:|---:|
 | raw input | | 2,400 |
+| duplicate accession | 0 | 2,400 |
 | plasma | 120 | |
 | immunoglobulin | 41 | |
 | erythrocyte | 19 | |

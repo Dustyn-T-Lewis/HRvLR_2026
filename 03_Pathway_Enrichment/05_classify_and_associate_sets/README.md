@@ -26,5 +26,5 @@ sr <- readRDS("03_Pathway_Enrichment/05_classify_and_associate_sets/c_data/set_r
 sr$chance_expectation # nominal against chance, per collection
 sr$set_auc            # set x task: AUC, p, BH
 sr$set_association    # set x outcome x window, pooled
-sr$by_arm             # correlations within each arm
+sr$by_arm             # correlations within each arm; the workbook keeps p < 0.05
 ```

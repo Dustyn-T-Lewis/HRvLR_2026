@@ -21,7 +21,9 @@ unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 inputs <- c(set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) stop("Run 01_run_fgsea_and_fry first.")
+if (!all(file.exists(paths))) {
+  stop("Run 01_run_fgsea_and_fry first. Missing: ", inputs[["set_tests"]])
+}
 fg <- readRDS(paths[["set_tests"]])
 manifest <- tibble(
   input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
@@ -45,8 +47,7 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
         padj_y < 0.05 ~ y_contrast,
         .default = "NS"
       ) |> factor(c("Both", x_contrast, y_contrast, "NS")),
-      # Discordant means the two contrasts put the set on opposite sides of zero. Each one here is
-      # significant in a single arm, so the opposite sign rests on the other arm's null.
+      # Opposite signs in the two arms, whichever arm, if either, is significant.
       discordant = sign(NES_x) != sign(NES_y),
       survivor = main_x | main_y,
       label = enrichVolcano::ev_clean_label(pathway)
@@ -57,7 +58,12 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
   stopifnot(nrow(paired) > 0)
 
   concordance <- function(data) {
-    test <- suppressWarnings(cor.test(data$NES_x, data$NES_y, method = "spearman"))
+    # A quadrant panel can hold one or two sets, too few for cor.test.
+    test <- if (nrow(data) >= 3) {
+      cor.test(data$NES_x, data$NES_y, method = "spearman", exact = FALSE)
+    } else {
+      list(estimate = NA_real_, p.value = NA_real_)
+    }
     hits <- filter(data, significance != "NS")
     tibble(
       sets = nrow(data), significant = nrow(hits), discordant = sum(hits$discordant),
@@ -79,15 +85,10 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
     stats <- concordance(data)
     # A panel reports rho only with 30 or more sets.
     caption <- sprintf(
-      "%d sets | %d significant | %d discordant",
-      stats$sets, stats$significant, stats$discordant
+      "%d set%s | %d significant%s | %d discordant", stats$sets, if (stats$sets == 1) "" else "s",
+      stats$significant,
+      if (stats$sets >= 30) sprintf(" | rho %.2f", stats$rho) else "", stats$discordant
     )
-    if (stats$sets >= 30) {
-      caption <- sprintf(
-        "%d sets | %d significant | rho %.2f | %d discordant",
-        stats$sets, stats$significant, stats$rho, stats$discordant
-      )
-    }
     ggplot(data, aes(NES_x, NES_y)) +
       geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
       geom_vline(xintercept = 0, colour = "grey85", linewidth = 0.3) +
@@ -156,8 +157,8 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
       sprintf("fgsea NES per contrast, %d sets, BH within contrast", nrow(paired)),
       paste(
         "One point per gene set, scored in both", tag, "contrasts. Dashed line is identity;",
-        "grey points reach neither threshold. Discordant sets sit on opposite sides of zero and",
-        "are significant in one arm only. Panel C rescales them.",
+        "grey points reach neither threshold. Discordant sets are significant in at least one",
+        "arm and sit on opposite sides of zero. Panel C rescales them.",
         "Table: c_data/nes_scatter.csv."
       )
     ) +
@@ -169,22 +170,27 @@ run_pair <- function(x_contrast, y_contrast, tag, prefix) {
   # scaled to its own points so every set can be named.
   curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
   quadrant <- function(direction) {
-    rows <- filter(curated, significance != "NS", (NES_x > 0) == direction)
-    nes_panel(rows, if (direction) "Up in both" else "Down in both", labelled = rows, pad = 0.22)
+    rows <- filter(curated, significance != "NS", !discordant, (NES_x > 0) == direction)
+    # Panel A carries the colour key; a quadrant missing a category would draw a second one.
+    nes_panel(rows, if (direction) "Up in both" else "Down in both", labelled = rows, pad = 0.22) +
+      guides(colour = "none")
   }
   composite_curated <- (
     nes_panel(
       curated, "Hallmark and GO Slim",
-      labelled = slice_min(filter(curated, significance != "NS"), padj_x + padj_y, n = 8)
+      labelled = slice_min(
+        filter(curated, significance != "NS"), padj_x + padj_y,
+        n = 8, with_ties = FALSE
+      )
     ) | (quadrant(TRUE) / quadrant(FALSE))
   ) +
     page_labels(
       paste0("NES concordance, Hallmark and GO Slim: ", x_contrast, " against ", y_contrast),
       sprintf("fgsea NES per contrast, %d non-nesting sets, BH within contrast", nrow(curated)),
       paste(
-        "Panel A is every Hallmark and GO Slim set; B and C rescale the significant ones by",
-        "direction so each can be named. Point size is gene count, colour the contrast a set",
-        "reached FDR 0.05 in. Table: c_data/nes_scatter.csv."
+        "Panel A is every Hallmark and GO Slim set; B and C rescale the significant sets with the",
+        "same sign in both arms, so each can be named. Point size is gene count, colour the",
+        "contrast a set reached FDR 0.05 in. Table: c_data/nes_scatter.csv."
       )
     ) +
     plot_layout(guides = "collect") &

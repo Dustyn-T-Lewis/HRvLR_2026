@@ -35,13 +35,17 @@ c(proteins = nrow(mat), samples = ncol(mat), pct_missing = round(100 * mean(is.n
 ## Impute
 
 Random-forest imputation (Stekhoven & Bühlmann 2012). Rows are sorted before the stochastic fit
-so the result reproduces. The backend is named: missForest 1.6.1 made ranger the default, which
-is not the randomForest engine the paper describes.
+so the result reproduces. The backend is ranger, named rather than left to the default, so a
+change in missForest's default cannot swap engines between runs. The paper used randomForest.
 
 ```{r impute}
+params <- list(method = "missForest", backend = "ranger", maxiter = 10, ntree = 100)
 set.seed(42)
 ord <- order(rownames(mat))
-mf <- missForest(t(mat[ord, ]), maxiter = 10, ntree = 100, verbose = FALSE, backend = "ranger")
+mf <- missForest(
+  t(mat[ord, ]),
+  maxiter = params$maxiter, ntree = params$ntree, backend = params$backend, verbose = FALSE
+)
 imputed <- t(mf$ximp)[rownames(mat), ]
 dimnames(imputed) <- dimnames(mat)
 stopifnot(!anyNA(imputed), identical(dim(imputed), dim(mat)))
@@ -52,16 +56,13 @@ c(oob_nrmse = round(unname(mf$OOBerror[1]), 4))
 
 ```{r write}
 dal$data <- imputed
-dal$imputation <- list(
-  method = "missForest", backend = "ranger", maxiter = 10, ntree = 100,
-  oob_error = unname(mf$OOBerror[1])
-)
+dal$imputation <- c(params, oob_error = unname(mf$OOBerror[1]))
 saveRDS(dal, file.path(out, "DAList_imputed.rds"))
 write_xlsx(
-  list(imputation = tibble(
-    method = "missForest", backend = "ranger", maxiter = 10, ntree = 100,
+  list(imputation = as_tibble(c(
+    params,
     pct_imputed = 100 * mean(is.na(mat)), oob_nrmse = unname(mf$OOBerror[1])
-  )),
+  ))),
   file.path(out, "03_impute.xlsx")
 )
 ```

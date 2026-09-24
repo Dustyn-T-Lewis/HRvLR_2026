@@ -32,7 +32,6 @@ fg <- readRDS(paths[["set_tests"]])
 protein_results <- fg$protein_results |>
   filter(!is.na(P.Value)) |>
   mutate(plot_p = pmax(P.Value, .Machine$double.xmin))
-# the results table is long, one row per set per contrast per method; rings read fgsea
 fgsea_results <- filter(fg$set_tests, method == "fgsea", main)
 stopifnot(nrow(fgsea_results) > 0, !is.null(protein_results$label))
 
@@ -42,7 +41,7 @@ stopifnot(nrow(fgsea_results) > 0, !is.null(protein_results$label))
 # Built from every protein, tested or not, so a protein untested in one contrast still gets its
 # tick in another.
 gene_to_label <- fg$protein_results |>
-  filter(!is.na(gene)) |>
+  filter(selected, !is.na(gene)) |>
   distinct(gene, label) |>
   with(set_names(label, gene))
 fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) {
@@ -60,13 +59,11 @@ contrast_subtitle <- c(
   Acute_Interaction = "(HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 )
 
-# A named vector indexed by a missing name returns NA, not NULL, so the subtitle lookup is
-# dropped with na.omit() rather than defaulted with %||%.
 make_volcano <- function(contrast, rank_by = "fdr") {
   points <- filter(protein_results, .data$contrast == .env$contrast)
   ring <- fgsea_results |>
     filter(.data$contrast == .env$contrast, padj < 0.05) |>
-    slice_min(padj, n = 8) |>
+    slice_min(padj, n = 8, with_ties = FALSE) |>
     # Overlapping databases mean two ringed sets can carry the same name, and
     # volcano_ring() strips the database prefix before drawing. GOBP_MUSCLE_CONTRACTION and
     # REACTOME_MUSCLE_CONTRACTION then label two arcs identically.
@@ -77,6 +74,8 @@ make_volcano <- function(contrast, rank_by = "fdr") {
         paste0(pathway, " ", database), pathway
       )
     )
+  # Indexing a named vector by a missing name returns NA, not NULL, so the interaction algebra
+  # is dropped with na.omit() rather than defaulted with %||%.
   if (rank_by == "pi") {
     labels <- points |>
       arrange(pi_score, protein) |>

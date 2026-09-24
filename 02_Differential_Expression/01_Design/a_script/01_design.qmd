@@ -122,6 +122,7 @@ mutate(strata, correlation = round(correlation, 3))
 
 ```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
 saveRDS(
   list(dal = dal, contrasts = contrast_vector, roles = roles, floor = "Baseline_HRvLR"),
   file.path(out, "design.rds")

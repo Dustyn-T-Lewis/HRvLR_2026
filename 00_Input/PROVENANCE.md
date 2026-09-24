@@ -20,7 +20,7 @@ protein and `n_sources` how many agree.
 | CB2019 | Ravenhill et al. 2019, *Commun Biol* 2:350 (doi:10.1038/s42003-019-0596-y). Erythrocyte surface proteome by plasma-membrane profiling. | 1,559 surface/membrane proteins |
 | This study | Bai et al. 2026, *Sci Data* 13 (doi:10.1038/s41597-026-06792-5); ProteomeXchange PXD067677. Mature-RBC membrane + cytoplasm proteome. | 5,264 proteins, largest to date |
 
-Union: 8,011 entries (6,452 with accession, 7,937 with gene); 2,089 backed by two or more sources.
+Union: 7,012 entries (6,452 with accession, 6,938 with gene); 2,566 backed by two or more sources. CB2019 rows take their accession from the other sheets by gene.
 
 ## Why membership never removes on its own
 

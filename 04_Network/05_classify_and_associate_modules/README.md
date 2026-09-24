@@ -20,3 +20,14 @@ values, so no observation floor applies.
 BH over twelve modules is lenient; no module passes it. Figures: every module and task as tiles,
 every module and phenotype per window as tiles, an ROC panel for each nominal module-task pair
 (floor excluded), a scatter for each nominal module-outcome pair, and nominal hits over chance.
+
+The workbook opens on `read_me`. Its sheets follow the set level without `set_catalog` and
+`set_scores`; `chance_expectation` has the same columns less `database`, and the same task labels:
+
+```r
+mr <- readRDS("04_Network/05_classify_and_associate_modules/c_data/module_results.rds")
+mr$chance_expectation # nominal against chance, per task and per window and outcome
+mr$module_auc         # module x task: AUC, p, BH
+mr$module_association # module x outcome x window, pooled
+mr$by_arm             # correlations within each arm; the workbook keeps p < 0.05
+```

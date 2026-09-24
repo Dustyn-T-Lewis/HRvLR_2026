@@ -44,7 +44,7 @@ if (!all(file.exists(paths))) {
 modules <- readRDS(paths[["modules"]])
 d <- readRDS(paths[["design"]])
 fit <- readRDS(paths[["fit"]])
-phenotype <- readRDS(paths[["phenotype"]])$results
+phenotype <- readRDS(paths[["phenotype"]])$protein_association
 imputed <- readRDS(paths[["imputed"]])
 manifest <- tibble(
   input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
@@ -58,9 +58,14 @@ subject <- d$dal$metadata$subject
 abundance <- as.matrix(imputed$data)
 members <- filter(modules$membership, module != "grey")
 module_order <- modules$module_summary$module
+outcomes <- c(
+  "comp_hypertrophy", "d_fcsa_I", "d_fcsa_II", "d_fcsa_mixed", "d_nfibre_mixed",
+  "d_nfibre_I", "d_mcsa", "d_1rm_legpress", "d_1rm_ext", "volume_load"
+)
 stopifnot(
   identical(colnames(me), rownames(design)),
   identical(colnames(abundance), rownames(design)),
+  identical(d$dal$metadata$sample_id, rownames(design)),
   identical(rownames(fit$eBayes_fit$t), rownames(abundance))
 )
 
@@ -106,10 +111,10 @@ member_rho <- function(data, value) {
     filter(!is.na(.data[[value]])) |>
     summarise(
       n = n(),
-      rho = cor(kme, .data[[value]], method = "spearman"),
-      p = cor.test(kme, .data[[value]], method = "spearman", exact = FALSE)$p.value,
+      test = list(cor.test(kme, .data[[value]], method = "spearman", exact = FALSE)),
       .by = c(module, any_of(c("contrast", "outcome")))
-    )
+    ) |>
+    mutate(rho = map_dbl(test, "estimate"), p = map_dbl(test, "p.value"), test = NULL)
 }
 membership_contrast <- members |>
   inner_join(protein_t, by = "uniprot_id", relationship = "one-to-many") |>
@@ -136,7 +141,7 @@ figure_theme <- theme_minimal(base_size = 10) +
     axis.text.x = element_text(angle = 35, hjust = 1),
     plot.title = element_text(face = "bold", size = 13),
     plot.subtitle = element_text(size = 9, colour = "grey30"),
-    plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40")
+    plot.caption = element_text(hjust = 0, size = 7, colour = "grey45")
   )
 # One tile per module and column; the label marks nominal p and a black border BH < 0.05.
 module_tiles <- function(data, columns, fill_label, limits, title, subtitle, caption) {
@@ -186,8 +191,8 @@ save_figure(
       fry_correlation
     ),
     paste(
-      "Fill: -log10 fry p, positive when the module moved up. fry's FDR runs over the twelve",
-      "modules within each contrast."
+      "Fill: -log10 fry p, positive when the module moved up. fry's FDR runs over the",
+      nrow(me), "modules within each contrast."
     )
   ),
   "02_fry_contrasts", 9, 5.5
@@ -208,7 +213,7 @@ save_figure(
 save_figure(
   module_tiles(
     rename(membership_phenotype, column = outcome, effect = rho) |> mutate(fdr = NA_real_),
-    unique(membership_phenotype$outcome), "Spearman\nrho", c(-1, 1),
+    outcomes, "Spearman\nrho", c(-1, 1),
     "Module membership against phenotype association",
     "Spearman between each member's kME and its protein rho with the phenotype over training",
     paste(
@@ -226,12 +231,9 @@ primary <- members |>
     filter(membership_contrast, contrast == "Training_Interaction") |> select(module, rho),
     by = "module"
   ) |>
-  mutate(
-    module = factor(module, levels = module_order),
-    panel = factor(sprintf("%s  rho %+.2f", module, rho), levels = unique(sprintf(
-      "%s  rho %+.2f", module, rho
-    )[order(module)]))
-  )
+  mutate(module = factor(module, levels = module_order)) |>
+  arrange(module) |>
+  mutate(panel = sprintf("%s  rho %+.2f", module, rho), panel = factor(panel, unique(panel)))
 save_figure(
   ggplot(primary, aes(kme, t)) +
     geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
@@ -248,12 +250,8 @@ save_figure(
         "Table: c_data/04_test_modules.xlsx, membership_contrast."
       )
     ) +
-    theme_minimal(base_size = 10) +
-    theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 9, colour = "grey30"),
-      plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40")
-    ),
+    figure_theme +
+    theme(axis.text.x = element_text(angle = 0, hjust = 0.5)),
   "05_membership_primary", 10, 8
 )
 

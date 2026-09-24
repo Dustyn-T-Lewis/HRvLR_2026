@@ -9,7 +9,7 @@ Study data, plus the two scripts that build derived inputs from it.
 | `phenotype.csv` | one subject, 16 rows | `02_Differential_Expression/03_Phenotype`, `03_Pathway_Enrichment/05`, `04_Network/03` |
 | `blood_contaminants.csv` | one curated blood protein, 95 rows | `01_Filtering` |
 | `HPA_annotations_full.tsv` | one HPA gene, 20,162 rows | `01_Filtering` |
-| `RBC_proteome_reference.tsv` | one red-cell protein, 8,011 rows | `01_Filtering` |
+| `RBC_proteome_reference.tsv` | one red-cell protein, 7,012 rows | `01_Filtering` |
 | `RBC_proteins.xlsx` | five published red-cell proteomes, one sheet each | `a_script/02_build_blood_list.R` |
 | `downloads/` | STRING v12 human links, aliases and protein info | `04_Network/02` |
 

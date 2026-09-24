@@ -1,16 +1,9 @@
-# Two set tests, reported side by side.
-#
-# fgsea is competitive: it ranks proteins by moderated t and asks whether a set piles up at one
-# end, relative to every other protein. That assumes the ranked proteins are exchangeable, and
-# co-regulated sets break the assumption.
-#
-# fry is self-contained: it asks whether a set moved at all, rotating the residuals of the fitted
-# model rather than shuffling gene labels. It takes the design, the subject block and the
-# within-subject correlation, so the repeated measures are built in. fry cannot take a missing
-# value, so it reads the imputed matrix, with a correlation estimated on that same matrix.
-#
-# Both ship as rows of one table. Each method's BH runs over all 1,378 sets within a contrast,
-# pooling the five collections, as BFR does.
+# fgsea and fry, side by side. fgsea is competitive on moderated t and
+# assumes exchangeable proteins, which they are not. fry is self-contained and rotates residuals
+# under the design, subject block and within-subject correlation. fry takes no missing value, so
+# it reads the imputed matrix with a correlation estimated on that matrix. Each method's own BH
+# runs within contrast over the sets it tested: all of them for fry, fewer for fgsea when a
+# contrast leaves a set under minSize.
 
 suppressPackageStartupMessages({
   library(here)
@@ -58,6 +51,7 @@ stopifnot(
   identical(colnames(eb$coefficients), contrast_names),
   identical(rownames(imputed$data), protein_ids),
   identical(colnames(imputed$data), rownames(design)),
+  identical(fit$metadata$sample_id, rownames(design)),
   d$floor %in% contrast_names
 )
 
@@ -156,7 +150,8 @@ set_tests <- set_tests |>
 # is printed first.
 set_summary <- set_tests |>
   summarise(
-    sets = n_distinct(set_id),
+    fry_tested = sum(method == "fry"),
+    fgsea_tested = sum(method == "fgsea"),
     fgsea = sum(method == "fgsea" & padj < 0.05),
     collapsed = sum(method == "fgsea" & padj < 0.05 & main),
     fry = sum(method == "fry" & padj < 0.05),
@@ -202,12 +197,11 @@ draw_dotplot <- function(rows, colour_by, file) {
         if (colour_by == "database") "all collections" else rows$database[1]
       ),
       caption = sprintf(
-        paste(
-          "%s of %d collapse survivor%s, ranked by adjusted p.",
-          "Size is gene count, colour is -log10 FDR. Table: c_data/set_tests.csv."
-        ),
+        "%s of %d collapse survivor%s, ranked by adjusted p. Size is gene count, colour is %s. %s",
         if (nrow(rows) > 10) "Ten strongest" else "All", nrow(rows),
-        if (nrow(rows) == 1) "" else "s"
+        if (nrow(rows) == 1) "" else "s",
+        if (colour_by == "database") "collection" else "-log10 FDR",
+        "Table: c_data/set_tests.csv."
       )
     ) +
     theme_minimal(base_size = 10) +
@@ -312,6 +306,7 @@ for (page in seq_len(max(page_of, 0))) {
       data = filter(page_data, fdr < 0.05), aes(size = -log10(p)),
       shape = 21, colour = "black", stroke = 0.9, fill = NA
     ) +
+    scale_x_discrete(drop = FALSE) +
     scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
     scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
     labs(
@@ -324,7 +319,7 @@ for (page in seq_len(max(page_of, 0))) {
       caption = paste(
         "Rows: sets at fry p < 0.05 in at least one contrast, most contrasts first, then by",
         "best p. Filled dot: nominal, fill = fgsea NES, size = -log10 fry p. Black ring: fry",
-        "FDR < 0.05. Grey speck: not nominal. Table: c_data/set_tests.csv."
+        "FDR < 0.05. Grey speck: tested, not nominal. Table: c_data/set_tests.csv."
       )
     ) +
     theme_minimal(base_size = 9) +
@@ -334,7 +329,7 @@ for (page in seq_len(max(page_of, 0))) {
       plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
     )
 }
-# Paged, so one PDF and no PNG.
+# Paged, so one PDF and no PNG. Its own folder puts it last in the bundle.
 dir.create(file.path(figure_root, "hits"), showWarnings = FALSE)
 pdf(file.path(figure_root, "hits", "03_set_hits.pdf"), width = 11, height = 8.5, bg = "white")
 walk(hit_plots, print)

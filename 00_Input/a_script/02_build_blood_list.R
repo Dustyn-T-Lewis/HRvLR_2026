@@ -34,10 +34,18 @@ rbc_reference <- imap(parsers, \(parse, sheet) {
     mutate(source = sheet)
 }) |>
   list_rbind() |>
-  filter(!is.na(acc) | !is.na(gene)) |>
-  mutate(key = coalesce(acc, gene)) |>
+  filter(!is.na(acc) | !is.na(gene))
+# CB2019 has no accession. Borrow one from the other sheets by gene, or its rows never merge with
+# the same protein listed elsewhere and n_sources undercounts.
+gene_acc <- rbc_reference |>
+  filter(!is.na(acc), !is.na(gene)) |>
+  distinct(gene, acc_from_gene = acc) |>
+  slice_head(n = 1, by = gene)
+rbc_reference <- rbc_reference |>
+  left_join(gene_acc, by = "gene") |>
+  mutate(key = coalesce(acc, acc_from_gene, gene)) |>
   summarise(
-    acc = first(na.omit(acc)),
+    acc = first(na.omit(c(acc, acc_from_gene))),
     gene = first(na.omit(gene)),
     sources = paste(sort(unique(source)), collapse = ";"),
     n_sources = n_distinct(source),

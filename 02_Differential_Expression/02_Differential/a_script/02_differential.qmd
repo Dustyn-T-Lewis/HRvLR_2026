@@ -51,12 +51,12 @@ res <- extract_DA_results(fit, pval_thresh = 0.05, lfc_thresh = 0, adj_method = 
 eb <- fit$eBayes_fit
 # write_limma_plots() knits its own R Markdown, which cannot run inside this render, so it
 # gets a fresh R session.
-callr::r(\(res, figures) {
+invisible(callr::r(\(res, figures) {
   proteoDA::write_limma_plots(res,
     grouping_column = "group", output_dir = figures,
     table_columns = c("uniprot_id", "gene", "protein"), title_column = "gene", overwrite = TRUE
   )
-}, args = list(res = res, figures = figures))
+}, args = list(res = res, figures = figures)))
 c(within_subject_correlation = round(eb$correlation, 3))
 ```
 
@@ -258,24 +258,35 @@ classify <- function(spec) {
   fits <- vapply(seq_len(nrow(spec$positive)), \(i) {
     classify_row(spec$positive[i, ], spec$negative[i, ], spec$paired)
   }, numeric(4))
-  tibble(feature = rownames(spec$positive), paired = spec$paired, !!!as_tibble(t(fits)))
+  tibble(uniprot_id = rownames(spec$positive), paired = spec$paired, !!!as_tibble(t(fits)))
 }
 
+# The labels are shared with the set and module levels, so the three chance tables line up.
+task_labels <- c(
+  Training_HR = "Training, HR (T1 to T2)", Training_LR = "Training, LR (T1 to T2)",
+  Acute_HR = "Acute bout, HR (T2 to T3)", Acute_LR = "Acute bout, LR (T2 to T3)",
+  Baseline_HRvLR = "HR vs LR at T1 (floor)", Trained_HRvLR = "HR vs LR at T2",
+  Training_change_HRvLR = "HR vs LR, training change",
+  Acute_change_HRvLR = "HR vs LR, acute change"
+)
 tasks <- build_tasks(fit$data)
-protein_auc <- imap(tasks, \(spec, name) mutate(classify(spec), task = name, .before = 1)) |>
+stopifnot(identical(names(tasks), names(task_labels)))
+protein_auc <- imap(tasks, \(spec, name) {
+  mutate(classify(spec), task = name, task_label = task_labels[[name]], .before = 1)
+}) |>
   list_rbind() |>
   mutate(fdr = p.adjust(p, "BH"), .by = task) |>
-  left_join(select(annotation, feature = uniprot_id, gene), by = "feature") |>
-  relocate(gene, .after = feature)
+  left_join(select(annotation, uniprot_id, gene), by = "uniprot_id") |>
+  relocate(gene, .after = uniprot_id)
 
-auc_summary <- protein_auc |>
-  summarise(
-    tested = sum(!is.na(p)), nominal = sum(p < 0.05, na.rm = TRUE),
-    expected = round(0.05 * sum(!is.na(p)), 1), fdr_sig = sum(fdr < 0.05, na.rm = TRUE),
-    .by = c(task, paired)
-  ) |>
-  mutate(ratio = round(nominal / expected, 2))
-auc_summary
+chance_expectation <- protein_auc |>
+  filter(!is.na(p)) |>
+  summarise(tested = n(), nominal = sum(p < 0.05), fdr_sig = sum(fdr < 0.05), .by = task_label) |>
+  transmute(
+    analysis = "classification", comparison = task_label, tested, nominal,
+    expected = 0.05 * tested, ratio = round(nominal / expected, 2), fdr_sig
+  )
+chance_expectation
 ```
 
 ## Hit matrices
@@ -370,7 +381,7 @@ contrast_hits <- hit_pages(
 )
 task_hits <- hit_pages(
   transmute(protein_auc,
-    label = label_of[feature], column = task,
+    label = label_of[uniprot_id], column = task,
     effect = auc, p = p, fdr = fdr
   ),
   names(tasks),
@@ -455,7 +466,10 @@ estimated on that matrix.
 imputed <- readRDS(here("01_Preprocess", "03_Imputation", "c_data", "DAList_imputed.rds"))
 abundance <- as.matrix(imputed$data)
 design <- fit$design$design_matrix
-stopifnot(identical(colnames(abundance), rownames(design)), !anyNA(abundance))
+stopifnot(
+  identical(colnames(abundance), rownames(design)), identical(meta$sample_id, rownames(design)),
+  !anyNA(abundance)
+)
 fry_correlation <- duplicateCorrelation(abundance, design, block = meta$subject)
 fry_correlation <- fry_correlation$consensus.correlation
 
@@ -501,10 +515,26 @@ write_xlsx(
   list(
     DEP_matrix = dep_matrix, contrast_summary = contrast_summary,
     null_calibration = null_calibration, treat = treat_counts, pi_ranking = pi_ranking,
-    protein_auc = arrange(protein_auc, p), auc_summary = auc_summary,
+    protein_auc = arrange(protein_auc, p), chance_expectation = chance_expectation,
     v1_equivalence = v1_equivalence, fry_concordance = fry_concordance
   ),
   file.path(out, "02_differential.xlsx")
+)
+saveRDS(
+  list(
+    contrast_summary = contrast_summary, null_calibration = null_calibration,
+    treat = treat_counts, pi_ranking = pi_ranking, protein_auc = protein_auc,
+    chance_expectation = chance_expectation, fry_concordance = fry_concordance,
+    provenance = list(
+      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+      inputs = tibble(
+        input = "design", path = "02_Differential_Expression/01_Design/c_data/design.rds",
+        md5 = unname(tools::md5sum(here(path)))
+      )
+    )
+  ),
+  file.path(out, "differential.rds"),
+  compress = "xz"
 )
 pages <- sort(list.files(figures, "^0[0-9]_.*[.]pdf$", full.names = TRUE))
 invisible(qpdf::pdf_combine(pages, bundle))
