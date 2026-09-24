@@ -16,8 +16,8 @@ execute:
 ---
 
 proteoDA compares normalisation methods on the filtered matrix, then applies cyclic loess. The
-matrix stays unimputed: limma fits each protein on the samples where it was seen, so the
-differential stage reads this file directly.
+matrix stays unimputed: limma fits each protein on the samples where it was seen, so `01_Design` and
+`03_Phenotype` read this file directly.
 
 ```{r setup}
 library(here)

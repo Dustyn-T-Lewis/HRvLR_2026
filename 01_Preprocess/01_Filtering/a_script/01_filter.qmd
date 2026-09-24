@@ -52,9 +52,8 @@ stopifnot(file.exists(paths))
 strip_iso <- function(x) sub("-[0-9]+$", "", x)
 ```
 
-## Every threshold was set from annotation alone
+## No threshold consulted a contrast, phenotype or group label
 
-Each value was set from annotation alone. No contrast, phenotype or group label was consulted.
 
 ```{r config}
 cfg <- list(
@@ -191,8 +190,7 @@ c(proteins = nrow(intensity), samples = ncol(intensity))
 ## blood_cor is reported and gates nothing
 
 The blood index is each sample's mean log2 haemoglobin intensity, computed before removal while
-the anchor proteins are still present. Each protein's Spearman correlation with it, `blood_cor`,
-is reported beside every call and gates nothing.
+the anchor proteins are still present. Each protein's Spearman correlation with it is `blood_cor`.
 
 ```{r blood-index}
 log_int <- log2(intensity)

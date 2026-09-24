@@ -61,7 +61,7 @@ One flat cut over-removed the sparse end and under-removed the dense end.
 
 ## Members are chosen by identity, not covariation
 
- Every member is one of:
+Every member is one of:
 
 | class | n | basis |
 |---|---|---|

@@ -11,4 +11,5 @@ Tests how well each set score separates the eight tasks and whether it tracks th
 
 The figure PDF opens on nominal hits over chance by collection, then an ROC panel for every set
 reaching nominal p on each task (floor excluded) and a scatter for every set-outcome pair reaching
-nominal p in each window, 12 panels to a page, by collection then p. `set_by_arm` keeps the within-arm correlations with p < 0.05.
+nominal p in each window, 12 panels to a page, by collection then p. `set_by_arm` keeps the
+within-arm correlations with p < 0.05.

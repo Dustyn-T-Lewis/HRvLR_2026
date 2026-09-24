@@ -42,11 +42,11 @@ Both outputs are committed; rerun a builder only when its source changes.
 `Group` in `HRvLR_meta.csv` is the median split of `COMP.HYPERTROPHY`: top 8 HR, bottom 8 LR. It
 separates that composite's fibre-area ingredients by construction.
 
-## Phenotype exists at T1 and T2 only
+## Every trait but two is a T2 − T1 change
 
 The MyoVision columns count fibres. Their names say "fCSA", but the source workbook calls them
 "Number of fCSA". `phenotype.csv` names them `d_nfibre_mixed` and `d_nfibre_I`.
 
-`phenotype.csv` computes each trait as T2 − T1, except
+Phenotype exists at T1 and T2 only. `01_build_phenotype.R` computes each trait as T2 − T1, except
 `comp_hypertrophy`, the source's composite read from the T2 row, and `volume_load`, total kilograms
 lifted, recorded once per subject.

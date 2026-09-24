@@ -42,7 +42,7 @@ at T3 exceeds HR's by 1.21 (t = 2.22, subject-label permutation p = 0.023). On t
 share of signal the same term gives p = 0.356. This confound does not cancel in the interaction
 contrasts.
 
-## The fitted matrix stays unimputed
+## Cyclic loess, then missForest for fry, singscore and WGCNA
 
 `normalize_data("cycloess")` is `limma::normalizeCyclicLoess(method = "fast")`. With
 `adaptive.span = TRUE` the span comes from `chooseLowessSpan(nrow)`, not the 0.7 in the formals, so

@@ -21,7 +21,8 @@ so it cannot answer that.
 
 Each subject contributes one value per protein: the level at T1, the change over training
 (T2 − T1), or the change over the acute bout (T3 − T2). Each is correlated with the ten
-phenotypes, all T2 − T1 changes except `volume_load`. Training change is the window that matches
+phenotypes, computed as T2 − T1 except `comp_hypertrophy`, the source's composite, and
+`volume_load`. Training change is the window that matches
 the phenotypes; the baseline level asks whether a starting proteome predicts adaptation, and the
 acute change whether the bout response does.
 

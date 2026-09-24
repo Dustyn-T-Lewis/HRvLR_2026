@@ -60,7 +60,7 @@ Turquoise, yellow, green and black have no set at FDR < 0.05. All twelve modules
 edges than their degrees predict (1.1 to 10.1 times; FDR < 0.05). Among the 25 highest-kME members,
 greenyellow has 209 edges, tan 202 and purple 167; turquoise, green and black have two to four.
 
-## 35 of 38 arm modules are preserved in the other arm
+## 35 of 38 arm modules reach at least moderate preservation
 
 Each arm gets its own network with the settings above. HR gives 21 modules at power 16 (the WGCNA
 FAQ fallback for 20 samples, since no power cleared 0.85) and LR 17 at power 9.

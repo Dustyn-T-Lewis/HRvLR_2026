@@ -397,7 +397,7 @@ invisible(dev.off())
 
 ## The floor count is printed, not asserted
 
-`Baseline_HRvLR` compares the arms before training. The count is printed, not asserted.
+`Baseline_HRvLR` compares the arms before training.
 
 ```{r floor}
 floor_rows <- filter(results, contrast == d$floor)

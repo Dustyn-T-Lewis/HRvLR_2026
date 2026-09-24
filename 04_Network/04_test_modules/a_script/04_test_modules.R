@@ -8,8 +8,9 @@
 #
 # Membership against significance (WGCNA's MM against GS): within each module, Spearman between a
 # member's kME and its protein-level moderated t per contrast, and its Spearman rho with each
-# phenotype over the training window. A positive value means the module's most central proteins
-# moved up most. Members share a module, so these correlations are descriptive, not tests.
+# phenotype over the training window. For a contrast, a positive value means the module's most
+# central proteins moved up most; for a phenotype, that they track it most positively. Members
+# share a module, so these correlations are descriptive, not tests.
 
 suppressPackageStartupMessages({
   library(here)

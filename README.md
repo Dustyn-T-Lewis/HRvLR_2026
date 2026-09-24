@@ -9,7 +9,7 @@ The primary comparison is the training interaction: whether the proteome changed
 training in HR than in LR. The study also asks whether any protein, pathway or co-expression module
 tracks how much a subject adapted, across ten phenotypes.
 
-## Five stages pass data through disk
+## Stages 00 to 04 pass data through disk
 
 | Stage | Runs | Writes |
 |---|---|---|
@@ -54,7 +54,7 @@ done
 Stages 01 to 04 take about ten minutes. `04_Network/02` needs the STRING files;
 `00_Input/README.md` has the download command.
 
-## proteoDA fits the unimputed matrix
+## proteoDA fits the unimputed matrix; BH never pools across screens
 
 Preprocessing and the fit use proteoDA: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
 `filter_samples`, `normalize_data("cycloess")`, then `add_design`, `add_contrasts`,
@@ -66,8 +66,8 @@ missForest copy is read only by the methods that need a complete matrix: `fry`, 
 WGCNA.
 
 Every classification and association screen reports its nominal count beside the count chance
-predicts. BH runs within each contrast, task or window. Set tests pool the five collections within
-a contrast; set classification and association split by collection.
+predicts. BH runs within each contrast, task, or window and outcome. Set tests pool the five
+collections within a contrast; set classification and association split by collection.
 
 ## renv.lock pins every package
 

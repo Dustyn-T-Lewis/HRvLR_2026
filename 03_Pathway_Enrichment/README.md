@@ -70,7 +70,7 @@ bout.
 A set is discordant when its two NES differ in sign. Hallmark and GO Slim are paired because their
 sets do not nest.
 
-## Set classification clears chance only on the acute bout
+## Only the acute bout clears chance in every collection
 
 singscore gives one rank-based score per set per sample on the imputed matrix. It carries no
 p-value and never sees a contrast. Subject dominates raw scores: PC1 carries 25.6% of the variance,
@@ -82,14 +82,14 @@ collection, window and outcome (association). Nominal hits over chance for class
 
 | Task | Hallmark | KEGG_Legacy | Reactome | GOBP | GO_Slim |
 |---|---:|---:|---:|---:|---:|
-| training, HR | 0.59 | 1.29 | 0.79 | 0.60 | 1.72 |
-| training, LR | 0.00 | 0.65 | 0.12 | 0.56 | 0.34 |
-| acute, HR | 2.35 | 1.94 | 1.34 | 1.71 | 1.38 |
-| acute, LR | 2.94 | 4.19 | 1.77 | 2.23 | 2.07 |
-| HR vs LR at T1 *(floor)* | 0.59 | 0.00 | 0.12 | 0.24 | 0.00 |
+| Training, HR (T1 to T2) | 0.61 | 1.29 | 0.79 | 0.60 | 1.72 |
+| Training, LR (T1 to T2) | 0.00 | 0.65 | 0.12 | 0.56 | 0.34 |
+| Acute bout, HR (T2 to T3) | 2.42 | 1.94 | 1.34 | 1.72 | 1.38 |
+| Acute bout, LR (T2 to T3) | 3.03 | 4.19 | 1.77 | 2.23 | 2.07 |
+| HR vs LR at T1 (floor) | 0.61 | 0.00 | 0.12 | 0.25 | 0.00 |
 | HR vs LR at T2 | 0.00 | 0.00 | 0.06 | 0.29 | 0.00 |
-| HR vs LR, training change | 1.18 | 1.94 | 0.30 | 0.47 | 1.03 |
-| HR vs LR, acute change | 1.18 | 0.97 | 0.37 | 0.98 | 0.34 |
+| HR vs LR, training change | 1.21 | 1.94 | 0.30 | 0.47 | 1.03 |
+| HR vs LR, acute change | 1.21 | 0.97 | 0.37 | 0.98 | 0.34 |
 
 The acute bout clears chance in every collection in both arms; no other task does so across
 collections. No set survives BH in any task. The paired Wilcoxon has a floor set by the number of
