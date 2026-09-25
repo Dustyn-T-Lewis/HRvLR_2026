@@ -18,7 +18,6 @@ tracks how much a subject adapted, across ten phenotypes.
 | [`02_Differential_Expression/`](02_Differential_Expression/README.md) | design, nine contrasts, protein classification, protein against phenotype | `design.rds`, `fit.rds`, `phenotype.rds` |
 | [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | gene set tests, per-sample set scores, set classification and association | `gene_sets.rds`, `set_tests.rds`, `singscore.rds` |
 | [`04_Network/`](04_Network/README.md) | co-expression modules, preservation between arms, the same tests on modules | `modules.rds` |
-| [`05_Figures/`](05_Figures/README.md) | five manuscript figures from stage 01 to 04 outputs | `F01.pdf` to `F05.pdf`, with PNGs and per-panel files |
 
 Each sub-stage holds `a_script/` (code), `b_reports/` (`<step>_figures.pdf` where the step draws,
 and the rendered HTML report for notebooks, which git ignores), `c_data/` (one workbook per step,
@@ -50,7 +49,6 @@ for s in 01_build_modules 02_characterise_modules 03_preserve_modules 04_test_mo
   Rscript 04_Network/$s/a_script/$s.R
 done
 
-for f in F01 F02 F03 F04 F05; do Rscript 05_Figures/$f/a_script/$f.R; done
 ```
 
 Stages 01 to 04 take about ten minutes. `04_Network/02` needs the STRING files;
@@ -75,8 +73,8 @@ collections within a contrast; set classification and association split by colle
 
 Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`,
 `here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`,
-`patchwork`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
-`GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
+`patchwork`, `pROC`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`,
+`GO.db`, `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
 `clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Rendering needs
 Quarto.
 
