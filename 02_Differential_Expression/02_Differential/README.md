@@ -10,5 +10,6 @@ Fits the model, writes the results and null checks, and classifies every protein
 | Cost | about 40 s |
 
 `fit.rds` is the full proteoDA result, limma fit included. The figure PDF holds the p-value
-histogram, then every protein nominal in any contrast and every protein nominal in any task as dot
-matrices, 75 rows to a page.
+histogram, every protein nominal in any contrast and every protein nominal in any task as dot
+matrices, 75 rows to a page, then an ROC curve for every protein-task pair at p < 0.05, the floor
+task excluded.

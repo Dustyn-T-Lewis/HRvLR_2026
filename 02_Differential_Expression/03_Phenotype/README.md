@@ -10,4 +10,5 @@ Correlates each protein with the ten phenotypes in the training, baseline and ac
 | Cost | about 25 s |
 
 `phenotype.rds` holds `protein_association`, which `04_Network/04` reads. The figure PDF holds
-nominal hits over chance by outcome and window, then one hit matrix per window.
+nominal hits over chance by outcome and window, one hit matrix per window, then a scatter for
+every protein-outcome pair at pooled p < 0.05, with a line and an exact p for each arm.

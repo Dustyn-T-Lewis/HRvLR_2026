@@ -90,4 +90,4 @@ Edgeworth series that returns 0 in the far tail; it put RPS4X at FDR 0.
 | acute | d_mcsa | 1.52 | 0 |
 
 The other 23 cells sit between 0.44 and 1.18. The same correlations inside each arm rest on 4 to
-8 subjects; the workbook keeps those with p < 0.05.
+8 subjects, so their p is exact, not the t approximation; the workbook keeps those with p < 0.05.

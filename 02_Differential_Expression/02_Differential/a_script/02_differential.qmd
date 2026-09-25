@@ -383,6 +383,86 @@ task_hits <- hit_pages(
 c(contrast_pages = length(contrast_hits), task_pages = length(task_hits))
 ```
 
+## Every nominal protein-task pair gets an ROC curve
+
+One panel per protein at p < 0.05 on a task, by p, twelve to a page. The floor task is not drawn.
+Red marks higher in the later timepoint or in HR, blue lower. pROC fixes `direction = "<"`,
+since `pROC::roc()` otherwise flips every curve below chance.
+
+```{r roc-pages}
+favours <- c(
+  Training_HR = "T2", Training_LR = "T2", Acute_HR = "T3", Acute_LR = "T3",
+  Trained_HRvLR = "HR", Training_change_HRvLR = "HR", Acute_change_HRvLR = "HR"
+)
+roc_pages <- imap(favours, \(favoured, task_name) {
+  spec <- tasks[[task_name]]
+  hits <- protein_auc |>
+    filter(task == task_name, p < 0.05) |>
+    arrange(p)
+  curves <- pmap(hits, \(uniprot_id, auc, p, fdr, ...) {
+    positive <- spec$positive[uniprot_id, ]
+    negative <- spec$negative[uniprot_id, ]
+    if (spec$paired) {
+      kept <- !is.na(positive) & !is.na(negative)
+      positive <- positive[kept]
+      negative <- negative[kept]
+    }
+    curve <- pROC::roc(
+      controls = na.omit(negative), cases = na.omit(positive), direction = "<", quiet = TRUE
+    )
+    tibble(
+      fpr = 1 - curve$specificities, tpr = curve$sensitivities,
+      direction = if_else(auc >= 0.5, "higher", "lower"),
+      panel = sprintf(
+        "%s\nAUC %.2f   p %s   q %s", label_of[[uniprot_id]], auc, signif(p, 2), signif(fdr, 2)
+      )
+    )
+  }) |>
+    list_rbind() |>
+    mutate(panel = factor(panel, levels = unique(panel))) |>
+    arrange(panel, fpr, tpr)
+  stopifnot(nlevels(curves$panel) == nrow(hits))
+  page_of <- (as.integer(curves$panel) - 1) %/% 12 + 1
+  map(seq_len(max(page_of)), \(page) {
+    droplevels(curves[page_of == page, ]) |>
+      ggplot(aes(fpr, tpr, colour = direction, fill = direction)) +
+      geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
+      geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
+      geom_step(linewidth = 0.8, direction = "hv") +
+      facet_wrap(~panel, ncol = 4, nrow = 3) +
+      scale_colour_manual(values = c(higher = "#B2182B", lower = "#2166AC"), guide = "none") +
+      scale_fill_manual(values = c(higher = "#B2182B", lower = "#2166AC"), guide = "none") +
+      coord_cartesian(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+      scale_x_continuous(breaks = c(0, 0.5, 1)) +
+      scale_y_continuous(breaks = c(0, 0.5, 1)) +
+      labs(
+        x = "1 - specificity", y = "sensitivity", title = task_labels[[task_name]],
+        subtitle = sprintf(
+          "log2 abundance per protein, %s, AUC above 0.5 favours %s",
+          if (spec$paired) "paired subjects" else "subjects", favoured
+        ),
+        tag = if (max(page_of) > 1) sprintf("page %d of %d", page, max(page_of)),
+        caption = paste(
+          "All", nrow(hits), "proteins at nominal p < 0.05 on this task, by p. Shading is area",
+          "under the curve, dashed line chance. p from the Wilcoxon",
+          if (spec$paired) "signed-rank" else "rank-sum", "test, q from BH within task.",
+          "Table: c_data/02_differential.xlsx, protein_auc."
+        )
+      ) +
+      theme_minimal(base_size = 10) +
+      theme(
+        strip.text = element_text(size = 7, lineheight = 1.2, margin = margin(2, 2, 3, 2)),
+        panel.grid.minor = element_blank(), panel.spacing = unit(4, "mm"),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.subtitle = element_text(size = 9, colour = "grey30"),
+        plot.caption = element_text(hjust = 0, size = 7, colour = "grey40"),
+        plot.tag = element_text(size = 9, colour = "grey30"), plot.tag.position = "topright"
+      )
+  })
+})
+map_int(roc_pages, length)
+```
+
 ## Writes fit.rds and the figure PDF before the floor check
 
 The fit and the figures are written before the floor is checked, so a failure leaves them on disk.
@@ -391,7 +471,7 @@ The workbook follows the appendix, whose table it carries.
 ```{r write}
 saveRDS(res, file.path(out, "fit.rds"), compress = "xz")
 pdf(file.path(figures, "02_differential_figures.pdf"), width = 11, height = 8.5)
-walk(c(list(p_histogram), contrast_hits, task_hits), print)
+walk(c(list(p_histogram), contrast_hits, task_hits, list_flatten(unname(roc_pages))), print)
 invisible(dev.off())
 ```
 

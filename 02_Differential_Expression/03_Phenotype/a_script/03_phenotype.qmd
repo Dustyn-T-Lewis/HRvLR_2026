@@ -129,13 +129,45 @@ results <- imap(windows, \(values, window) {
 ```
 
 The same correlation inside each arm and window, descriptive only: 4 to 8 subjects per correlation.
+At that size the t approximation is wrong: at |rho| = 1 it returns p = 0, where on four subjects
+the exact p is 0.083. The within-arm p is exact, from every ordering of the protein against the
+outcome's ranks, ties kept; without ties it equals `cor.test(exact = TRUE)`.
 
 ```{r by-arm}
+orderings <- function(n) {
+  if (n == 1) {
+    return(matrix(1L))
+  }
+  shorter <- orderings(n - 1)
+  do.call(rbind, map(seq_len(n), \(first) cbind(first, shorter + (shorter >= first))))
+}
+null_rho <- new.env()
+exact_spearman_p <- function(x, y) {
+  ok <- !is.na(x) & !is.na(y)
+  rx <- rank(x[ok])
+  ry <- rank(y[ok])
+  stopifnot(length(rx) <= 9)
+  key <- paste(paste(sort(rx), collapse = ","), paste(sort(ry), collapse = ","))
+  if (is.null(null_rho[[key]])) {
+    shuffled <- matrix(rx[orderings(length(rx))], ncol = length(rx))
+    centred <- ry - mean(ry)
+    rho <- (shuffled - mean(rx)) %*% centred / sqrt(sum((rx - mean(rx))^2) * sum(centred^2))
+    null_rho[[key]] <- sort(abs(rho[, 1]))
+  }
+  null <- null_rho[[key]]
+  (length(null) - findInterval(abs(cor(rx, ry)) - 1e-9, null)) / length(null)
+}
+exact_by_row <- function(values, outcome) {
+  result <- spearman_by_row(values, outcome)
+  tested <- which(!is.na(result$rho))
+  result$p[tested] <- map_dbl(tested, \(i) exact_spearman_p(values[i, ], outcome))
+  result
+}
 arm_of <- set_names(phenotype$arm, phenotype$subject)
 by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   imap(windows, \(values, window) {
     kept <- values[, arm_of[colnames(values)] == arm, drop = FALSE]
-    map(set_names(outcomes), \(name) spearman_by_row(kept, outcome_of(name, colnames(kept)))) |>
+    map(set_names(outcomes), \(name) exact_by_row(kept, outcome_of(name, colnames(kept)))) |>
       list_rbind(names_to = "outcome") |>
       mutate(window = window, .before = 1)
   }) |>
@@ -276,9 +308,91 @@ hits <- imap(window_titles, \(title, window) {
 map_int(hits, length)
 ```
 
+## Every nominal protein-outcome pair gets a scatter
+
+One panel per pair at pooled p < 0.05, by p, twelve to a page. Points are subjects, lines are
+fitted within each arm, and the header gives each arm's rho and exact p.
+
+```{r scatter-pages}
+paged <- function(data, draw) {
+  per_page <- 12
+  page_of <- (as.integer(data$panel) - 1) %/% per_page + 1
+  n_pages <- max(page_of)
+  map(seq_len(n_pages), \(page) {
+    draw(droplevels(data[page_of == page, ])) +
+      facet_wrap(~panel, ncol = 4, nrow = 3, scales = "free") +
+      labs(tag = if (n_pages > 1) sprintf("page %d of %d", page, n_pages)) +
+      theme_minimal(base_size = 10) +
+      theme(
+        strip.text = element_text(size = 7, lineheight = 1.2, margin = margin(2, 2, 3, 2)),
+        panel.grid.minor = element_blank(), panel.spacing = unit(4, "mm"),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.subtitle = element_text(size = 9, colour = "grey30"),
+        plot.caption = element_text(hjust = 0, size = 7, colour = "grey40"),
+        plot.tag = element_text(size = 9, colour = "grey30"), plot.tag.position = "topright",
+        legend.position = "top"
+      )
+  })
+}
+scatter_pages <- imap(window_titles, \(title, which_window) {
+  pairs <- results |>
+    filter(window == which_window, p < 0.05) |>
+    arrange(p)
+  values <- windows[[which_window]]
+  arm_text <- by_arm |>
+    filter(window == which_window) |>
+    transmute(uniprot_id, outcome, arm,
+      text = sprintf("%-3s n=%d  rho=%+.2f  p=%.3f", arm, n_subjects, rho, p)
+    )
+  points <- pmap(pairs, \(uniprot_id, outcome, rho, p, fdr, ...) {
+    arms <- filter(arm_text, uniprot_id == !!uniprot_id, outcome == !!outcome)
+    tibble(
+      panel = sprintf(
+        "%s   vs   %s\nrho = %+.2f   p %s   q %s",
+        label_of[[uniprot_id]], outcome, rho, signif(p, 2), signif(fdr, 2)
+      ),
+      abundance = values[uniprot_id, ], outcome_value = outcome_of(outcome, colnames(values)),
+      arm = arm_of[colnames(values)], caption = paste(arms$text, collapse = "\n")
+    )
+  }) |>
+    list_rbind() |>
+    filter(!is.na(abundance), !is.na(outcome_value)) |>
+    mutate(panel = factor(panel, levels = unique(panel)))
+  stopifnot(nlevels(points$panel) == nrow(pairs))
+  paged(points, \(page) {
+    ggplot(page, aes(abundance, outcome_value, colour = arm, fill = arm)) +
+      geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
+      geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
+      geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.6) +
+      geom_point(size = 1.4, alpha = 0.9) +
+      geom_text(
+        data = distinct(page, panel, caption), inherit.aes = FALSE,
+        aes(x = -Inf, y = Inf, label = caption), family = "mono",
+        hjust = -0.05, vjust = 1.25, size = 2, lineheight = 1.2, colour = "grey25"
+      ) +
+      scale_y_continuous(expand = expansion(mult = c(0.06, 0.35))) +
+      scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
+      scale_fill_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
+      labs(
+        x = paste0("log2 abundance, ", title, ", one point per subject"), y = "phenotype",
+        title = paste("Protein against phenotype,", title),
+        subtitle = "Spearman, subjects pooled across arms",
+        caption = paste(
+          "All", nrow(pairs), "protein-outcome pairs at nominal p < 0.05, by p. Lines are fitted",
+          "within each arm; the header rho is pooled, q from BH within window and outcome.",
+          "Table: c_data/03_phenotype.xlsx, protein_association and protein_by_arm."
+        )
+      )
+  })
+})
+map_int(scatter_pages, length)
+```
+
 ```{r write}
 pdf(file.path(figures, "03_phenotype_figures.pdf"), width = 11, height = 8.5)
-walk(c(list(chance_figure), list_flatten(unname(hits))), print)
+walk(c(
+  list(chance_figure), list_flatten(unname(hits)), list_flatten(unname(scatter_pages))
+), print)
 invisible(dev.off())
 saveRDS(list(protein_association = results), file.path(out, "phenotype.rds"), compress = "xz")
 # by_arm runs to tens of thousands of rows; the workbook keeps the nominal ones.
@@ -295,7 +409,7 @@ sheets <- list(
 read_me <- tibble(sheet = names(sheets), holds = c(
   "Nominal hits against chance, per window and outcome. Read first.",
   "Spearman rho, p and BH FDR per protein, window and outcome, subjects pooled.",
-  "Within-arm correlations with p < 0.05.",
+  "Within-arm correlations with exact p < 0.05.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))
