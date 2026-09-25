@@ -131,10 +131,42 @@ module_association <- imap(windows, \(values, window) {
   list_rbind() |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome))
 
+# The within-arm correlations hold 6 to 8 subjects, where the t approximation is wrong: at
+# |rho| = 1 it returns p = 0. Their p is exact, from every ordering of one variable against the
+# other's ranks, ties kept; without ties it equals cor.test(exact = TRUE).
+orderings <- function(n) {
+  if (n == 1) {
+    return(matrix(1L))
+  }
+  shorter <- orderings(n - 1)
+  do.call(rbind, map(seq_len(n), \(first) cbind(first, shorter + (shorter >= first))))
+}
+null_rho <- new.env()
+exact_spearman_p <- function(x, y) {
+  ok <- !is.na(x) & !is.na(y)
+  rx <- rank(x[ok])
+  ry <- rank(y[ok])
+  stopifnot(length(rx) <= 9)
+  key <- paste(paste(sort(rx), collapse = ","), paste(sort(ry), collapse = ","))
+  if (is.null(null_rho[[key]])) {
+    shuffled <- matrix(rx[orderings(length(rx))], ncol = length(rx))
+    centred <- ry - mean(ry)
+    rho <- (shuffled - mean(rx)) %*% centred / sqrt(sum((rx - mean(rx))^2) * sum(centred^2))
+    null_rho[[key]] <- sort(abs(rho[, 1]))
+  }
+  null <- null_rho[[key]]
+  (length(null) - findInterval(abs(cor(rx, ry)) - 1e-9, null)) / length(null)
+}
+exact_by_row <- function(values, outcome) {
+  result <- spearman_by_row(values, outcome)
+  result$p <- map_dbl(seq_len(nrow(values)), \(i) exact_spearman_p(values[i, ], outcome))
+  result
+}
+
 by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   imap(windows, \(values, window) {
     kept <- values[, arm_of[colnames(values)] == arm, drop = FALSE]
-    map(set_names(outcomes), \(name) spearman_by_row(kept, outcome_of(name, colnames(kept)))) |>
+    map(set_names(outcomes), \(name) exact_by_row(kept, outcome_of(name, colnames(kept)))) |>
       list_rbind(names_to = "outcome") |>
       mutate(window = window, .before = 1)
   }) |>
@@ -391,7 +423,7 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Nominal hits against chance, per task and per window-outcome. Read first.",
   "How well each eigengene separates each task. AUC from ranks, p from Wilcoxon.",
   "Eigengene against each phenotype, per window, subjects pooled.",
-  "Every within-arm correlation, per arm, window, outcome and module.",
+  "Every within-arm correlation with exact p, per arm, window, outcome and module.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))

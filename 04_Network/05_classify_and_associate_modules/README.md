@@ -13,4 +13,4 @@ The tasks, AUC and tests are those of `02_Differential` and `03_Pathway_Enrichme
 have no missing values, so no observation floor applies. The figure PDF holds nominal hits over
 chance, every module and task as tiles, every module and phenotype per window as tiles, an ROC panel
 for each nominal module-task pair (floor excluded) and a scatter for each nominal module-outcome
-pair. `module_by_arm` holds every within-arm correlation.
+pair. `module_by_arm` holds every within-arm correlation, with an exact p.
