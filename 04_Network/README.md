@@ -1,15 +1,17 @@
 # 04 · Network
 
-Finds proteins that move together, asks whether the two arms share that structure, and puts the
-modules through the tests stages 02 and 03 apply to proteins and sets.
+The module level. Finds proteins that move together, runs the protein level's contrasts, classify
+and associate steps on the module eigengenes, then names the modules and asks whether the two arms
+share them.
 
 | Step | Runs | Writes |
 |---|---|---|
-| [`01_build_modules`](01_build_modules/README.md) | WGCNA on subject-centred abundance | `modules.rds` |
-| [`02_characterise_modules`](02_characterise_modules/README.md) | ORA against the stage 03 sets, hubs, STRING enrichment, hub networks | workbook, 5 pages |
-| [`03_preserve_modules`](03_preserve_modules/README.md) | modules built in each arm, preservation in the other | workbook, 1 page |
-| [`04_test_modules`](04_test_modules/README.md) | nine contrasts on eigengenes and with fry, membership against significance | workbook, 5 pages |
-| [`05_classify_and_associate_modules`](05_classify_and_associate_modules/README.md) | eight tasks, ten phenotypes | workbook, every nominal module drawn |
+| [`01_Build_Modules`](01_Build_Modules/README.md) | WGCNA on subject-centred abundance | `modules.rds` |
+| [`02_Contrasts`](02_Contrasts/README.md) | nine contrasts on eigengenes and with fry, membership against significance | workbook, 5 pages |
+| [`03_Classify`](03_Classify/README.md) | AUC and Wilcoxon p on eight tasks, an ROC curve per nominal module | workbook and PDF |
+| [`04_Associate`](04_Associate/README.md) | sample-level limma model per trait, change-score Spearman | workbook and PDF |
+| [`05_Characterise`](05_Characterise/README.md) | ORA against the stage 03 sets, hubs, STRING enrichment, hub networks | workbook, 5 pages |
+| [`06_Preserve`](06_Preserve/README.md) | modules built in each arm, preservation in the other | workbook, 1 page |
 
 ## Twelve modules; 285 of 1,900 proteins unassigned
 
@@ -39,7 +41,7 @@ R2 0.85: power 8, R2 0.866, mean connectivity 28.
 
 ## Eight of twelve modules have a set at FDR < 0.05
 
-Enrichment is `compareCluster(fun = "enricher")` against the 1,378 sets of `00_build_gene_sets`,
+Enrichment is `compareCluster(fun = "enricher")` against the 1,378 sets of `00_Gene_Sets`,
 with the 1,900 measured genes as universe and BH within each module. Hubs are the ten members with
 the highest kME. The STRING check is `get_ppi_enrichment()` at combined score ≥ 700 with the
 measured proteins STRING maps as background; the expected edge count comes from each member's
@@ -84,15 +86,19 @@ re-estimated on the eigengenes (0.095), `eBayes(robust = TRUE)` and BH within co
 each module as a protein set on the imputed matrix with a correlation estimated on that matrix
 (0.176); its FDR runs over the twelve modules within each contrast.
 
-No eigengene clears BH in any contrast, task or phenotype. fry finds one module: red rises in
-Acute_LR (FDR 0.045).
+No eigengene clears BH in any contrast, task, trait or outcome. fry finds one module: red rises
+in Acute_LR (FDR 0.045).
 
 | Test | Tests | Expected at p < 0.05 | Nominal | BH < 0.05 |
 |---|---:|---:|---:|---:|
 | eigengene contrasts | 108 | 5.4 | 5 | 0 |
 | fry contrasts | 108 | 5.4 | 7 | 1 |
 | classification | 96 | 4.8 | 6 | 0 |
-| association | 360 | 18 | 12 | 0 |
+| sample model | 216 | 10.8 | 9 | 0 |
+| change score | 720 | 36 | 25 | 0 |
+
+In the sample model purple, the striated-muscle module, rises within-person with type I fibre
+share (p = 0.034), the direction the protein-level positive control shows.
 
 Membership against significance is the Spearman correlation, within each module, between a
 member's kME and its protein-level moderated t. On the primary contrast blue (rho 0.32) and green
