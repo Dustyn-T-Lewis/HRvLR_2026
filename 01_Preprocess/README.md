@@ -17,7 +17,8 @@ Contaminants go before normalisation, because cyclic loess estimates each sample
 that sample's own intensity distribution. Removal is by identity: a curated list plus HPA plasma,
 immunoglobulin and erythrocyte tags, with a muscle rescue (myonuclei ≥ 20 nCPM and plasma
 concentration < 1e9 pg/L) that overturns an HPA tag. `blood_cor` is reported beside every call and
-gates nothing; `00_Input/PROVENANCE.md` records why its old cut was retired.
+gates nothing; `00_Input/README.md` records why its old cut was retired, and the
+`blood_cor_null` sheet holds the null behind that.
 
 A sample goes when three of four outlier methods flag it. The detection filter runs last, so no
 discarded sample counts toward a protein's detections: a protein needs 5 detections in at least

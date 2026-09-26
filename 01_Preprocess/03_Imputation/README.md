@@ -6,8 +6,7 @@ Fills the normalised matrix with missForest for the methods that need it complet
 |---|---|
 | Reads | `02_Normalization/c_data/DAList_normalized.rds` |
 | Writes | `c_data/DAList_imputed.rds`, `c_data/03_impute.xlsx` |
-| Run | `quarto render 01_Preprocess/03_Imputation/a_script/03_impute.qmd --output-dir ../b_reports` |
+| Run | `Rscript 01_Preprocess/03_Imputation/a_script/03_impute.R` |
 | Cost | about 30 s |
 
-Read by `02_Differential` (the `fry` appendix), `03_Pathway_Enrichment/01`, `/04` and `/05` (the
-sample sheet only), and `04_Network/01`, `/03` and `/04`.
+Read by every step that needs a complete matrix: `fry`, singscore and WGCNA.

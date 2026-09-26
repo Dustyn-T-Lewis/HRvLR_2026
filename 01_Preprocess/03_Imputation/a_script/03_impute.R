@@ -1,29 +1,12 @@
----
-title: "03 · Imputation"
-subtitle: "missForest, for the methods that need a complete matrix"
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    embed-resources: true
-    df-print: kable
-    fig-width: 7
-    fig-height: 5
-    fig-dpi: 150
-    fig-align: center
-execute:
-  message: false
----
+# missForest copy of the normalised matrix, for the methods that need no missing values: fry,
+# singscore and WGCNA. The limma fits read the unimputed matrix.
 
-The differential fit reads the unimputed matrix. Three later methods cannot: `fry` rotates
-residuals and takes no missing value, singscore ranks every protein in a sample, and WGCNA
-correlates complete columns. `03_Pathway_Enrichment/05` reads the sample sheet from it.
-
-```{r setup}
-library(here)
-library(missForest)
-library(tibble)
-library(writexl)
+suppressPackageStartupMessages({
+  library(here)
+  library(missForest)
+  library(tibble)
+  library(writexl)
+})
 
 inputs <- c(normalized = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds")
 paths <- vapply(inputs, here, character(1))
@@ -32,17 +15,10 @@ dal <- readRDS(paths[["normalized"]])
 out <- here("01_Preprocess", "03_Imputation", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 mat <- as.matrix(dal$data)
-c(proteins = nrow(mat), samples = ncol(mat), pct_missing = round(100 * mean(is.na(mat)), 1))
-```
 
-## missForest on ranger, rows sorted, seed 42
-
-Random-forest imputation (Stekhoven & Bühlmann 2012). Rows are sorted before the stochastic fit
-so the result reproduces. The backend is ranger, named rather than left to the default, so a
-change in missForest's default cannot swap engines between runs.
-
-```{r impute}
 params <- list(method = "missForest", backend = "ranger", maxiter = 10, ntree = 100)
+# Rows are sorted before the seeded fit so the result reproduces; ranger is named so a change in
+# missForest's default cannot swap engines.
 set.seed(42)
 ord <- order(rownames(mat))
 mf <- missForest(
@@ -52,12 +28,7 @@ mf <- missForest(
 imputed <- t(mf$ximp)[rownames(mat), ]
 dimnames(imputed) <- dimnames(mat)
 stopifnot(!anyNA(imputed), identical(dim(imputed), dim(mat)))
-c(oob_nrmse = round(unname(mf$OOBerror[1]), 4))
-```
 
-## Writes DAList_imputed.rds and the workbook
-
-```{r write}
 dal$data <- imputed
 dal$imputation <- c(params, oob_error = unname(mf$OOBerror[1]))
 saveRDS(dal, file.path(out, "DAList_imputed.rds"), compress = "xz")
@@ -79,4 +50,3 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Packages loaded at run time."
 ))
 write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "03_impute.xlsx"))
-```

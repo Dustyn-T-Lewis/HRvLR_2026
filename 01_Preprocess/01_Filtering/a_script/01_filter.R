@@ -1,47 +1,29 @@
----
-title: "01 · Filtering"
-subtitle: "Protein report to a filtered, unnormalised DAList"
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    embed-resources: true
-    df-print: kable
-    fig-width: 7
-    fig-height: 5
-    fig-dpi: 150
-    fig-align: center
-execute:
-  message: false
----
+# Protein report to a filtered, unnormalised DAList. Contaminants go by identity, outlier samples
+# by a four-method consensus, then proteins by detection on the samples that remain. No threshold
+# reads a contrast, phenotype or group label.
 
-The report arrives at protein level, one row per accession and one column per MS run. This
-notebook removes contaminant proteins by identity, drops outlier samples by a four-method
-consensus, and filters on detection last, on the samples that remain. Contaminants leave before
-`02_Normalization` because cyclic loess estimates each sample's reference from that sample's own
-intensity distribution.
-
-```{r setup}
-library(here)
-library(proteoDA)
-library(dplyr)
-library(tidyr)
-library(tibble)
-library(stringr)
-library(purrr)
-library(readr)
-library(readxl)
-library(ggplot2)
-library(forcats)
-library(patchwork)
-library(writexl)
+suppressPackageStartupMessages({
+  library(here)
+  library(proteoDA)
+  library(dplyr)
+  library(tidyr)
+  library(tibble)
+  library(stringr)
+  library(purrr)
+  library(readr)
+  library(readxl)
+  library(ggplot2)
+  library(forcats)
+  library(patchwork)
+  library(writexl)
+})
 
 out <- here("01_Preprocess", "01_Filtering", "c_data")
 figures <- here("01_Preprocess", "01_Filtering", "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   report = "00_Input/HRvLR_raw.xlsx",
-  samples = "00_Input/HRvLR_meta.csv",
+  samples = "00_Input/metadata.csv",
   blood = "00_Input/blood_contaminants.csv",
   hpa = "00_Input/HPA_annotations_full.tsv",
   rbc = "00_Input/RBC_proteome_reference.tsv"
@@ -50,12 +32,7 @@ paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 
 strip_iso <- function(x) sub("-[0-9]+$", "", x)
-```
 
-## No threshold consulted a contrast, phenotype or group label
-
-
-```{r config}
 cfg <- list(
   miss_min_reps = 5, # detected samples a group cell needs
   miss_min_groups = 1, # cells that must clear miss_min_reps
@@ -64,33 +41,16 @@ cfg <- list(
   mahal_p = 0.01, # PCA Mahalanobis chi-square tail
   mad_k = 3, # Hampel constant
   ery_cut = 5000, # erythrocyte nCPM at or above: red-cell protein
-  myo_cut = 20, # myonuclei nCPM at or above: candidate for muscle rescue
+  # myonuclei nCPM at or above: candidate for muscle rescue. At 50 the rescue missed GPI (43.1),
+  # ANXA2 (40.2) and PPIA (21.1); blood_max, not this floor, separates plasma from muscle.
+  myo_cut = 20,
   blood_max = 1e9, # rescue only below this plasma concentration, pg/L
   blood_anchor = c("HBB", "HBA1", "HBD", "HBG1", "HBG2")
 )
-```
 
-`myo_cut` is 20 rather than 50. HPA tags every plasma-detectable protein "Secreted to blood", and
-the rescue exists to undo that tag. At 50 it missed GPI (myonuclei 43.1), ANXA2 (40.2) and PPIA (21.1). The
-transcript floor does not separate plasma from muscle on its own: removed plasma proteins span
-myonuclei 0 to 237 and rescued ones 21 to 362. `blood_max` does the separating. The eight
-removed proteins above `myo_cut` all measure 2.3e9 to 4.2e11 pg/L in plasma; intracellular
-proteins measure 1e6 to 1e8.
-
-The floor over-deletes five real proteins: C1QBP, HMGB2, PPIB, LGALS1 and CTSB clear
-`blood_max` and fail only on myonuclei. Version 1 (tag `legacy-v1`) refitted the nine contrasts with all 120
-blood-tagged proteins readmitted and found no BH hit in any HR-versus-LR or interaction
-contrast, so the null does not rest on this rule. Readmitting them took Acute_LR from 0 to 53
-hits at BH < 0.10, 40 of them the readmitted blood proteins.
-
-## Contaminants match by accession, never by symbol
-
-Two sources, both matched by accession. cRAP collides with muscle proteins on gene symbol
-(ALDOA against rabbit ALDOA_RABIT) and on description (a trypsin or albumin pattern takes
-parvalbumin with it). Only the cRAP dust and contact section is used; the UPS1 spike-in section
-holds myoglobin and creatine kinase M, ranks 1 and 2 of this proteome.
-
-```{r contaminants}
+# Matched by accession only. cRAP collides with muscle on symbol (ALDOA against ALDOA_RABIT) and on
+# description (a trypsin or albumin pattern takes parvalbumin). Only cRAP's dust and contact
+# section is used: its UPS1 section holds myoglobin and creatine kinase M.
 contaminants <- tribble(
   ~uniprot_id, ~gene, ~class, ~reason,
   "P04264", "KRT1", "keratin", "cRAP dust/contact; cornified epidermal",
@@ -129,8 +89,7 @@ contaminants <- tribble(
       select(uniprot_id, gene, class, reason)
   )
 
-# Share of each sample's summed intensity, measured before removal. These describe the
-# biopsies; they filter nothing.
+# Share of each sample's summed intensity, measured before removal. Descriptive only.
 qc_panels <- list(
   keratin = c(
     "KRT1", "KRT2", "KRT10", "KRT8", "KRT9", "KRT16", "KRT14", "KRT5", "KRT6A",
@@ -147,28 +106,15 @@ qc_panels <- list(
     "ATP2A1", "DES"
   )
 )
-c(contaminant_list = nrow(contaminants))
-```
 
-The 95 blood proteins come from `blood_contaminants.csv`, chosen by identity: immunoglobulins,
-complement, secreted plasma proteins, mature red-cell and leukocyte proteins. They replaced a
-cut at `blood_cor > 0.45`, whose null did not reproduce (see the section on blood_cor's null).
-
-## One row per accession: the highest-mean row wins
-
-```{r read}
 raw <- read_excel(paths[["report"]])
 metadata <- read_csv(paths[["samples"]], show_col_types = FALSE) |>
-  transmute(
-    sample_id = Col_ID, subject = Subject_ID, arm = Group, timepoint = Timepoint,
-    group = Group_Time
-  ) |>
+  select(sample_id, subject, arm, timepoint, group) |>
   as.data.frame()
 rownames(metadata) <- metadata$sample_id
 
 annotation_cols <- c("uniprot_id", "protein", "gene", "description", "n_seq")
-# Every run in the report must be on the sample sheet and every sheet row in the report, or a
-# sample would silently drop out or come back all-NA.
+# A run missing from either side would drop out silently or come back all-NA.
 runs <- setdiff(names(raw), annotation_cols)
 stopifnot("sample sheet and report disagree" = setequal(runs, metadata$sample_id))
 annotation <- raw[, annotation_cols]
@@ -184,15 +130,9 @@ keep_row <- tibble(
 annotation <- annotation[keep_row, ]
 intensity <- intensity[keep_row, ]
 n_dedup <- length(keep_row)
-c(proteins = nrow(intensity), samples = ncol(intensity))
-```
 
-## blood_cor is reported and gates nothing
-
-The blood index is each sample's mean log2 haemoglobin intensity, computed before removal while
-the anchor proteins are still present. Each protein's Spearman correlation with it is `blood_cor`.
-
-```{r blood-index}
+# The blood index is each sample's mean log2 haemoglobin, taken before the anchors are removed.
+# blood_cor, each protein's Spearman correlation with it, is reported and gates nothing.
 log_int <- log2(intensity)
 log_int[!is.finite(log_int)] <- NA
 blood_index <- colMeans(log_int[annotation$gene %in% cfg$blood_anchor, , drop = FALSE],
@@ -216,19 +156,9 @@ qc_index <- imap(qc_panels, \(genes, panel) {
   list_rbind() |>
   left_join(select(metadata, sample_id, subject, arm, timepoint), by = "sample_id")
 
-qc_index |>
-  summarise(median = round(median(pct_signal), 3), max = round(max(pct_signal), 3), .by = panel)
-```
-
-## One call per protein
-
-A protein is removed when it is on the curated list, or when HPA marks it as a plasma,
-immunoglobulin or erythrocyte protein and the muscle rescue does not reach it. Absence from HPA
-is unknown, never a reason to remove. The red-cell reference (`RBC_proteome_reference.tsv`)
-is reported as `in_rbc` and removes nothing: about two thirds of a skeletal-muscle proteome
-appears in it.
-
-```{r calls}
+# A protein goes when it is on the curated list, or when HPA marks it plasma, immunoglobulin or
+# erythrocyte and the muscle rescue does not reach it. Absence from HPA never removes. Red-cell
+# membership is reported as in_rbc and removes nothing.
 hpa <- read_tsv(paths[["hpa"]], show_col_types = FALSE) |>
   transmute(
     acc = Uniprot, protein_class = `Protein class`, secretome = `Secretome location`,
@@ -273,30 +203,19 @@ protein_calls <- annotation |>
     uniprot_id, gene, description, verdict, reason, contaminant, in_rbc,
     secretome, blood_conc, ery, myo, blood_cor
   )
-# Every verdict branch has to agree with the contaminant flag.
 stopifnot(protein_calls$contaminant == str_starts(protein_calls$verdict, "remove"))
-count(protein_calls, verdict, sort = TRUE)
-```
 
-Removal is a plain subset. `filter_proteins_by_annotation()` would read a logical column
-directly, but its guard calls `if()` on a length-2 class vector and errors on every real DAList.
-
-```{r dalist}
+# A plain subset: filter_proteins_by_annotation() calls if() on a length-2 class vector and errors
+# on every real DAList.
 keep <- !protein_calls$contaminant
 int_df <- as.data.frame(intensity[keep, ])
 annot_df <- as.data.frame(annotation[keep, ])
 rownames(int_df) <- rownames(annot_df) <- annot_df$uniprot_id
 dal <- zero_to_missing(DAList(data = int_df, annotation = annot_df, metadata = metadata))
-c(proteins = nrow(dal$data), samples = ncol(dal$data))
-```
 
-## A sample goes when three of four methods flag it
-
-Four methods flag a sample: missingness (Tukey fence on the sample's share and on its spread
-within subject), PCA Mahalanobis distance, median intensity (Hampel) and median inter-sample
-correlation. A sample goes when three of the four agree.
-
-```{r outliers}
+# Four methods flag a sample: missingness (Tukey fence on its share and on its spread within
+# subject), PCA Mahalanobis distance, median intensity (Hampel) and median inter-sample
+# correlation. Three of four remove it.
 lg <- log2(dal$data + 1)
 complete <- dal$data[rowSums(is.na(dal$data)) == 0, ]
 pcs <- prcomp(t(log2(complete + 1)), center = TRUE, scale. = TRUE)$x[, 1:3]
@@ -319,15 +238,8 @@ outlier_diag <- dal$metadata |>
 stopifnot(identical(rownames(pcs), outlier_diag$sample_id))
 outlier_ids <- outlier_diag$sample_id[outlier_diag$consensus_outlier]
 dal <- filter_samples(dal, !(sample_id %in% outlier_ids))
-filter(outlier_diag, n_flags > 0) |> select(sample_id, arm, timepoint, n_flags, consensus_outlier)
-```
 
-## Detection filters last, on the surviving samples
-
-Run last, on the samples that survive, so no sample about to be discarded counts toward a
-protein's detections.
-
-```{r detection}
+# Detection runs last, so no discarded sample counts toward a protein's detections.
 n_before <- nrow(dal$data)
 dal <- filter_proteins_by_group(dal,
   min_reps = cfg$miss_min_reps, min_groups = cfg$miss_min_groups,
@@ -343,14 +255,7 @@ filter_log <- tibble(
     pct_of_raw = round(100 * n_after / n_raw, 1),
     n_samples = c(rep(nrow(metadata), nrow(removed) + 2), rep(ncol(dal$data), 2))
   )
-filter_log
-```
 
-## The cascade removes 500 of 2,400 proteins
-
-```{r fig-cascade}
-#| fig-width: 9
-#| fig-height: 10
 set.seed(42) # the jittered points only
 waterfall <- filter_log |>
   filter(!is.na(n_removed)) |>
@@ -404,16 +309,10 @@ consensus <- ggplot(flags, aes(method, sample_id, fill = flagged)) +
 filter_figure <- (cascade / contamination / consensus) +
   plot_layout(heights = c(1, 1.2, 0.9)) &
   theme_minimal(base_size = 10)
-filter_figure
-```
 
-## LR's T3 biopsies carry more blood
-
-Tests whether blood content rises more at T3 in one arm, with a mixed model on the analysed
-samples (arm by timepoint, subject intercept) on two scales: the log2 haemoglobin index and the
-blood panel's share of signal. The permutation p shuffles the HR/LR label across subjects 999 times.
-
-```{r blood-by-arm}
+# Does blood content rise more at T3 in one arm? Mixed model on the analysed samples (arm by
+# timepoint, subject intercept) on two scales; the permutation p shuffles the arm label across
+# subjects 999 times. A confound on this scale does not cancel in the interaction contrasts.
 blood_data <- dal$metadata |>
   select(sample_id, subject, arm, timepoint) |>
   mutate(
@@ -446,21 +345,9 @@ blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
   )
 }) |>
   list_rbind()
-blood_by_arm
-blood_data |>
-  summarise(mean_log2_index = round(mean(log2_index), 2), .by = c(arm, timepoint)) |>
-  arrange(arm, timepoint)
-```
 
-The estimate is LR's T3 rise over HR's, relative to T1. A confound on this scale does not cancel
-in the interaction contrasts.
-
-## blood_cor's null depends on how often a protein was seen
-
-The old cut was 0.45, justified as rounding above a 300-permutation null recorded at 0.43.
-Recomputed here, and split by how many samples a protein was seen in:
-
-```{r blood-null}
+# The old blood_cor cut of 0.45 rested on a null recorded at 0.43. Recomputed and split by how many
+# samples saw a protein, the null differs by observation count, so no single cut serves all.
 set.seed(42)
 tested <- log_int[testable, ]
 null_rho <- replicate(300, abs(as.vector(suppressWarnings(cor(
@@ -469,22 +356,13 @@ null_rho <- replicate(300, abs(as.vector(suppressWarnings(cor(
 )))))
 n_obs <- cut(rowSums(!is.na(tested)), c(0, 25, 40, Inf), c("15-25", "26-40", "41-48"))
 null_999 <- \(rows) round(quantile(null_rho[rows, ], 0.999, na.rm = TRUE, names = FALSE), 3)
-bind_rows(
+blood_null <- bind_rows(
   map(levels(n_obs), \(bin) {
     tibble(observations = bin, proteins = sum(n_obs == bin), null_999 = null_999(n_obs == bin))
   }),
   tibble(observations = "all", proteins = length(n_obs), null_999 = null_999(TRUE))
 )
-```
 
-A protein seen in 15 samples and one seen in 48 do not draw |rho| from the same distribution, so
-no single cut serves both. Removal moved to the curated list.
-
-## Writes DAList_filtered.rds, the workbook and the figure PDF
-
-`DAList_filtered.rds` is read by `02_Normalization`. The workbook records every call.
-
-```{r write}
 saveRDS(dal, file.path(out, "DAList_filtered.rds"), compress = "xz")
 pdf(file.path(figures, "01_filter_figures.pdf"), width = 11, height = 8.5)
 print(filter_figure)
@@ -498,6 +376,7 @@ sheets <- list(
   blood_index = tibble(sample_id = names(blood_index), blood_index = unname(blood_index)),
   outlier_diagnostics = outlier_diag,
   blood_by_arm = blood_by_arm,
+  blood_cor_null = blood_null,
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
@@ -514,8 +393,8 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Mean log2 haemoglobin intensity per sample.",
   "The four outlier flags per sample.",
   "Arm by T3 blood term on two scales, with a permutation p.",
+  "99.9th percentile of the blood_cor permutation null, by observation count.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))
 write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_filter.xlsx"))
-```

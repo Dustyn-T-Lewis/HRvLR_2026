@@ -1,24 +1,20 @@
 # 00 · Input
 
-Study data, and the two scripts that build derived inputs from it.
+Study data. No code.
 
 | File | One row is | Read by |
 |---|---|---|
 | `HRvLR_raw.xlsx` | one protein, 48 MS runs as columns | `01_Preprocess/01_Filtering` |
-| `HRvLR_meta.csv` | one MS sample, 48 rows | `01_Filtering`, `a_script/01_build_phenotype.R` |
-| `phenotype.csv` | one subject, 16 rows | `02_Differential_Expression/03_Phenotype`, `03_Pathway_Enrichment/05`, `04_Network/05` |
-| `blood_contaminants.csv` | one curated blood protein, 95 rows | `01_Filtering` |
-| `HPA_annotations_full.tsv` | one HPA gene, 20,162 rows | `01_Filtering` |
-| `RBC_proteome_reference.tsv` | one red-cell protein, 7,012 rows | `01_Filtering` |
-| `RBC_proteins.xlsx` | five published red-cell proteomes, one sheet each | `a_script/02_build_blood_list.R` |
-| `downloads/` | STRING v12 human links at score ≥ 700, aliases and protein info | `04_Network/02` |
-
-`PROVENANCE.md` records the red-cell sources and why the curated blood list replaced a correlation
-cut.
+| `metadata.csv` | one MS sample, 48 rows | `01_Preprocess/01_Filtering` |
+| `phenotype.csv` | one subject, 16 rows | every `04_Associate` step |
+| `blood_contaminants.csv` | one curated blood protein, 95 rows | `01_Preprocess/01_Filtering` |
+| `HPA_annotations_full.tsv` | one Human Protein Atlas gene, 20,162 rows | `01_Preprocess/01_Filtering` |
+| `RBC_proteome_reference.tsv` | one red-cell protein, 7,012 rows | `01_Preprocess/01_Filtering` |
+| `downloads/` | STRING v12 human links at score ≥ 700, aliases and protein info | `04_Network/05_Characterise` |
 
 ## STRING files are downloaded, not committed
 
-Too large for git. From the repo root:
+They are too large for git. From the repo root:
 
 ```sh
 mkdir -p 00_Input/downloads && cd 00_Input/downloads
@@ -28,25 +24,44 @@ for f in aliases info; do
 done
 ```
 
-## Two builders derive phenotype.csv and the red-cell reference
+## HR and LR are the median split of the composite
 
-```sh
-Rscript 00_Input/a_script/01_build_phenotype.R    # HRvLR_meta.csv -> phenotype.csv
-Rscript 00_Input/a_script/02_build_blood_list.R   # RBC_proteins.xlsx -> RBC_proteome_reference.tsv
-```
+`arm` is the median split of `comp_hypertrophy`: top 8 HR, bottom 8 LR. The composite is built from
+fibre-area change, so a fibre-area difference between arms is built in and is not a finding.
 
-Both outputs are committed; rerun a builder only when its source changes.
+## phenotype.csv holds pre and post side by side
 
-## HR/LR is the median split of COMP.HYPERTROPHY
+Pre is the T1 biopsy and post the T2 biopsy; T3 has no phenotype. Units sit in each column name.
+`comp_hypertrophy` is the source's composite and `volume_load_total_kg` is total kilograms lifted
+over the programme, one value per subject. The extension 1RM is missing for one subject at one
+timepoint.
 
-`Group` in `HRvLR_meta.csv` is the median split of `COMP.HYPERTROPHY`: top 8 HR, bottom 8 LR. It
-separates that composite's fibre-area ingredients by construction.
+The `fibres_*` columns are MyoVision fibre counts. The source workbook labels them "Number of
+fCSA", and they fall as fibre area rises.
 
-## Every trait but two is a T2 − T1 change
+## Blood proteins are removed by identity
 
-The MyoVision columns count fibres. Their names say "fCSA", but the source workbook calls them
-"Number of fCSA". `phenotype.csv` names them `d_nfibre_mixed` and `d_nfibre_I`.
+`blood_contaminants.csv` lists 95 proteins, each with its `class` and `reason`: 41 plasma, 20
+immunoglobulin, 19 erythrocyte, 10 complement, 5 leukocyte. Every entry was checked against its
+UniProt name. The `blood_cor`, `ery` and `myo` columns record the evidence at curation and decided
+nothing.
 
-Phenotype exists at T1 and T2 only. `01_build_phenotype.R` computes each trait as T2 − T1, except
-`comp_hypertrophy`, the source's composite read from the T2 row, and `volume_load`, total kilograms
-lifted, recorded once per subject.
+The list replaced a cut at `blood_cor` 0.45. A permutation null for that correlation depends on how
+many samples saw the protein: its 99.9th percentile is 0.71 for proteins seen in 15 to 25 samples
+and 0.48 for 41 to 48. One cut cannot serve both. Sixteen proteins the old cut removed, all
+expressed in myonuclei, stay in the matrix: RBMX, SYNE2, HNRNPA3, DDI2, GDI2, STK38, CPNE3, CCS,
+FBXO7, LXN, ARF1, ANP32E, SEPTIN6, RAN, DNAJB4 and FLOT1.
+
+## The red-cell reference flags and never removes
+
+`RBC_proteome_reference.tsv` is the union of five red-cell proteomes. `sources` names the ones that
+list each protein and `n_sources` counts them. A red-cell proteome shares about two thirds of a
+muscle proteome, so `01_Filtering` reports membership as `in_rbc` and removes nothing on it.
+
+| Source | Contributes |
+|---|---|
+| Téletchéa et al. 2019, *PLOS ONE* 14:e0211043 (RESPIRE) | 736 curated red-cell proteins |
+| UniProtKB "Erythrocyte" annotation, retrieved 2026-07-23 | 597 entries |
+| Bryk & Wiśniewski 2017, *J Proteome Res* 16:2752 | 2,577 quantified proteins |
+| Ravenhill et al. 2019, *Commun Biol* 2:350 | 1,559 surface proteins |
+| Bai et al. 2026, *Sci Data* 13, PXD067677 | 5,264 proteins |
