@@ -1,22 +1,26 @@
 # 03 · Pathway Enrichment
 
-Tests each gene set on each contrast, scores every sample on every set, and tests the scores.
+The pathway level. Tests every gene set on the nine contrasts, scores every sample on every set,
+and puts the scores through the protein level's classification and association.
 
 | Step | Runs | Writes |
 |---|---|---|
-| [`00_build_gene_sets`](00_build_gene_sets/README.md) | frozen MSigDB snapshot, protein-to-gene map, size filter, GO Slim sets | `gene_sets.rds` |
-| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | fgsea and fry per contrast, `collapsePathways` | `set_tests.rds` |
-| [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | 8 volcanoes |
-| [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | HR NES against LR NES, training and acute | 4 composites |
-| [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds` |
-| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | every nominal set drawn |
+| [`00_Gene_Sets`](00_Gene_Sets/README.md) | frozen MSigDB snapshot, protein-to-gene map, size filter, GO Slim sets | `gene_sets.rds` |
+| [`01_Scores`](01_Scores/README.md) | singscore per set and sample | `singscore.rds` |
+| [`02_Contrasts`](02_Contrasts/README.md) | fgsea and fry per contrast, `collapsePathways` | `set_tests.rds` |
+| [`03_Classify`](03_Classify/README.md) | AUC and Wilcoxon p on eight tasks, an ROC curve per nominal set | workbook and PDF |
+| [`04_Associate`](04_Associate/README.md) | sample-level limma model per trait, change-score Spearman | workbook and PDF |
+| [`05_Volcano`](05_Volcano/README.md) | protein volcanoes with pathway rings | 8 volcanoes |
+| [`06_NES_Scatter`](06_NES_Scatter/README.md) | HR NES against LR NES, training and acute | 4 composites |
+
+Every collection is its own screen: BH and the chance count run within collection.
 
 ## 1,378 sets pass the size filter
 
 The first run fetches four MSigDB collections (release 2026.1.Hs) and writes an RDS with an md5 to
-`00_build_gene_sets/c_data/cache/`. Later runs verify the checksum and need no network. Restore the
+`00_Gene_Sets/c_data/cache/`. Later runs verify the checksum and need no network. Restore the
 RDS and its `.md5` together; move both aside to rebuild. `goslim_generic.obo` sits beside it with
-its own `.md5`; the script does not fetch it. `00_Input/PROVENANCE.md` has its source and refresh
+its own `.md5`; the script does not fetch it. `00_Gene_Sets/README.md` has its source and refresh
 steps.
 
 A set is tested with 15 to 500 source genes and at least 15 measured. Each GO Slim set holds every
@@ -74,11 +78,9 @@ sets do not nest.
 
 singscore gives one rank-based score per set per sample on the imputed matrix. It carries no
 p-value and never sees a contrast. Subject dominates raw scores: PC1 carries 25.6% of the variance,
-of which subject explains 0.68, so step 05 reads within-subject change as well as levels.
+of which subject explains 0.68.
 
-Step 05 puts each score through the eight classification tasks of `02_Differential` and the
-Spearman association in three windows, with BH within collection and task (classification) or
-collection, window and outcome (association). Nominal hits over chance for classification:
+Nominal classifiers over chance, per collection:
 
 | Task | Hallmark | KEGG_Legacy | Reactome | GOBP | GO_Slim |
 |---|---:|---:|---:|---:|---:|
@@ -91,12 +93,32 @@ collection, window and outcome (association). Nominal hits over chance for class
 | HR vs LR, training change | 1.21 | 1.94 | 0.30 | 0.47 | 1.03 |
 | HR vs LR, acute change | 1.21 | 0.97 | 0.37 | 0.98 | 0.34 |
 
-The acute bout clears chance in every collection in both arms; no other task does so across
-collections. No set survives BH in any task. The paired Wilcoxon has a floor set by the number of
-pairs: 6 pairs (HR training) cannot go below p = 0.031, 7 (HR acute) below 0.016, 8 (LR) below
-0.0078.
+No set survives BH in any task. HR's smallest attainable p is 0.031 (training, 6 pairs) and 0.016
+(acute, 7); LR's is 0.0078 (8).
 
-Four set-outcome pairs survive BH within collection: peroxisomal protein import (Reactome) and
-peroxisome (KEGG) against `volume_load` over training, GO Slim DNA replication against baseline
-`d_1rm_ext`, and Reactome basal-body anchoring against `comp_hypertrophy` over the acute bout.
-Baseline level against `d_1rm_ext` runs at 3.4 times chance across collections.
+## The acute response tracks the training shift in fibre type
+
+No term of the sample model has a BH hit. Between-person mCSA returns 140 nominal sets where chance
+predicts 69 (ratio 2.03), the same excess the protein level shows; between-person type I fibre area
+follows at 1.65.
+
+Change-score pairs at BH < 0.05, BH within window, outcome and collection:
+
+| Window | Outcome | Collection | Sets |
+|---|---|---|---:|
+| acute | pct_type1_share | Reactome | 85 |
+| acute | pct_type1_share | GOBP | 3 |
+| acute | d_type1_share | GOBP | 1 |
+| acute | comp_hypertrophy | Reactome | 1 (basal-body anchoring) |
+| acute | pct_leg_ext_1rm | GO_Slim | 1 (tRNA metabolism) |
+| baseline | d_leg_ext_1rm | GO_Slim | 1 (DNA replication) |
+| baseline | pct_leg_press_1rm | GO_Slim | 1 (ECM organisation) |
+| training | volume_load_total_kg | Reactome, KEGG_Legacy | 2 (peroxisomal import, peroxisome) |
+
+The 85 Reactome sets are mostly proteasome, ubiquitin, cell-cycle and NF-κB signalling. For all
+but three, the acute-bout score change rises with the percent change in type I fibre share over
+training (15 subjects, |rho| 0.63 to 0.83). The share comes from MyoVision counts of 142 to 1,119
+fibres per biopsy. One subject (HR_S29) moved +105%; Spearman reads ranks, so that value weighs as
+one rank.
+Across collections the baseline level against `d_leg_ext_1rm` runs at 3.43 times chance and the
+acute change against `pct_type1_share` at 3.05.
