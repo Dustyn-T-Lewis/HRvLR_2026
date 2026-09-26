@@ -1,48 +1,21 @@
----
-title: "01 · Design"
-subtitle: "Design formula and the nine contrasts"
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    embed-resources: true
-    df-print: kable
-    fig-width: 7
-    fig-height: 5
-    fig-dpi: 150
-    fig-align: center
-execute:
-  message: false
----
+# Six cell means with subject random, the nine contrasts and their roles, and the within-subject
+# correlation. Every later limma fit reads design.rds.
 
-proteoDA carries the design as a formula on the DAList and reads its terms from metadata column
-names. This notebook sets the factor levels, attaches the design and the nine contrasts, and
-checks both before anything is fitted.
-
-```{r setup}
-library(here)
-library(proteoDA)
-library(limma)
-library(dplyr)
-library(tibble)
-library(writexl)
+suppressPackageStartupMessages({
+  library(here)
+  library(proteoDA)
+  library(limma)
+  library(dplyr)
+  library(tibble)
+  library(writexl)
+})
 
 inputs <- c(normalized = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds")
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
 dal <- readRDS(paths[["normalized"]])
 stopifnot(identical(dal$metadata$sample_id, colnames(dal$data)))
-with(dal$metadata, table(arm, timepoint))
-```
 
-## Six cell means, subject random
-
-Six cell means, one per arm-and-timepoint combination, with subject as a random effect.
-HR and LR are different people, so a fixed subject term would absorb the between-arm contrasts;
-the random effect keeps them estimable and carries the repeated measures through
-`duplicateCorrelation()`.
-
-```{r design}
 group_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
 meta <- dal$metadata |>
   mutate(
@@ -54,6 +27,8 @@ rownames(meta) <- meta$sample_id
 stopifnot(!anyNA(meta$group), !any(is.na(meta$subject) | meta$subject == ""))
 dal$metadata <- meta
 
+# HR and LR are different people, so subject is a random effect: a fixed subject term would absorb
+# the between-arm contrasts.
 dal <- add_design(dal, "~ 0 + group + (1 | subject)")
 design <- dal$design$design_matrix
 
@@ -63,12 +38,7 @@ stopifnot(
   qr(design)$rank == ncol(design),
   identical(make.names(colnames(design)), colnames(design))
 )
-c(samples = nrow(design), coefficients = ncol(design), residual_df = nrow(design) - ncol(design))
-```
 
-## Nine contrasts, one primary
-
-```{r contrasts}
 contrast_vector <- c(
   "Training_HR = HR_T2 - HR_T1",
   "Training_LR = LR_T2 - LR_T1",
@@ -82,10 +52,8 @@ contrast_vector <- c(
 )
 dal <- add_contrasts(dal, contrasts_vector = contrast_vector)
 contrast_names <- colnames(dal$design$contrast_matrix)
-dal$design$contrast_matrix
-```
 
-```{r roles}
+# Baseline_HRvLR is the floor, not a negative control: the arm label comes from the outcome.
 roles <- tibble(
   contrast = contrast_names,
   role = case_when(
@@ -95,31 +63,12 @@ roles <- tibble(
     TRUE ~ "descriptive"
   )
 )
-roles
-```
 
-`Training_Interaction` is the primary comparison: does the training response differ between arms.
-`Acute_Interaction` asks the same of the acute bout. `Baseline_HRvLR` is the floor. It is not a
-negative control: the label was cut from the training outcome, so a real baseline difference would
-be predictive. The six others are descriptive. `Training_Interaction` equals `Trained_HRvLR` minus
-`Baseline_HRvLR` exactly.
-
-## Within-subject correlation is 0.189
-
-`duplicateCorrelation()` on the normalised matrix, blocked by subject. `fit_limma_model()`
-estimates the same number internally.
-
-```{r correlation}
 strata <- tibble(
   level = "within subject, subject random (unweighted matrix correlation)",
   correlation = duplicateCorrelation(dal$data, design, block = meta$subject)$consensus.correlation
 )
-mutate(strata, correlation = round(correlation, 3))
-```
 
-## Writes design.rds and the workbook
-
-```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 saveRDS(
@@ -145,4 +94,3 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Packages loaded at run time."
 ))
 write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_design.xlsx"))
-```
