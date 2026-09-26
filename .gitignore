@@ -1,7 +1,7 @@
 # STRING v12 files, too large for git; 00_Input/README.md has the download command.
 00_Input/downloads/
 
-# Rendered notebooks and proteoDA's per-contrast reports; each render rewrites them.
+# proteoDA's per-contrast reports; each run rewrites them.
 **/b_reports/*.html
 **/b_reports/static_plots/
 # WGCNA's modulePreservation checkpoints
@@ -23,11 +23,8 @@ Rplots.pdf
 *.pem
 *.key
 .here
-.quarto/
 **/*_cache/
 **/*_files/
-**/a_script/*.rmarkdown
-**/*.quarto_ipynb
 
 # renv library is machine-local; the lockfile is the record
 renv/library/

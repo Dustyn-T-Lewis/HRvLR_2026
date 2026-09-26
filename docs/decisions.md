@@ -15,3 +15,12 @@
 | Script format | Plain R scripts, run with `Rscript`. | One run command, no Quarto, no ignored HTML. |
 | Checks | Snapshot every workbook, rerun, diff; report each number that moves and why. | Nothing moves without a stated reason. |
 | Per-biopsy traits | fCSA mixed, type I and type II; mCSA; 1RM leg press and extension; fibre counts mixed and type I; % type I fibres. Percent change per trait joins the change-score outcomes. | % type I carries the positive control; percent change is one value per person. |
+
+## 2026-09-25: added during the build
+
+| Question | Decision | Reason |
+|---|---|---|
+| Plot code | Package wrappers only: `pROC::ggroc()` for ROC pages, `ggpubr::ggscatter()` for change-score scatters, plain `ggplot2` elsewhere. Pages of twelve come from `split()`, not `ggforce::facet_wrap_paginate()`. | Paginate rebuilds every panel on every page; on 400-page PDFs that is too slow. |
+| Inputs | `00_Input` holds hand-curated study data only: `metadata.csv` (one row per MS sample) and `phenotype.csv` (one row per subject, pre and post side by side). Builders and derived inputs are gone. | Same pattern as BFR_limpa. Change scores from the new file equal the old ones to 1e-9. |
+| Observation floor in the sample model | A protein enters a trait's model only when two thirds of that trait's biopsies saw it. | TIGAR, seen in 15 of 30 biopsies, reached BH < 0.05 on between-person mCSA through half-missing data; the change score already used this floor. |
+| Derived trait name | `type1_share`, the type I fibre count over the mixed count, in percent. | `pct_type1` would have produced `pct_pct_type1` for its percent change. |

@@ -6,53 +6,63 @@ at the end of it (T3). They were labelled High or Low Responder by a median spli
 hypertrophy score, eight each. 48 MS runs; three are dropped as outliers, leaving 45.
 
 The primary comparison is the training interaction: whether the proteome changed differently over
-training in HR than in LR. The study also asks whether any protein, pathway or co-expression module
-tracks how much a subject adapted, across ten phenotypes.
+training in HR than in LR. The study also asks which proteins, pathways and co-expression modules
+separate the groups, and which track the phenotype measured on each biopsy.
 
-## Every stage passes data through disk
+## Every level runs contrasts, classify and associate
 
 | Stage | Runs | Writes |
 |---|---|---|
-| [`00_Input/`](00_Input/README.md) | study data, two builders for derived inputs | `phenotype.csv`, `RBC_proteome_reference.tsv` |
+| [`00_Input/`](00_Input/README.md) | study data, no code | |
 | [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, missForest | `DAList_normalized.rds`, `DAList_imputed.rds` |
-| [`02_Differential_Expression/`](02_Differential_Expression/README.md) | design, nine contrasts, protein classification, protein against phenotype | `design.rds`, `fit.rds`, `phenotype.rds` |
-| [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | gene set tests, per-sample set scores, set classification and association | `gene_sets.rds`, `set_tests.rds`, `singscore.rds` |
-| [`04_Network/`](04_Network/README.md) | co-expression modules, preservation between arms, the same tests on modules | `modules.rds` |
+| [`02_Differential_Expression/`](02_Differential_Expression/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
+| [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
+| [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
+| [`05_Summary/`](05_Summary/README.md) | planned, no code yet | |
 
-Each sub-stage holds `a_script/` (code), `b_reports/` (`<step>_figures.pdf` where the step draws,
-and the rendered HTML report for notebooks, which git ignores), `c_data/` (one workbook per step,
-plus the `.rds` a later step reads) and a README. Every workbook opens on a
-`read_me` sheet and ends with `input_manifest` and `package_versions`. Stages 01 and 02 are Quarto
-notebooks; stages 03 and 04 are R scripts. Data passes through disk, so any sub-stage re-runs on its
-own once its inputs exist.
+Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts, `03_Classify`
+scores eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
+sample-level limma model and by change-score correlation. Each level adds its own steps around
+them. Every nominal result gets a panel in its step's PDF, and every table reports the count chance
+predicts beside the count observed.
+
+Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
+`c_data/` (one workbook, plus the `.rds` a later step reads) and a README. Every workbook opens on a
+`read_me` sheet and ends with `input_manifest` and `package_versions`. Data passes through disk, so
+any sub-stage re-runs on its own once its inputs exist.
 
 ## One command per step, in order
 
 ```sh
 Rscript -e 'renv::restore()'
 
-quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd        --output-dir ../b_reports
-quarto render 01_Preprocess/02_Normalization/a_script/02_normalize.qmd --output-dir ../b_reports
-quarto render 01_Preprocess/03_Imputation/a_script/03_impute.qmd       --output-dir ../b_reports
-
-quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
-quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
-quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd       --output-dir ../b_reports
-
-for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
-         03_enrich_scatter_fgsea 04_run_singscore 05_classify_and_associate_sets; do
-  Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
+for s in 01_Filtering/a_script/01_filter 02_Normalization/a_script/02_normalize \
+         03_Imputation/a_script/03_impute; do
+  Rscript 01_Preprocess/$s.R
 done
 
-for s in 01_build_modules 02_characterise_modules 03_preserve_modules 04_test_modules \
-         05_classify_and_associate_modules; do
-  Rscript 04_Network/$s/a_script/$s.R
+for s in 01_Design/a_script/01_design 02_Contrasts/a_script/02_contrasts \
+         03_Classify/a_script/03_classify 04_Associate/a_script/04_associate; do
+  Rscript 02_Differential_Expression/$s.R
 done
 
+for s in 00_Gene_Sets/a_script/00_gene_sets 01_Scores/a_script/01_scores \
+         02_Contrasts/a_script/02_contrasts 03_Classify/a_script/03_classify \
+         04_Associate/a_script/04_associate 05_Volcano/a_script/05_volcano \
+         06_NES_Scatter/a_script/06_nes_scatter; do
+  Rscript 03_Pathway_Enrichment/$s.R
+done
+
+for s in 01_Build_Modules/a_script/01_build_modules 02_Contrasts/a_script/02_contrasts \
+         03_Classify/a_script/03_classify 04_Associate/a_script/04_associate \
+         05_Characterise/a_script/05_characterise 06_Preserve/a_script/06_preserve; do
+  Rscript 04_Network/$s.R
+done
 ```
 
-Stages 01 to 04 take about ten minutes. `04_Network/02` needs the STRING files;
-`00_Input/README.md` has the download command.
+The run takes about 20 minutes, most of it the three associate steps and the preservation
+permutations. `04_Network/05_Characterise` needs the STRING files; `00_Input/README.md` has the
+download command.
 
 ## proteoDA fits the unimputed matrix; BH never pools across screens
 
@@ -65,18 +75,16 @@ The fitted matrix stays unimputed: limma fits each protein on the samples where 
 missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and
 WGCNA.
 
-Every classification and association screen reports its nominal count beside the count chance
-predicts. BH runs within each contrast, task, or window and outcome. Set tests pool the five
+BH runs within each contrast, task, trait and term, or window and outcome. Set tests pool the five
 collections within a contrast; set classification and association split by collection.
 
 ## renv.lock pins every package
 
 Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`,
 `here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`,
-`patchwork`, `pROC`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`,
+`patchwork`, `pROC`, `ggpubr`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`,
 `GO.db`, `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
-`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Rendering needs
-Quarto.
+`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`.
 
 `enrichVolcano` 0.3.0.9000 is recorded in `renv.lock` without a remote, so `renv::restore()`
 cannot fetch it. To move to the GitHub release, install it and snapshot, then rerun stage 03 and
