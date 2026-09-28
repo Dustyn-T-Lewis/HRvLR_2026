@@ -20,11 +20,11 @@ separate the groups, and which track the phenotype measured on each biopsy.
 | [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
 | [`05_Summary/`](05_Summary/README.md) | planned, no code yet | |
 
-Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts, `03_Classify`
-scores eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
-sample-level limma model and by change-score correlation. Each level adds its own steps around
-them. Every nominal result gets a panel in its step's PDF, and every table reports the tested,
-p < 0.05 and BH < 0.05 counts.
+Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts, `03_Classify` scores
+eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
+sample-level limma model and by change-score correlation. Each level adds its own steps around them.
+Each step's PDF opens with overview heatmaps of every feature, then gives every nominal result a
+panel, and every table reports the tested, p < 0.05 and BH < 0.05 counts.
 
 Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
 `c_data/` (one workbook, plus the `.rds` a later step reads) and a README. Every workbook opens on a
@@ -80,10 +80,10 @@ collections within a contrast; set classification and association split by colle
 
 ## renv.lock pins every package
 
-Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`,
-`here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`,
-`patchwork`, `pROC`, `ggpubr`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`,
-`GO.db`, `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
+Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`, `here`, `dplyr`,
+`tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`,
+`ComplexHeatmap`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
+`GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
 `clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`.
 
 `enrichVolcano` 0.3.0.9000 is recorded in `renv.lock` without a remote, so `renv::restore()`

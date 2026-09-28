@@ -33,3 +33,15 @@
 | Paired tasks | Within-arm tasks are drawn as paired grids with the signed-rank p and median paired change; ROC grids only for the four HR-vs-LR tasks. | AUC and ROC treat paired biopsies as independent groups, so they described a different comparison from the signed-rank p. |
 | Set contrast pages | Every fgsea collapse survivor at FDR < 0.05 and every fry set at p < 0.05, not the ten strongest. | A top-ten cut is a hand-set cutoff. |
 | Summary figures | The scratch summary figures are dropped; `05_Summary` stays a plan. | They carried chance dots and hand-picked examples. |
+
+## 2026-09-27: plot pass
+
+| Question | Decision | Reason |
+|---|---|---|
+| Baseline hits | Drawn like every other task; the task label drops "(floor)". The contrast keeps its floor role in `design.rds`. | Every nominal hit gets a panel; leaving one task out was a hidden cut. |
+| Change-score scatter | ggplot2 `geom_point()` with a least-squares line per arm, captioned as a guide; the tests stay Spearman. `ggpubr` leaves the scripts. | `ggscatter()` did nothing ggplot2 does not, and 25 packages entered the lock only through it. This supersedes the plot-code entry of 2026-09-25 for scatters. |
+| Overviews | Each contrasts, classify and associate PDF opens with ComplexHeatmap pages of every feature: biopsies at the contrasts step, effects beside a status map (not significant, p < 0.05, BH < 0.05, not tested) at every step. Pathway pages repeat per collection. | The grids show hits one at a time; the overviews show every feature at once. ComplexHeatmap was already in the lock through proteoDA. |
+| Overview rows | Proteins by average-linkage clustering on 1 - Pearson r of the imputed matrix, sets the same on singscore within collection, modules by size. Display only. | One order per level, the same in every step. |
+| Panel order | Within each comparison: p, then the larger effect, then feature ID. | For a fixed n, p is monotone in the effect, so the strongest come first and ties are deterministic. |
+| Panel n | Each header gives the feature's own n: complete pairs, HR and LR subjects, biopsies and subjects, or subjects. | Missing values change n per feature. |
+| Plot index | Every classify and associate workbook gains `plot_index`: result key, PDF page, panel position. | One lookup from a table row to its panel. |
