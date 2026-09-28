@@ -63,9 +63,6 @@ stopifnot(
   identical(rownames(fit$eBayes_fit$t), rownames(abundance))
 )
 
-
-# ---- eigengene contrasts -------------------------------------------------------------------
-
 me_correlation <- duplicateCorrelation(me, design, block = subject)$consensus.correlation
 me_fit <- lmFit(me, design, block = subject, correlation = me_correlation) |>
   contrasts.fit(contrast_matrix) |>
@@ -76,9 +73,6 @@ eigengene_tests <- map(contrast_names, \(contrast) {
     transmute(contrast, module, logFC, t, p = P.Value, fdr = adj.P.Val)
 }) |>
   list_rbind()
-
-
-# ---- fry on module sets --------------------------------------------------------------------
 
 fry_correlation <- duplicateCorrelation(abundance, design, block = subject)$consensus.correlation
 module_rows <- split(match(members$uniprot_id, rownames(abundance)), members$module)
@@ -94,9 +88,6 @@ message(
   "correlation: eigengenes ", round(me_correlation, 3), ", imputed matrix ",
   round(fry_correlation, 3)
 )
-
-
-# ---- membership against significance -------------------------------------------------------
 
 protein_t <- as_tibble(fit$eBayes_fit$t, rownames = "uniprot_id") |>
   pivot_longer(-uniprot_id, names_to = "contrast", values_to = "t")
@@ -119,9 +110,6 @@ membership_phenotype <- members |>
     by = "uniprot_id", relationship = "one-to-many"
   ) |>
   member_rho("association")
-
-
-# ---- figures -------------------------------------------------------------------------------
 
 figure_theme <- theme_minimal(base_size = 10) +
   theme(

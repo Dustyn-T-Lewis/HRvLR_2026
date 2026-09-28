@@ -89,13 +89,13 @@ each module as a protein set on the imputed matrix with a correlation estimated 
 No eigengene clears BH in any contrast, task, trait or outcome. fry finds one module: red rises
 in Acute_LR (FDR 0.045).
 
-| Test | Tests | Expected at p < 0.05 | Nominal | BH < 0.05 |
-|---|---:|---:|---:|---:|
-| eigengene contrasts | 108 | 5.4 | 5 | 0 |
-| fry contrasts | 108 | 5.4 | 7 | 1 |
-| classification | 96 | 4.8 | 6 | 0 |
-| sample model | 216 | 10.8 | 9 | 0 |
-| change score | 720 | 36 | 25 | 0 |
+| Test | Tests | p < 0.05 | BH < 0.05 |
+|---|---:|---:|---:|
+| eigengene contrasts | 108 | 5 | 0 |
+| fry contrasts | 108 | 7 | 1 |
+| classification | 96 | 6 | 0 |
+| sample model | 216 | 9 | 0 |
+| change score | 720 | 25 | 0 |
 
 In the sample model purple, the striated-muscle module, rises within-person with type I fibre
 share (p = 0.034), the direction the protein-level positive control shows.

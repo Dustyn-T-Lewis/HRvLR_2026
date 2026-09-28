@@ -117,9 +117,6 @@ message(sprintf(
   sprintf("%d of %d samples define the modules", nrow(expr), ncol(abund))
 ))
 
-
-# ---- figures -------------------------------------------------------------------------------
-
 caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
 
 threshold_figure <- fit_indices |>

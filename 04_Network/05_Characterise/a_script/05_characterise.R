@@ -108,9 +108,6 @@ print(as.data.frame(select(labels, module, n_proteins, top_set, top_set_fdr, str
   digits = 3
 )
 
-
-# ---- figures -------------------------------------------------------------------------------
-
 caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
 
 enrichment_figure <- ora_fit |>

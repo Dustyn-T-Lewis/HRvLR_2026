@@ -14,6 +14,6 @@ eigengenes instead of abundance. Eigengenes have no missing values, so no observ
 applies. BH runs within trait and term (model) or window and outcome (change score), over twelve
 modules. `change_score_by_arm` keeps every within-arm correlation with its exact p.
 
-The figure PDF opens on the chance ratios, then gives every nominal model hit a panel (one line per
-subject from T1 to T2), then every nominal change-score pair a scatter (`ggpubr::ggscatter`, a line
-per arm, each arm's rho and exact p in the corner).
+The figure PDF gives every model hit at p < 0.05 a panel (one line per subject from T1 to T2),
+then every change-score pair at p < 0.05 a scatter (`ggpubr::ggscatter`, a line per arm, each
+arm's rho and exact p in the corner), twelve to a page, by p.

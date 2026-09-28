@@ -121,9 +121,6 @@ preservation_table <- map(c(HR = "LR", LR = "HR"), \(test) {
   ))
 print(as.data.frame(preservation_table), digits = 3)
 
-
-# ---- figures -------------------------------------------------------------------------------
-
 plot_data <- preservation_table |>
   mutate(direction = paste(reference, "modules tested in", test)) |>
   select(
