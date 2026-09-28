@@ -38,13 +38,10 @@ stopifnot(file.exists(paths))
 dal <- readRDS(paths[["proteins"]])
 values <- as.matrix(dal$data)
 meta <- as_tibble(dal$metadata)
-feature_label <- dal$annotation |>
-  mutate(label = if_else(
-    is.na(gene) | duplicated(gene) | duplicated(gene, fromLast = TRUE),
-    paste0(coalesce(gene, "?"), " (", uniprot_id, ")"), gene
-  )) |>
-  with(set_names(label, uniprot_id))
-feature_noun <- "protein"
+# Every protein carries one distinct gene symbol.
+feature_label <- with(dal$annotation, set_names(gene, uniprot_id))
+stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
+feature_noun <- "proteins"
 value_label <- "log2 abundance"
 # Display order for the overviews: average-linkage clustering on 1 - Pearson r of the imputed
 # matrix, shared by every protein overview.
@@ -212,6 +209,91 @@ counts <- bind_rows(
     )
 )
 
+# Heatmap and workbook helpers, the same in every contrasts, classify and associate script.
+# Display only: row order, colour limits and centring touch no test.
+ht_opt$message <- FALSE
+diverging <- c("#5E3C99", "white", "#E66101")
+status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
+status_legend <- Legend(
+  labels = c(names(status_colours), "not tested"), title = "status",
+  legend_gp = gpar(fill = c(status_colours, "grey80"))
+)
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+# Colours stop at the 99th percentile of |x| so a few extremes do not wash out the rest.
+cap <- \(x) unname(quantile(abs(x), 0.99, na.rm = TRUE))
+# Long results to a feature-by-column matrix; untested cells stay NA and draw grey.
+as_grid <- function(d, rows, cols, col, value) {
+  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
+  d <- filter(d, feature %in% rows, .data[[col]] %in% cols)
+  m[cbind(d$feature, d[[col]])] <- value(d)
+  m
+}
+# An effect map on a diverging scale when breaks are given, otherwise a status map.
+heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
+                 column_names_gp = gpar(fontsize = 7), ...) {
+  rows <- rownames(m)
+  Heatmap(m,
+    name = title, na_col = "grey80",
+    col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
+    show_heatmap_legend = !is.null(breaks) && !is.null(legend),
+    heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
+    cluster_rows = FALSE, cluster_columns = FALSE, column_title = title,
+    column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
+    show_row_names = row_names && length(rows) <= 80,
+    row_labels = gsub("\n", " ", feature_label[rows]),
+    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
+    use_raster = length(rows) > 200, ...
+  )
+}
+heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
+  list(title = title, draw = function() {
+    draw(maps,
+      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
+      merge_legend = TRUE, heatmap_legend_list = legends, padding = unit(c(14, 4, 4, 4), "mm")
+    )
+    grid.text(stringr::str_wrap(caption, 190),
+      x = unit(4, "mm"), y = unit(3, "mm"), just = c("left", "bottom"), gp = gpar(fontsize = 7)
+    )
+  })
+}
+write_workbook <- function(sheets, holds, file) {
+  sheets <- c(sheets, list(
+    input_manifest = tibble(
+      input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+    ),
+    package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+      as_tibble() |>
+      select(package, version = loadedversion, source)
+  ))
+  holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
+  write_xlsx(c(list(read_me = tibble(sheet = names(sheets), holds = holds)), sheets), file)
+}
+
+# Grid helpers, the same in every classify and associate script. Twelve panels to a page; blank
+# slots keep a short last page at the same panel size.
+slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
+paginate <- function(hits, by) {
+  hits |>
+    mutate(
+      page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
+      position = (row_number() - 1) %% 12 + 1, .by = all_of(by)
+    ) |>
+    mutate(pdf_page = consecutive_id(pick(all_of(by)), page))
+}
+page_theme <- theme_minimal(base_size = 9) +
+  theme(
+    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0), legend.position = "top"
+  )
+counts_line <- \(info, noun, hits) {
+  sprintf(
+    "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.", info$n_nominal, info$n_tested,
+    noun, info$n_fdr_05, hits$page[1], hits$n_pages[1]
+  )
+}
+
 # Units come from the phenotype column names; type1_share is a percentage.
 unit_cols <- grep("_pre_", names(phenotype), value = TRUE)
 unit_of <- c(set_names(sub(".*_pre_", "", unit_cols), sub("_pre_.*", "", unit_cols)),
@@ -224,23 +306,52 @@ outcome_unit <- c(
 )
 window_axis <- c(training = "change, T1 to T2", baseline = "T1 level", acute = "change, T2 to T3")
 arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
-# Blank slots keep a short last page on the same 3 x 4 panel size.
-slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
-page_theme <- theme_minimal(base_size = 9) +
-  theme(
-    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
-    plot.caption = element_text(hjust = 0), legend.position = "top"
-  )
-# Twelve panels to a page, strongest first within each group: p, then |t| or |rho|, then ID.
-paginate <- function(hits, by) {
-  hits |>
-    mutate(
-      page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
-      position = (row_number() - 1) %% 12 + 1, .by = all_of(by)
-    ) |>
-    mutate(pdf_page = consecutive_id(pick(all_of(by)), page))
-}
 
+# Overviews: sample-model t by trait, then change-score rho by outcome, one page per window.
+t_limit <- cap(model$t)
+row_order <- paste(
+  "Rows are ordered by average-linkage clustering (1 - Pearson r) of the imputed",
+  "matrix, for display only."
+)
+overviews <- imap(row_groups, \(rows, group) {
+  term_grid <- \(term, value) {
+    as_grid(filter(model, term == .env$term), rows, traits, "trait", value)
+  }
+  model_maps <- heat(term_grid("within", \(d) d$t), "Within-person t", c(-t_limit, 0, t_limit),
+    "t"
+  ) +
+    heat(term_grid("between", \(d) d$t), "Between-person t", c(-t_limit, 0, t_limit), NULL) +
+    heat(term_grid("within", \(d) status_of(d$p, d$fdr)), "Within: p and BH q") +
+    heat(term_grid("between", \(d) status_of(d$p, d$fdr)), "Between: p and BH q",
+      row_names = TRUE
+    )
+  model_page <- heatmap_page(model_maps, sprintf("Sample model overview: %s", group), paste(
+    sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
+    "Moderated t of the within and between terms, abundance ~ timepoint + between + within,",
+    sprintf("subject blocked. Colours stop at the 99th percentile of |t|, %.2g.", t_limit),
+    row_order, "Grey: not tested. Table: c_data/04_associate.xlsx, model."
+  ))
+  window_pages <- map(names(windows), \(w) {
+    d <- filter(change_score, window == w)
+    maps <- heat(as_grid(d, rows, outcomes, "outcome", \(d) d$rho),
+      "Spearman rho, both arms pooled", c(-1, 0, 1), "rho"
+    ) +
+      heat(as_grid(d, rows, outcomes, "outcome", \(d) status_of(d$p, d$fdr)), "p and BH q",
+        row_names = TRUE
+      )
+    heatmap_page(maps, sprintf("Change score overview, %s window: %s", w, group), paste(
+      sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
+      sprintf(
+        "Spearman rho between the %s (%s) and each outcome.", value_label, window_axis[[w]]
+      ),
+      row_order, "Grey: not tested. Table: c_data/04_associate.xlsx, change_score."
+    ))
+  })
+  c(list(model_page), window_pages)
+}) |>
+  list_flatten()
+
+# Grids: every p < 0.05 hit, strongest first (p, then |t| or |rho|, then feature ID).
 trait_samples <- map(set_names(traits), \(trait) filter(samples, !is.na(.data[[trait]])))
 seen_in <- \(feature, trait) !is.na(values[feature, trait_samples[[trait]]$sample_id])
 model_hits <- model |>
@@ -250,9 +361,10 @@ model_hits <- model |>
     n_subjects = map2_int(feature, trait, \(f, tr) {
       n_distinct(trait_samples[[tr]]$subject[seen_in(f, tr)])
     }),
+    name = label,
     panel = sprintf(
-      "%s\n%s %.3g  p %.2g  q %.2g\n%d biopsies, %d subjects", label, term,
-      effect, p, fdr, n_biopsies, n_subjects
+      "%s\n%s %.3g  p %.2g  q %.2g\n%d biopsies, %d subjects", name, term, effect, p, fdr,
+      n_biopsies, n_subjects
     )
   ) |>
   arrange(match(trait, traits), desc(term), p, desc(abs(t)), feature) |>
@@ -282,11 +394,7 @@ model_page <- function(hits) {
     scale_shape_manual(values = c(T1 = 1, T2 = 16), name = NULL) +
     labs(
       title = sprintf("%s, %s-person term", trait, term),
-      subtitle = sprintf(
-        "%d of %d %ss at p < 0.05, %d at BH < 0.05. Page %d of %d.",
-        info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05, hits$page[1],
-        hits$n_pages[1]
-      ),
+      subtitle = counts_line(info, feature_noun, hits),
       x = sprintf("%s at the biopsy (%s)", trait, unit_of[[trait]]), y = value_label,
       caption = stringr::str_wrap(width = 160, paste(
         "limma, abundance ~ timepoint + between + within, subject blocked, on the T1 and T2",
@@ -305,10 +413,13 @@ arm_text <- by_arm |>
   summarise(caption = paste(text, collapse = "\n"), .by = c(window, outcome, feature))
 change_hits <- change_score |>
   filter(p < 0.05) |>
-  mutate(panel = sprintf(
-    "%s vs %s (%s)\nrho %+.2f  p %.2g  q %.2g  n %d", label, outcome,
-    outcome_unit[outcome], rho, p, fdr, n_subjects
-  )) |>
+  mutate(
+    name = label,
+    panel = sprintf(
+      "%s vs %s (%s)\nrho %+.2f  p %.2g  q %.2g  n %d", name, outcome, outcome_unit[outcome],
+      rho, p, fdr, n_subjects
+    )
+  ) |>
   arrange(match(window, names(windows)), p, desc(abs(rho)), feature, outcome) |>
   paginate("window")
 change_page <- function(hits) {
@@ -338,11 +449,7 @@ change_page <- function(hits) {
     scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
     labs(
       title = sprintf("Change score, %s window", w),
-      subtitle = sprintf(
-        "%d of %d %s-outcome pairs at p < 0.05, %d at BH < 0.05. Page %d of %d.",
-        info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05, hits$page[1],
-        hits$n_pages[1]
-      ),
+      subtitle = counts_line(info, "feature-outcome pairs", hits),
       x = sprintf("%s, %s", value_label, window_axis[[w]]), y = "outcome (unit in header)",
       caption = stringr::str_wrap(width = 160, paste(
         "One point per subject. Lines are a least-squares fit per arm, drawn as a guide; the",
@@ -359,103 +466,6 @@ change_page <- function(hits) {
 model_pages <- map(split(model_hits, model_hits$pdf_page), model_page)
 change_pages <- map(split(change_hits, change_hits$pdf_page), change_page)
 
-# Overviews: every feature by trait (sample model t) and by outcome (change-score rho, one page
-# per window). Each effect map sits beside a status map; grey cells were not tested.
-ht_opt$message <- FALSE
-status_of <- \(p, fdr) {
-  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
-}
-status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
-status_legend <- Legend(
-  labels = c(names(status_colours), "not tested"), title = "status",
-  legend_gp = gpar(fill = c(status_colours, "grey80"))
-)
-diverging <- c("#5E3C99", "white", "#E66101")
-cell_grid <- function(d, rows, cols, col_var, value) {
-  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
-  d <- filter(d, feature %in% rows, .data[[col_var]] %in% cols)
-  m[cbind(d$feature, d[[col_var]])] <- value(d)
-  m
-}
-body <- function(m, name, col, title, legend_at = NULL, legend = TRUE, names = FALSE) {
-  rows <- rownames(m)
-  Heatmap(m,
-    name = name, col = col, na_col = "grey80", heatmap_legend_param = list(at = legend_at),
-    show_heatmap_legend = legend, cluster_rows = FALSE, cluster_columns = FALSE,
-    show_row_names = names && length(rows) <= 80,
-    row_labels = gsub("\n", " ", feature_label[rows]),
-    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
-    column_names_gp = gpar(fontsize = 7), column_title = title,
-    column_title_gp = gpar(fontsize = 8), use_raster = length(rows) > 200
-  )
-}
-overview <- function(maps, title, caption) {
-  list(title = title, draw = function() {
-    draw(maps,
-      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
-      merge_legend = TRUE, heatmap_legend_list = list(status_legend),
-      padding = unit(c(14, 4, 4, 4), "mm")
-    )
-    grid.text(stringr::str_wrap(caption, 190),
-      x = unit(4, "mm"), y = unit(3, "mm"),
-      just = c("left", "bottom"), gp = gpar(fontsize = 7)
-    )
-  })
-}
-t_cap <- unname(quantile(abs(model$t), 0.99, na.rm = TRUE))
-model_overview <- function(rows, group) {
-  t_colours <- circlize::colorRamp2(c(-t_cap, 0, t_cap), diverging)
-  term_grid <- \(term, value) {
-    cell_grid(filter(model, term == .env$term), rows, traits, "trait", value)
-  }
-  maps <- body(term_grid("within", \(d) d$t), "t", t_colours, "Within-person t",
-    legend_at = signif(c(-t_cap, 0, t_cap), 2)
-  ) +
-    body(term_grid("between", \(d) d$t), "t, between", t_colours, "Between-person t",
-      legend = FALSE
-    ) +
-    body(term_grid("within", \(d) status_of(d$p, d$fdr)), "status, within", status_colours,
-      "Within: p and BH q",
-      legend = FALSE
-    ) +
-    body(term_grid("between", \(d) status_of(d$p, d$fdr)), "status, between", status_colours,
-      "Between: p and BH q",
-      legend = FALSE, names = TRUE
-    )
-  overview(maps, sprintf("Sample model overview: %s", group), paste(
-    sprintf("All %s %ss, one row each.", format(length(rows), big.mark = ","), feature_noun),
-    "Moderated t of the within and between terms, abundance ~ timepoint + between + within,",
-    sprintf("subject blocked. Colours stop at the 99th percentile of |t|, %.2g.", t_cap),
-    "Rows are ordered by average-linkage clustering (1 - Pearson r) of the",
-    "imputed matrix, for display only.",
-    "Grey: not tested. Table: c_data/04_associate.xlsx, model."
-  ))
-}
-change_overview <- function(rows, group, window) {
-  d <- filter(change_score, window == .env$window)
-  maps <- body(cell_grid(d, rows, outcomes, "outcome", \(d) d$rho), "rho",
-    circlize::colorRamp2(c(-1, 0, 1), diverging), "Spearman rho, both arms pooled",
-    legend_at = c(-1, 0, 1)
-  ) +
-    body(cell_grid(d, rows, outcomes, "outcome", \(d) status_of(d$p, d$fdr)), "status",
-      status_colours, "p and BH q",
-      legend = FALSE, names = TRUE
-    )
-  overview(maps, sprintf("Change score overview, %s window: %s", window, group), paste(
-    sprintf("All %s %ss, one row each.", format(length(rows), big.mark = ","), feature_noun),
-    sprintf(
-      "Spearman rho between the %s (%s) and each outcome.", value_label, window_axis[[window]]
-    ),
-    "Rows are ordered by average-linkage clustering (1 - Pearson r) of the",
-    "imputed matrix, for display only.",
-    "Grey: not tested. Table: c_data/04_associate.xlsx, change_score."
-  ))
-}
-overviews <- imap(row_groups, \(rows, group) {
-  c(list(model_overview(rows, group)), map(names(windows), \(w) change_overview(rows, group, w)))
-}) |>
-  list_flatten()
-
 plot_index <- bind_rows(
   tibble(
     analysis = "overview", label = map_chr(overviews, "title"), pdf_page = seq_along(overviews)
@@ -470,45 +480,34 @@ plot_index <- bind_rows(
   )
 )
 stopifnot(
-  !anyDuplicated(select(filter(plot_index, analysis != "overview"), -label, -pdf_page, -position)),
-  max(plot_index$pdf_page) == length(overviews) + length(model_pages) + length(change_pages),
-  nrow(anti_join(filter(model, p < 0.05), model_hits, by = c("trait", "term", "feature"))) == 0,
-  nrow(anti_join(filter(change_score, p < 0.05), change_hits,
-    by = c("window", "outcome", "feature")
-  )) == 0,
   nrow(model_hits) == sum(model$p < 0.05, na.rm = TRUE),
-  nrow(change_hits) == sum(change_score$p < 0.05)
+  nrow(change_hits) == sum(change_score$p < 0.05),
+  !anyDuplicated(select(filter(plot_index, !is.na(feature)), -label, -pdf_page, -position)),
+  max(plot_index$pdf_page) == length(overviews) + length(model_pages) + length(change_pages)
 )
 
 saveRDS(list(change_score = change_score, model = model), file.path(out, "associate.rds"),
   compress = "xz"
 )
+
 pdf(file.path(figures, "04_associate_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
 walk(c(model_pages, change_pages), print)
 invisible(dev.off())
 
-# The within-arm table runs to hundreds of thousands of rows; the workbook keeps p < 0.05.
-sheets <- list(
-  counts = counts,
-  model = arrange(model, trait, term, p),
-  change_score = arrange(change_score, window, outcome, p),
-  change_score_by_arm = filter(by_arm, p < 0.05),
-  plot_index = plot_index,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+write_workbook(
+  list(
+    counts = counts, model = arrange(model, trait, term, p),
+    change_score = arrange(change_score, window, outcome, p),
+    change_score_by_arm = filter(by_arm, p < 0.05),
+    plot_index = plot_index
   ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  c(
+    "Tested, p < 0.05 and BH < 0.05 counts per term and trait, and per window and outcome.",
+    "Sample model: effect per trait unit, t, p and BH FDR per protein, trait and term.",
+    "Change score: pooled Spearman rho, p and BH FDR per protein, window and outcome.",
+    "Change score within each arm, exact p, rows with p < 0.05.",
+    "PDF page of each overview, and page and panel position of every p < 0.05 row."
+  ),
+  file.path(out, "04_associate.xlsx")
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
-  "Tested, p < 0.05 and BH < 0.05 counts per model term and trait, and per window and outcome.",
-  "Sample model: effect per trait unit, t, p and BH FDR per protein, trait and term.",
-  "Change score: pooled Spearman rho, p and BH FDR per protein, window and outcome.",
-  "Change score within each arm, exact p, rows with p < 0.05.",
-  "PDF page of each overview, and page and panel position of every p < 0.05 row.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "04_associate.xlsx"))
