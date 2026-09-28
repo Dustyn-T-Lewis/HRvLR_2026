@@ -13,9 +13,9 @@ suppressPackageStartupMessages({
   library(purrr)
   library(tibble)
   library(ggplot2)
-  library(writexl)
   library(grid)
   library(ComplexHeatmap)
+  library(writexl)
 })
 
 stage <- here("03_Pathway_Enrichment", "03_Classify")
@@ -129,222 +129,219 @@ counts <- auc |>
     .after = n_negative
   )
 
-page_theme <- theme_minimal(base_size = 9) +
-  theme(
-    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
-    plot.caption = element_text(hjust = 0)
-  )
-page_labels <- function(info, page, n_pages, caption) {
-  labs(
-    title = info$task_label,
-    subtitle = sprintf(
-      "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.",
-      info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05, page, n_pages
-    ),
-    caption = caption
-  )
-}
-# Blank slots keep a short last page on the same 3 x 4 panel size.
-slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
-# Paired tasks: each subject's two biopsies joined by a line.
-paired_page <- function(hits, spec, info, page, n_pages) {
-  points <- map2(hits$feature, hits$panel, \(id, panel) {
-    tibble(
-      panel = panel, subject = colnames(spec$positive),
-      before = spec$negative[id, ], after = spec$positive[id, ]
-    )
-  }) |>
-    list_rbind() |>
-    filter(!is.na(before), !is.na(after)) |>
-    pivot_longer(c(before, after), names_to = "biopsy") |>
-    mutate(
-      biopsy = factor(if_else(biopsy == "before", spec$levels[1], spec$levels[2]), spec$levels),
-      panel = factor(panel, slots(hits$panel))
-    )
-  ggplot(points, aes(biopsy, value, group = subject)) +
-    geom_line(colour = "grey55") +
-    geom_point(size = 1.4) +
-    facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free_y", drop = FALSE) +
-    labs(x = NULL, y = value_label) +
-    page_labels(info, page, n_pages, sprintf(
-      paste(
-        "Wilcoxon signed-rank test on up to %d pairs; smallest attainable p %.2g. Header: median",
-        "paired change, p, BH q within task and collection, and the feature's complete pairs.",
-        "Table: c_data/03_classify.xlsx, auc."
-      ),
-      info$n_positive, info$min_p
-    )) +
-    page_theme
-}
-# Between-arm tasks: one ROC curve per feature, HR as cases.
-roc_page <- function(hits, spec, info, page, n_pages) {
-  curves <- map(hits$feature, \(id) {
-    s <- sides(spec, id)
-    pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE)
-  }) |>
-    set_names(hits$panel)
-  pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "black") +
-    geom_abline(
-      aes(intercept = 0, slope = 1),
-      data = tibble(name = hits$panel), linetype = 2, colour = "grey60"
-    ) +
-    facet_wrap(~ factor(name, levels = slots(hits$panel)), nrow = 3, ncol = 4, drop = FALSE) +
-    coord_equal() +
-    labs(x = "1 - specificity", y = "sensitivity") +
-    page_labels(info, page, n_pages, sprintf(
-      paste(
-        "HR (up to %d) against LR (up to %d); AUC above 0.5 means higher in HR. Wilcoxon rank-sum",
-        "test; smallest attainable p %.2g. Header: AUC, p, BH q within task and collection,",
-        "and the feature's n.",
-        "Table: c_data/03_classify.xlsx, auc."
-      ),
-      info$n_positive, info$n_negative, info$min_p
-    )) +
-    page_theme
-}
-
-# Overview: every feature by task. Median paired change and AUC keep their own colour scales;
-# the status map marks p < 0.05 and BH < 0.05, and grey cells were not tested.
-status_of <- \(p, fdr) {
-  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
-}
-status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
+# Heatmap and workbook helpers, the same in every contrasts, classify and associate script.
+# Display only: row order, colour limits and centring touch no test.
 ht_opt$message <- FALSE
+diverging <- c("#5E3C99", "white", "#E66101")
+status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
 status_legend <- Legend(
   labels = c(names(status_colours), "not tested"), title = "status",
   legend_gp = gpar(fill = c(status_colours, "grey80"))
 )
-diverging <- c("#5E3C99", "white", "#E66101")
-change_cap <- unname(quantile(abs(auc$median_change), 0.99, na.rm = TRUE))
-task_grid <- function(rows, cols, value) {
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+# Colours stop at the 99th percentile of |x| so a few extremes do not wash out the rest.
+cap <- \(x) unname(quantile(abs(x), 0.99, na.rm = TRUE))
+# Long results to a feature-by-column matrix; untested cells stay NA and draw grey.
+as_grid <- function(d, rows, cols, col, value) {
   m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
-  d <- filter(auc, feature %in% rows, task %in% cols)
-  m[cbind(d$feature, d$task)] <- value(d)
+  d <- filter(d, feature %in% rows, .data[[col]] %in% cols)
+  m[cbind(d$feature, d[[col]])] <- value(d)
   m
 }
-overview_page <- function(rows, group) {
-  paired_tasks <- names(tasks)[map_lgl(tasks, "paired")]
-  body <- function(m, name, col, title, legend_at = NULL, names_shown = FALSE) {
-    Heatmap(m,
-      name = name, col = col, na_col = "grey80", heatmap_legend_param = list(at = legend_at),
-      show_heatmap_legend = !names_shown, cluster_rows = FALSE,
-      cluster_columns = FALSE, show_row_names = names_shown && length(rows) <= 80,
-      row_labels = gsub("\n", " ", feature_label[rows]),
-      row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
-      column_labels = map_chr(tasks[colnames(m)], "label"), column_names_gp = gpar(fontsize = 7),
-      column_title = title, column_title_gp = gpar(fontsize = 8),
-      use_raster = length(rows) > 200
-    )
-  }
-  maps <- body(
-    task_grid(rows, paired_tasks, \(d) d$median_change), paste("median change,", value_label),
-    circlize::colorRamp2(c(-change_cap, 0, change_cap), diverging), "Median paired change",
-    signif(c(-change_cap, 0, change_cap), 2)
-  ) +
-    body(
-      task_grid(rows, setdiff(names(tasks), paired_tasks), \(d) d$auc), "AUC",
-      circlize::colorRamp2(c(0, 0.5, 1), diverging), "AUC, HR against LR", c(0, 0.5, 1)
-    ) +
-    body(
-      task_grid(rows, names(tasks), \(d) status_of(d$p, d$fdr)), "status", status_colours,
-      "Wilcoxon p and BH q",
-      names_shown = TRUE
-    )
-  caption <- paste(
-    sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
-    "Rows are ordered within collection by average-linkage clustering (1 - Pearson r) for",
-    "display only.",
-    sprintf("Median change colours stop at the 99th percentile of |change|, %.2g.", change_cap),
-    "Grey: not tested. Table: c_data/03_classify.xlsx, auc."
+# An effect map on a diverging scale when breaks are given, otherwise a status map.
+heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
+                 column_names_gp = gpar(fontsize = 7), ...) {
+  rows <- rownames(m)
+  Heatmap(m,
+    name = title, na_col = "grey80",
+    col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
+    show_heatmap_legend = !is.null(breaks) && !is.null(legend),
+    heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
+    cluster_rows = FALSE, cluster_columns = FALSE, column_title = title,
+    column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
+    show_row_names = row_names && length(rows) <= 80,
+    row_labels = gsub("\n", " ", feature_label[rows]),
+    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
+    use_raster = length(rows) > 200, ...
   )
-  function() {
+}
+heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
+  list(title = title, draw = function() {
     draw(maps,
-      column_title = sprintf("Classification overview: %s", group),
-      column_title_gp = gpar(fontsize = 11, fontface = "bold"), merge_legend = TRUE,
-      heatmap_legend_list = list(status_legend),
-      padding = unit(c(14, 4, 4, 4), "mm")
+      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
+      merge_legend = TRUE, heatmap_legend_list = legends, padding = unit(c(14, 4, 4, 4), "mm")
     )
     grid.text(stringr::str_wrap(caption, 190),
-      x = unit(4, "mm"), y = unit(3, "mm"),
-      just = c("left", "bottom"), gp = gpar(fontsize = 7)
+      x = unit(4, "mm"), y = unit(3, "mm"), just = c("left", "bottom"), gp = gpar(fontsize = 7)
     )
-  }
+  })
 }
-overviews <- imap(row_groups, overview_page)
+write_workbook <- function(sheets, holds, file) {
+  sheets <- c(sheets, list(
+    input_manifest = tibble(
+      input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+    ),
+    package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+      as_tibble() |>
+      select(package, version = loadedversion, source)
+  ))
+  holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
+  write_xlsx(c(list(read_me = tibble(sheet = names(sheets), holds = holds)), sheets), file)
+}
 
-# Every p < 0.05 hit, strongest first: p, then the larger effect, then feature ID.
+# Grid helpers, the same in every classify and associate script. Twelve panels to a page; blank
+# slots keep a short last page at the same panel size.
+slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
+paginate <- function(hits, by) {
+  hits |>
+    mutate(
+      page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
+      position = (row_number() - 1) %% 12 + 1, .by = all_of(by)
+    ) |>
+    mutate(pdf_page = consecutive_id(pick(all_of(by)), page))
+}
+page_theme <- theme_minimal(base_size = 9) +
+  theme(
+    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0), legend.position = "top"
+  )
+counts_line <- \(info, noun, hits) {
+  sprintf(
+    "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.", info$n_nominal, info$n_tested,
+    noun, info$n_fdr_05, hits$page[1], hits$n_pages[1]
+  )
+}
+
+# Overview: every feature by task, median paired change and AUC each on its own scale.
+paired_tasks <- names(tasks)[map_lgl(tasks, "paired")]
+task_labels <- map_chr(tasks, "label")
+change_limit <- cap(auc$median_change)
+overviews <- imap(row_groups, \(rows, group) {
+  task_grid <- \(cols, value) as_grid(auc, rows, cols, "task", value)
+  between <- setdiff(names(tasks), paired_tasks)
+  maps <- heat(task_grid(paired_tasks, \(d) d$median_change), "Median paired change",
+    c(-change_limit, 0, change_limit), paste("median change,", value_label),
+    column_labels = task_labels[paired_tasks]
+  ) +
+    heat(task_grid(between, \(d) d$auc), "AUC, HR against LR", c(0, 0.5, 1), "AUC",
+      column_labels = task_labels[between]
+    ) +
+    heat(task_grid(names(tasks), \(d) status_of(d$p, d$fdr)), "Wilcoxon p and BH q",
+      row_names = TRUE, column_labels = task_labels
+    )
+  heatmap_page(maps, sprintf("Classification overview: %s", group), paste(
+    sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
+    "Rows are ordered within collection by average-linkage clustering (1 - Pearson r)",
+    "of singscore, for display only.",
+    sprintf("Median change colours stop at the 99th percentile of |change|, %.2g.", change_limit),
+    "Grey: not tested. Table: c_data/03_classify.xlsx, auc."
+  ))
+})
+
+# Grids: every p < 0.05 hit, strongest first (p, then the larger effect, then feature ID).
+# Within-arm tasks join each subject's two biopsies; HR-vs-LR tasks draw an ROC curve.
+task_counts <- counts |>
+  summarise(
+    across(c(task_label, paired, n_positive, n_negative, min_p), first),
+    across(c(n_tested, n_nominal, n_fdr_05), sum), .by = task
+  )
 hits <- auc |>
   filter(p < 0.05) |>
   mutate(
     task = factor(task, names(tasks)),
-    effect = if_else(paired, sprintf("median change %+.2f", median_change),
-      sprintf("AUC %.2f", auc)
-    ),
-    n_text = if_else(paired, sprintf("n pairs %d", n_positive),
-      sprintf("HR %d, LR %d", n_positive, n_negative)
-    ),
-    panel = sprintf(
-      "%s: %s\n%s  p %.2g  q %.2g\n%s", collection, panel_label(label), effect, p, fdr, n_text
+    name = paste0(collection, ": ", panel_label(label)),
+    panel = if_else(paired,
+      sprintf(
+        "%s\nmedian change %+.2f  p %.2g  q %.2g\nn pairs %d", name, median_change, p, fdr,
+        n_positive
+      ),
+      sprintf(
+        "%s\nAUC %.2f  p %.2g  q %.2g\nHR %d, LR %d", name, auc, p, fdr, n_positive, n_negative
+      )
     )
   ) |>
   arrange(task, p, desc(abs(if_else(paired, median_change, auc - 0.5))), feature) |>
-  mutate(
-    page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
-    position = (row_number() - 1) %% 12 + 1, .by = task
-  )
-pages <- hits |>
-  group_by(task, page) |>
-  group_map(\(page_hits, key) {
-    spec <- tasks[[as.character(key$task)]]
-    info <- counts |>
-      filter(task == as.character(key$task)) |>
-      summarise(
-        across(c(task_label, paired, n_positive, n_negative, min_p), first),
-        across(c(n_tested, n_nominal, n_fdr_05), sum)
+  paginate("task")
+task_page <- function(hits) {
+  spec <- tasks[[as.character(hits$task[1])]]
+  info <- filter(task_counts, task == as.character(hits$task[1]))
+  panels <- slots(hits$panel)
+  if (spec$paired) {
+    points <- map2(hits$feature, hits$panel, \(id, panel) {
+      tibble(
+        panel, subject = colnames(spec$positive),
+        before = spec$negative[id, ], after = spec$positive[id, ]
       )
-    draw <- if (spec$paired) paired_page else roc_page
-    draw(page_hits, spec, info, key$page, page_hits$n_pages[1])
-  })
+    }) |>
+      list_rbind() |>
+      filter(!is.na(before), !is.na(after)) |>
+      pivot_longer(c(before, after), names_to = "biopsy") |>
+      mutate(
+        biopsy = factor(spec$levels[match(biopsy, c("before", "after"))], spec$levels),
+        panel = factor(panel, panels)
+      )
+    plot <- ggplot(points, aes(biopsy, value, group = subject)) +
+      geom_line(colour = "grey55") +
+      geom_point(size = 1.4) +
+      facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free_y", drop = FALSE) +
+      labs(x = NULL, y = value_label, caption = sprintf(paste(
+        "Wilcoxon signed-rank test on up to %d pairs; smallest attainable p %.2g. Header: median",
+        "paired change, p, BH q within task and collection,",
+        "and the feature's complete pairs.",
+        "Table: c_data/03_classify.xlsx, auc."
+      ), info$n_positive, info$min_p))
+  } else {
+    curves <- map(hits$feature, \(id) {
+      s <- sides(spec, id)
+      pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE)
+    }) |>
+      set_names(hits$panel)
+    plot <- pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "black") +
+      geom_abline(
+        aes(intercept = 0, slope = 1),
+        data = tibble(name = hits$panel), linetype = 2, colour = "grey60"
+      ) +
+      facet_wrap(~ factor(name, levels = panels), nrow = 3, ncol = 4, drop = FALSE) +
+      coord_equal() +
+      labs(x = "1 - specificity", y = "sensitivity", caption = sprintf(paste(
+        "HR (up to %d) against LR (up to %d); AUC above 0.5 means higher in HR. Wilcoxon rank-sum",
+        "test; smallest attainable p %.2g. Header: AUC, p, BH q within task and collection,",
+        "and the feature's n.",
+        "Table: c_data/03_classify.xlsx, auc."
+      ), info$n_positive, info$n_negative, info$min_p))
+  }
+  plot +
+    labs(title = info$task_label, subtitle = counts_line(info, feature_noun, hits)) +
+    page_theme
+}
+pages <- map(split(hits, hits$pdf_page), task_page)
+
 plot_index <- bind_rows(
-  tibble(
-    task = "overview", collection = names(overviews), label = names(overviews),
-    pdf_page = seq_along(overviews)
-  ),
-  hits |>
-    mutate(
-      task = as.character(task),
-      pdf_page = length(overviews) + match(paste(task, page), unique(paste(task, page)))
-    ) |>
-    select(task, collection, feature, label, pdf_page, position)
+  tibble(task = "overview", label = map_chr(overviews, "title"), pdf_page = seq_along(overviews)),
+  transmute(hits,
+    task = as.character(task), collection, feature, label, pdf_page = pdf_page + length(overviews),
+    position
+  )
 )
 stopifnot(
-  length(pages) == nrow(distinct(hits, task, page)),
-  !anyDuplicated(plot_index[c("task", "collection", "feature")]),
-  nrow(anti_join(filter(auc, p < 0.05), plot_index, by = c("task", "collection", "feature"))) == 0,
+  nrow(hits) == sum(auc$p < 0.05, na.rm = TRUE),
+  !anyDuplicated(select(filter(plot_index, !is.na(feature)), -label, -pdf_page, -position)),
   max(plot_index$pdf_page) == length(overviews) + length(pages)
 )
 
 pdf(file.path(figures, "03_classify_figures.pdf"), width = 11, height = 8.5)
-walk(overviews, \(draw_page) draw_page())
+walk(overviews, \(page) page$draw())
 walk(pages, print)
 invisible(dev.off())
 
-sheets <- list(
-  counts = counts,
-  auc = arrange(auc, task, collection, p),
-  plot_index = plot_index,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+write_workbook(
+  list(counts = counts, auc = arrange(auc, task, collection, p), plot_index = plot_index),
+  c(
+    "Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts.",
+    "Per set and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
+    "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row."
   ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  file.path(out, "03_classify.xlsx")
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
-  "Per task and collection: pairing, n per side, smallest p, tested, p < 0.05 and BH counts.",
-  "Per set and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
-  "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "03_classify.xlsx"))
