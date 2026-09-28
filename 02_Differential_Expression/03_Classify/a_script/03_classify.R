@@ -65,7 +65,7 @@ tasks <- list(
   Training_LR = within_arm("T1", "T2", "LR", "Training, LR (T1 to T2)"),
   Acute_HR = within_arm("T2", "T3", "HR", "Acute bout, HR (T2 to T3)"),
   Acute_LR = within_arm("T2", "T3", "LR", "Acute bout, LR (T2 to T3)"),
-  Baseline_HRvLR = between_arm(by_subject("T1"), "HR vs LR at T1 (floor)"),
+  Baseline_HRvLR = between_arm(by_subject("T1"), "HR vs LR at T1"),
   Trained_HRvLR = between_arm(by_subject("T2"), "HR vs LR at T2"),
   Training_change_HRvLR = between_arm(change("T1", "T2"), "HR vs LR, training change"),
   Acute_change_HRvLR = between_arm(change("T2", "T3"), "HR vs LR, acute change")
@@ -136,6 +136,8 @@ page_labels <- function(info, page, n_pages, caption) {
     caption = caption
   )
 }
+# Blank slots keep a short last page on the same 3 x 4 panel size.
+slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
 # Paired tasks: each subject's two biopsies joined by a line.
 paired_page <- function(hits, spec, info, page, n_pages) {
   points <- map2(hits$feature, hits$panel, \(id, panel) {
@@ -149,17 +151,18 @@ paired_page <- function(hits, spec, info, page, n_pages) {
     pivot_longer(c(before, after), names_to = "biopsy") |>
     mutate(
       biopsy = factor(if_else(biopsy == "before", spec$levels[1], spec$levels[2]), spec$levels),
-      panel = factor(panel, hits$panel)
+      panel = factor(panel, slots(hits$panel))
     )
   ggplot(points, aes(biopsy, value, group = subject)) +
     geom_line(colour = "grey55") +
     geom_point(size = 1.4) +
-    facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free_y") +
+    facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free_y", drop = FALSE) +
     labs(x = NULL, y = value_label) +
     page_labels(info, page, n_pages, sprintf(
       paste(
-        "Wilcoxon signed-rank test on %d pairs; smallest attainable p %.2g. Header: median",
-        "paired change, p, and BH q within task. Table: c_data/03_classify.xlsx, auc."
+        "Wilcoxon signed-rank test on up to %d pairs; smallest attainable p %.2g. Header: median",
+        "paired change, p, BH q within task, and the feature's complete pairs.",
+        "Table: c_data/03_classify.xlsx, auc."
       ),
       info$n_positive, info$min_p
     )) +
@@ -172,15 +175,18 @@ roc_page <- function(hits, spec, info, page, n_pages) {
     pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE)
   }) |>
     set_names(hits$panel)
-  pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "#B2182B") +
-    geom_abline(linetype = 2, colour = "grey60") +
-    facet_wrap(~ factor(name, levels = hits$panel), nrow = 3, ncol = 4) +
+  pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "black") +
+    geom_abline(
+      aes(intercept = 0, slope = 1),
+      data = tibble(name = hits$panel), linetype = 2, colour = "grey60"
+    ) +
+    facet_wrap(~ factor(name, levels = slots(hits$panel)), nrow = 3, ncol = 4, drop = FALSE) +
     coord_equal() +
     labs(x = "1 - specificity", y = "sensitivity") +
     page_labels(info, page, n_pages, sprintf(
       paste(
-        "HR (%d) against LR (%d); AUC above 0.5 means higher in HR. Wilcoxon rank-sum test;",
-        "smallest attainable p %.2g. Header: AUC, p, and BH q within task.",
+        "HR (up to %d) against LR (up to %d); AUC above 0.5 means higher in HR. Wilcoxon rank-sum",
+        "test; smallest attainable p %.2g. Header: AUC, p, BH q within task, and the feature's n.",
         "Table: c_data/03_classify.xlsx, auc."
       ),
       info$n_positive, info$n_negative, info$min_p
@@ -188,17 +194,24 @@ roc_page <- function(hits, spec, info, page, n_pages) {
     page_theme
 }
 
+# Every p < 0.05 hit, strongest first: p, then the larger effect, then feature ID.
 hits <- auc |>
-  filter(p < 0.05, task != "Baseline_HRvLR") |>
+  filter(p < 0.05) |>
   mutate(
     task = factor(task, names(tasks)),
     effect = if_else(paired, sprintf("median change %+.2f", median_change),
       sprintf("AUC %.2f", auc)
     ),
-    panel = sprintf("%s\n%s  p %.2g  q %.2g", label, effect, p, fdr)
+    n_text = if_else(paired, sprintf("n pairs %d", n_positive),
+      sprintf("HR %d, LR %d", n_positive, n_negative)
+    ),
+    panel = sprintf("%s\n%s  p %.2g  q %.2g\n%s", label, effect, p, fdr, n_text)
   ) |>
-  arrange(task, p) |>
-  mutate(page = (row_number() - 1) %/% 12 + 1, n_pages = max(page), .by = task)
+  arrange(task, p, desc(abs(if_else(paired, median_change, auc - 0.5))), feature) |>
+  mutate(
+    page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
+    position = (row_number() - 1) %% 12 + 1, .by = task
+  )
 pages <- hits |>
   group_by(task, page) |>
   group_map(\(page_hits, key) {
@@ -207,7 +220,16 @@ pages <- hits |>
     draw <- if (spec$paired) paired_page else roc_page
     draw(page_hits, spec, info, key$page, page_hits$n_pages[1])
   })
-stopifnot(length(pages) == nrow(distinct(hits, task, page)))
+plot_index <- hits |>
+  mutate(pdf_page = match(paste(task, page), unique(paste(task, page)))) |>
+  select(task, feature, label, pdf_page, position)
+stopifnot(
+  length(pages) == nrow(distinct(hits, task, page)),
+  !anyDuplicated(plot_index[c("task", "feature")]),
+  nrow(anti_join(filter(auc, p < 0.05), mutate(plot_index, task = as.character(task)),
+    by = c("task", "feature")
+  )) == 0
+)
 
 pdf(file.path(figures, "03_classify_figures.pdf"), width = 11, height = 8.5)
 walk(pages, print)
@@ -216,6 +238,7 @@ invisible(dev.off())
 sheets <- list(
   counts = counts,
   auc = arrange(auc, task, p),
+  plot_index = plot_index,
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
@@ -226,6 +249,7 @@ sheets <- list(
 read_me <- tibble(sheet = names(sheets), holds = c(
   "Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts.",
   "Per protein and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
+  "PDF page and panel position (1 to 12) of every p < 0.05 row of auc.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))
