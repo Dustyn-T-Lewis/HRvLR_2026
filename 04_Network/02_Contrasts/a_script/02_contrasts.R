@@ -14,21 +14,21 @@
 
 suppressPackageStartupMessages({
   library(here)
+  library(limma)
   library(dplyr)
-  library(tibble)
   library(tidyr)
   library(purrr)
+  library(tibble)
   library(ggplot2)
   library(grid)
   library(ComplexHeatmap)
-  library(limma)
+  library(writexl)
 })
 
 stage <- here("04_Network", "02_Contrasts")
 out <- file.path(stage, "c_data")
-figure_dir <- file.path(stage, "b_reports")
-for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-
+figures <- file.path(stage, "b_reports")
+for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   modules = "04_Network/01_Build_Modules/c_data/modules.rds",
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
@@ -38,12 +38,7 @@ inputs <- c(
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) {
-  stop(
-    "Run 01_Build_Modules and stage 02 first. Missing: ",
-    paste(inputs[!file.exists(paths)], collapse = ", ")
-  )
-}
+stopifnot(file.exists(paths))
 modules <- readRDS(paths[["modules"]])
 d <- readRDS(paths[["design"]])
 fit <- readRDS(paths[["fit"]])
@@ -224,41 +219,71 @@ feature_label <- set_names(module_order)
 feature_noun <- "modules"
 contrast_results <- transmute(eigengene_tests, feature = module, contrast, effect = logFC, p, fdr)
 row_groups <- list(modules = module_order)
-# Overviews: every feature across the 45 biopsies, then across the nine contrasts beside a status
-# map. Display only: row order, centring and colour limits do not touch any test.
+# Heatmap and workbook helpers, the same in every contrasts, classify and associate script.
+# Display only: row order, colour limits and centring touch no test.
 ht_opt$message <- FALSE
-status_of <- \(p, fdr) {
-  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
-}
+diverging <- c("#5E3C99", "white", "#E66101")
 status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
 status_legend <- Legend(
   labels = c(names(status_colours), "not tested"), title = "status",
   legend_gp = gpar(fill = c(status_colours, "grey80"))
 )
-diverging <- c("#5E3C99", "white", "#E66101")
-arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
-group_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-overview <- function(maps, title, caption, legends = list(status_legend)) {
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+# Colours stop at the 99th percentile of |x| so a few extremes do not wash out the rest.
+cap <- \(x) unname(quantile(abs(x), 0.99, na.rm = TRUE))
+# Long results to a feature-by-column matrix; untested cells stay NA and draw grey.
+as_grid <- function(d, rows, cols, col, value) {
+  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
+  d <- filter(d, feature %in% rows, .data[[col]] %in% cols)
+  m[cbind(d$feature, d[[col]])] <- value(d)
+  m
+}
+# An effect map on a diverging scale when breaks are given, otherwise a status map.
+heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
+                 column_title = title, column_names_gp = gpar(fontsize = 7), ...) {
+  rows <- rownames(m)
+  Heatmap(m,
+    name = title, na_col = "grey80",
+    col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
+    show_heatmap_legend = !is.null(breaks) && !is.null(legend),
+    heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
+    cluster_rows = FALSE, cluster_columns = FALSE, column_title = column_title,
+    column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
+    show_row_names = row_names && length(rows) <= 80,
+    row_labels = gsub("\n", " ", feature_label[rows]),
+    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
+    use_raster = length(rows) > 200, ...
+  )
+}
+heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
   list(title = title, draw = function() {
     draw(maps,
       column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
-      merge_legend = TRUE, heatmap_legend_list = legends,
-      padding = unit(c(14, 4, 4, 4), "mm")
+      merge_legend = TRUE, heatmap_legend_list = legends, padding = unit(c(14, 4, 4, 4), "mm")
     )
     grid.text(stringr::str_wrap(caption, 190),
-      x = unit(4, "mm"), y = unit(3, "mm"),
-      just = c("left", "bottom"), gp = gpar(fontsize = 7)
+      x = unit(4, "mm"), y = unit(3, "mm"), just = c("left", "bottom"), gp = gpar(fontsize = 7)
     )
   })
 }
-row_text <- function(rows) {
-  list(
-    show_row_names = length(rows) <= 80, row_labels = gsub("\n", " ", feature_label[rows]),
-    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5)
-  )
+write_workbook <- function(sheets, holds, file) {
+  sheets <- c(sheets, list(
+    input_manifest = tibble(
+      input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+    ),
+    package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+      as_tibble() |>
+      select(package, version = loadedversion, source)
+  ))
+  holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
+  write_xlsx(c(list(read_me = tibble(sheet = names(sheets), holds = holds)), sheets), file)
 }
 
-# Biopsy traits sit on T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
+# Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
+# sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
+arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -271,90 +296,68 @@ biopsy_traits <- trait_table |>
   )
 columns <- as_tibble(column_meta) |>
   transmute(sample_id, subject, arm = as.character(arm), timepoint = as.character(timepoint)) |>
-  mutate(group = factor(paste(arm, timepoint, sep = "_"), group_levels)) |>
+  mutate(group = factor(paste(arm, timepoint, sep = "_"), paste(
+    rep(c("HR", "LR"), each = 3), c("T1", "T2", "T3"),
+    sep = "_"
+  ))) |>
   left_join(biopsy_traits, by = c("subject", "timepoint")) |>
   left_join(select(trait_table, subject, comp_hypertrophy), by = "subject") |>
   arrange(group, subject)
 stopifnot(!anyDuplicated(columns$sample_id), setequal(columns$sample_id, colnames(sample_values)))
 grey_ramp <- \(x) circlize::colorRamp2(range(x, na.rm = TRUE), c("#F7F7F7", "#252525"))
-sample_annotation <- HeatmapAnnotation(
-  arm = columns$arm, timepoint = columns$timepoint,
+tracks <- list(
   "type I share (%)" = columns$type1_share, "fCSA mixed (um2)" = columns$fcsa_mixed,
   "mCSA (cm2)" = columns$mcsa, "leg press 1RM (kg)" = columns$leg_press_1rm,
-  "comp_hypertrophy, per subject" = columns$comp_hypertrophy,
-  col = list(
-    arm = arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25"),
-    "type I share (%)" = grey_ramp(columns$type1_share),
-    "fCSA mixed (um2)" = grey_ramp(columns$fcsa_mixed),
-    "mCSA (cm2)" = grey_ramp(columns$mcsa),
-    "leg press 1RM (kg)" = grey_ramp(columns$leg_press_1rm),
-    "comp_hypertrophy, per subject" = grey_ramp(columns$comp_hypertrophy)
+  "comp_hypertrophy, per subject" = columns$comp_hypertrophy
+)
+sample_annotation <- HeatmapAnnotation(
+  df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
+  col = c(
+    list(arm = arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
   simple_anno_size = unit(3, "mm")
 )
-sample_overview <- function(rows, group) {
+row_order <- paste(
+  "Rows follow module size."
+)
+effect_limit <- cap(contrast_results$effect)
+overviews <- imap(row_groups, \(rows, group) {
   m <- sample_values[rows, columns$sample_id, drop = FALSE]
   m <- m
-  cap <- unname(quantile(abs(m), 0.99, na.rm = TRUE))
-  maps <- exec(Heatmap, m,
-    name = "eigengene", col = circlize::colorRamp2(c(-cap, 0, cap), diverging),
-    na_col = "grey80", heatmap_legend_param = list(at = signif(c(-cap, 0, cap), 2)),
-    top_annotation = sample_annotation, column_split = columns$group,
-    cluster_rows = FALSE, cluster_columns = FALSE, cluster_column_slices = FALSE,
-    column_labels = columns$subject, column_names_gp = gpar(fontsize = 5),
-    column_title_gp = gpar(fontsize = 8), use_raster = length(rows) > 200, !!!row_text(rows)
+  limit <- cap(m)
+  biopsy_map <- heat(m, "biopsies", c(-limit, 0, limit), "eigengene",
+    row_names = TRUE, column_title = character(0), top_annotation = sample_annotation,
+    column_split = columns$group, cluster_column_slices = FALSE,
+    column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
   )
-  overview(maps, sprintf("Biopsy overview: %s", group), paste(
-    sprintf(
-      "All %s %s by %d biopsies,", format(length(rows), big.mark = ","), feature_noun, ncol(m)
-    ),
-    "grouped by arm and time point; column labels are subjects.",
-    "Fill: module eigengene.",
-    sprintf("Colours stop at the 99th percentile of |value|, %.2g.", cap),
-    "Rows follow module size.",
-    "Grey: missing."
-  ), legends = list())
-}
-effect_cap <- unname(quantile(abs(contrast_results$effect), 0.99, na.rm = TRUE))
-contrast_grid <- function(rows, value) {
-  m <- matrix(NA, length(rows), length(contrast_names), dimnames = list(rows, contrast_names))
-  d <- filter(contrast_results, feature %in% rows)
-  m[cbind(d$feature, d$contrast)] <- value(d)
-  m
-}
-contrast_overview <- function(rows, group) {
-  maps <- exec(Heatmap, contrast_grid(rows, \(d) d$effect),
-    name = "eigengene log2 FC",
-    col = circlize::colorRamp2(c(-effect_cap, 0, effect_cap), diverging),
-    na_col = "grey80", heatmap_legend_param = list(at = signif(c(-effect_cap, 0, effect_cap), 2)),
-    cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = FALSE,
-    column_names_gp = gpar(fontsize = 7), column_title = "eigengene log2 fold change",
-    column_title_gp = gpar(fontsize = 8), use_raster = length(rows) > 200
+  contrast_grid <- \(value) as_grid(contrast_results, rows, contrast_names, "contrast", value)
+  contrast_maps <- heat(contrast_grid(\(d) d$effect), "eigengene log2 fold change",
+    c(-effect_limit, 0, effect_limit), "eigengene log2 FC"
   ) +
-    exec(Heatmap, contrast_grid(rows, \(d) status_of(d$p, d$fdr)),
-      name = "status", col = status_colours, na_col = "grey80", show_heatmap_legend = FALSE,
-      cluster_rows = FALSE, cluster_columns = FALSE, column_names_gp = gpar(fontsize = 7),
-      column_title = "moderated t p and BH q", column_title_gp = gpar(fontsize = 8),
-      use_raster = length(rows) > 200, !!!row_text(rows)
-    )
-  overview(maps, sprintf("Contrast overview: %s", group), paste(
-    sprintf(
-      "All %s %s by the nine contrasts.", format(length(rows), big.mark = ","), feature_noun
-    ),
-    "Fill: eigengene fold change from limma; status: p and BH q within contrast.",
-    sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_cap),
-    "Rows follow module size.",
-    "Grey: not tested. Table: c_data/02_contrasts.xlsx, eigengene_tests."
-  ))
-}
-overviews <- imap(row_groups, \(rows, group) {
-  list(sample_overview(rows, group), contrast_overview(rows, group))
+    heat(contrast_grid(\(d) status_of(d$p, d$fdr)), "moderated t p and BH q", row_names = TRUE)
+  n_rows <- format(length(rows), big.mark = ",")
+  list(
+    heatmap_page(biopsy_map, sprintf("Biopsy overview: %s", group), paste(
+      sprintf("All %s %s by %d biopsies,", n_rows, feature_noun, ncol(m)),
+      "grouped by arm and time point; column labels are subjects.",
+      "Fill: module eigengene.",
+      sprintf("Colours stop at the 99th percentile of |value|, %.2g.", limit),
+      row_order, "Grey: missing."
+    ), legends = list()),
+    heatmap_page(contrast_maps, sprintf("Contrast overview: %s", group), paste(
+      sprintf("All %s %s by the nine contrasts.", n_rows, feature_noun),
+      "Fill: eigengene fold change from limma; status: p and BH q within contrast.",
+      sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_limit),
+      row_order, "Grey: not tested. Table: c_data/02_contrasts.xlsx, eigengene_tests."
+    ))
+  )
 }) |>
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-pdf(file.path(figure_dir, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
+pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
 walk(list(
   eigengene_figure, fry_figure, membership_contrast_figure, membership_phenotype_figure,
@@ -362,27 +365,20 @@ walk(list(
 ), print)
 invisible(dev.off())
 
-sheets <- list(
-  eigengene_tests = eigengene_tests, fry_tests = fry_tests,
-  membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
-  correlation = tibble(
-    matrix = c("eigengenes", "imputed"), correlation = c(me_correlation, fry_correlation)
+write_workbook(
+  list(
+    eigengene_tests = eigengene_tests, fry_tests = fry_tests,
+    membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
+    correlation = tibble(
+      matrix = c("eigengenes", "imputed"), correlation = c(me_correlation, fry_correlation)
+    )
   ),
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+  c(
+    "limma on module eigengenes: logFC, moderated t, p and BH FDR per contrast.",
+    "fry on each module as a protein set: direction, p and FDR per contrast.",
+    "Spearman rho between member kME and protein moderated t, per module and contrast.",
+    "Spearman rho between member kME and protein rho with each phenotype over training.",
+    "Within-subject correlation on the eigengenes and on the imputed matrix."
   ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  file.path(out, "02_contrasts.xlsx")
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
-  "limma on module eigengenes: logFC, moderated t, p and BH FDR per contrast.",
-  "fry on each module as a protein set: direction, p and FDR per contrast.",
-  "Spearman rho between member kME and protein moderated t, per module and contrast.",
-  "Spearman rho between member kME and protein rho with each phenotype over training.",
-  "Within-subject correlation on the eigengenes and on the imputed matrix.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "02_contrasts.xlsx"))
-message("wrote 02_contrasts.xlsx and 5 figures")

@@ -220,14 +220,14 @@ as_grid <- function(d, rows, cols, col, value) {
 }
 # An effect map on a diverging scale when breaks are given, otherwise a status map.
 heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
-                 column_names_gp = gpar(fontsize = 7), ...) {
+                 column_title = title, column_names_gp = gpar(fontsize = 7), ...) {
   rows <- rownames(m)
   Heatmap(m,
     name = title, na_col = "grey80",
     col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
     show_heatmap_legend = !is.null(breaks) && !is.null(legend),
     heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
-    cluster_rows = FALSE, cluster_columns = FALSE, column_title = title,
+    cluster_rows = FALSE, cluster_columns = FALSE, column_title = column_title,
     column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
     show_row_names = row_names && length(rows) <= 80,
     row_labels = gsub("\n", " ", feature_label[rows]),
