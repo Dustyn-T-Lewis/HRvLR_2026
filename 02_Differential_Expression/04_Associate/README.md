@@ -5,7 +5,7 @@ correlation per subject.
 
 | | |
 |---|---|
-| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (overview row order), `00_Input/phenotype.csv` |
 | Writes | `c_data/associate.rds`, `c_data/04_associate.xlsx`, `b_reports/04_associate_figures.pdf` |
 | Run | `Rscript 02_Differential_Expression/04_Associate/a_script/04_associate.R` |
 | Cost | about 3 min |
@@ -36,8 +36,15 @@ outcome.
 change scores. `counts` gives tested, p < 0.05 and BH < 0.05 counts for every model term and trait
 and every window and outcome.
 
-The figure PDF gives every model hit at p < 0.05 a panel (trait at the biopsy against abundance,
-one line per subject from T1 to T2), then every change-score pair at p < 0.05 a scatter
-(`ggpubr::ggscatter`, a line per arm, each arm's rho and exact p in the corner), twelve to a page,
-by p. Arm is the median split of `comp_hypertrophy`, so pooled correlations with it and with
-fibre-area change partly carry the group split; the change-score captions say so.
+The figure PDF opens with overview pages: one for the sample model (within- and between-person t for
+every trait, beside their status maps) and one per change-score window (pooled rho for every
+outcome, beside its status map). Rows follow average-linkage clustering (1 - Pearson r) of the
+imputed matrix, for display only. The grids follow. Every model hit at p < 0.05 gets a panel: trait
+at the biopsy against abundance, one line per subject from T1 to T2, and a header with the effect,
+p, BH q and the biopsies and subjects where the protein was observed. Every change-score pair at p <
+0.05 gets a scatter, one point per subject, with a least-squares line per arm drawn as a guide; the
+tests are Spearman. The header gives the pooled rho, p, BH q and subjects used, the corner each
+arm's rho and exact p. Twelve panels to a page, ordered by p, then |t| or |rho|, then ID.
+`plot_index` gives the PDF page and panel of every drawn row. Arm is the median split of
+`comp_hypertrophy`, so pooled correlations with it and with fibre-area change partly carry the group
+split; the change-score captions say so.

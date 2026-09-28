@@ -13,13 +13,18 @@ suppressPackageStartupMessages({
   library(tibble)
   library(ggplot2)
   library(writexl)
+  library(grid)
+  library(ComplexHeatmap)
 })
 
 stage <- here("02_Differential_Expression", "03_Classify")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-inputs <- c(design = "02_Differential_Expression/01_Design/c_data/design.rds")
+inputs <- c(
+  design = "02_Differential_Expression/01_Design/c_data/design.rds",
+  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds"
+)
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 dal <- readRDS(paths[["design"]])$dal
@@ -33,6 +38,12 @@ feature_label <- dal$annotation |>
   with(set_names(label, uniprot_id))
 feature_noun <- "proteins"
 value_label <- "log2 abundance"
+# Display order for the overview: average-linkage clustering on 1 - Pearson r of the imputed
+# matrix, shared by every protein overview.
+imputed <- as.matrix(readRDS(paths[["imputed"]])$data)
+row_groups <- list(
+  proteins = rownames(imputed)[hclust(as.dist(1 - cor(t(imputed))), "average")$order]
+)
 
 by_subject <- function(timepoint, arm = c("HR", "LR")) {
   rows <- filter(meta, timepoint == .env$timepoint, arm %in% .env$arm)
@@ -194,6 +205,74 @@ roc_page <- function(hits, spec, info, page, n_pages) {
     page_theme
 }
 
+# Overview: every feature by task. Median paired change and AUC keep their own colour scales;
+# the status map marks p < 0.05 and BH < 0.05, and grey cells were not tested.
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
+ht_opt$message <- FALSE
+status_legend <- Legend(
+  labels = c(names(status_colours), "not tested"), title = "status",
+  legend_gp = gpar(fill = c(status_colours, "grey80"))
+)
+diverging <- c("#5E3C99", "white", "#E66101")
+change_cap <- unname(quantile(abs(auc$median_change), 0.99, na.rm = TRUE))
+task_grid <- function(rows, cols, value) {
+  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
+  d <- filter(auc, feature %in% rows, task %in% cols)
+  m[cbind(d$feature, d$task)] <- value(d)
+  m
+}
+overview_page <- function(rows, group) {
+  paired_tasks <- names(tasks)[map_lgl(tasks, "paired")]
+  body <- function(m, name, col, title, legend_at = NULL, names_shown = FALSE) {
+    Heatmap(m,
+      name = name, col = col, na_col = "grey80", heatmap_legend_param = list(at = legend_at),
+      show_heatmap_legend = !names_shown, cluster_rows = FALSE,
+      cluster_columns = FALSE, show_row_names = names_shown && length(rows) <= 80,
+      row_labels = gsub("\n", " ", feature_label[rows]),
+      row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
+      column_labels = map_chr(tasks[colnames(m)], "label"), column_names_gp = gpar(fontsize = 7),
+      column_title = title, column_title_gp = gpar(fontsize = 8),
+      use_raster = length(rows) > 200
+    )
+  }
+  maps <- body(
+    task_grid(rows, paired_tasks, \(d) d$median_change), paste("median change,", value_label),
+    circlize::colorRamp2(c(-change_cap, 0, change_cap), diverging), "Median paired change",
+    signif(c(-change_cap, 0, change_cap), 2)
+  ) +
+    body(
+      task_grid(rows, setdiff(names(tasks), paired_tasks), \(d) d$auc), "AUC",
+      circlize::colorRamp2(c(0, 0.5, 1), diverging), "AUC, HR against LR", c(0, 0.5, 1)
+    ) +
+    body(
+      task_grid(rows, names(tasks), \(d) status_of(d$p, d$fdr)), "status", status_colours,
+      "Wilcoxon p and BH q",
+      names_shown = TRUE
+    )
+  caption <- paste(
+    sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
+    "Rows are ordered by average-linkage clustering (1 - Pearson r) for display only.",
+    sprintf("Median change colours stop at the 99th percentile of |change|, %.2g.", change_cap),
+    "Grey: not tested. Table: c_data/03_classify.xlsx, auc."
+  )
+  function() {
+    draw(maps,
+      column_title = sprintf("Classification overview: %s", group),
+      column_title_gp = gpar(fontsize = 11, fontface = "bold"), merge_legend = TRUE,
+      heatmap_legend_list = list(status_legend),
+      padding = unit(c(14, 4, 4, 4), "mm")
+    )
+    grid.text(stringr::str_wrap(caption, 190),
+      x = unit(4, "mm"), y = unit(3, "mm"),
+      just = c("left", "bottom"), gp = gpar(fontsize = 7)
+    )
+  }
+}
+overviews <- imap(row_groups, overview_page)
+
 # Every p < 0.05 hit, strongest first: p, then the larger effect, then feature ID.
 hits <- auc |>
   filter(p < 0.05) |>
@@ -220,18 +299,24 @@ pages <- hits |>
     draw <- if (spec$paired) paired_page else roc_page
     draw(page_hits, spec, info, key$page, page_hits$n_pages[1])
   })
-plot_index <- hits |>
-  mutate(pdf_page = match(paste(task, page), unique(paste(task, page)))) |>
-  select(task, feature, label, pdf_page, position)
+plot_index <- bind_rows(
+  tibble(task = "overview", label = names(overviews), pdf_page = seq_along(overviews)),
+  hits |>
+    mutate(
+      task = as.character(task),
+      pdf_page = length(overviews) + match(paste(task, page), unique(paste(task, page)))
+    ) |>
+    select(task, feature, label, pdf_page, position)
+)
 stopifnot(
   length(pages) == nrow(distinct(hits, task, page)),
   !anyDuplicated(plot_index[c("task", "feature")]),
-  nrow(anti_join(filter(auc, p < 0.05), mutate(plot_index, task = as.character(task)),
-    by = c("task", "feature")
-  )) == 0
+  nrow(anti_join(filter(auc, p < 0.05), plot_index, by = c("task", "feature"))) == 0,
+  max(plot_index$pdf_page) == length(overviews) + length(pages)
 )
 
 pdf(file.path(figures, "03_classify_figures.pdf"), width = 11, height = 8.5)
+walk(overviews, \(draw_page) draw_page())
 walk(pages, print)
 invisible(dev.off())
 
@@ -249,7 +334,7 @@ sheets <- list(
 read_me <- tibble(sheet = names(sheets), holds = c(
   "Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts.",
   "Per protein and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
-  "PDF page and panel position (1 to 12) of every p < 0.05 row of auc.",
+  "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))

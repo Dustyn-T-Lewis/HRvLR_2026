@@ -7,6 +7,8 @@ suppressPackageStartupMessages({
   library(limma)
   library(dplyr)
   library(ggplot2)
+  library(grid)
+  library(ComplexHeatmap)
   library(purrr)
   library(tibble)
   library(tidyr)
@@ -19,7 +21,8 @@ figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
-  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds"
+  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
+  phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -196,7 +199,148 @@ volcano <- results |>
   theme(legend.position = "top", plot.caption = element_text(hjust = 0))
 
 saveRDS(res, file.path(out, "fit.rds"), compress = "xz")
+sample_values <- as.matrix(fit$data)
+column_meta <- fit$metadata
+feature_label <- set_names(annotation$gene, annotation$uniprot_id)
+feature_noun <- "proteins"
+contrast_results <- transmute(results, feature = uniprot_id, contrast, effect = logFC, p, fdr)
+# Display order: average-linkage clustering on 1 - Pearson r of the imputed matrix.
+row_groups <- list(
+  proteins = rownames(abundance)[hclust(as.dist(1 - cor(t(abundance))), "average")$order]
+)
+# Overviews: every feature across the 45 biopsies, then across the nine contrasts beside a status
+# map. Display only: row order, centring and colour limits do not touch any test.
+ht_opt$message <- FALSE
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
+status_legend <- Legend(
+  labels = c(names(status_colours), "not tested"), title = "status",
+  legend_gp = gpar(fill = c(status_colours, "grey80"))
+)
+diverging <- c("#5E3C99", "white", "#E66101")
+arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
+group_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+overview <- function(maps, title, caption, legends = list(status_legend)) {
+  list(title = title, draw = function() {
+    draw(maps,
+      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
+      merge_legend = TRUE, heatmap_legend_list = legends,
+      padding = unit(c(14, 4, 4, 4), "mm")
+    )
+    grid.text(stringr::str_wrap(caption, 190),
+      x = unit(4, "mm"), y = unit(3, "mm"),
+      just = c("left", "bottom"), gp = gpar(fontsize = 7)
+    )
+  })
+}
+row_text <- function(rows) {
+  list(
+    show_row_names = length(rows) <= 80, row_labels = gsub("\n", " ", feature_label[rows]),
+    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5)
+  )
+}
+
+# Biopsy traits sit on T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
+trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
+biopsy_traits <- trait_table |>
+  select(subject, matches("_(pre|post)_")) |>
+  pivot_longer(-subject, names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*") |>
+  pivot_wider(names_from = trait) |>
+  transmute(
+    subject,
+    timepoint = if_else(when == "pre", "T1", "T2"),
+    type1_share = 100 * fibres_type1 / fibres_mixed, fcsa_mixed, mcsa, leg_press_1rm
+  )
+columns <- as_tibble(column_meta) |>
+  transmute(sample_id, subject, arm = as.character(arm), timepoint = as.character(timepoint)) |>
+  mutate(group = factor(paste(arm, timepoint, sep = "_"), group_levels)) |>
+  left_join(biopsy_traits, by = c("subject", "timepoint")) |>
+  left_join(select(trait_table, subject, comp_hypertrophy), by = "subject") |>
+  arrange(group, subject)
+stopifnot(!anyDuplicated(columns$sample_id), setequal(columns$sample_id, colnames(sample_values)))
+grey_ramp <- \(x) circlize::colorRamp2(range(x, na.rm = TRUE), c("#F7F7F7", "#252525"))
+sample_annotation <- HeatmapAnnotation(
+  arm = columns$arm, timepoint = columns$timepoint,
+  "type I share (%)" = columns$type1_share, "fCSA mixed (um2)" = columns$fcsa_mixed,
+  "mCSA (cm2)" = columns$mcsa, "leg press 1RM (kg)" = columns$leg_press_1rm,
+  "comp_hypertrophy, per subject" = columns$comp_hypertrophy,
+  col = list(
+    arm = arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25"),
+    "type I share (%)" = grey_ramp(columns$type1_share),
+    "fCSA mixed (um2)" = grey_ramp(columns$fcsa_mixed),
+    "mCSA (cm2)" = grey_ramp(columns$mcsa),
+    "leg press 1RM (kg)" = grey_ramp(columns$leg_press_1rm),
+    "comp_hypertrophy, per subject" = grey_ramp(columns$comp_hypertrophy)
+  ),
+  na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
+  simple_anno_size = unit(3, "mm")
+)
+sample_overview <- function(rows, group) {
+  m <- sample_values[rows, columns$sample_id, drop = FALSE]
+  m <- sweep(m, 1, rowMeans(m, na.rm = TRUE))
+  cap <- unname(quantile(abs(m), 0.99, na.rm = TRUE))
+  maps <- exec(Heatmap, m,
+    name = "log2 abundance, centred", col = circlize::colorRamp2(c(-cap, 0, cap), diverging),
+    na_col = "grey80", heatmap_legend_param = list(at = signif(c(-cap, 0, cap), 2)),
+    top_annotation = sample_annotation, column_split = columns$group,
+    cluster_rows = FALSE, cluster_columns = FALSE, cluster_column_slices = FALSE,
+    column_labels = columns$subject, column_names_gp = gpar(fontsize = 5),
+    column_title_gp = gpar(fontsize = 8), use_raster = length(rows) > 200, !!!row_text(rows)
+  )
+  overview(maps, sprintf("Biopsy overview: %s", group), paste(
+    sprintf(
+      "All %s %s by %d biopsies,", format(length(rows), big.mark = ","), feature_noun, ncol(m)
+    ),
+    "grouped by arm and time point; column labels are subjects.",
+    "Fill: log2 abundance minus the protein's mean over biopsies.",
+    sprintf("Colours stop at the 99th percentile of |value|, %.2g.", cap),
+    "Rows are ordered by average-linkage clustering (1 - Pearson r) of",
+    "the imputed matrix, for display only.",
+    "Grey: missing."
+  ), legends = list())
+}
+effect_cap <- unname(quantile(abs(contrast_results$effect), 0.99, na.rm = TRUE))
+contrast_grid <- function(rows, value) {
+  m <- matrix(NA, length(rows), length(contrast_names), dimnames = list(rows, contrast_names))
+  d <- filter(contrast_results, feature %in% rows)
+  m[cbind(d$feature, d$contrast)] <- value(d)
+  m
+}
+contrast_overview <- function(rows, group) {
+  maps <- exec(Heatmap, contrast_grid(rows, \(d) d$effect),
+    name = "log2 FC", col = circlize::colorRamp2(c(-effect_cap, 0, effect_cap), diverging),
+    na_col = "grey80", heatmap_legend_param = list(at = signif(c(-effect_cap, 0, effect_cap), 2)),
+    cluster_rows = FALSE, cluster_columns = FALSE, show_row_names = FALSE,
+    column_names_gp = gpar(fontsize = 7), column_title = "log2 fold change",
+    column_title_gp = gpar(fontsize = 8), use_raster = length(rows) > 200
+  ) +
+    exec(Heatmap, contrast_grid(rows, \(d) status_of(d$p, d$fdr)),
+      name = "status", col = status_colours, na_col = "grey80", show_heatmap_legend = FALSE,
+      cluster_rows = FALSE, cluster_columns = FALSE, column_names_gp = gpar(fontsize = 7),
+      column_title = "moderated t p and BH q", column_title_gp = gpar(fontsize = 8),
+      use_raster = length(rows) > 200, !!!row_text(rows)
+    )
+  overview(maps, sprintf("Contrast overview: %s", group), paste(
+    sprintf(
+      "All %s %s by the nine contrasts.", format(length(rows), big.mark = ","), feature_noun
+    ),
+    "Fill: log2 fold change from the limma fit; status: p and BH q within contrast.",
+    sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_cap),
+    "Rows are ordered by average-linkage clustering (1 - Pearson r) of",
+    "the imputed matrix, for display only.",
+    "Grey: not tested. Table: c_data/02_contrasts.xlsx, DEP_matrix."
+  ))
+}
+overviews <- imap(row_groups, \(rows, group) {
+  list(sample_overview(rows, group), contrast_overview(rows, group))
+}) |>
+  list_flatten()
+stopifnot(length(overviews) == 2 * length(row_groups))
+
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
+walk(overviews, \(page) page$draw())
 walk(list(p_histogram, volcano), print)
 invisible(dev.off())
 

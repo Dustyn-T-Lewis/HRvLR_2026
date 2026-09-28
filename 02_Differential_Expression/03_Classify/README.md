@@ -4,7 +4,7 @@ Scores how well each protein separates the groups on eight tasks.
 
 | | |
 |---|---|
-| Reads | `01_Design/c_data/design.rds` |
+| Reads | `01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (overview row order) |
 | Writes | `c_data/03_classify.xlsx`, `b_reports/03_classify_figures.pdf` |
 | Run | `Rscript 02_Differential_Expression/03_Classify/a_script/03_classify.R` |
 | Cost | about 15 s |
@@ -21,7 +21,13 @@ training and 7 acute pairs, LR 8 of each, so HR's smallest p is 0.031 and 0.016 
 0.0078. `auc` holds every protein and task; its AUC for paired tasks ignores the pairing and is not
 drawn.
 
-The figure PDF draws every protein at p < 0.05, task by task, by p, twelve panels to a page. Within-arm
-tasks get a paired grid, each subject's two biopsies joined by a line. Between-arm tasks get an ROC
-grid (`pROC::ggroc`). The floor task is not drawn. Each page subtitle gives the task's counts and
-each caption the test, n and smallest attainable p.
+The figure PDF opens with an overview page: every protein's median paired change in the four
+within-arm tasks and AUC in the four HR-vs-LR tasks, each on its own colour scale, beside a status
+map (not significant, p < 0.05, BH < 0.05, not tested). Rows follow average-linkage clustering (1 -
+Pearson r) of the imputed matrix, for display only. The grids follow: every protein at p < 0.05 in
+every task, baseline included, twelve panels to a page, ordered within task by p, then the larger
+effect, then ID. Within-arm tasks get a paired grid, each subject's two biopsies joined by a line;
+between-arm tasks get an ROC grid (`pROC::ggroc`). Each header gives the protein, its effect, p, BH
+q and its own n (complete pairs, or HR and LR subjects). Each page subtitle gives the task's counts
+and each caption the test, the largest n and the smallest attainable p. `plot_index` gives the PDF
+page and panel of every drawn row.

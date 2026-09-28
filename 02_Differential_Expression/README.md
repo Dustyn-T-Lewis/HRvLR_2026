@@ -71,7 +71,7 @@ the rank-sum test. HR has fewer pairs than LR, so its smallest attainable p is l
 | Training, LR (T1 to T2) | 8 | 0.0078 | 1,771 | 78 | 0 |
 | Acute bout, HR (T2 to T3) | 7 | 0.016 | 1,703 | 116 | 0 |
 | Acute bout, LR (T2 to T3) | 8 | 0.0078 | 1,742 | 107 | 0 |
-| HR vs LR at T1 (floor) | 7 / 8 | 0.0003 | 1,733 | 37 | 0 |
+| HR vs LR at T1 | 7 / 8 | 0.0003 | 1,733 | 37 | 0 |
 | HR vs LR at T2 | 7 / 8 | 0.0003 | 1,835 | 61 | 0 |
 | HR vs LR, training change | 6 / 8 | 0.0007 | 1,539 | 39 | 0 |
 | HR vs LR, acute change | 7 / 8 | 0.0003 | 1,645 | 88 | 0 |
