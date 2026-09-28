@@ -88,7 +88,7 @@ Sets at p < 0.05 over sets tested, per collection. None reaches BH < 0.05 in any
 | Training, LR (T1 to T2) | 0 / 33 | 2 / 62 | 2 / 328 | 25 / 897 | 1 / 58 |
 | Acute bout, HR (T2 to T3) | 4 / 33 | 6 / 62 | 22 / 328 | 77 / 897 | 4 / 58 |
 | Acute bout, LR (T2 to T3) | 5 / 33 | 13 / 62 | 29 / 328 | 100 / 897 | 6 / 58 |
-| HR vs LR at T1 (floor) | 1 / 33 | 0 / 62 | 2 / 328 | 11 / 897 | 0 / 58 |
+| HR vs LR at T1 | 1 / 33 | 0 / 62 | 2 / 328 | 11 / 897 | 0 / 58 |
 | HR vs LR at T2 | 0 / 33 | 0 / 62 | 1 / 328 | 13 / 897 | 0 / 58 |
 | HR vs LR, training change | 2 / 33 | 6 / 62 | 5 / 328 | 21 / 897 | 3 / 58 |
 | HR vs LR, acute change | 2 / 33 | 3 / 62 | 6 / 328 | 44 / 897 | 1 / 58 |

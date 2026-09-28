@@ -21,7 +21,13 @@ training and 7 acute pairs, LR 8 of each, so HR's smallest p is 0.031 and 0.016 
 0.0078. `auc` holds every set and task; its AUC for paired tasks ignores the pairing and is not
 drawn.
 
-The figure PDF draws every set at p < 0.05, task by task, by p, twelve panels to a page. Within-arm
-tasks get a paired grid, each subject's two biopsies joined by a line. Between-arm tasks get an ROC
-grid (`pROC::ggroc`). The floor task is not drawn. Each page subtitle gives the task's counts and
-each caption the test, n and smallest attainable p.
+The figure PDF opens with one overview page per collection: every set's median paired change in the
+four within-arm tasks and AUC in the four HR-vs-LR tasks, each on its own colour scale, beside a
+status map (not significant, p < 0.05, BH < 0.05, not tested). Rows follow average-linkage
+clustering (1 - Pearson r) of singscore within collection, for display only. The grids follow: every
+set at p < 0.05 in every task, baseline included, twelve panels to a page, ordered within task by p,
+then the larger effect, then ID. Within-arm tasks get a paired grid, each subject's two biopsies
+joined by a line; between-arm tasks get an ROC grid (`pROC::ggroc`). Each header gives the set, its
+effect, p, BH q and its own n (complete pairs, or HR and LR subjects). Each page subtitle gives the
+task's counts and each caption the test, the largest n and the smallest attainable p. `plot_index`
+gives the PDF page and panel of every drawn row.
