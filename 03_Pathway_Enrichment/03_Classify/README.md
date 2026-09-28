@@ -9,12 +9,19 @@ Scores how well each set's singscore separates the groups on the protein level's
 | Run | `Rscript 03_Pathway_Enrichment/03_Classify/a_script/03_classify.R` |
 | Cost | about 15 s |
 
-The tasks, AUC and tests are those of `02_Differential_Expression/03_Classify`. BH and the chance
-count run within task and collection. `chance_expectation` gives each task and collection's group
-sizes, smallest attainable p (HR training 0.031, HR acute 0.016, LR 0.0078), tested, nominal and BH
-counts. With 6 to 8 pairs fewer than 5% of null tests reach 0.05, so a ratio below 1 is not worse
-than chance.
+Within-arm tasks (training and the acute bout in each arm) pair each subject's two biopsies. Their
+p is the Wilcoxon signed-rank test and their effect the median paired change. Between-arm tasks
+(HR against LR on the T1 level, the T2 level, the training change and the acute change) use the
+rank-sum test, and AUC is W / (n1·n2), above 0.5 when higher in HR. BH runs within task and collection. A
+set needs three observations per side.
 
-The figure PDF opens on the chance ratio per task and collection, then draws an ROC curve
-(`pROC::ggroc`) for every set at p < 0.05 on each task, by p, twelve to a page. The floor task gets
-no curves.
+`counts` gives each task's pairing, n per side, smallest attainable p (2 / 2^n for n pairs,
+2 / choose(n1 + n2, n1) for two groups), and the tested, p < 0.05 and BH < 0.05 counts. HR has 6
+training and 7 acute pairs, LR 8 of each, so HR's smallest p is 0.031 and 0.016 against LR's
+0.0078. `auc` holds every set and task; its AUC for paired tasks ignores the pairing and is not
+drawn.
+
+The figure PDF draws every set at p < 0.05, task by task, by p, twelve panels to a page. Within-arm
+tasks get a paired grid, each subject's two biopsies joined by a line. Between-arm tasks get an ROC
+grid (`pROC::ggroc`). The floor task is not drawn. Each page subtitle gives the task's counts and
+each caption the test, n and smallest attainable p.

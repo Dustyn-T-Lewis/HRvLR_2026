@@ -12,9 +12,8 @@ Ties each set's singscore to phenotype, the protein level's two ways.
 The sample model and the change score are those of `02_Differential_Expression/04_Associate`, on
 singscore instead of abundance. Scores have no missing values, so no observation floor applies. BH
 runs within trait, term and collection (model) or window, outcome and collection (change score).
-`chance_expectation` gives nominal counts against 5% of tested per collection.
+`counts` gives tested, p < 0.05 and BH < 0.05 counts per collection.
 
-The figure PDF opens on the chance ratios with collections pooled, then gives every nominal model
-hit a panel (one line per subject from T1 to T2), then every nominal change-score pair a scatter
-(`ggpubr::ggscatter`, a line per arm, each arm's rho and exact p in the corner). Twelve panels to a
-page, by p.
+The figure PDF gives every model hit at p < 0.05 a panel (one line per subject from T1 to T2),
+then every change-score pair at p < 0.05 a scatter (`ggpubr::ggscatter`, a line per arm, each
+arm's rho and exact p in the corner), twelve to a page, by p.

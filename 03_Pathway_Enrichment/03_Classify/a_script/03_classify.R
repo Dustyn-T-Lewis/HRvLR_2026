@@ -1,13 +1,15 @@
 # How well each gene set's singscore separates the study's groups, on the protein level's eight
-# tasks.
-# Within-arm tasks pair each subject with itself; between-arm tasks compare HR with LR subjects on
-# a level or on their own change. AUC is the rank-sum statistic over n1 * n2, so above 0.5 means
-# higher at the later timepoint or in HR. p is Wilcoxon, signed-rank when paired. Each collection is
-# its own screen: BH and the chance count run within task and collection.
+# tasks. Each collection is its own screen, so BH runs within task and collection.
+# Within-arm tasks pair each subject's two biopsies: p is the Wilcoxon signed-rank test and the
+# effect is the median paired change. Between-arm tasks compare HR with LR subjects on a level or
+# on their own change: p is the rank-sum test and AUC is W / (n1 * n2), above 0.5 when higher in
+# HR. The auc column is filled for every task; for paired tasks it ignores the pairing and is not
+# drawn.
 
 suppressPackageStartupMessages({
   library(here)
   library(dplyr)
+  library(tidyr)
   library(purrr)
   library(tibble)
   library(ggplot2)
@@ -31,6 +33,8 @@ meta <- readRDS(paths[["proteins"]])$metadata
 stopifnot(identical(colnames(values), meta$sample_id))
 feature_label <- with(catalog, set_names(enrichVolcano::ev_clean_label(pathway), set_id))
 collection_of <- with(catalog, set_names(collection, set_id))
+feature_noun <- "sets"
+value_label <- "singscore"
 
 by_subject <- function(timepoint, arm = c("HR", "LR")) {
   rows <- filter(meta, timepoint == .env$timepoint, arm %in% .env$arm)
@@ -45,13 +49,16 @@ paired <- function(from, to, arm = c("HR", "LR")) {
 arm_of <- set_names(as.character(meta$arm), meta$subject)
 within_arm <- function(from, to, arm, label) {
   p <- paired(from, to, arm)
-  list(positive = p$after, negative = p$before, paired = TRUE, label = label, favours = to)
+  list(
+    positive = p$after, negative = p$before, paired = TRUE, label = label,
+    levels = c(from, to)
+  )
 }
 between_arm <- function(level, label) {
   hr <- arm_of[colnames(level)] == "HR"
   list(
     positive = level[, hr, drop = FALSE], negative = level[, !hr, drop = FALSE],
-    paired = FALSE, label = label, favours = "HR"
+    paired = FALSE, label = label
   )
 }
 change <- \(from, to) with(paired(from, to), after - before)
@@ -67,124 +74,154 @@ tasks <- list(
 )
 
 # Ties push wilcox.test to its normal approximation and it warns on every call.
-classify_row <- function(pos, neg, paired) {
-  kept <- if (paired) !is.na(pos) & !is.na(neg) else NULL
-  pos <- if (paired) pos[kept] else pos[!is.na(pos)]
-  neg <- if (paired) neg[kept] else neg[!is.na(neg)]
-  if (min(length(pos), length(neg)) < 3) {
-    return(c(auc = NA, p = NA, n_positive = length(pos), n_negative = length(neg)))
-  }
-  w <- suppressWarnings(wilcox.test(pos, neg)$statistic)
-  p <- suppressWarnings(wilcox.test(pos, neg, paired = paired)$p.value)
-  c(auc = unname(w) / (length(pos) * length(neg)), p = p, n_positive = length(pos),
-    n_negative = length(neg))
-}
-auc <- imap(tasks, \(spec, name) {
-  fits <- vapply(rownames(values), \(id) {
-    classify_row(spec$positive[id, ], spec$negative[id, ], spec$paired)
-  }, numeric(4))
-  tibble(task = name, task_label = spec$label, feature = rownames(values), !!!as_tibble(t(fits)))
-}) |>
-  list_rbind() |>
-  mutate(collection = collection_of[feature], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(task, collection)) |>
-  mutate(label = feature_label[feature], .after = feature)
-
-# The smallest p a task can reach: signed-rank on n pairs gives 2 / 2^n, rank-sum on n1 and n2
-# gives 2 / choose(n1 + n2, n1). HR has 6 training and 7 acute pairs, LR 8 of each.
-chance_expectation <- auc |>
-  filter(!is.na(p)) |>
-  summarise(
-    n_positive = max(n_positive), n_negative = max(n_negative), n_tested = n(),
-    n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05), .by = c(task, task_label, collection)
-  ) |>
-  mutate(
-    paired = map_lgl(task, \(t) tasks[[t]]$paired),
-    min_p = if_else(paired, 2 / 2^n_positive, 2 / choose(n_positive + n_negative, n_positive)),
-    n_expected = 0.05 * n_tested, ratio = round(n_nominal / n_expected, 2), .after = n_nominal
-  )
-
-# One ROC curve per nominal feature, twelve to a page, by p. The floor task is not drawn.
-roc_of <- function(spec, id) {
+sides <- function(spec, id) {
   pos <- spec$positive[id, ]
   neg <- spec$negative[id, ]
   if (spec$paired) {
     kept <- !is.na(pos) & !is.na(neg)
-    pos <- pos[kept]
-    neg <- neg[kept]
+    return(list(pos = pos[kept], neg = neg[kept]))
   }
-  pROC::roc(controls = na.omit(neg), cases = na.omit(pos), direction = "<", quiet = TRUE)
+  list(pos = pos[!is.na(pos)], neg = neg[!is.na(neg)])
 }
-roc_pages <- auc |>
-  filter(p < 0.05, task != "Baseline_HRvLR") |>
-  mutate(task = factor(task, names(tasks))) |>
-  arrange(task, p) |>
-  mutate(
-    panel = sprintf("%s: %s\nAUC %.2f  p %.2g  q %.2g", collection, label, auc, p, fdr),
-    page = (row_number() - 1) %/% 12, .by = task
+classify_row <- function(spec, id) {
+  s <- sides(spec, id)
+  n <- c(n_positive = length(s$pos), n_negative = length(s$neg))
+  if (min(n) < 3) {
+    return(c(auc = NA, median_change = NA, p = NA, n))
+  }
+  w <- suppressWarnings(wilcox.test(s$pos, s$neg)$statistic)
+  c(
+    auc = unname(w) / prod(n),
+    median_change = if (spec$paired) median(s$pos - s$neg) else NA,
+    p = suppressWarnings(wilcox.test(s$pos, s$neg, paired = spec$paired)$p.value),
+    n
+  )
+}
+auc <- imap(tasks, \(spec, name) {
+  fits <- vapply(rownames(values), \(id) classify_row(spec, id), numeric(5))
+  tibble(
+    task = name, task_label = spec$label, paired = spec$paired, feature = rownames(values),
+    !!!as_tibble(t(fits))
+  )
+}) |>
+  list_rbind() |>
+  mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(task, collection))
+
+# The smallest p a task can reach: signed-rank on n pairs gives 2 / 2^n, rank-sum on n1 and n2
+# gives 2 / choose(n1 + n2, n1). HR has 6 training and 7 acute pairs, LR 8 of each.
+counts <- auc |>
+  filter(!is.na(p)) |>
+  summarise(
+    paired = first(paired), n_positive = max(n_positive), n_negative = max(n_negative),
+    n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
+    .by = c(task, task_label, collection)
   ) |>
+  mutate(
+    min_p = if_else(paired, 2 / 2^n_positive, 2 / choose(n_positive + n_negative, n_positive)),
+    .after = n_negative
+  )
+
+page_theme <- theme_minimal(base_size = 9) +
+  theme(
+    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0)
+  )
+page_labels <- function(info, page, n_pages, caption) {
+  labs(
+    title = info$task_label,
+    subtitle = sprintf(
+      "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.",
+      info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05, page, n_pages
+    ),
+    caption = caption
+  )
+}
+# Paired tasks: each subject's two biopsies joined by a line.
+paired_page <- function(hits, spec, info, page, n_pages) {
+  points <- map2(hits$feature, hits$panel, \(id, panel) {
+    tibble(
+      panel = panel, subject = colnames(spec$positive),
+      before = spec$negative[id, ], after = spec$positive[id, ]
+    )
+  }) |>
+    list_rbind() |>
+    filter(!is.na(before), !is.na(after)) |>
+    pivot_longer(c(before, after), names_to = "biopsy") |>
+    mutate(
+      biopsy = factor(if_else(biopsy == "before", spec$levels[1], spec$levels[2]), spec$levels),
+      panel = factor(panel, hits$panel)
+    )
+  ggplot(points, aes(biopsy, value, group = subject)) +
+    geom_line(colour = "grey55") +
+    geom_point(size = 1.4) +
+    facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free_y") +
+    labs(x = NULL, y = value_label) +
+    page_labels(info, page, n_pages, sprintf(
+      paste(
+        "Wilcoxon signed-rank test on %d pairs; smallest attainable p %.2g. Header: median",
+        "paired change, p, and BH q within task and collection.",
+        "Table: c_data/03_classify.xlsx, auc."
+      ),
+      info$n_positive, info$min_p
+    )) +
+    page_theme
+}
+# Between-arm tasks: one ROC curve per feature, HR as cases.
+roc_page <- function(hits, spec, info, page, n_pages) {
+  curves <- map(hits$feature, \(id) {
+    s <- sides(spec, id)
+    pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE)
+  }) |>
+    set_names(hits$panel)
+  pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "#B2182B") +
+    geom_abline(linetype = 2, colour = "grey60") +
+    facet_wrap(~ factor(name, levels = hits$panel), nrow = 3, ncol = 4) +
+    coord_equal() +
+    labs(x = "1 - specificity", y = "sensitivity") +
+    page_labels(info, page, n_pages, sprintf(
+      paste(
+        "HR (%d) against LR (%d); AUC above 0.5 means higher in HR. Wilcoxon rank-sum test;",
+        "smallest attainable p %.2g. Header: AUC, p, and BH q within task and collection.",
+        "Table: c_data/03_classify.xlsx, auc."
+      ),
+      info$n_positive, info$n_negative, info$min_p
+    )) +
+    page_theme
+}
+
+hits <- auc |>
+  filter(p < 0.05, task != "Baseline_HRvLR") |>
+  mutate(
+    task = factor(task, names(tasks)),
+    effect = if_else(paired, sprintf("median change %+.2f", median_change),
+      sprintf("AUC %.2f", auc)
+    ),
+    panel = sprintf("%s: %s\n%s  p %.2g  q %.2g", collection, label, effect, p, fdr)
+  ) |>
+  arrange(task, p) |>
+  mutate(page = (row_number() - 1) %/% 12 + 1, n_pages = max(page), .by = task)
+pages <- hits |>
   group_by(task, page) |>
-  group_map(\(hits, key) {
+  group_map(\(page_hits, key) {
     spec <- tasks[[as.character(key$task)]]
-    info <- chance_expectation |>
+    info <- counts |>
       filter(task == as.character(key$task)) |>
       summarise(
-        across(c(n_positive, n_negative, min_p), first),
-        across(c(n_tested, n_nominal, n_expected), sum)
+        across(c(task_label, paired, n_positive, n_negative, min_p), first),
+        across(c(n_tested, n_nominal, n_fdr_05), sum)
       )
-    curves <- set_names(map(hits$feature, \(id) roc_of(spec, id)), hits$panel)
-    pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "#B2182B") +
-      geom_abline(linetype = "22", colour = "grey60") +
-      facet_wrap(~ factor(name, levels = hits$panel), nrow = 3, ncol = 4) +
-      coord_equal() +
-      labs(
-        title = spec$label, x = "1 - specificity", y = "sensitivity",
-        subtitle = sprintf(
-          "singscore; AUC above 0.5 favours %s; %d vs %d %s; page %d of %d",
-          spec$favours, info$n_positive, info$n_negative,
-          if (spec$paired) "paired samples" else "subjects", key$page + 1,
-          ceiling(info$n_nominal / 12)
-        ),
-        caption = sprintf(
-          paste(
-            "%d of %d sets reach p < 0.05; chance predicts %.0f. Smallest attainable p: %.2g.",
-            "p from the Wilcoxon %s test, q from BH within task and collection.",
-            "Table: c_data/03_classify.xlsx, auc."
-          ),
-          info$n_nominal, info$n_tested, info$n_expected, info$min_p,
-          if (spec$paired) "signed-rank" else "rank-sum"
-        )
-      ) +
-      theme_minimal(base_size = 9) +
-      theme(strip.text = element_text(size = 7), plot.caption = element_text(hjust = 0))
+    draw <- if (spec$paired) paired_page else roc_page
+    draw(page_hits, spec, info, key$page, page_hits$n_pages[1])
   })
-n_drawn <- sum(map_int(roc_pages, \(g) n_distinct(g$data$name)))
-stopifnot(n_drawn == sum(auc$p < 0.05 & auc$task != "Baseline_HRvLR", na.rm = TRUE))
-
-chance_figure <- chance_expectation |>
-  mutate(task_label = factor(task_label, rev(map_chr(tasks, "label")))) |>
-  ggplot(aes(ratio, task_label)) +
-  geom_vline(xintercept = 1, colour = "grey40") +
-  geom_col(fill = "grey60", width = 0.6) +
-  facet_wrap(~collection, nrow = 1) +
-  geom_text(aes(label = sprintf("%d of %d", n_nominal, n_tested)), hjust = -0.05, size = 2.5) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.4))) +
-  labs(
-    title = "Nominal classifiers against chance", x = "nominal hits / chance expectation",
-    y = NULL, caption = paste(
-      "Chance is 5% of sets tested per collection. With 6 to 8 pairs the Wilcoxon p is coarse, so",
-      "fewer than 5% of null tests reach 0.05 and a ratio below 1 is not worse than chance."
-    )
-  ) +
-  theme_minimal(base_size = 10) +
-  theme(plot.caption = element_text(hjust = 0))
+stopifnot(length(pages) == nrow(distinct(hits, task, page)))
 
 pdf(file.path(figures, "03_classify_figures.pdf"), width = 11, height = 8.5)
-walk(c(list(chance_figure), roc_pages), print)
+walk(pages, print)
 invisible(dev.off())
 
 sheets <- list(
-  chance_expectation = chance_expectation,
+  counts = counts,
   auc = arrange(auc, task, collection, p),
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
@@ -194,8 +231,8 @@ sheets <- list(
     select(package, version = loadedversion, source)
 )
 read_me <- tibble(sheet = names(sheets), holds = c(
-  "Per task and collection: group sizes, smallest p, tested, nominal, chance-expected, BH counts.",
-  "AUC, Wilcoxon p and BH FDR per set and task.",
+  "Per task and collection: pairing, n per side, smallest p, tested, p < 0.05 and BH counts.",
+  "Per set and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))

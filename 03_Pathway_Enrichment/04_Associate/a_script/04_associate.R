@@ -1,5 +1,5 @@
 # Ties each gene set's singscore to phenotype, the protein level's two ways. Each collection is its
-# own screen: BH and the chance count run within collection.
+# own screen: BH runs within collection.
 #
 # Sample model: every T1 and T2 biopsy carries its own trait values. Per trait, limma fits
 # abundance ~ timepoint + between + within with subject blocked, where between is the subject's
@@ -180,7 +180,7 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   list_rbind(names_to = "arm") |>
   filter(!is.na(rho))
 
-chance_expectation <- bind_rows(
+counts <- bind_rows(
   summarise(model,
     n_tested = sum(!is.na(p)), n_nominal = sum(p < 0.05, na.rm = TRUE),
     n_fdr_05 = sum(fdr < 0.05, na.rm = TRUE), .by = c(term, trait, collection)
@@ -197,8 +197,7 @@ chance_expectation <- bind_rows(
       analysis = paste("change score:", window), comparison = outcome, collection, n_tested,
       n_nominal, n_fdr_05
     )
-) |>
-  mutate(n_expected = 0.05 * n_tested, ratio = round(n_nominal / n_expected, 2), .after = n_nominal)
+)
 
 # Twelve panels to a page; split() pages the data so each page builds only its own panels.
 paged <- function(data, draw) {
@@ -221,9 +220,9 @@ model_pages <- model |>
   arrange(match(trait, traits), desc(term), p) |>
   group_split(trait, term, .keep = TRUE) |>
   map(\(hits) {
-    info <- chance_expectation |>
+    info <- counts |>
       filter(analysis == paste("model:", hits$term[1]), comparison == hits$trait[1]) |>
-      summarise(across(c(n_tested, n_nominal, n_expected), sum))
+      summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
     points <- hits |>
       mutate(panel = sprintf(
         "%s: %s\n%s %.3g  p %.2g  q %.2g", collection, label, term, effect, p, fdr
@@ -247,22 +246,21 @@ model_pages <- model |>
         scale_colour_manual(values = arm_colours, name = NULL) +
         scale_shape_manual(values = c(T1 = 1, T2 = 16), name = NULL) +
         labs(
-          title = sprintf(
-            "%s against %s, %s-person term", value_label, hits$trait[1], hits$term[1]
+          title = sprintf("%s, %s-person term", hits$trait[1], hits$term[1]),
+          subtitle = sprintf(
+            "%d of %d %ss at p < 0.05, %d at BH < 0.05.",
+            info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05
           ),
           x = paste(hits$trait[1], "at the biopsy"), y = value_label,
-          subtitle = paste(
-            "One line per subject from T1 to T2: within is the slope of the lines,",
-            "between the spread of subjects"
-          ),
-          caption = sprintf(
+          caption = stringr::str_wrap(width = 160, sprintf(
             paste(
-              "%d of %d %ss reach p < 0.05 on this term; chance predicts %.0f.",
-              "limma on %d biopsies, subject blocked; q from BH within trait, term and collection.",
-              "Table: c_data/04_associate.xlsx, model."
+              "limma on %d biopsies, abundance ~ timepoint + between + within, subject blocked.",
+              "Lines join each subject's T1 and T2 biopsies: the within term reads their slopes,",
+              "the between term the spread of subjects. Header: effect per trait unit, p, and BH",
+              "q within trait, term and collection. Table: c_data/04_associate.xlsx, model."
             ),
-            info$n_nominal, info$n_tested, feature_noun, info$n_expected, hits$n_samples[1]
-          )
+            hits$n_samples[1]
+          ))
         )
     })
   }) |>
@@ -277,7 +275,9 @@ change_pages <- change_score |>
   group_split(window, .keep = TRUE) |>
   map(\(hits) {
     w <- hits$window[1]
-    n_tested <- sum(filter(chance_expectation, analysis == paste("change score:", w))$n_tested)
+    info <- counts |>
+      filter(analysis == paste("change score:", w)) |>
+      summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
     points <- hits |>
       left_join(arm_text, by = c("window", "outcome", "feature")) |>
       mutate(panel = sprintf(
@@ -301,42 +301,24 @@ change_pages <- change_score |>
         ) +
         scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
         labs(
-          title = sprintf("%s against phenotype, %s window", value_label, w),
-          x = sprintf("%s, %s window, one point per subject", value_label, w), y = "outcome",
-          colour = NULL,
-          caption = stringr::str_wrap(width = 160, sprintf(
-            paste(
-              "%d of %d %s-outcome pairs reach pooled p < 0.05; chance predicts %.0f. Header:",
-              "pooled Spearman, q from BH within window, outcome and collection. Corner: each",
-              "arm's rho and exact p. Table: c_data/04_associate.xlsx, change_score and",
-              "change_score_by_arm."
-            ),
-            nrow(hits), n_tested, feature_noun, 0.05 * n_tested
+          title = sprintf("Change score, %s window", w),
+          subtitle = sprintf(
+            "%d of %d %s-outcome pairs at p < 0.05, %d at BH < 0.05.",
+            info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05
+          ),
+          x = sprintf("%s, %s window", value_label, w), y = "outcome", colour = NULL,
+          caption = stringr::str_wrap(width = 160, paste(
+            "One point per subject; a line per arm. Header: Spearman rho and p pooled over both",
+            "arms, and BH q within window, outcome and collection. Corner: each arm's rho and",
+            "exact p. Arm is",
+            "the median split of comp_hypertrophy, so pooled correlations with it and with fibre",
+            "area change partly carry the group split.",
+            "Table: c_data/04_associate.xlsx, change_score and change_score_by_arm."
           ))
         )
     })
   }) |>
   list_flatten()
-
-chance_figure <- chance_expectation |>
-  summarise(across(c(n_nominal, n_expected), sum), .by = c(analysis, comparison)) |>
-  mutate(
-    ratio = n_nominal / n_expected,
-    comparison = factor(comparison, rev(unique(c(traits, outcomes))))
-  ) |>
-  ggplot(aes(ratio, comparison)) +
-  geom_vline(xintercept = 1, colour = "grey40") +
-  geom_col(fill = "grey60", width = 0.7) +
-  facet_wrap(~analysis, nrow = 1, scales = "free_y") +
-  labs(
-    title = "Nominal associations against chance", x = "nominal hits / chance expectation",
-    y = NULL, caption = sprintf(
-      "Collections pooled; chance is 5%% of %ss tested. Per collection: c_data/04_associate.xlsx.",
-      feature_noun
-    )
-  ) +
-  theme_minimal(base_size = 8) +
-  theme(plot.caption = element_text(hjust = 0))
 
 stopifnot(
   sum(map_int(model_pages, \(g) nlevels(g$data$panel))) == sum(model$p < 0.05, na.rm = TRUE),
@@ -344,12 +326,12 @@ stopifnot(
 )
 
 pdf(file.path(figures, "04_associate_figures.pdf"), width = 11, height = 8.5)
-walk(c(list(chance_figure), model_pages, change_pages), print)
+walk(c(model_pages, change_pages), print)
 invisible(dev.off())
 
 # The within-arm table runs to hundreds of thousands of rows; the workbook keeps p < 0.05.
 sheets <- list(
-  chance_expectation = chance_expectation,
+  counts = counts,
   model = arrange(model, trait, term, p),
   change_score = arrange(change_score, window, outcome, p),
   change_score_by_arm = filter(by_arm, p < 0.05),
@@ -361,7 +343,7 @@ sheets <- list(
     select(package, version = loadedversion, source)
 )
 read_me <- tibble(sheet = names(sheets), holds = c(
-  "Nominal hits against chance, per model term and trait and per change-score window and outcome.",
+  "Tested, p < 0.05 and BH < 0.05 counts per model term and trait, and per window and outcome.",
   "Sample model: effect per trait unit, t, p and BH FDR per set, trait and term.",
   "Change score: pooled Spearman rho, p and BH FDR per set, window and outcome.",
   "Change score within each arm, exact p, rows with p < 0.05.",

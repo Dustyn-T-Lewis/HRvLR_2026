@@ -159,160 +159,62 @@ set_summary <- set_tests |>
 print(as.data.frame(set_summary))
 
 
-# ---- figures -------------------------------------------------------------------------------
-
-# One dot plot per collection and contrast, plus one over all collections. Each shows the ten
-# strongest collapse survivors by FDR.
-shown <- c(
-  "Training_Interaction", "Acute_Interaction", "Training_HR", "Training_LR", "Acute_HR",
-  "Acute_LR"
-)
-survivors <- set_tests |>
-  filter(method == "fgsea", fdr < 0.05, main, contrast %in% shown)
-
-draw_dotplot <- function(rows, colour_by) {
-  top <- rows |>
-    slice_min(fdr, n = 10, with_ties = FALSE) |>
-    mutate(label = enrichVolcano::ev_clean_label(pathway))
-  figure <- top |>
-    ggplot(aes(nes, reorder(label, nes), size = n_proteins, colour = .data[[colour_by]])) +
-    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
-    geom_point(alpha = 0.9) +
-    scale_size_continuous(range = c(2, 6), name = "proteins") +
-    labs(
-      x = "normalised enrichment score", y = NULL, title = unique(top$contrast),
-      subtitle = sprintf(
-        "%s, fgsea, BH within contrast",
-        if (colour_by == "collection") "all collections" else rows$collection[1]
-      ),
-      caption = sprintf(
-        "%s of %d collapse survivor%s, ranked by FDR. Size is protein count, colour is %s. %s",
-        if (nrow(rows) > 10) "Ten strongest" else "All", nrow(rows),
-        if (nrow(rows) == 1) "" else "s",
-        if (colour_by == "collection") "collection" else "-log10 FDR",
-        "Table: c_data/02_contrasts.xlsx, significant."
-      )
-    ) +
-    theme_minimal(base_size = 10) +
-    theme(
-      panel.grid.major.y = element_blank(),
-      plot.caption = element_text(size = 6.5, colour = "grey45", hjust = 0)
-    )
-  if (colour_by == "collection") {
-    figure + scale_colour_brewer(palette = "Dark2", name = NULL)
-  } else {
-    figure + scale_colour_viridis_c(
-      option = "rocket", direction = -1, end = 0.9,
-      name = expression(-log[10] ~ FDR)
-    )
-  }
-}
-
-collections <- unique(gs$set_catalog$collection[gs$set_catalog$qualifies])
-dotplots <- map(c("all", collections), \(which_collection) {
-  rows <- if (which_collection == "all") {
-    survivors
-  } else {
-    filter(survivors, collection == which_collection)
-  }
-  map(intersect(shown, unique(rows$contrast)), \(cn) {
-    draw_dotplot(
-      mutate(filter(rows, contrast == cn), `-log10 FDR` = -log10(fdr)),
-      if (which_collection == "all") "collection" else "-log10 FDR"
-    )
-  })
-})
-
-collapse_effect <- set_tests |>
-  filter(method == "fgsea", fdr < 0.05, contrast %in% shown) |>
-  summarise(before = n(), after = sum(main), .by = c(contrast, collection)) |>
-  tidyr::pivot_longer(c(before, after), names_to = "stage", values_to = "n_sets") |>
+# Every fgsea collapse survivor at FDR < 0.05 and every set at fry p < 0.05, one dot plot per
+# contrast and method, 40 sets to a page.
+labelled <- set_tests |>
   mutate(
-    stage = factor(stage, c("before", "after")),
-    contrast = factor(contrast, levels = shown)
+    contrast = factor(contrast, levels = contrast_names),
+    label = gsub("\n", " ", enrichVolcano::ev_clean_label(pathway))
   )
-collapse_figure <- ggplot(collapse_effect, aes(stage, n_sets, fill = collection)) +
-  geom_col(position = "dodge") +
-  facet_wrap(~contrast, scales = "free_y", nrow = 2) +
-  scale_fill_brewer(palette = "Dark2", name = NULL) +
-  labs(
-    x = NULL, y = "significant sets", title = "Significant sets before and after collapse",
-    subtitle = "fgsea at FDR 0.05, then collapsePathways",
-    caption = paste(
-      "collapsePathways re-tests each significant set conditioned on a stronger set's leading",
-      "edge and keeps it only if it stays significant.",
-      "Table: c_data/02_contrasts.xlsx, significant."
-    )
-  ) +
-  theme_minimal(base_size = 9) +
-  theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
+dot_pages <- function(rows, x, x_label, method_label, caption) {
+  rows |>
+    arrange(contrast, .data[[x]]) |>
+    mutate(page = (row_number() - 1) %/% 40 + 1, n_pages = max(page), .by = contrast) |>
+    group_by(contrast, page) |>
+    group_map(\(page_rows, key) {
+      ggplot(page_rows, aes(.data[[x]], reorder(label, .data[[x]]), colour = collection)) +
+        geom_vline(xintercept = 0, colour = "grey75") +
+        geom_point(aes(size = n_proteins)) +
+        scale_colour_brewer(palette = "Dark2", name = NULL) +
+        scale_size_continuous(range = c(1.5, 5), name = "proteins") +
+        labs(
+          title = sprintf("%s, %s", key$contrast, method_label),
+          subtitle = sprintf(
+            "%d sets. Page %d of %d.",
+            sum(rows$contrast == key$contrast), key$page, page_rows$n_pages[1]
+          ),
+          x = x_label, y = NULL, caption = caption
+        ) +
+        theme_minimal(base_size = 8) +
+        theme(plot.caption = element_text(hjust = 0), plot.title = element_text(face = "bold"))
+    })
+}
+fgsea_pages <- dot_pages(
+  filter(labelled, method == "fgsea", fdr < 0.05, main), "nes",
+  "normalised enrichment score", "fgsea collapse survivors at FDR < 0.05",
+  paste(
+    "fgsea on the moderated t ranking; BH within contrast over all collections; collapsePathways",
+    "keeps the sets that stay significant given a stronger set. Table: c_data/02_contrasts.xlsx,",
+    "significant."
+  )
+)
+fry_pages <- dot_pages(
+  labelled |>
+    filter(method == "fry", p < 0.05) |>
+    mutate(signed = if_else(direction == "Up", 1, -1) * -log10(p)),
+  "signed", "signed -log10 p (positive: up)", "fry sets at p < 0.05",
+  paste(
+    "fry on the imputed matrix with the fitted design, subject block and within-subject",
+    "correlation; BH within contrast. Table: set_tests in c_data/set_tests.rds."
+  )
+)
+pages <- c(fgsea_pages, fry_pages)
+stopifnot(
+  sum(map_int(pages, \(g) nrow(g$data))) ==
+    nrow(filter(set_tests, method == "fgsea", fdr < 0.05, main)) +
+      nrow(filter(set_tests, method == "fry", p < 0.05))
+)
 
-# Every set nominal under fry in at least one contrast, as a dot matrix. Fill is the fgsea NES,
-# for direction; size is -log10 fry p; a black ring marks fry FDR < 0.05.
-# One label per set, built before the join so two sets sharing a display name stay apart.
-set_labels <- gs$set_catalog |>
-  filter(qualifies) |>
-  transmute(
-    set_id,
-    label = gsub("\n", " ", paste0("[", collection, "] ", enrichVolcano::ev_clean_label(pathway)))
-  ) |>
-  mutate(label = if_else(duplicated(label) | duplicated(label, fromLast = TRUE), set_id, label))
-hit_data <- set_tests |>
-  filter(method == "fry") |>
-  select(set_id, contrast, p, fdr) |>
-  left_join(
-    set_tests |> filter(method == "fgsea") |> select(set_id, contrast, effect = nes),
-    by = c("set_id", "contrast")
-  ) |>
-  left_join(set_labels, by = "set_id")
-ranked_hits <- hit_data |>
-  summarise(n_nominal = sum(p < 0.05), best = min(p), .by = label) |>
-  filter(n_nominal > 0) |>
-  arrange(desc(n_nominal), best)
-page_of <- ceiling(seq_len(nrow(ranked_hits)) / 75)
-hit_plots <- map(seq_len(max(page_of, 0)), \(page) {
-  rows <- ranked_hits$label[page_of == page]
-  page_data <- hit_data |>
-    filter(label %in% rows) |>
-    mutate(
-      label = factor(label, levels = rev(rows)),
-      contrast = factor(contrast, levels = contrast_names), nominal = p < 0.05
-    )
-  ggplot(page_data, aes(contrast, label)) +
-    geom_point(data = filter(page_data, !nominal), colour = "grey85", size = 0.6) +
-    geom_point(
-      data = filter(page_data, nominal), aes(size = -log10(p), fill = effect),
-      shape = 21, colour = "grey30", stroke = 0.2
-    ) +
-    geom_point(
-      data = filter(page_data, fdr < 0.05), aes(size = -log10(p)),
-      shape = 21, colour = "black", stroke = 0.9, fill = NA
-    ) +
-    scale_x_discrete(drop = FALSE) +
-    scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
-    scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
-    labs(
-      title = sprintf("Set contrast hits, fry (%d/%d)", page, max(page_of)),
-      subtitle = sprintf(
-        "fry p per contrast, filled by fgsea NES; %d sets nominal in at least one contrast",
-        nrow(ranked_hits)
-      ),
-      x = NULL, y = NULL, fill = "NES", size = "-log10 p",
-      caption = paste(
-        "Rows: sets at fry p < 0.05 in at least one contrast, most contrasts first, then by",
-        "best p. Filled dot: nominal, fill = fgsea NES, size = -log10 fry p. Black ring: fry",
-        "FDR < 0.05. Grey speck: tested, not nominal. Table: set_tests in c_data/set_tests.rds."
-      )
-    ) +
-    theme_minimal(base_size = 9) +
-    theme(
-      axis.text.x = element_text(angle = 35, hjust = 1),
-      axis.text.y = element_text(size = if (length(rows) > 30) 5.5 else 8),
-      plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)
-    )
-})
-
-pages <- c(dotplots[[1]], list(collapse_figure), list_flatten(dotplots[-1]), hit_plots)
 pdf(file.path(figure_dir, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(pages, print)
 invisible(dev.off())

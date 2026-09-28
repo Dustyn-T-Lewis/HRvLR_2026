@@ -13,7 +13,7 @@ and puts the scores through the protein level's classification and association.
 | [`05_Volcano`](05_Volcano/README.md) | protein volcanoes with pathway rings | 8 volcanoes |
 | [`06_NES_Scatter`](06_NES_Scatter/README.md) | HR NES against LR NES, training and acute | 4 composites |
 
-Every collection is its own screen: BH and the chance count run within collection.
+Every collection is its own screen: BH runs within collection.
 
 ## 1,378 sets pass the size filter
 
@@ -74,33 +74,31 @@ bout.
 A set is discordant when its two NES differ in sign. Hallmark and GO Slim are paired because their
 sets do not nest.
 
-## Only the acute bout clears chance in every collection
+## No set classifier passes BH
 
 singscore gives one rank-based score per set per sample on the imputed matrix. It carries no
 p-value and never sees a contrast. Subject dominates raw scores: PC1 carries 25.6% of the variance,
 of which subject explains 0.68.
 
-Nominal classifiers over chance, per collection:
+Sets at p < 0.05 over sets tested, per collection. None reaches BH < 0.05 in any task.
 
 | Task | Hallmark | KEGG_Legacy | Reactome | GOBP | GO_Slim |
 |---|---:|---:|---:|---:|---:|
-| Training, HR (T1 to T2) | 0.61 | 1.29 | 0.79 | 0.60 | 1.72 |
-| Training, LR (T1 to T2) | 0.00 | 0.65 | 0.12 | 0.56 | 0.34 |
-| Acute bout, HR (T2 to T3) | 2.42 | 1.94 | 1.34 | 1.72 | 1.38 |
-| Acute bout, LR (T2 to T3) | 3.03 | 4.19 | 1.77 | 2.23 | 2.07 |
-| HR vs LR at T1 (floor) | 0.61 | 0.00 | 0.12 | 0.25 | 0.00 |
-| HR vs LR at T2 | 0.00 | 0.00 | 0.06 | 0.29 | 0.00 |
-| HR vs LR, training change | 1.21 | 1.94 | 0.30 | 0.47 | 1.03 |
-| HR vs LR, acute change | 1.21 | 0.97 | 0.37 | 0.98 | 0.34 |
+| Training, HR (T1 to T2) | 1 / 33 | 4 / 62 | 13 / 328 | 27 / 897 | 5 / 58 |
+| Training, LR (T1 to T2) | 0 / 33 | 2 / 62 | 2 / 328 | 25 / 897 | 1 / 58 |
+| Acute bout, HR (T2 to T3) | 4 / 33 | 6 / 62 | 22 / 328 | 77 / 897 | 4 / 58 |
+| Acute bout, LR (T2 to T3) | 5 / 33 | 13 / 62 | 29 / 328 | 100 / 897 | 6 / 58 |
+| HR vs LR at T1 (floor) | 1 / 33 | 0 / 62 | 2 / 328 | 11 / 897 | 0 / 58 |
+| HR vs LR at T2 | 0 / 33 | 0 / 62 | 1 / 328 | 13 / 897 | 0 / 58 |
+| HR vs LR, training change | 2 / 33 | 6 / 62 | 5 / 328 | 21 / 897 | 3 / 58 |
+| HR vs LR, acute change | 2 / 33 | 3 / 62 | 6 / 328 | 44 / 897 | 1 / 58 |
 
-No set survives BH in any task. HR's smallest attainable p is 0.031 (training, 6 pairs) and 0.016
-(acute, 7); LR's is 0.0078 (8).
+HR's smallest attainable p is 0.031 (training, 6 pairs) and 0.016 (acute, 7); LR's is 0.0078 (8).
 
 ## The acute response tracks the training shift in fibre type
 
-No term of the sample model has a BH hit. Between-person mCSA returns 140 nominal sets where chance
-predicts 69 (ratio 2.03), the same excess the protein level shows; between-person type I fibre area
-follows at 1.65.
+No term of the sample model has a BH hit. Between-person mCSA has the most sets at p < 0.05, 140
+of 1,378, as at the protein level; between-person type I fibre area follows with 114.
 
 Change-score pairs at BH < 0.05, BH within window, outcome and collection:
 
@@ -119,6 +117,5 @@ The 85 Reactome sets are mostly proteasome, ubiquitin, cell-cycle and NF-κB sig
 but three, the acute-bout score change rises with the percent change in type I fibre share over
 training (15 subjects, |rho| 0.63 to 0.83). The share comes from MyoVision counts of 142 to 1,119
 fibres per biopsy. One subject (HR_S29) moved +105%; Spearman reads ranks, so that value weighs as
-one rank.
-Across collections the baseline level against `d_leg_ext_1rm` runs at 3.43 times chance and the
-acute change against `pct_type1_share` at 3.05.
+one rank. Each of the 20 outcomes, 3 windows and 5 collections carries its own BH, so these hits
+are not corrected across outcomes.

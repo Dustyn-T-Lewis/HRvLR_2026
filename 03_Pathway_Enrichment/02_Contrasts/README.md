@@ -11,7 +11,6 @@ Tests every set on every contrast with fgsea and fry, and marks non-redundant fg
 
 `set_tests.rds` holds `set_tests`, one row per set, contrast and method (`nes`, `leading_edge` and
 `main` are fgsea-only), and `protein_results`, the nine contrasts rebuilt from the fit with
-`topTable()`. The workbook keeps the sets at FDR < 0.05. The figure PDF holds a dot plot of the ten
-strongest collapse survivors per contrast over all collections, the before-and-after collapse
-counts, the same dot plot per collection, and every set nominal under fry as a dot matrix, 75 to a
-page.
+`topTable()`. The workbook keeps the sets at FDR < 0.05. The figure PDF holds one dot plot per contrast of every
+fgsea collapse survivor at FDR < 0.05, placed by NES, then one per contrast of every set at fry
+p < 0.05, placed by signed −log10 p. Forty sets to a page, coloured by collection.
