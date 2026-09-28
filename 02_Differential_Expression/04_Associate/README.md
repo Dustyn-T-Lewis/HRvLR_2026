@@ -33,10 +33,11 @@ outcome.
 ## Outputs
 
 `associate.rds` holds `change_score` and `model`; `04_Network/02_Contrasts` reads the training
-change scores. `chance_expectation` gives nominal counts against 5% of tested for every model term
-and trait and every window and outcome.
+change scores. `counts` gives tested, p < 0.05 and BH < 0.05 counts for every model term and trait
+and every window and outcome.
 
-The figure PDF opens on the chance ratios, then gives every nominal model hit a panel (one line per
-subject from T1 to T2, coloured by arm), then every nominal change-score pair a scatter
-(`ggpubr::ggscatter`, a line per arm, each arm's rho and exact p in the corner). Twelve panels to a
-page, by p. Each caption gives the tested count and the chance expectation.
+The figure PDF gives every model hit at p < 0.05 a panel (trait at the biopsy against abundance,
+one line per subject from T1 to T2), then every change-score pair at p < 0.05 a scatter
+(`ggpubr::ggscatter`, a line per arm, each arm's rho and exact p in the corner), twelve to a page,
+by p. Arm is the median split of `comp_hypertrophy`, so pooled correlations with it and with
+fibre-area change partly carry the group split; the change-score captions say so.

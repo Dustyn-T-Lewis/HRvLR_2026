@@ -60,24 +60,21 @@ A calibrated null sits at 1, 0.674 and 0.200. Five contrasts depart from it on a
 Training_HR, Acute_HR, Acute_LR, Acute_HRvLR and Acute_Interaction. `treat()` at 1.15-fold returns
 nothing. Two of the sixteen fry concordance tests reach FDR < 0.05.
 
-## Only the acute bout clears chance as a classifier
+## No classifier passes BH
 
-No task has a BH hit. The HR tasks have fewer pairs than LR, so their smallest attainable p is
-larger: 0.031 for HR training (6 pairs), 0.016 for HR acute (7), 0.0078 for LR (8).
+Within-arm tasks are paired and tested with the Wilcoxon signed-rank test; between-arm tasks use
+the rank-sum test. HR has fewer pairs than LR, so its smallest attainable p is larger.
 
-| Task | Nominal / tested | Chance ratio | Smallest p |
-|---|---:|---:|---:|
-| Training, HR (T1 to T2) | 43 / 1,555 | 0.55 | 0.031 |
-| Training, LR (T1 to T2) | 78 / 1,771 | 0.88 | 0.0078 |
-| Acute bout, HR (T2 to T3) | 116 / 1,703 | 1.36 | 0.016 |
-| Acute bout, LR (T2 to T3) | 107 / 1,742 | 1.23 | 0.0078 |
-| HR vs LR at T1 (floor) | 37 / 1,733 | 0.43 | 0.0003 |
-| HR vs LR at T2 | 61 / 1,835 | 0.66 | 0.0003 |
-| HR vs LR, training change | 39 / 1,539 | 0.51 | 0.0007 |
-| HR vs LR, acute change | 88 / 1,645 | 1.07 | 0.0003 |
-
-With 6 to 8 pairs a Wilcoxon p is coarse, so fewer than 5% of null tests reach 0.05. A ratio below
-1 is not worse than chance.
+| Task | Pairs or HR / LR | Smallest p | Tested | p < 0.05 | BH < 0.05 |
+|---|---:|---:|---:|---:|---:|
+| Training, HR (T1 to T2) | 6 | 0.031 | 1,555 | 43 | 0 |
+| Training, LR (T1 to T2) | 8 | 0.0078 | 1,771 | 78 | 0 |
+| Acute bout, HR (T2 to T3) | 7 | 0.016 | 1,703 | 116 | 0 |
+| Acute bout, LR (T2 to T3) | 8 | 0.0078 | 1,742 | 107 | 0 |
+| HR vs LR at T1 (floor) | 7 / 8 | 0.0003 | 1,733 | 37 | 0 |
+| HR vs LR at T2 | 7 / 8 | 0.0003 | 1,835 | 61 | 0 |
+| HR vs LR, training change | 6 / 8 | 0.0007 | 1,539 | 39 | 0 |
+| HR vs LR, acute change | 7 / 8 | 0.0003 | 1,645 | 88 | 0 |
 
 ## Slow-fibre proteins track each person's type I share
 
@@ -87,22 +84,19 @@ slow isoforms: TPM3 ranks 2nd, TNNC1 3rd, TNNT1 5th, TNNI1 18th and MYL3 26th of
 reaches BH < 0.05. This is the positive control: the proteome tracks a fibre-type count made
 independently of the proteomics.
 
-No model term has a BH hit. The between-person mCSA term returns 206 nominal proteins where chance
-predicts 82 (ratio 2.51), the largest excess at this level; leg extension 1RM follows at 1.51
-within and 1.61 between. Every other term sits between 0.56 and 1.30.
+No model term has a BH hit. The between-person mCSA term has the most proteins at p < 0.05, 206 of
+1,640; the other seventeen terms have 46 to 130.
 
-## Two change-score pairs survive BH
+## Two change-score pairs pass BH
 
-| Window | Outcome | Nominal / chance | BH < 0.05 |
-|---|---|---:|---:|
-| training | d_leg_ext_1rm | 1.96 | 0 |
-| training | d_mcsa | 0.95 | 1 (RPS4X, rho 0.91, n 14) |
-| baseline | d_leg_ext_1rm | 2.36 | 0 |
-| baseline | d_leg_press_1rm | 1.25 | 1 (ACSL3, rho −0.87, n 15) |
-| baseline | pct_leg_press_1rm | 1.63 | 0 |
-| acute | comp_hypertrophy | 1.86 | 0 |
-| acute | pct_mcsa | 1.82 | 0 |
-| acute | pct_type1_share | 1.75 | 0 |
+Of 88,996 protein-outcome pairs across the three windows, 4,376 reach p < 0.05 and two reach
+BH < 0.05:
 
-The 60 cells run from 0.44 to 2.36. Within-arm correlations rest on 4 to 8 subjects and carry an
-exact p.
+| Window | Outcome | Protein | rho | n |
+|---|---|---|---:|---:|
+| training | d_mcsa | RPS4X | 0.91 | 14 |
+| baseline | d_leg_press_1rm | ACSL3 | −0.87 | 15 |
+
+Within-arm correlations rest on 4 to 8 subjects and carry an exact p. Arm is the median split of
+`comp_hypertrophy`, so pooled correlations with it and with fibre-area change partly carry the
+group split.

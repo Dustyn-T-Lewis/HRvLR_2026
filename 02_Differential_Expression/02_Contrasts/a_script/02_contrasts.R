@@ -72,9 +72,6 @@ contrast_summary <- results |>
     min_fdr = min(fdr, na.rm = TRUE),
     .by = contrast
   ) |>
-  mutate(
-    n_expected = 0.05 * n_tested, ratio = round(n_nominal / n_expected, 2), .after = n_nominal
-  ) |>
   left_join(d$roles, by = "contrast")
 
 # propTrueNull() saturates at 1, so it cannot tell a flat null from a conservative one. Median |t|
@@ -156,7 +153,7 @@ p_histogram <- results |>
   ) +
   facet_wrap(~contrast) +
   labs(
-    title = "p-value distribution per contrast", x = "p", y = "proteins",
+    title = "p-value histogram per contrast", x = "p", y = "proteins",
     caption = paste(
       "Dashed line: a flat null (tested / 20). A spike at zero on a flat background is signal;",
       "a slope up toward 1 is a conservative test. Table: c_data/02_contrasts.xlsx, DEP_matrix."
@@ -164,59 +161,43 @@ p_histogram <- results |>
   ) +
   theme_minimal(base_size = 10)
 
-# Every protein nominal in at least one contrast, 75 rows to a page: fill is log2 FC, size is
-# -log10 p, a black ring marks BH < 0.05.
-label_of <- annotation |>
-  mutate(label = if_else(
-    is.na(gene) | duplicated(gene) | duplicated(gene, fromLast = TRUE),
-    paste0(coalesce(gene, "?"), " (", uniprot_id, ")"), gene
-  )) |>
-  with(set_names(label, uniprot_id))
-ranked <- results |>
+# One volcano per contrast. Nominal proteins in colour; BH < 0.05 proteins labelled.
+volcano <- results |>
   filter(!is.na(p)) |>
-  summarise(n_nominal = sum(p < 0.05), best = min(p), .by = uniprot_id) |>
-  filter(n_nominal > 0) |>
-  arrange(desc(n_nominal), best) |>
-  mutate(page = ceiling(row_number() / 75))
-hit_pages <- map(split(ranked$uniprot_id, ranked$page), \(ids) {
-  results |>
-    filter(uniprot_id %in% ids) |>
-    mutate(
-      label = factor(label_of[uniprot_id], levels = rev(label_of[ids])),
-      contrast = factor(contrast, levels = contrast_names),
-      nominal = !is.na(p) & p < 0.05
-    ) |>
-    ggplot(aes(contrast, label)) +
-    geom_point(data = \(x) filter(x, !nominal), colour = "grey85", size = 0.6) +
-    geom_point(
-      data = \(x) filter(x, nominal), aes(size = -log10(p), fill = logFC),
-      shape = 21, colour = "grey30", stroke = 0.2
-    ) +
-    geom_point(
-      data = \(x) filter(x, fdr < 0.05), aes(size = -log10(p)),
-      shape = 21, colour = "black", stroke = 0.9
-    ) +
-    scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B") +
-    scale_size_continuous(range = c(1, 4.5), limits = c(-log10(0.05), NA)) +
-    scale_x_discrete(drop = FALSE) +
-    labs(
-      title = sprintf("Proteins nominal in at least one contrast (%d)", nrow(ranked)),
-      x = NULL, y = NULL, fill = "log2 FC", size = "-log10 p",
-      caption = paste(
-        "Rows: proteins at p < 0.05 in at least one contrast, most contrasts first, then best p.",
-        "Grey speck: tested, not nominal. Black ring: BH < 0.05. Chance: 5% of tested per",
-        "contrast (contrast_summary). Table: c_data/02_contrasts.xlsx, DEP_matrix."
-      )
-    ) +
-    theme_minimal(base_size = 9) +
-    theme(
-      axis.text.x = element_text(angle = 35, hjust = 1), axis.text.y = element_text(size = 5.5)
+  mutate(
+    contrast = factor(contrast, levels = contrast_names),
+    call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")
+  ) |>
+  ggplot(aes(logFC, -log10(p), colour = call)) +
+  geom_point(size = 0.6, alpha = 0.7) +
+  geom_hline(yintercept = -log10(0.05), linetype = 2, colour = "grey50") +
+  ggrepel::geom_text_repel(
+    aes(label = gene),
+    data = \(x) filter(x, fdr < 0.05), size = 2.2, show.legend = FALSE
+  ) +
+  facet_wrap(~contrast) +
+  scale_colour_manual(
+    values = c(`BH < 0.05` = "#B2182B", `p < 0.05` = "#2166AC", `not nominal` = "grey75"),
+    name = NULL
+  ) +
+  labs(
+    title = "Volcano per contrast",
+    subtitle = sprintf(
+      "%s proteins at p < 0.05 per contrast; %d at BH < 0.05 across all nine.",
+      paste(range(contrast_summary$n_nominal), collapse = " to "), sum(contrast_summary$n_fdr_05)
+    ),
+    x = "log2 fold change", y = "-log10 p",
+    caption = paste(
+      "limma via proteoDA on the unimputed matrix, subject as a random effect. Dashed line:",
+      "p = 0.05. BH within contrast. Table: c_data/02_contrasts.xlsx, DEP_matrix."
     )
-})
+  ) +
+  theme_minimal(base_size = 9) +
+  theme(legend.position = "top", plot.caption = element_text(hjust = 0))
 
 saveRDS(res, file.path(out, "fit.rds"), compress = "xz")
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
-walk(c(list(p_histogram), hit_pages), print)
+walk(list(p_histogram, volcano), print)
 invisible(dev.off())
 
 sheets <- list(
@@ -243,7 +224,7 @@ sheets <- list(
 )
 read_me <- tibble(sheet = names(sheets), holds = c(
   "logFC, p and BH FDR per protein and contrast, with samples observed.",
-  "Tested, nominal, chance-expected and BH counts per contrast, with its role.",
+  "Tested, p < 0.05 and BH counts per contrast, with its role.",
   "propTrueNull, median |t| and share of p below 0.2 per contrast.",
   "Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast.",
   "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",

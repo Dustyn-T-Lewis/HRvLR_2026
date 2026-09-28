@@ -9,16 +9,19 @@ Scores how well each protein separates the groups on eight tasks.
 | Run | `Rscript 02_Differential_Expression/03_Classify/a_script/03_classify.R` |
 | Cost | about 15 s |
 
-The tasks are training (T1 to T2) and the acute bout (T2 to T3) within each arm, paired, and HR
-against LR on the T1 level, the T2 level, the training change and the acute change. AUC is the
-rank-sum statistic over n1·n2, so above 0.5 means higher at the later timepoint or in HR. p is
-Wilcoxon, signed-rank when paired; BH within task. A protein needs three observations per side.
+Within-arm tasks (training and the acute bout in each arm) pair each subject's two biopsies. Their
+p is the Wilcoxon signed-rank test and their effect the median paired change. Between-arm tasks
+(HR against LR on the T1 level, the T2 level, the training change and the acute change) use the
+rank-sum test, and AUC is W / (n1·n2), above 0.5 when higher in HR. BH runs within task. A
+protein needs three observations per side.
 
-`chance_expectation` gives each task's group sizes, smallest attainable p, tested, nominal and BH
-counts, and the chance expectation (5% of tested). HR has 6 training and 7 acute pairs and LR 8 of
-each, so HR's smallest p is 0.031 (training) and 0.016 (acute) against LR's 0.0078. With so few
-pairs fewer than 5% of null tests reach 0.05, and a ratio below 1 is not worse than chance.
+`counts` gives each task's pairing, n per side, smallest attainable p (2 / 2^n for n pairs,
+2 / choose(n1 + n2, n1) for two groups), and the tested, p < 0.05 and BH < 0.05 counts. HR has 6
+training and 7 acute pairs, LR 8 of each, so HR's smallest p is 0.031 and 0.016 against LR's
+0.0078. `auc` holds every protein and task; its AUC for paired tasks ignores the pairing and is not
+drawn.
 
-The figure PDF opens on the chance ratio per task, then draws an ROC curve (`pROC::ggroc`) for
-every protein at p < 0.05 on each task, by p, twelve to a page. The floor task gets no curves. Each
-page caption repeats the task's counts and smallest attainable p.
+The figure PDF draws every protein at p < 0.05, task by task, by p, twelve panels to a page. Within-arm
+tasks get a paired grid, each subject's two biopsies joined by a line. Between-arm tasks get an ROC
+grid (`pROC::ggroc`). The floor task is not drawn. Each page subtitle gives the task's counts and
+each caption the test, n and smallest attainable p.
