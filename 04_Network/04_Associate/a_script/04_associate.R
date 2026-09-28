@@ -194,126 +194,168 @@ counts <- bind_rows(
     )
 )
 
-# Twelve panels to a page; split() pages the data so each page builds only its own panels.
-paged <- function(data, draw) {
-  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
-  imap(unname(pages), \(page, i) {
-    draw(droplevels(page)) +
-      facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free") +
-      labs(tag = sprintf("page %d of %d", i, length(pages))) +
-      theme_minimal(base_size = 9) +
-      theme(
-        strip.text = element_text(size = 7), plot.caption = element_text(hjust = 0),
-        plot.tag.position = "topright", plot.tag = element_text(size = 8), legend.position = "top"
-      )
-  })
-}
+# Units come from the phenotype column names; type1_share is a percentage.
+unit_cols <- grep("_pre_", names(phenotype), value = TRUE)
+unit_of <- c(set_names(sub(".*_pre_", "", unit_cols), sub("_pre_.*", "", unit_cols)),
+  type1_share = "%"
+)
+outcome_unit <- c(
+  comp_hypertrophy = "score", volume_load_total_kg = "kg",
+  set_names(unit_of[traits], paste0("d_", traits)),
+  set_names(rep("%", length(traits)), paste0("pct_", traits))
+)
+window_axis <- c(training = "change, T1 to T2", baseline = "T1 level", acute = "change, T2 to T3")
 arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
+# Blank slots keep a short last page on the same 3 x 4 panel size.
+slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
+page_theme <- theme_minimal(base_size = 9) +
+  theme(
+    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0), legend.position = "top"
+  )
+# Twelve panels to a page, strongest first within each group: p, then |t| or |rho|, then ID.
+paginate <- function(hits, by) {
+  hits |>
+    mutate(
+      page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
+      position = (row_number() - 1) %% 12 + 1, .by = all_of(by)
+    ) |>
+    mutate(pdf_page = consecutive_id(pick(all_of(by)), page))
+}
 
-model_pages <- model |>
+trait_samples <- map(set_names(traits), \(trait) filter(samples, !is.na(.data[[trait]])))
+seen_in <- \(feature, trait) !is.na(values[feature, trait_samples[[trait]]$sample_id])
+model_hits <- model |>
   filter(p < 0.05) |>
-  arrange(match(trait, traits), desc(term), p) |>
-  group_split(trait, term, .keep = TRUE) |>
-  map(\(hits) {
-    info <- filter(
-      counts,
-      analysis == paste("model:", hits$term[1]), comparison == hits$trait[1]
+  mutate(
+    n_biopsies = map2_int(feature, trait, \(f, tr) sum(seen_in(f, tr))),
+    n_subjects = map2_int(feature, trait, \(f, tr) {
+      n_distinct(trait_samples[[tr]]$subject[seen_in(f, tr)])
+    }),
+    panel = sprintf(
+      "%s\n%s %.3g  p %.2g  q %.2g\n%d biopsies, %d subjects", label, term,
+      effect, p, fdr, n_biopsies, n_subjects
     )
-    points <- hits |>
-      mutate(panel = sprintf("%s\n%s %.3g  p %.2g  q %.2g", label, term, effect, p, fdr)) |>
-      select(feature, panel) |>
-      cross_join(
-        select(samples, sample_id, subject, timepoint, trait_value = all_of(hits$trait[1]))
-      ) |>
-      mutate(
-        value = values[cbind(feature, sample_id)], arm = arm_of[subject],
-        panel = factor(panel, unique(panel))
-      ) |>
-      filter(!is.na(value), !is.na(trait_value))
-    paged(points, \(page) {
-      ggplot(page, aes(trait_value, value, colour = arm)) +
-        geom_line(
-          aes(group = subject),
-          data = \(d) filter(d, n() == 2, .by = c(panel, subject)), alpha = 0.6
-        ) +
-        geom_point(aes(shape = timepoint), size = 1.5) +
-        scale_colour_manual(values = arm_colours, name = NULL) +
-        scale_shape_manual(values = c(T1 = 1, T2 = 16), name = NULL) +
-        labs(
-          title = sprintf("%s, %s-person term", hits$trait[1], hits$term[1]),
-          subtitle = sprintf(
-            "%d of %d %ss at p < 0.05, %d at BH < 0.05.",
-            info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05
-          ),
-          x = paste(hits$trait[1], "at the biopsy"), y = value_label,
-          caption = stringr::str_wrap(width = 160, sprintf(
-            paste(
-              "limma on %d biopsies, abundance ~ timepoint + between + within, subject blocked.",
-              "Lines join each subject's T1 and T2 biopsies: the within term reads their slopes,",
-              "the between term the spread of subjects. Header: effect per trait unit, p, and BH",
-              "q within trait and term. Table: c_data/04_associate.xlsx, model."
-            ),
-            hits$n_samples[1]
-          ))
-        )
-    })
-  }) |>
-  list_flatten()
+  ) |>
+  arrange(match(trait, traits), desc(term), p, desc(abs(t)), feature) |>
+  paginate(c("trait", "term"))
+model_page <- function(hits) {
+  trait <- hits$trait[1]
+  term <- hits$term[1]
+  info <- counts |>
+    filter(analysis == paste("model:", term), comparison == trait) |>
+    summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
+  points <- hits |>
+    select(feature, panel) |>
+    cross_join(select(samples, sample_id, subject, timepoint, trait_value = all_of(trait))) |>
+    mutate(
+      value = values[cbind(feature, sample_id)], arm = arm_of[subject],
+      panel = factor(panel, slots(hits$panel))
+    ) |>
+    filter(!is.na(value), !is.na(trait_value))
+  ggplot(points, aes(trait_value, value, colour = arm)) +
+    geom_line(
+      aes(group = subject),
+      data = \(d) filter(d, n() == 2, .by = c(panel, subject)), alpha = 0.6
+    ) +
+    geom_point(aes(shape = timepoint), size = 1.5) +
+    facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free", drop = FALSE) +
+    scale_colour_manual(values = arm_colours, name = NULL) +
+    scale_shape_manual(values = c(T1 = 1, T2 = 16), name = NULL) +
+    labs(
+      title = sprintf("%s, %s-person term", trait, term),
+      subtitle = sprintf(
+        "%d of %d %ss at p < 0.05, %d at BH < 0.05. Page %d of %d.",
+        info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05, hits$page[1],
+        hits$n_pages[1]
+      ),
+      x = sprintf("%s at the biopsy (%s)", trait, unit_of[[trait]]), y = value_label,
+      caption = stringr::str_wrap(width = 160, paste(
+        "limma, abundance ~ timepoint + between + within, subject blocked, on the T1 and T2",
+        "biopsies with the trait measured. Lines join each subject's two biopsies: the within",
+        "term reads their slopes, the between term the spread of subjects. Header: effect per",
+        "trait unit, p, BH q within trait and term,",
+        "and the biopsies and subjects where the feature was observed.",
+        "Table: c_data/04_associate.xlsx, model."
+      ))
+    ) +
+    page_theme
+}
 
 arm_text <- by_arm |>
   mutate(text = sprintf("%-3s n=%d rho=%+.2f p=%.3f", arm, n_subjects, rho, p)) |>
   summarise(caption = paste(text, collapse = "\n"), .by = c(window, outcome, feature))
-change_pages <- change_score |>
+change_hits <- change_score |>
   filter(p < 0.05) |>
-  arrange(match(window, names(windows)), p) |>
-  group_split(window, .keep = TRUE) |>
-  map(\(hits) {
-    w <- hits$window[1]
-    info <- counts |>
-      filter(analysis == paste("change score:", w)) |>
-      summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
-    points <- hits |>
-      left_join(arm_text, by = c("window", "outcome", "feature")) |>
-      mutate(panel = sprintf("%s vs %s\nrho %+.2f  p %.2g  q %.2g", label, outcome, rho, p, fdr)) |>
-      select(feature, outcome, panel, caption) |>
-      cross_join(tibble(subject = colnames(windows[[w]]))) |>
-      mutate(
-        value = windows[[w]][cbind(feature, subject)],
-        outcome_value = map2_dbl(outcome, subject, outcome_of), arm = arm_of[subject],
-        panel = factor(panel, unique(panel))
-      ) |>
-      filter(!is.na(value), !is.na(outcome_value))
-    paged(points, \(page) {
-      ggpubr::ggscatter(page, "value", "outcome_value",
-        color = "arm", palette = arm_colours, add = "reg.line", size = 1.3
-      ) +
-        geom_text(
-          data = distinct(page, panel, caption), aes(-Inf, Inf, label = caption),
-          inherit.aes = FALSE, hjust = -0.03, vjust = 1.1, size = 1.9, family = "mono"
-        ) +
-        scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
-        labs(
-          title = sprintf("Change score, %s window", w),
-          subtitle = sprintf(
-            "%d of %d %s-outcome pairs at p < 0.05, %d at BH < 0.05.",
-            info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05
-          ),
-          x = sprintf("%s, %s window", value_label, w), y = "outcome", colour = NULL,
-          caption = stringr::str_wrap(width = 160, paste(
-            "One point per subject; a line per arm. Header: Spearman rho and p pooled over both",
-            "arms, and BH q within window and outcome. Corner: each arm's rho and exact p. Arm is",
-            "the median split of comp_hypertrophy, so pooled correlations with it and with fibre",
-            "area change partly carry the group split.",
-            "Table: c_data/04_associate.xlsx, change_score and change_score_by_arm."
-          ))
-        )
-    })
-  }) |>
-  list_flatten()
+  mutate(panel = sprintf(
+    "%s vs %s (%s)\nrho %+.2f  p %.2g  q %.2g  n %d", label, outcome,
+    outcome_unit[outcome], rho, p, fdr, n_subjects
+  )) |>
+  arrange(match(window, names(windows)), p, desc(abs(rho)), feature, outcome) |>
+  paginate("window")
+change_page <- function(hits) {
+  w <- hits$window[1]
+  info <- counts |>
+    filter(analysis == paste("change score:", w)) |>
+    summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
+  points <- hits |>
+    left_join(arm_text, by = c("window", "outcome", "feature")) |>
+    select(feature, outcome, panel, caption) |>
+    cross_join(tibble(subject = colnames(windows[[w]]))) |>
+    mutate(
+      value = windows[[w]][cbind(feature, subject)],
+      outcome_value = map2_dbl(outcome, subject, outcome_of), arm = arm_of[subject],
+      panel = factor(panel, slots(hits$panel))
+    ) |>
+    filter(!is.na(value), !is.na(outcome_value))
+  ggplot(points, aes(value, outcome_value, colour = arm)) +
+    geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.5) +
+    geom_point(size = 1.3) +
+    geom_text(
+      data = distinct(points, panel, caption), aes(-Inf, Inf, label = caption),
+      inherit.aes = FALSE, hjust = -0.03, vjust = 1.1, size = 1.9, family = "mono"
+    ) +
+    facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free", drop = FALSE) +
+    scale_colour_manual(values = arm_colours, name = NULL) +
+    scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
+    labs(
+      title = sprintf("Change score, %s window", w),
+      subtitle = sprintf(
+        "%d of %d %s-outcome pairs at p < 0.05, %d at BH < 0.05. Page %d of %d.",
+        info$n_nominal, info$n_tested, feature_noun, info$n_fdr_05, hits$page[1],
+        hits$n_pages[1]
+      ),
+      x = sprintf("%s, %s", value_label, window_axis[[w]]), y = "outcome (unit in header)",
+      caption = stringr::str_wrap(width = 160, paste(
+        "One point per subject. Lines are a least-squares fit per arm, drawn as a guide; the",
+        "tests are Spearman. Header: rho and p pooled over both arms,",
+        "BH q within window and outcome, and the subjects used.",
+        "Corner: each arm's rho and exact p. Arm is the median split of",
+        "comp_hypertrophy, so pooled correlations with it and with fibre area change partly",
+        "carry the group split. Table: c_data/04_associate.xlsx, change_score and",
+        "change_score_by_arm."
+      ))
+    ) +
+    page_theme
+}
+model_pages <- map(split(model_hits, model_hits$pdf_page), model_page)
+change_pages <- map(split(change_hits, change_hits$pdf_page), change_page)
 
+plot_index <- bind_rows(
+  transmute(model_hits, analysis = "model", trait, term, feature, label, pdf_page, position),
+  transmute(change_hits,
+    analysis = "change score", window, outcome, feature, label,
+    pdf_page = pdf_page + length(model_pages), position
+  )
+)
 stopifnot(
-  sum(map_int(model_pages, \(g) nlevels(g$data$panel))) == sum(model$p < 0.05, na.rm = TRUE),
-  sum(map_int(change_pages, \(g) nlevels(g$data$panel))) == sum(change_score$p < 0.05)
+  !anyDuplicated(select(plot_index, -label, -pdf_page, -position)),
+  nrow(anti_join(filter(model, p < 0.05), model_hits, by = c("trait", "term", "feature"))) == 0,
+  nrow(anti_join(filter(change_score, p < 0.05), change_hits,
+    by = c("window", "outcome", "feature")
+  )) == 0,
+  nrow(model_hits) == sum(model$p < 0.05, na.rm = TRUE),
+  nrow(change_hits) == sum(change_score$p < 0.05)
 )
 
 pdf(file.path(figures, "04_associate_figures.pdf"), width = 11, height = 8.5)
@@ -325,6 +367,7 @@ sheets <- list(
   model = arrange(model, trait, term, p),
   change_score = arrange(change_score, window, outcome, p),
   change_score_by_arm = by_arm,
+  plot_index = plot_index,
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
@@ -337,6 +380,7 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Sample model: effect per trait unit, t, p and BH FDR per module, trait and term.",
   "Change score: pooled Spearman rho, p and BH FDR per module, window and outcome.",
   "Change score within each arm, exact p, every module.",
+  "PDF page and panel position (1 to 12) of every p < 0.05 model and change-score row.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))
