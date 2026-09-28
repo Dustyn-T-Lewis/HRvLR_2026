@@ -19,6 +19,8 @@ suppressPackageStartupMessages({
   library(tibble)
   library(ggplot2)
   library(writexl)
+  library(grid)
+  library(ComplexHeatmap)
 })
 
 stage <- here("04_Network", "04_Associate")
@@ -38,6 +40,7 @@ stopifnot(identical(colnames(values), meta$sample_id))
 feature_label <- set_names(rownames(values))
 feature_noun <- "module"
 value_label <- "eigengene"
+row_groups <- list(modules = modules$module_summary$module)
 
 # One row per subject and biopsy, pre as T1 and post as T2. type1_share is the MyoVision type I
 # fibre count as a percentage of the mixed count.
@@ -341,15 +344,117 @@ change_page <- function(hits) {
 model_pages <- map(split(model_hits, model_hits$pdf_page), model_page)
 change_pages <- map(split(change_hits, change_hits$pdf_page), change_page)
 
+# Overviews: every feature by trait (sample model t) and by outcome (change-score rho, one page
+# per window). Each effect map sits beside a status map; grey cells were not tested.
+ht_opt$message <- FALSE
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
+status_legend <- Legend(
+  labels = c(names(status_colours), "not tested"), title = "status",
+  legend_gp = gpar(fill = c(status_colours, "grey80"))
+)
+diverging <- c("#5E3C99", "white", "#E66101")
+cell_grid <- function(d, rows, cols, col_var, value) {
+  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
+  d <- filter(d, feature %in% rows, .data[[col_var]] %in% cols)
+  m[cbind(d$feature, d[[col_var]])] <- value(d)
+  m
+}
+body <- function(m, name, col, title, legend_at = NULL, legend = TRUE, names = FALSE) {
+  rows <- rownames(m)
+  Heatmap(m,
+    name = name, col = col, na_col = "grey80", heatmap_legend_param = list(at = legend_at),
+    show_heatmap_legend = legend, cluster_rows = FALSE, cluster_columns = FALSE,
+    show_row_names = names && length(rows) <= 80,
+    row_labels = gsub("\n", " ", feature_label[rows]),
+    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
+    column_names_gp = gpar(fontsize = 7), column_title = title,
+    column_title_gp = gpar(fontsize = 8), use_raster = length(rows) > 200
+  )
+}
+overview <- function(maps, title, caption) {
+  list(title = title, draw = function() {
+    draw(maps,
+      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
+      merge_legend = TRUE, heatmap_legend_list = list(status_legend),
+      padding = unit(c(14, 4, 4, 4), "mm")
+    )
+    grid.text(stringr::str_wrap(caption, 190),
+      x = unit(4, "mm"), y = unit(3, "mm"),
+      just = c("left", "bottom"), gp = gpar(fontsize = 7)
+    )
+  })
+}
+t_cap <- unname(quantile(abs(model$t), 0.99, na.rm = TRUE))
+model_overview <- function(rows, group) {
+  t_colours <- circlize::colorRamp2(c(-t_cap, 0, t_cap), diverging)
+  term_grid <- \(term, value) {
+    cell_grid(filter(model, term == .env$term), rows, traits, "trait", value)
+  }
+  maps <- body(term_grid("within", \(d) d$t), "t", t_colours, "Within-person t",
+    legend_at = signif(c(-t_cap, 0, t_cap), 2)
+  ) +
+    body(term_grid("between", \(d) d$t), "t, between", t_colours, "Between-person t",
+      legend = FALSE
+    ) +
+    body(term_grid("within", \(d) status_of(d$p, d$fdr)), "status, within", status_colours,
+      "Within: p and BH q",
+      legend = FALSE
+    ) +
+    body(term_grid("between", \(d) status_of(d$p, d$fdr)), "status, between", status_colours,
+      "Between: p and BH q",
+      legend = FALSE, names = TRUE
+    )
+  overview(maps, sprintf("Sample model overview: %s", group), paste(
+    sprintf("All %s %ss, one row each.", format(length(rows), big.mark = ","), feature_noun),
+    "Moderated t of the within and between terms, abundance ~ timepoint + between + within,",
+    sprintf("subject blocked. Colours stop at the 99th percentile of |t|, %.2g.", t_cap),
+    "Rows follow module size.",
+    "Grey: not tested. Table: c_data/04_associate.xlsx, model."
+  ))
+}
+change_overview <- function(rows, group, window) {
+  d <- filter(change_score, window == .env$window)
+  maps <- body(cell_grid(d, rows, outcomes, "outcome", \(d) d$rho), "rho",
+    circlize::colorRamp2(c(-1, 0, 1), diverging), "Spearman rho, both arms pooled",
+    legend_at = c(-1, 0, 1)
+  ) +
+    body(cell_grid(d, rows, outcomes, "outcome", \(d) status_of(d$p, d$fdr)), "status",
+      status_colours, "p and BH q",
+      legend = FALSE, names = TRUE
+    )
+  overview(maps, sprintf("Change score overview, %s window: %s", window, group), paste(
+    sprintf("All %s %ss, one row each.", format(length(rows), big.mark = ","), feature_noun),
+    sprintf(
+      "Spearman rho between the %s (%s) and each outcome.", value_label, window_axis[[window]]
+    ),
+    "Rows follow module size.",
+    "Grey: not tested. Table: c_data/04_associate.xlsx, change_score."
+  ))
+}
+overviews <- imap(row_groups, \(rows, group) {
+  c(list(model_overview(rows, group)), map(names(windows), \(w) change_overview(rows, group, w)))
+}) |>
+  list_flatten()
+
 plot_index <- bind_rows(
-  transmute(model_hits, analysis = "model", trait, term, feature, label, pdf_page, position),
+  tibble(
+    analysis = "overview", label = map_chr(overviews, "title"), pdf_page = seq_along(overviews)
+  ),
+  transmute(model_hits,
+    analysis = "model", trait, term, feature, label,
+    pdf_page = pdf_page + length(overviews), position
+  ),
   transmute(change_hits,
     analysis = "change score", window, outcome, feature, label,
-    pdf_page = pdf_page + length(model_pages), position
+    pdf_page = pdf_page + length(overviews) + length(model_pages), position
   )
 )
 stopifnot(
-  !anyDuplicated(select(plot_index, -label, -pdf_page, -position)),
+  !anyDuplicated(select(filter(plot_index, analysis != "overview"), -label, -pdf_page, -position)),
+  max(plot_index$pdf_page) == length(overviews) + length(model_pages) + length(change_pages),
   nrow(anti_join(filter(model, p < 0.05), model_hits, by = c("trait", "term", "feature"))) == 0,
   nrow(anti_join(filter(change_score, p < 0.05), change_hits,
     by = c("window", "outcome", "feature")
@@ -359,6 +464,7 @@ stopifnot(
 )
 
 pdf(file.path(figures, "04_associate_figures.pdf"), width = 11, height = 8.5)
+walk(overviews, \(page) page$draw())
 walk(c(model_pages, change_pages), print)
 invisible(dev.off())
 
@@ -380,7 +486,7 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Sample model: effect per trait unit, t, p and BH FDR per module, trait and term.",
   "Change score: pooled Spearman rho, p and BH FDR per module, window and outcome.",
   "Change score within each arm, exact p, every module.",
-  "PDF page and panel position (1 to 12) of every p < 0.05 model and change-score row.",
+  "PDF page of each overview, and page and panel position of every p < 0.05 row.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))
