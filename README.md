@@ -23,8 +23,8 @@ separate the groups, and which track the phenotype measured on each biopsy.
 Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts, `03_Classify`
 scores eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
 sample-level limma model and by change-score correlation. Each level adds its own steps around
-them. Every nominal result gets a panel in its step's PDF, and every table reports the count chance
-predicts beside the count observed.
+them. Every nominal result gets a panel in its step's PDF, and every table reports the tested,
+p < 0.05 and BH < 0.05 counts.
 
 Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
 `c_data/` (one workbook, plus the `.rds` a later step reads) and a README. Every workbook opens on a

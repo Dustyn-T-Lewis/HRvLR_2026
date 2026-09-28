@@ -24,3 +24,12 @@
 | Inputs | `00_Input` holds hand-curated study data only: `metadata.csv` (one row per MS sample) and `phenotype.csv` (one row per subject, pre and post side by side). Builders and derived inputs are gone. | Same pattern as BFR_limpa. Change scores from the new file equal the old ones to 1e-9. |
 | Observation floor in the sample model | A protein enters a trait's model only when two thirds of that trait's biopsies saw it. | TIGAR, seen in 15 of 30 biopsies, reached BH < 0.05 on between-person mCSA through half-missing data; the change score already used this floor. |
 | Derived trait name | `type1_share`, the type I fibre count over the mixed count, in percent. | `pct_type1` would have produced `pct_pct_type1` for its percent change. |
+
+## 2026-09-27: nominal reporting audit
+
+| Question | Decision | Reason |
+|---|---|---|
+| Chance ratio | Removed everywhere. Tables report tested, p < 0.05 and BH < 0.05 counts; the smallest attainable p stays. | 5% of tests is not the null count here: the Wilcoxon p is discrete with 6 to 8 pairs, and proteins and sets are correlated. This supersedes the chance entries above. |
+| Paired tasks | Within-arm tasks are drawn as paired grids with the signed-rank p and median paired change; ROC grids only for the four HR-vs-LR tasks. | AUC and ROC treat paired biopsies as independent groups, so they described a different comparison from the signed-rank p. |
+| Set contrast pages | Every fgsea collapse survivor at FDR < 0.05 and every fry set at p < 0.05, not the ten strongest. | A top-ten cut is a hand-set cutoff. |
+| Summary figures | The scratch summary figures are dropped; `05_Summary` stays a plan. | They carried chance dots and hand-picked examples. |

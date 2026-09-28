@@ -9,8 +9,8 @@ Candidate content:
 
 - a cohort page: pre and post size and strength per subject by arm, and the volume load across the
   16 training sessions (in the source workbook, not yet in `00_Input`);
-- the protein level: contrasts at chance, the acute bout above chance as a classifier, the
-  slow-isoform positive control;
+- the protein level: no BH hit in any contrast or classifier, the paired acute-bout changes, and
+  the slow-isoform positive control;
 - the pathway level: the training-interaction fgsea sets beside the baseline floor, and the acute
   response against the training shift in type I fibre share;
 - the module level: the twelve modules, their preservation between arms, and red in Acute_LR.
