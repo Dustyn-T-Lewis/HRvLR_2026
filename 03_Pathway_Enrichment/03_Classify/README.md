@@ -7,27 +7,27 @@ Scores how well each set's singscore separates the groups on the protein level's
 | Reads | `01_Scores/c_data/singscore.rds`, `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (sample sheet) |
 | Writes | `c_data/03_classify.xlsx`, `b_reports/03_classify_figures.pdf` |
 | Run | `Rscript 03_Pathway_Enrichment/03_Classify/a_script/03_classify.R` |
-| Cost | about 15 s |
 
-Within-arm tasks (training and the acute bout in each arm) pair each subject's two biopsies. Their
-p is the Wilcoxon signed-rank test and their effect the median paired change. Between-arm tasks
-(HR against LR on the T1 level, the T2 level, the training change and the acute change) use the
-rank-sum test, and AUC is W / (n1·n2), above 0.5 when higher in HR. BH runs within task and collection. A
-set needs three observations per side.
+## Method
 
-`counts` gives each task's pairing, n per side, smallest attainable p (2 / 2^n for n pairs,
-2 / choose(n1 + n2, n1) for two groups), and the tested, p < 0.05 and BH < 0.05 counts. HR has 6
-training and 7 acute pairs, LR 8 of each, so HR's smallest p is 0.031 and 0.016 against LR's
-0.0078. `auc` holds every set and task; its AUC for paired tasks ignores the pairing and is not
-drawn.
+Eight tasks on singscore. Within-arm tasks (training and the acute bout, in each arm) pair each
+subject's two biopsies: the Wilcoxon signed-rank test gives p and the effect is the median paired
+change. HR-vs-LR tasks (T1 level, T2 level, training change, acute change) use the rank-sum test,
+and AUC = W / (n1 x n2), above 0.5 when higher in HR. A feature needs three observations per side.
+BH within task and collection. `counts` gives each task's smallest attainable p: 2 / 2^n for n
+pairs, 2 / choose(n1 + n2, n1) for two groups.
 
-The figure PDF opens with one overview page per collection: every set's median paired change in the
-four within-arm tasks and AUC in the four HR-vs-LR tasks, each on its own colour scale, beside a
-status map (not significant, p < 0.05, BH < 0.05, not tested). Rows follow average-linkage
-clustering (1 - Pearson r) of singscore within collection, for display only. The grids follow: every
-set at p < 0.05 in every task, baseline included, twelve panels to a page, ordered within task by p,
-then the larger effect, then ID. Within-arm tasks get a paired grid, each subject's two biopsies
-joined by a line; between-arm tasks get an ROC grid (`pROC::ggroc`). Each header gives the set, its
-effect, p, BH q and its own n (complete pairs, or HR and LR subjects). Each page subtitle gives the
-task's counts and each caption the test, the largest n and the smallest attainable p. `plot_index`
-gives the PDF page and panel of every drawn row.
+## Figures
+
+One overview page per collection: median paired change and AUC for every set, each on its own colour
+scale, beside a status map. Then every set at p < 0.05 in every task, twelve panels to a page,
+ordered by p, then the larger effect, then ID: a paired grid for within-arm tasks, an ROC grid
+(`pROC::ggroc`) for HR-vs-LR tasks. Headers give the effect, p, BH q and the set's own n.
+
+## Workbook
+
+| Sheet | Holds |
+|---|---|
+| `counts` | Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts. |
+| `auc` | Per set and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR. |
+| `plot_index` | PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row. |

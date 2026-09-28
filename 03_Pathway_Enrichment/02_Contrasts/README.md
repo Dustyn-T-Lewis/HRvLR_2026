@@ -7,17 +7,29 @@ Tests every set on every contrast with fgsea and fry, and marks non-redundant fg
 | Reads | `00_Gene_Sets/c_data/gene_sets.rds`, `01_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv`, `02_Differential_Expression/02_Contrasts/c_data/fit.rds`, `02_Differential_Expression/01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` |
 | Writes | `c_data/set_tests.rds`, `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf` |
 | Run | `Rscript 03_Pathway_Enrichment/02_Contrasts/a_script/02_contrasts.R` |
-| Cost | about 55 s |
 
-`set_tests.rds` holds `set_tests`, one row per set, contrast and method (`nes`, `leading_edge` and
-`main` are fgsea-only), and `protein_results`, the nine contrasts rebuilt from the fit with
-`topTable()`. The workbook keeps the sets at FDR < 0.05.
+## Method
 
-The figure PDF opens with two overview pages per collection. The first shows singscore across the 45
-biopsies, centred per set, with arm, time point, type I share, fCSA mixed, mCSA, leg press 1RM and
-comp_hypertrophy above the columns. The biopsy traits are blank at T3, where none were measured. The
-second shows fgsea NES in the nine contrasts beside its status (not significant, p < 0.05, BH <
-0.05, not tested). Rows follow average-linkage clustering (1 - Pearson r) of singscore within
-collection, for display only. After them come one dot plot per contrast of every fgsea collapse
-survivor at FDR < 0.05, placed by NES, then one per contrast of every set at fry p < 0.05, placed by
-signed −log10 p. Forty sets to a page, coloured by collection.
+fgsea ranks proteins by moderated t from the protein fit and asks whether a set sits at one end
+(seeded). fry asks whether the set moved at all under the design, subject block and within-subject
+correlation, on the imputed matrix. Each method's BH runs within contrast over the five collections
+pooled. `collapsePathways()` marks non-redundant fgsea hits in `main` and deletes nothing.
+`set_tests.rds` holds `set_tests` (one row per set, contrast and method) and `protein_results`.
+
+## Figures
+
+Two overview pages per collection: singscore across the 45 biopsies, centred per set, with arm, time
+point, type I share, fCSA mixed, mCSA, leg press 1RM and comp_hypertrophy above the columns (the
+biopsy traits are blank at T3, where none were measured); then fgsea NES in the nine contrasts
+beside a status map. Then a dot plot per contrast of every fgsea collapse survivor at FDR < 0.05,
+placed by NES, and one per contrast of every set at fry p < 0.05, placed by signed -log10 p, forty
+sets to a page.
+
+## Workbook
+
+| Sheet | Holds |
+|---|---|
+| `set_summary` | Sets tested and called per contrast, by method, and fgsea survivors of collapsePathways. |
+| `significant` | Every set at FDR < 0.05, either method. The full table is set_tests in set_tests.rds. |
+| `protein_summary` | Proteins tested and at BH < 0.05 per contrast. |
+| `fry_correlation` | Within-subject correlation fry used, estimated on the imputed matrix. |

@@ -7,18 +7,30 @@ Fits the nine contrasts with proteoDA and limma on the unimputed matrix.
 | Reads | `01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/fit.rds`, `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf`, and proteoDA's per-contrast HTML reports in `b_reports/` (ignored) |
 | Run | `Rscript 02_Differential_Expression/02_Contrasts/a_script/02_contrasts.R` |
-| Cost | about 40 s |
 
-`fit.rds` is the full proteoDA result, limma fit included; the pathway and module contrast steps
-read it. BH runs within each contrast. `contrast_summary` gives tested, p < 0.05 and BH counts per
-contrast. The fry concordance check reads the imputed matrix because fry takes no missing value.
+## Method
 
-The figure PDF opens with two overview pages. The biopsy overview shows all 1,900 proteins across
-the 45 biopsies, centred per protein, with arm, time point, type I share, fCSA mixed, mCSA, leg
-press 1RM and comp_hypertrophy above the columns. The biopsy traits are blank at T3, where none were
-measured. The contrast overview shows each protein's log2 fold change in the nine contrasts beside
-its status (not significant, p < 0.05, BH < 0.05, not tested). Rows follow average-linkage
-clustering (1 - Pearson r) of the imputed matrix, for display only. After them come the p-value
-histogram per contrast and a volcano per contrast, proteins at p < 0.05 in colour and proteins at BH
-< 0.05 labelled. The log carries limma's note on partial NA coefficients for 34 proteins with an
-empty cell.
+`fit_limma_model()` fits every protein on the samples where it was seen, subject blocked, then
+`eBayes(robust = TRUE)`; `extract_DA_results()` applies BH within each contrast. A protein with an
+empty cell in a contrast is not tested there. `treat()` retests at a 1.15-fold floor. The fry
+concordance check takes one arm's responders and tests them in the other arm's contrast on the
+imputed matrix, since fry takes no missing value. `fit.rds` holds the full proteoDA result; the
+pathway and module contrasts read it.
+
+## Figures
+
+Two overview pages: every protein across the 45 biopsies, centred per protein, with arm, time point,
+type I share, fCSA mixed, mCSA, leg press 1RM and comp_hypertrophy above the columns (the biopsy
+traits are blank at T3, where none were measured); then log2 fold change in the nine contrasts
+beside a status map. Then the p-value histogram and a volcano per contrast.
+
+## Workbook
+
+| Sheet | Holds |
+|---|---|
+| `DEP_matrix` | logFC, p and BH FDR per protein and contrast, with samples observed. |
+| `contrast_summary` | Tested, p < 0.05 and BH counts per contrast, with its role. |
+| `null_calibration` | propTrueNull, median |t| and share of p below 0.2 per contrast. |
+| `treat` | Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast. |
+| `detectable_effect` | log2 effect the primary contrast detects at 80% power, median and 90th percentile. |
+| `fry_concordance` | fry: one arm's responders tested in the other arm's contrast. |

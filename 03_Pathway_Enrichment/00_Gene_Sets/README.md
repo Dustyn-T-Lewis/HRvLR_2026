@@ -7,19 +7,26 @@ Freezes the gene sets, maps proteins to genes and applies the size filter.
 | Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `c_data/cache/goslim_generic.obo` and `c_data/cache/msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds`, each with its `.md5` |
 | Writes | `c_data/gene_sets.rds`, `c_data/00_gene_sets.xlsx`; the MSigDB cache on the first run |
 | Run | `Rscript 03_Pathway_Enrichment/00_Gene_Sets/a_script/00_gene_sets.R` |
-| Cost | about 8 s |
 
-`gene_sets.rds` holds `sets` (the 1,378 tested sets as gene symbols), `set_catalog` (every set with
-its sizes), `protein_map` (every protein, its symbol and the representative flag) and
-`gene_universe` (the 1,900 measured symbols).
+## Method
 
-## GO Slim generic, GO release 2026-07-26
+Four MSigDB collections (Hallmark, KEGG_Legacy, Reactome, GOBP; release 2026.1.Hs) come from a
+frozen RDS in `c_data/cache/`, checked against its `.md5`; the first run fetches it with msigdbr. GO
+Slim sets come from `goslim_generic.obo` (GO release 2026-07-26): each holds every measured gene
+annotated to the slim term or any GO:BP term below it. A set is tested with 15 to 500 source genes
+and at least 15 measured. To refresh the OBO, download it into `c_data/cache/` from
+<https://current.geneontology.org/ontology/subsets/goslim_generic.obo>, run `md5 -q
+goslim_generic.obo > goslim_generic.obo.md5`, and record the release here.
 
-`goslim_generic.obo` is the Gene Ontology Consortium's species-neutral slim, downloaded 2026-08-19
-from <https://current.geneontology.org/ontology/subsets/goslim_generic.obo>. It holds 140 terms (72
-biological process, 28 cellular component, 40 molecular function); this step builds 71 sets from
-the biological-process terms. The script stops if the file's checksum does not match its `.md5`.
+## Figures
 
-To refresh, download into `c_data/cache/`, then run `md5 -q goslim_generic.obo > goslim_generic.obo.md5`
-and record the new release here. Each release can change term membership and every result that
-reads it.
+None.
+
+## Workbook
+
+| Sheet | Holds |
+|---|---|
+| `collection_summary` | Sets per collection in the source, sets that qualify, median measured size. |
+| `set_catalog` | Every set with its source and measured size and whether it qualifies (15 to 500). |
+| `protein_gene_map` | Every protein, its gene symbol, and the representative chosen per symbol. |
+| `mapping_summary` | Proteins per mapping status. |

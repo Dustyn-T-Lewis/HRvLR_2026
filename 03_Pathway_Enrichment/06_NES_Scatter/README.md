@@ -1,13 +1,26 @@
 # 06_NES_Scatter
 
-Plots each set's HR NES against its LR NES, once for training and once for the acute bout.
+Plots each set's HR NES against its LR NES, for training and for the acute bout.
 
 | | |
 |---|---|
 | Reads | `02_Contrasts/c_data/set_tests.rds` |
 | Writes | `c_data/06_nes_scatter.xlsx`, `b_reports/06_nes_scatter_figures.pdf` |
 | Run | `Rscript 03_Pathway_Enrichment/06_NES_Scatter/a_script/06_nes_scatter.R` |
-| Cost | about 9 s |
 
-Four composites: for each pair, every collection with collapse survivors and discordant sets, then
+## Method
+
+A set is discordant when its two NES differ in sign. Spearman rho of HR against LR NES summarises
+agreement per population: all sets, collapse survivors, and Hallmark with GO Slim.
+
+## Figures
+
+Four composites: per pair, every collection with collapse survivors and discordant sets, then
 Hallmark and GO Slim with each concordant quadrant rescaled so every significant set is named.
+
+## Workbook
+
+| Sheet | Holds |
+|---|---|
+| `concordance` | Spearman rho of HR against LR NES, and significant and discordant counts, per population. |
+| `nes_scatter` | One row per set scored in both arms: both NES, both FDR, significance and discordance. |
