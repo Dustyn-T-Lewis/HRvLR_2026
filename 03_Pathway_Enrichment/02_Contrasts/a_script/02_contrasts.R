@@ -300,7 +300,7 @@ biopsy_traits <- trait_table |>
   transmute(
     subject,
     timepoint = if_else(when == "pre", "T1", "T2"),
-    type1_share = 100 * fibres_type1 / fibres_mixed, fcsa_mixed, mcsa, leg_press_1rm
+    fcsa_mixed, mcsa, leg_press_1rm
   )
 columns <- as_tibble(column_meta) |>
   transmute(sample_id, subject, arm = as.character(arm), timepoint = as.character(timepoint)) |>
@@ -314,7 +314,7 @@ columns <- as_tibble(column_meta) |>
 stopifnot(!anyDuplicated(columns$sample_id), setequal(columns$sample_id, colnames(sample_values)))
 grey_ramp <- \(x) circlize::colorRamp2(range(x, na.rm = TRUE), c("#F7F7F7", "#252525"))
 tracks <- list(
-  "type I share (%)" = columns$type1_share, "fCSA mixed (um2)" = columns$fcsa_mixed,
+  "fCSA mixed (um2)" = columns$fcsa_mixed,
   "mCSA (cm2)" = columns$mcsa, "leg press 1RM (kg)" = columns$leg_press_1rm,
   "comp_hypertrophy, per subject" = columns$comp_hypertrophy
 )

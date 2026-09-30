@@ -7,7 +7,7 @@
 # carry more of the protein. Arm stays out: it was defined from one of these traits.
 #
 # Change score: one value per subject and window (training change, T1 level, acute change),
-# Spearman against 20 outcomes. Pooled p is the t approximation that cor.test(exact = FALSE) uses;
+# Spearman against 8 outcomes. Pooled p is the t approximation that cor.test(exact = FALSE) uses;
 # within-arm p is exact, since 4 to 8 subjects make the approximation return p = 0 at |rho| = 1.
 
 suppressPackageStartupMessages({
@@ -42,8 +42,9 @@ feature_noun <- "modules"
 value_label <- "eigengene"
 row_groups <- list(modules = modules$module_summary$module)
 
-# One row per subject and biopsy, pre as T1 and post as T2. type1_share is the MyoVision type I
-# fibre count as a percentage of the mixed count.
+# One row per subject and biopsy, pre as T1 and post as T2. Size and strength traits only; the
+# MyoVision fibre counts stay out.
+traits <- c("fcsa_mixed", "fcsa_type1", "fcsa_type2", "mcsa", "leg_press_1rm", "leg_ext_1rm")
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy <- phenotype |>
   select(subject, arm, matches("_(pre|post)_")) |>
@@ -51,21 +52,15 @@ biopsy <- phenotype |>
     names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*"
   ) |>
   pivot_wider(names_from = trait) |>
-  mutate(
-    timepoint = if_else(when == "pre", "T1", "T2"),
-    type1_share = 100 * fibres_type1 / fibres_mixed
-  ) |>
-  select(-when)
-traits <- setdiff(names(biopsy), c("subject", "arm", "timepoint"))
+  mutate(timepoint = if_else(when == "pre", "T1", "T2")) |>
+  select(subject, arm, timepoint, all_of(traits))
 per_subject <- biopsy |>
   pivot_longer(all_of(traits), names_to = "trait") |>
   pivot_wider(names_from = timepoint) |>
-  transmute(subject, trait, d = T2 - T1, pct = 100 * (T2 - T1) / T1) |>
-  pivot_wider(names_from = trait, values_from = c(d, pct)) |>
+  transmute(subject, trait, pct = 100 * (T2 - T1) / T1) |>
+  pivot_wider(names_from = trait, values_from = pct, names_prefix = "pct_") |>
   left_join(select(phenotype, subject, comp_hypertrophy, volume_load_total_kg), by = "subject")
-outcomes <- c(
-  "comp_hypertrophy", "volume_load_total_kg", paste0("d_", traits), paste0("pct_", traits)
-)
+outcomes <- c("comp_hypertrophy", "volume_load_total_kg", paste0("pct_", traits))
 outcome_of <- \(name, subjects) set_names(per_subject[[name]], per_subject$subject)[subjects]
 arm_of <- set_names(phenotype$arm, phenotype$subject)
 
@@ -181,6 +176,60 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   list_rbind(names_to = "arm") |>
   filter(!is.na(rho))
 
+# Two limma models on the same per-subject values. Arm difference: feature ~ arm * outcome, whose
+# interaction is HR's slope minus LR's per outcome unit. Two predictor: feature ~ comp_hypertrophy
+# + a strength gain, once per 1RM test, so growth and strength each come adjusted for the other;
+# the two are unrelated here. The change score's two-thirds floor applies. BH within analysis,
+# window and comparison.
+subject_fit <- function(x, predictors, formula, terms) {
+  ok <- complete.cases(predictors)
+  x <- x[, ok, drop = FALSE]
+  x <- x[rowSums(!is.na(x)) >= ceiling(2 * ncol(x) / 3), , drop = FALSE]
+  fit <- lmFit(x, model.matrix(formula, predictors[ok, , drop = FALSE])) |>
+    eBayes(robust = TRUE)
+  map(terms, \(term) {
+    tibble(
+      feature = rownames(x), coefficient = term, n_subjects = unname(rowSums(!is.na(x))),
+      effect = unname(fit$coefficients[, term]), t = unname(fit$t[, term]),
+      p = unname(fit$p.value[, term])
+    )
+  }) |>
+    list_rbind() |>
+    filter(!is.na(p))
+}
+arm_difference <- imap(windows, \(x, window) {
+  map(set_names(outcomes), \(name) {
+    predictors <- data.frame(
+      arm = factor(arm_of[colnames(x)], c("LR", "HR")), outcome = outcome_of(name, colnames(x))
+    )
+    subject_fit(x, predictors, ~ arm * outcome, "armHR:outcome")
+  }) |>
+    list_rbind(names_to = "outcome") |>
+    mutate(window = window, .before = 1)
+}) |>
+  list_rbind() |>
+  select(-coefficient) |>
+  mutate(label = feature_label[feature], .after = feature) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome))
+strength_tests <- c("pct_leg_press_1rm", "pct_leg_ext_1rm")
+two_predictor <- imap(windows, \(x, window) {
+  map(set_names(strength_tests), \(test) {
+    predictors <- data.frame(
+      growth = outcome_of("comp_hypertrophy", colnames(x)), strength = outcome_of(test, colnames(x))
+    )
+    subject_fit(x, predictors, ~ growth + strength, c("growth", "strength"))
+  }) |>
+    list_rbind(names_to = "strength_test") |>
+    mutate(window = window, .before = 1)
+}) |>
+  list_rbind() |>
+  mutate(
+    outcome = if_else(coefficient == "growth", "comp_hypertrophy", strength_test),
+    .after = coefficient
+  ) |>
+  mutate(label = feature_label[feature], .after = feature) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(window, strength_test, coefficient))
+
 counts <- bind_rows(
   summarise(model,
     n_tested = sum(!is.na(p)), n_nominal = sum(p < 0.05, na.rm = TRUE),
@@ -194,6 +243,23 @@ counts <- bind_rows(
     transmute(
       analysis = paste("change score:", window), comparison = outcome, n_tested, n_nominal,
       n_fdr_05
+    ),
+  summarise(arm_difference,
+    n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
+    .by = c(window, outcome)
+  ) |>
+    transmute(
+      analysis = paste("arm difference:", window), comparison = outcome,
+      n_tested, n_nominal, n_fdr_05
+    ),
+  summarise(two_predictor,
+    n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
+    .by = c(window, strength_test, coefficient)
+  ) |>
+    transmute(
+      analysis = paste("two predictor:", window),
+      comparison = paste(coefficient, strength_test, sep = ", "),
+      n_tested, n_nominal, n_fdr_05
     )
 )
 
@@ -282,14 +348,11 @@ counts_line <- \(info, noun, hits) {
   )
 }
 
-# Units come from the phenotype column names; type1_share is a percentage.
+# Units come from the phenotype column names.
 unit_cols <- grep("_pre_", names(phenotype), value = TRUE)
-unit_of <- c(set_names(sub(".*_pre_", "", unit_cols), sub("_pre_.*", "", unit_cols)),
-  type1_share = "%"
-)
+unit_of <- set_names(sub(".*_pre_", "", unit_cols), sub("_pre_.*", "", unit_cols))
 outcome_unit <- c(
   comp_hypertrophy = "score", volume_load_total_kg = "kg",
-  set_names(unit_of[traits], paste0("d_", traits)),
   set_names(rep("%", length(traits)), paste0("pct_", traits))
 )
 window_axis <- c(training = "change, T1 to T2", baseline = "T1 level", acute = "change, T2 to T3")
@@ -304,7 +367,8 @@ overviews <- imap(row_groups, \(rows, group) {
   term_grid <- \(term, value) {
     as_grid(filter(model, term == .env$term), rows, traits, "trait", value)
   }
-  model_maps <- heat(term_grid("within", \(d) d$t), "Within-person t", c(-t_limit, 0, t_limit),
+  model_maps <- heat(
+    term_grid("within", \(d) d$t), "Within-person t", c(-t_limit, 0, t_limit),
     "t"
   ) +
     heat(term_grid("between", \(d) d$t), "Between-person t", c(-t_limit, 0, t_limit), NULL) +
@@ -320,7 +384,8 @@ overviews <- imap(row_groups, \(rows, group) {
   ))
   window_pages <- map(names(windows), \(w) {
     d <- filter(change_score, window == w)
-    maps <- heat(as_grid(d, rows, outcomes, "outcome", \(d) d$rho),
+    maps <- heat(
+      as_grid(d, rows, outcomes, "outcome", \(d) d$rho),
       "Spearman rho, both arms pooled", c(-1, 0, 1), "rho"
     ) +
       heat(as_grid(d, rows, outcomes, "outcome", \(d) status_of(d$p, d$fdr)), "p and BH q",
@@ -409,10 +474,35 @@ change_hits <- change_score |>
   ) |>
   arrange(match(window, names(windows)), p, desc(abs(rho)), feature, outcome) |>
   paginate("window")
-change_page <- function(hits) {
+page_captions <- c(
+  "change score" = paste(
+    "One point per subject. Lines are a least-squares fit per arm, drawn as a guide; the",
+    "tests are Spearman. Header: rho and p pooled over both arms,",
+    "BH q within window, outcome%s, and the subjects used.",
+    "Corner: each arm's rho and exact p. Arm is the median split of",
+    "comp_hypertrophy, so pooled correlations with it and with fibre area change partly",
+    "carry the group split. Table: c_data/04_associate.xlsx, change_score and",
+    "change_score_by_arm."
+  ),
+  "arm difference" = paste(
+    "One point per subject. Lines are a least-squares fit per arm. Header: HR's slope minus",
+    "LR's per outcome unit from limma, feature ~ arm * outcome, with p, BH q within window,",
+    "outcome%s, and the subjects used. Corner: each arm's Spearman rho and exact p.",
+    "Table: c_data/04_associate.xlsx, arm_difference."
+  ),
+  "two predictor" = paste(
+    "One point per subject. Header: the growth or strength coefficient from limma, feature ~",
+    "comp_hypertrophy + strength gain, each adjusted for the other, with p, BH q within",
+    "window, strength test, term%s, and the subjects used. The x axis shows the term's own",
+    "outcome; the drawing does not hold the other predictor fixed. Corner: each arm's",
+    "Spearman rho and exact p. Table: c_data/04_associate.xlsx, two_predictor."
+  )
+)
+page_captions[] <- sprintf(page_captions, "")
+change_page <- function(hits, kind = "change score") {
   w <- hits$window[1]
   info <- counts |>
-    filter(analysis == paste("change score:", w)) |>
+    filter(analysis == paste0(kind, ": ", w)) |>
     summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
   points <- hits |>
     left_join(arm_text, by = c("window", "outcome", "feature")) |>
@@ -435,23 +525,44 @@ change_page <- function(hits) {
     scale_colour_manual(values = arm_colours, name = NULL) +
     scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
     labs(
-      title = sprintf("Change score, %s window", w),
+      title = sprintf("%s, %s window", stringr::str_to_sentence(kind), w),
       subtitle = counts_line(info, "feature-outcome pairs", hits),
       x = sprintf("%s, %s", value_label, window_axis[[w]]), y = "outcome (unit in header)",
-      caption = stringr::str_wrap(width = 160, paste(
-        "One point per subject. Lines are a least-squares fit per arm, drawn as a guide; the",
-        "tests are Spearman. Header: rho and p pooled over both arms,",
-        "BH q within window and outcome, and the subjects used.",
-        "Corner: each arm's rho and exact p. Arm is the median split of",
-        "comp_hypertrophy, so pooled correlations with it and with fibre area change partly",
-        "carry the group split. Table: c_data/04_associate.xlsx, change_score and",
-        "change_score_by_arm."
-      ))
+      caption = stringr::str_wrap(page_captions[[kind]], 160)
     ) +
     page_theme
 }
 model_pages <- map(split(model_hits, model_hits$pdf_page), model_page)
 change_pages <- map(split(change_hits, change_hits$pdf_page), change_page)
+slope_hits <- bind_rows(
+  arm_difference |>
+    filter(p < 0.05) |>
+    mutate(
+      kind = "arm difference",
+      header = sprintf("slope HR-LR %+.3g", effect)
+    ),
+  two_predictor |>
+    filter(p < 0.05) |>
+    mutate(
+      kind = "two predictor",
+      header = sprintf(
+        "%s term, %s model %+.3g", coefficient, sub("pct_", "", strength_test), effect
+      )
+    )
+) |>
+  mutate(
+    name = label,
+    panel = sprintf(
+      "%s vs %s (%s)\n%s  p %.2g  q %.2g  n %d", name, outcome, outcome_unit[outcome], header,
+      p, fdr, n_subjects
+    )
+  ) |>
+  arrange(
+    match(kind, c("arm difference", "two predictor")), match(window, names(windows)), p,
+    desc(abs(t)), feature, outcome
+  ) |>
+  paginate(c("kind", "window"))
+slope_pages <- map(split(slope_hits, slope_hits$pdf_page), \(hits) change_page(hits, hits$kind[1]))
 
 plot_index <- bind_rows(
   tibble(
@@ -464,18 +575,24 @@ plot_index <- bind_rows(
   transmute(change_hits,
     analysis = "change score", window, outcome, feature, label,
     pdf_page = pdf_page + length(overviews) + length(model_pages), position
+  ),
+  transmute(slope_hits,
+    analysis = kind, window, outcome, strength_test, coefficient, feature, label,
+    pdf_page = pdf_page + length(overviews) + length(model_pages) + length(change_pages), position
   )
 )
 stopifnot(
   nrow(model_hits) == sum(model$p < 0.05, na.rm = TRUE),
   nrow(change_hits) == sum(change_score$p < 0.05),
   !anyDuplicated(select(filter(plot_index, !is.na(feature)), -label, -pdf_page, -position)),
-  max(plot_index$pdf_page) == length(overviews) + length(model_pages) + length(change_pages)
+  nrow(slope_hits) == sum(arm_difference$p < 0.05) + sum(two_predictor$p < 0.05),
+  max(plot_index$pdf_page) ==
+    length(overviews) + length(model_pages) + length(change_pages) + length(slope_pages)
 )
 
 pdf(file.path(figures, "04_associate_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
-walk(c(model_pages, change_pages), print)
+walk(c(model_pages, change_pages, slope_pages), print)
 invisible(dev.off())
 
 write_workbook(
@@ -483,6 +600,8 @@ write_workbook(
     counts = counts, model = arrange(model, trait, term, p),
     change_score = arrange(change_score, window, outcome, p),
     change_score_by_arm = by_arm,
+    arm_difference = arrange(arm_difference, window, outcome, p),
+    two_predictor = arrange(two_predictor, window, strength_test, coefficient, p),
     plot_index = plot_index
   ),
   c(
@@ -490,6 +609,8 @@ write_workbook(
     "Sample model: effect per trait unit, t, p and BH FDR per module, trait and term.",
     "Change score: pooled Spearman rho, p and BH FDR per module, window and outcome.",
     "Change score within each arm, exact p, every module.",
+    "Arm difference: HR slope minus LR slope, t, p and BH FDR per module, window and outcome.",
+    "Two predictor: growth and strength terms, t, p and BH FDR per module, window and test.",
     "PDF page of each overview, and page and panel position of every p < 0.05 row."
   ),
   file.path(out, "04_associate.xlsx")
