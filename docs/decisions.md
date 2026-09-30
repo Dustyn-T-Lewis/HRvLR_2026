@@ -99,3 +99,10 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Extra checks | Leave-one-subject-out on the key tests; trace why Training_LR fgsea sets fell from 121 to 4 after blood adjustment. | Single-subject results; largest shift on the training side. |
 | Code structure | One `R/helpers.R` sourced by every script, unit-tested with testthat; row-wise packages (`matrixTests`, `limma`) replace hand loops. Supersedes "each script carries its own copy" (2026-09-25). | One fix lands everywhere; tests become possible. |
 | Build order | Refactor first with no number moving (workbook diff), then the new checks, then the panel. | New work builds on the shared helpers. |
+
+## 2026-09-30: Training_LR after blood adjustment
+
+| Question | Finding | Reason |
+|---|---|---|
+| Why Training_LR fgsea sets fell from 121 to 4 | Expected. LR's blood index falls 0.63 units from T1 to T2, HR's 0.21, so the unadjusted contrast carried less blood after training. Protein logFC barely moves (r = 0.94, median shift 0.05); set NES agree at r = 0.84. The lost sets are 88 Reactome sets, mostly one proteasome-driven cluster (APC/C, neddylation, CLEC7A, BCR signalling, DNA damage checkpoints), whose NES shrank from about -2.1 to -1.8 and crossed FDR 0.05 together. Proteasome subunits carry a larger blood slope than the proteome (median 0.021 against 0.002); red cells hold proteasome. | Threshold effect on a correlated cluster, not a failure of the adjustment. |
+| Refactor check | 21 workbooks rerun after moving shared code to `R/helpers.R`: every result sheet identical; only `.xlsx` input checksums differ, because writexl stamps a creation time. | No number moved. |
