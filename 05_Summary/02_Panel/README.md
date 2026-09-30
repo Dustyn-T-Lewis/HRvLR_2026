@@ -29,6 +29,10 @@ scores AUC 0: each held-out HR subject leaves a training set tipped towards LR (
 Stratified folds shrink that bias without removing it, so the permutation null centres near 0.39,
 not 0.5. Judge each panel against its null, never against 0.5.
 
+Any T3 panel inherits the blood confound. LR's T3 biopsies carry more blood, and the blood
+adjustment fits its slope within group cells, so the between-arm blood difference at T3 stays in
+the data; the T3 module panel's two modules track the blood index (salmon rho = -0.83).
+
 The module panels carry a leak: WGCNA built the modules on all 16 subjects, including each fold's
 held-out ones. The protein panels do not share it. Report against TRIPOD+AI (Collins et al. 2024):
 internal validation only, no external cohort.

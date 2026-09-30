@@ -114,3 +114,10 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Outer cross-validation | Stratified 5-fold, 10 repeats, replacing leave-one-out. | On T1 proteins `lambda.1se` kept nothing in every fold, and pooled leave-one-out then scored AUC 0.00: each held-out HR subject leaves a training set tipped towards LR (Airola et al. 2011). Replicated CV is unbiased in Smith et al. 2014. |
 | Reading the AUC | Against the permutation null only. | A 5-permutation smoke run put the null median near 0.39; with 7 against 8 no fold split is balanced. |
 | Missing values | Proteins observed in every subject of the input; nothing imputed. | glmnet takes no NA, and imputation outside the folds would leak. 974 to 1,115 proteins per input. |
+
+## 2026-09-30: panel results and the T3 blood confound
+
+| Question | Finding | Reason |
+|---|---|---|
+| Panels beyond their nulls | Modules at T3: AUC 0.83 against a null median of 0.38, permutation p = 0.006, carried by salmon (kept in 100% of models) and yellow (96%). Proteins in the acute change: AUC 0.58, p = 0.042, RPS20 kept in 64%. The other eight panels sit inside their nulls. Ten panels were tested, so p = 0.042 is within chance and p = 0.006 is near a Bonferroni line of 0.005. | 1,000 permutations each. |
+| Reading the T3 module panel | Confounded with blood. At T3 the salmon eigengene correlates rho = -0.83 with the blood index (p = 1e-4) and yellow -0.63; both sit lower in LR, the bloodier arm. The blood adjustment fits its slope within group cells, so the HR-against-LR blood difference at T3 is aliased with the group means and cannot be removed. | Any HR-against-LR result at T3 carries this caveat, not only the panel. |
