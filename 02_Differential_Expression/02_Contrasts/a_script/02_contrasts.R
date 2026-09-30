@@ -78,6 +78,7 @@ results <- res$results |>
   list_rbind(names_to = "contrast") |>
   as_tibble() |>
   rename(p = P.Value, fdr = adj.P.Val) |>
+  mutate(qvalue = storey_q(p), .by = contrast) |>
   mutate(
     pi_score = p^abs(logFC),
     sig_pi = case_when(
@@ -310,7 +311,7 @@ overviews <- imap(row_groups, \(rows, group) {
 stopifnot(length(overviews) == 2 * length(row_groups))
 
 ancova_results <- ancova(as.matrix(fit$data), as_tibble(fit$metadata)) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = window)
+  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
 # Leave one subject out on the tests that feed the candidate tables: the four HR-against-LR
 # contrasts and both ANCOVA windows. A hit that stays at p < 0.05 in every rerun does not rest on
 # one person.
@@ -366,9 +367,10 @@ write_workbook(
   list(
     DEP_matrix = results |>
       mutate(n_obs = n_obs[uniprot_id]) |>
-      select(uniprot_id, gene, n_obs, contrast, logFC, p, fdr) |>
+      select(uniprot_id, gene, n_obs, contrast, logFC, p, fdr, qvalue) |>
       pivot_wider(
-        names_from = contrast, values_from = c(logFC, p, fdr), names_glue = "{contrast}_{.value}"
+        names_from = contrast, values_from = c(logFC, p, fdr, qvalue),
+        names_glue = "{contrast}_{.value}"
       ),
     contrast_summary = contrast_summary,
     null_calibration = null_calibration,
@@ -383,14 +385,14 @@ write_workbook(
     leave_one_out = robustness
   ),
   c(
-    "logFC, p and BH FDR per protein and contrast, with samples observed.",
+    "logFC, p, BH and Storey q per protein and contrast, with samples observed.",
     "Tested, p < 0.05 and BH counts per contrast, with its role.",
     "propTrueNull, median |t| and share of p below 0.2 per contrast.",
     "Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
     "fry: one arm's responders tested in the other arm's contrast.",
     "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
-    "ANCOVA per protein and window: arm effect at equal starting value, t, p and BH FDR.",
+    "ANCOVA per protein and window: arm effect at equal starting value, t, p, BH FDR and Storey q.",
     "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
   ),
   file.path(out, "02_contrasts.xlsx"),

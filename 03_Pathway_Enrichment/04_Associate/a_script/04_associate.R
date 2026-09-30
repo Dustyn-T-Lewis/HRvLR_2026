@@ -98,7 +98,7 @@ model <- map(set_names(traits), \(trait) {
 }) |>
   list_rbind() |>
   mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(trait, term, collection))
+  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(trait, term, collection))
 
 windows <- list(
   training = subject_change(values, meta, "T1", "T2"),
@@ -122,7 +122,7 @@ change_score <- imap(windows, \(x, window) mutate(correlate(x), window = window,
   list_rbind() |>
   filter(!is.na(rho)) |>
   mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome, collection))
+  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(window, outcome, collection))
 by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   imap(windows, \(x, window) {
     kept <- x[, arm_of[colnames(x)] == arm, drop = FALSE]
@@ -146,7 +146,7 @@ arm_difference <- imap(windows, \(x, window) {
   list_rbind() |>
   select(-coefficient) |>
   mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(window, outcome, collection))
+  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(window, outcome, collection))
 strength_tests <- c("pct_leg_press_1rm", "pct_leg_ext_1rm")
 two_predictor <- imap(windows, \(x, window) {
   map(set_names(strength_tests), \(test) {
@@ -164,7 +164,10 @@ two_predictor <- imap(windows, \(x, window) {
     .after = coefficient
   ) |>
   mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(window, strength_test, coefficient, collection))
+  mutate(
+    fdr = p.adjust(p, "BH"), qvalue = storey_q(p),
+    .by = c(window, strength_test, coefficient, collection)
+  )
 
 counts <- bind_rows(
   summarise(model,
@@ -463,11 +466,11 @@ write_workbook(
   ),
   c(
     "Tested, p < 0.05 and BH < 0.05 counts per term and trait, and per window and outcome.",
-    "Sample model: effect per trait unit, t, p and BH FDR per set, trait and term.",
-    "Change score: pooled Spearman rho, p and BH FDR per set, window and outcome.",
+    "Sample model: effect per trait unit, t, p, BH and Storey q per set, trait and term.",
+    "Change score: pooled Spearman rho, p, BH and Storey q per set, window and outcome.",
     "Change score within each arm, exact p, rows with p < 0.05.",
-    "Arm difference: HR slope minus LR slope, t, p and BH FDR per set, window and outcome.",
-    "Two predictor: growth and strength terms, t, p and BH FDR per set, window and test.",
+    "Arm difference: HR minus LR slope, t, p, BH and Storey q per set, window and outcome.",
+    "Two predictor: growth and strength terms, t, p, BH and Storey q per set, window and test.",
     "PDF page of each overview, and page and panel position of every p < 0.05 row."
   ),
   file.path(out, "04_associate.xlsx"),

@@ -90,7 +90,7 @@ auc <- imap(tasks, \(spec, name) {
 }) |>
   list_rbind() |>
   mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(task, collection))
+  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(task, collection))
 
 # The smallest p a task can reach: signed-rank on n pairs gives 2 / 2^n, rank-sum on n1 and n2
 # gives 2 / choose(n1 + n2, n1). HR has 6 training and 7 acute pairs, LR 8 of each.
@@ -240,7 +240,7 @@ write_workbook(
   list(counts = counts, auc = arrange(auc, task, collection, p), plot_index = plot_index),
   c(
     "Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts.",
-    "Per set and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
+    "Per set and task: AUC, median paired change (paired tasks), Wilcoxon p, BH and Storey q.",
     "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row."
   ),
   file.path(out, "03_classify.xlsx"),

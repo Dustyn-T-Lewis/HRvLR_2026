@@ -69,7 +69,7 @@ me_fit <- lmFit(me, design, block = subject, correlation = me_correlation) |>
 eigengene_tests <- map(contrast_names, \(contrast) {
   topTable(me_fit, coef = contrast, number = Inf, sort.by = "none") |>
     rownames_to_column("module") |>
-    transmute(contrast, module, logFC, t, p = P.Value, fdr = adj.P.Val)
+    transmute(contrast, module, logFC, t, p = P.Value, fdr = adj.P.Val, qvalue = storey_q(p))
 }) |>
   list_rbind()
 
@@ -80,7 +80,10 @@ fry_tests <- map(contrast_names, \(contrast) {
     block = subject, correlation = fry_correlation, sort = "none"
   ) |>
     rownames_to_column("module") |>
-    transmute(contrast, module, n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR)
+    transmute(
+      contrast, module,
+      n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR, qvalue = storey_q(p)
+    )
 }) |>
   list_rbind()
 message(
@@ -299,7 +302,7 @@ overviews <- imap(row_groups, \(rows, group) {
 stopifnot(length(overviews) == 2 * length(row_groups))
 
 ancova_results <- ancova(me, as_tibble(d$dal$metadata)) |>
-  mutate(fdr = p.adjust(p, "BH"), .by = window)
+  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
 # Leave one subject out on the tests that feed the candidate tables: eigengene limma and fry on
 # the four HR-against-LR contrasts, and ANCOVA on eigengenes. A hit that stays at p < 0.05 in
 # every rerun does not rest on one person.
@@ -364,12 +367,12 @@ write_workbook(
     leave_one_out = robustness
   ),
   c(
-    "limma on module eigengenes: logFC, moderated t, p and BH FDR per contrast.",
+    "limma on module eigengenes: logFC, moderated t, p, BH and Storey q per contrast.",
     "fry on each module as a protein set: direction, p and FDR per contrast.",
     "Spearman rho between member kME and protein moderated t, per module and contrast.",
     "Spearman rho between member kME and protein rho with each phenotype over training.",
     "Within-subject correlation on the eigengenes and on the imputed matrix.",
-    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR.",
+    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH, Storey q.",
     "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
   ),
   file.path(out, "02_contrasts.xlsx"),

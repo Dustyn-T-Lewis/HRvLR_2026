@@ -49,20 +49,22 @@ lists <- list(
   )
 )
 
-# One long table per level: feature, family, test, effect, p, and the window or contrast that
-# places it on a list.
+# One long table per level: feature, family, test, effect, p with its BH and Storey q (each from
+# its own screen), and the window or contrast that places it on a list. Within-arm correlations
+# keep only their p < 0.05 rows upstream, so they carry no correction.
 associations <- function(input) {
   bind_rows(
     sheet(input, "change_score") |>
-      transmute(feature, window, test = paste("pooled rho", outcome), effect = rho, p),
+      transmute(feature, window, test = paste("pooled rho", outcome), effect = rho, p, fdr, qvalue),
     sheet(input, "change_score_by_arm") |>
       transmute(feature, window, test = paste(arm, "rho", outcome), effect = rho, p),
     sheet(input, "arm_difference") |>
-      transmute(feature, window, test = paste("slope HR-LR", outcome), effect, p),
+      transmute(feature, window, test = paste("slope HR-LR", outcome), effect, p, fdr, qvalue),
     sheet(input, "two_predictor") |>
       transmute(
         feature, window,
-        test = paste(coefficient, "term,", sub("pct_", "", strength_test), "model"), effect, p
+        test = paste(coefficient, "term,", sub("pct_", "", strength_test), "model"), effect, p,
+        fdr, qvalue
       )
   ) |>
     mutate(family = "associate")
@@ -70,33 +72,41 @@ associations <- function(input) {
 classify <- function(input) {
   sheet(input, "auc") |>
     filter(!paired) |>
-    transmute(feature, task, test = paste("classify", task), effect = auc, p, family = "classify")
+    transmute(
+      feature, task,
+      test = paste("classify", task), effect = auc, p, fdr, qvalue, family = "classify"
+    )
 }
 ancova_rows <- function(input) {
   sheet(input, "ancova") |>
     transmute(feature,
-      window = paste0("ancova_", window), test = paste("ANCOVA", window), effect, p,
+      window = paste0("ancova_", window), test = paste("ANCOVA", window), effect, p, fdr, qvalue,
       family = "contrast"
     )
 }
 
 protein_de <- sheet("protein_contrasts", "DEP_matrix") |>
-  select(feature = uniprot_id, ends_with("_logFC"), ends_with("_p")) |>
-  pivot_longer(-feature, names_to = c("contrast", ".value"), names_pattern = "(.*)_(logFC|p)$") |>
-  transmute(feature, contrast, test = contrast, effect = logFC, p, family = "contrast")
+  select(feature = uniprot_id, matches("_(logFC|p|fdr|qvalue)$")) |>
+  pivot_longer(-feature,
+    names_to = c("contrast", ".value"), names_pattern = "(.*)_(logFC|p|fdr|qvalue)$"
+  ) |>
+  transmute(feature, contrast, test = contrast, effect = logFC, p, fdr, qvalue, family = "contrast")
 set_de <- readRDS(paths[["set_tests"]])$set_tests |>
   transmute(
     feature = set_id, contrast, test = paste(method, contrast),
-    effect = if_else(method == "fgsea", nes, if_else(direction == "Up", 1, -1)), p,
+    effect = if_else(method == "fgsea", nes, if_else(direction == "Up", 1, -1)), p, fdr, qvalue,
     family = "contrast"
   )
 module_de <- bind_rows(
   sheet("module_contrasts", "eigengene_tests") |>
-    transmute(feature = module, contrast, test = paste("eigengene", contrast), effect = logFC, p),
+    transmute(
+      feature = module, contrast,
+      test = paste("eigengene", contrast), effect = logFC, p, fdr, qvalue
+    ),
   sheet("module_contrasts", "fry_tests") |>
     transmute(
       feature = module, contrast, test = paste("fry", contrast),
-      effect = if_else(direction == "Up", 1, -1), p
+      effect = if_else(direction == "Up", 1, -1), p, fdr, qvalue
     )
 ) |>
   mutate(family = "contrast")
@@ -164,8 +174,15 @@ candidates <- hits |>
   summarise(
     n_hits = n(), n_contrast = sum(family == "contrast"), n_classify = sum(family == "classify"),
     n_associate = sum(family == "associate"), n_stable = sum(stable, na.rm = TRUE),
-    min_p = min(p),
-    hits = paste(sprintf("%s (%+.3g, p %.2g)", test, effect, p), collapse = "; "),
+    n_bh_20 = sum(fdr < 0.2, na.rm = TRUE), n_storey_20 = sum(qvalue < 0.2, na.rm = TRUE),
+    min_p = min(p), min_bh = min(fdr, na.rm = TRUE), min_storey = min(qvalue, na.rm = TRUE),
+    hits = paste(
+      if_else(
+        is.na(fdr), sprintf("%s (%+.3g, p %.2g)", test, effect, p),
+        sprintf("%s (%+.3g, p %.2g, BH %.2g, q %.2g)", test, effect, p, fdr, qvalue)
+      ),
+      collapse = "; "
+    ),
     .by = c(level, list, feature)
   ) |>
   mutate(on_both = all(c("training", "acute") %in% list), .by = c(level, feature)) |>
@@ -194,7 +211,8 @@ table_of <- function(level, list) {
   d <- filter(candidates, .data$level == .env$level, .data$list == .env$list)
   cols <- c(
     "feature", "label", if (level == "proteins") "module", if (level == "sets") "collection",
-    "n_hits", "n_contrast", "n_stable", "n_classify", "n_associate", "min_p", "on_both",
+    "n_hits", "n_contrast", "n_stable", "n_classify", "n_associate", "n_bh_20", "n_storey_20",
+    "min_p", "min_bh", "min_storey", "on_both",
     "baseline_effect",
     "baseline_p", if (level == "proteins") paste0("unadjusted_p_", list), "hits"
   )
@@ -213,7 +231,7 @@ holds <- sprintf(
 sheets <- c(sheets, list(
   hit_distribution = distribution,
   evidence = hits |>
-    select(level, list, feature, family, test, effect, p, stable) |>
+    select(level, list, feature, family, test, effect, p, fdr, qvalue, stable) |>
     arrange(level, list, feature, p),
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
@@ -242,6 +260,9 @@ read_me <- tibble(sheet = names(sheets), holds = holds) |>
     "and arm is the median split of comp_hypertrophy. Effects: logFC for protein contrasts, NES",
     "for fgsea, +1 or -1 for fry direction, eigengene logFC, ANCOVA arm effect, AUC, Spearman rho,",
     "slope difference or model coefficient. Contrast rows come from the blood-adjusted fit;",
+    "BH and q are exploratory corrections within each test's own screen (Storey's q with a",
+    "bootstrap pi0, equal to BH in screens under 100 tests); n_bh_20 and n_storey_20 count hits",
+    "below 0.20.",
     "unadjusted_p is the protein interaction p before adjustment. n_stable counts contrast hits",
     "that stay at p < 0.05 in every leave-one-subject-out rerun."
   ))

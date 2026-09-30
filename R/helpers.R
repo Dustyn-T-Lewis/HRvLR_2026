@@ -1,6 +1,6 @@
 # Helpers every stage script sources after its library() calls: the statistics written for this
 # study, and the heatmap, page and workbook plumbing the contrasts, classify and associate steps
-# share. tests/testthat/test-helpers.R checks the statistics against hand-computed answers.
+# share.
 
 # Removes each feature's blood slope. The design carries the group means beside a centred `blood`
 # column, so the slope comes from spread within cells and no contrast leaks into it. A feature with
@@ -14,6 +14,20 @@ remove_blood <- function(values, design, subject) {
     values = values - outer(coalesce(slope, 0), design[, "blood"]),
     slope = slope, p = fit$p.value[, "blood"]
   )
+}
+
+# Storey's q-value within one screen, beside BH as an exploratory correction: BH scaled by the
+# estimated share of true nulls (pi0, bootstrap estimate, which copes with discrete p-values). A
+# screen of fewer than 100 tests cannot estimate pi0, so there pi0 is 1 and q equals BH.
+storey_q <- function(p) {
+  q <- rep(NA_real_, length(p))
+  tested <- !is.na(p)
+  q[tested] <- if (sum(tested) < 100) {
+    p.adjust(p[tested], "BH")
+  } else {
+    qvalue::qvalue(p[tested], pi0.method = "bootstrap")$qvalues
+  }
+  q
 }
 
 # The four contrasts that compare HR with LR in the candidate tables.
