@@ -10,9 +10,11 @@ Attaches the design and the nine contrasts to the DAList and records the within-
 
 ## Method
 
-`add_design(dal, "~ 0 + group + (1 | subject)")`: one cell mean per arm and time point, subject as a
-random effect, since HR and LR are different people and a fixed subject term would absorb every
-between-arm contrast. `duplicateCorrelation()` estimates the within-subject correlation. The script
+`add_design(dal, "~ 0 + group + blood + (1 | subject)")`: one cell mean per arm and time point and
+the centred blood index, subject as a random effect, since HR and LR are different people and a
+fixed subject term would absorb every between-arm contrast. `02_Normalization` already removed the
+blood slope; the term stays so the fit counts the degree of freedom that removal spent.
+`add_design()` leaves a numeric covariate's column unnamed, so the script names it `blood`. `duplicateCorrelation()` estimates the within-subject correlation. The script
 stops if the design is rank deficient or a column name fails `make.names()`.
 
 | Contrast | Role | Definition |

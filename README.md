@@ -14,15 +14,17 @@ separate the groups, and which track the phenotype measured on each biopsy.
 | Stage | Runs | Writes |
 |---|---|---|
 | [`00_Input/`](00_Input/README.md) | study data, no code | |
-| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, missForest | `DAList_normalized.rds`, `DAList_imputed.rds` |
+| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, blood adjustment, missForest | `DAList_normalized.rds`, `DAList_imputed.rds` |
 | [`02_Differential_Expression/`](02_Differential_Expression/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
 | [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
 | [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
-| [`05_Summary/`](05_Summary/README.md) | planned, no code yet | |
+| [`05_Summary/`](05_Summary/README.md) | candidate tables across the three levels | `01_candidates.xlsx` |
 
-Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts, `03_Classify` scores
+Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts and a baseline-adjusted
+ANCOVA, `03_Classify` scores
 eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
-sample-level limma model and by change-score correlation. Each level adds its own steps around them.
+sample-level limma model, by change-score correlation pooled and within each arm, by a test of
+whether that slope differs between arms, and by a model with growth and strength side by side. Each level adds its own steps around them.
 Each step's PDF opens with overview heatmaps of every feature, then gives every nominal result a
 panel, and every table reports the tested, p < 0.05 and BH < 0.05 counts.
 
@@ -58,6 +60,8 @@ for s in 01_Build_Modules/a_script/01_build_modules 02_Contrasts/a_script/02_con
          05_Characterise/a_script/05_characterise 06_Preserve/a_script/06_preserve; do
   Rscript 04_Network/$s.R
 done
+
+Rscript 05_Summary/01_Candidates/a_script/01_candidates.R
 ```
 
 The run takes about 20 minutes, most of it the three associate steps and the preservation
@@ -68,8 +72,10 @@ download command.
 
 Preprocessing and the fit use proteoDA: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
 `filter_samples`, `normalize_data("cycloess")`, then `add_design`, `add_contrasts`,
-`fit_limma_model` and `extract_DA_results`. The design is six cell means with subject as a random
-effect.
+`fit_limma_model` and `extract_DA_results`. The design is six cell means plus the blood index with
+subject as a random effect. LR's post-bout biopsies carry more blood than any other cell, so each
+protein's blood slope, fitted beside the group means, comes off in `02_Normalization`; the matrix
+before that step is kept for a sensitivity sheet.
 
 The fitted matrix stays unimputed: limma fits each protein on the samples where it was seen. A
 missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and

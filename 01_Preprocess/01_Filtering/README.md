@@ -13,7 +13,8 @@ Removes contaminant proteins by identity, drops outlier samples, then filters on
 Contaminants go by identity: the curated list in `00_Input/blood_contaminants.csv`, plus HPA plasma,
 immunoglobulin and erythrocyte tags. A muscle rescue (myonuclei at least 20 nCPM and plasma
 concentration below 1e9 pg/L) overturns an HPA tag. `blood_cor` is reported beside every call and
-gates nothing. A sample goes when three of four outlier methods flag it. The detection filter runs
+gates nothing. Each sample's `blood_rel` (mean log2 haemoglobin minus the sample's median log2
+intensity) goes into the metadata for `02_Normalization`. A sample goes when three of four outlier methods flag it. The detection filter runs
 last, so no discarded sample counts: a protein needs 5 detections in at least one group cell.
 
 ## Figures
@@ -30,7 +31,7 @@ outlier flags.
 | `rescued` | Blood-tagged proteins kept by the muscle rescue. |
 | `protein_calls` | One verdict per protein, with the annotation behind it. |
 | `contamination_index` | Share of each sample's signal per contamination panel, before removal. |
-| `blood_index` | Mean log2 haemoglobin intensity per sample. |
+| `blood_index` | Mean log2 haemoglobin per sample, raw and relative to the sample's median log2 intensity. |
 | `outlier_diagnostics` | The four outlier flags per sample. |
 | `blood_by_arm` | Arm by T3 blood term on two scales, with a permutation p. |
 | `blood_cor_null` | 99.9th percentile of the blood_cor permutation null, by observation count. |

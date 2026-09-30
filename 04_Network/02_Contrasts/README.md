@@ -13,18 +13,21 @@ protein-level results.
 
 Eigengenes get the protein design and subject block with their own within-subject correlation,
 `eBayes(robust = TRUE)` and BH within contrast. fry tests each module as a protein set on the
-imputed matrix, FDR over the twelve modules within contrast. Membership against significance is the
+imputed matrix, FDR over the modules within contrast. Membership against significance is the
 Spearman correlation, within module, between a member's kME and its protein-level moderated t, and
 between kME and its training change-score rho with each outcome. Members share a module, so these
 correlations are descriptive.
 
+ANCOVA on eigengenes sits beside the interactions: per module and window, `lm(later ~ earlier +
+arm)` over subjects with both biopsies, T2 on T1 for training and T3 on T2 for the acute bout. BH
+within window.
+
 ## Figures
 
-Two overview pages: the eigengenes across the 45 biopsies, with arm, time point, type I share, fCSA
-mixed, mCSA, leg press 1RM and comp_hypertrophy above the columns (the biopsy traits are blank at
+Two overview pages: the eigengenes across the 45 biopsies, with arm, time point, fCSA mixed, mCSA, leg press 1RM and comp_hypertrophy above the columns (the biopsy traits are blank at
 T3, where none were measured); then eigengene log2 fold change in the nine contrasts beside a status
 map. Then eigengene and fry tiles, membership against each contrast and each outcome, and kME
-against moderated t for `Training_Interaction` in every module.
+against moderated t for `Training_Interaction` in every module, and the ANCOVA volcano for both windows.
 
 ## Workbook
 
@@ -35,3 +38,4 @@ against moderated t for `Training_Interaction` in every module.
 | `membership_contrast` | Spearman rho between member kME and protein moderated t, per module and contrast. |
 | `membership_phenotype` | Spearman rho between member kME and protein rho with each phenotype over training. |
 | `correlation` | Within-subject correlation on the eigengenes and on the imputed matrix. |
+| `ancova` | ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR. |

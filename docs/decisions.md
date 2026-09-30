@@ -77,3 +77,12 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Association | Pooled, within HR, within LR, and the trait-by-arm slope difference, over the seven traits' percent change; plus the two-predictor growth and strength terms. | Within-arm links and a formal test that they differ. |
 | Counting | Every p < 0.05 counts once. | Simple and fully reported; correlated traits are not grouped. |
 | Inclusion | Proteins with at least one hit, sorted by hit count then smallest p. Baseline logFC and p, blood-unadjusted p and module are columns, never filters. | Nothing hidden. |
+
+## 2026-09-29: how the review was built
+
+| Question | Decision | Reason |
+|---|---|---|
+| Blood covariate | Each protein's slope on the loading-adjusted blood index, fitted beside the six group means with subject blocked, comes off in `02_normalize.R`; `blood` stays in the design for its degree of freedom. | One adjustment reaches every method (limma, fry, singscore, WGCNA, rank tests) without a covariate in each. Refit counts match the covariate model contrast for contrast; the `unadjusted` sheet reproduces the old fit exactly. |
+| Modules | WGCNA on the adjusted matrix finds 15 modules, not 12. | Blood co-variation no longer binds proteins together. |
+| Leg-press slope difference | Kept as reported: 27 proteins at FDR < 0.05, 26 in the contractile module (pink). All 27 stay nominal without HR_S03 (+108% leg press) and with the outcome ranked; 15 stay at FDR < 0.05 without HR_S03. | Checked for leverage before reporting. |
+| Classification wording | Per-feature Wilcoxon and AUC is single-feature discrimination, not a predictive classifier; no AUC is out-of-sample. | Literature check: Bamber 1975, Hanley & McNeil 1982 (AUC equals Mann-Whitney), Christin et al. 2013, Ambroise & McLachlan 2002, Varma & Simon 2006. |
