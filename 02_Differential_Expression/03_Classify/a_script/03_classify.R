@@ -3,7 +3,7 @@
 # effect is the median paired change. Between-arm tasks compare HR with LR subjects on a level or
 # on their own change: p is the rank-sum test and AUC is W / (n1 * n2), above 0.5 when higher in
 # HR. The auc column is filled for every task; for paired tasks it ignores the pairing and is not
-# drawn. BH within task.
+# drawn. Between-arm AUCs carry a DeLong 95% interval. BH within task.
 
 suppressPackageStartupMessages({
   library(here)
@@ -94,18 +94,28 @@ classify_row <- function(spec, id) {
   s <- sides(spec, id)
   n <- c(n_positive = length(s$pos), n_negative = length(s$neg))
   if (min(n) < 3) {
-    return(c(auc = NA, median_change = NA, p = NA, n))
+    return(c(auc = NA, auc_lower = NA, auc_upper = NA, median_change = NA, p = NA, n))
   }
   w <- suppressWarnings(wilcox.test(s$pos, s$neg)$statistic)
+  # direction = "<" pins HR as the higher side; pROC otherwise flips any AUC below 0.5. At perfect
+  # separation DeLong's variance is zero and the interval collapses to a point, so none is given.
+  interval <- if (spec$paired || w %in% c(0, prod(n))) {
+    c(NA, NA)
+  } else {
+    pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE) |>
+      pROC::ci.auc(method = "delong") |>
+      as.numeric() |>
+      _[c(1, 3)]
+  }
   c(
-    auc = unname(w) / prod(n),
+    auc = unname(w) / prod(n), auc_lower = interval[1], auc_upper = interval[2],
     median_change = if (spec$paired) median(s$pos - s$neg) else NA,
     p = suppressWarnings(wilcox.test(s$pos, s$neg, paired = spec$paired)$p.value),
     n
   )
 }
 auc <- imap(tasks, \(spec, name) {
-  fits <- vapply(rownames(values), \(id) classify_row(spec, id), numeric(5))
+  fits <- vapply(rownames(values), \(id) classify_row(spec, id), numeric(7))
   tibble(
     task = name, task_label = spec$label, paired = spec$paired, feature = rownames(values),
     !!!as_tibble(t(fits))
@@ -245,7 +255,8 @@ overviews <- imap(row_groups, \(rows, group) {
 task_counts <- counts |>
   summarise(
     across(c(task_label, paired, n_positive, n_negative, min_p), first),
-    across(c(n_tested, n_nominal, n_fdr_05), sum), .by = task
+    across(c(n_tested, n_nominal, n_fdr_05), sum),
+    .by = task
   )
 hits <- auc |>
   filter(p < 0.05) |>
@@ -258,7 +269,9 @@ hits <- auc |>
         n_positive
       ),
       sprintf(
-        "%s\nAUC %.2f  p %.2g  q %.2g\nHR %d, LR %d", name, auc, p, fdr, n_positive, n_negative
+        "%s\nAUC %.2f %s  p %.2g  q %.2g\nHR %d, LR %d", name, auc,
+        if_else(is.na(auc_lower), "[no CI]", sprintf("[%.2f, %.2f]", auc_lower, auc_upper)),
+        p, fdr, n_positive, n_negative
       )
     )
   ) |>
@@ -271,7 +284,8 @@ task_page <- function(hits) {
   if (spec$paired) {
     points <- map2(hits$feature, hits$panel, \(id, panel) {
       tibble(
-        panel, subject = colnames(spec$positive),
+        panel,
+        subject = colnames(spec$positive),
         before = spec$negative[id, ], after = spec$positive[id, ]
       )
     }) |>
@@ -307,7 +321,9 @@ task_page <- function(hits) {
       coord_equal() +
       labs(x = "1 - specificity", y = "sensitivity", caption = sprintf(paste(
         "HR (up to %d) against LR (up to %d); AUC above 0.5 means higher in HR. Wilcoxon rank-sum",
-        "test; smallest attainable p %.2g. Header: AUC, p, BH q within task,",
+        "test; smallest attainable p %.2g. Header: AUC with its DeLong 95%% interval, p,",
+        "none at AUC 0 or 1, where DeLong's variance is zero; at this n it runs narrow.",
+        "BH q within task,",
         "and the feature's n.",
         "Table: c_data/03_classify.xlsx, auc."
       ), info$n_positive, info$n_negative, info$min_p))
