@@ -86,3 +86,16 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Modules | WGCNA on the adjusted matrix finds 15 modules, not 12. | Blood co-variation no longer binds proteins together. |
 | Leg-press slope difference | Kept as reported: 27 proteins at FDR < 0.05, 26 in the contractile module (pink). All 27 stay nominal without HR_S03 (+108% leg press) and with the outcome ranked; 15 stay at FDR < 0.05 without HR_S03. | Checked for leverage before reporting. |
 | Classification wording | Per-feature Wilcoxon and AUC is single-feature discrimination, not a predictive classifier; no AUC is out-of-sample. | Literature check: Bamber 1975, Hanley & McNeil 1982 (AUC equals Mann-Whitney), Christin et al. 2013, Ambroise & McLachlan 2002, Varma & Simon 2006. |
+
+## 2026-09-30: panel, extra tests and shared code
+
+| Question | Decision | Reason |
+|---|---|---|
+| AUC intervals | DeLong 95% interval on between-arm tasks, blank at AUC 0 or 1. | DeLong's variance is zero at perfect separation and the interval collapses to a point; at this n it runs narrow. |
+| Panel inputs | Five panels: T1, T2, T3, training change, acute change. | T1 is the only one that predicts in advance; the rest describe. |
+| Panel features | Module eigengenes and all proteins, run separately. | A panel that works only on 1,900 proteins is a warning of overfitting. |
+| Panel method | `nestedcv`: elastic net, alpha 0.5 fixed, `lambda.1se` inside each fold, leave-one-out outer loop, imputation and scaling inside folds, 1,000 whole-pipeline label permutations, p = (b + 1)/(m + 1), selection frequency per feature, labelled exploratory with no external validation. | Airola et al. 2011; Smith et al. 2014; Varma & Simon 2006; Cawley & Talbot 2010; Meinshausen & Bühlmann 2010; Phipson & Smyth 2010; TRIPOD+AI 2024. Leave-pair-out would be less biased but no standard wrapper offers it. |
+| Eigengene panel | Modules come from all 16 subjects; the leak is stated in the output, not removed. | Rebuilding WGCNA inside every fold is impractical. |
+| Extra checks | Leave-one-subject-out on the key tests; trace why Training_LR fgsea sets fell from 121 to 4 after blood adjustment. | Single-subject results; largest shift on the training side. |
+| Code structure | One `R/helpers.R` sourced by every script, unit-tested with testthat; row-wise packages (`matrixTests`, `limma`) replace hand loops. Supersedes "each script carries its own copy" (2026-09-25). | One fix lands everywhere; tests become possible. |
+| Build order | Refactor first with no number moving (workbook diff), then the new checks, then the panel. | New work builds on the shared helpers. |
