@@ -45,3 +45,35 @@
 | Panel order | Within each comparison: p, then the larger effect, then feature ID. | For a fixed n, p is monotone in the effect, so the strongest come first and ties are deterministic. |
 | Panel n | Each header gives the feature's own n: complete pairs, HR and LR subjects, biopsies and subjects, or subjects. | Missing values change n per feature. |
 | Plot index | Every classify and associate workbook gains `plot_index`: result key, PDF page, panel position. | One lookup from a table row to its panel. |
+
+## 2026-09-29: responder analysis review
+
+| Question | Decision | Reason |
+|---|---|---|
+| Training interaction | Keep it primary; add an ANCOVA (`T2 ~ T1 + arm + blood`, and `T3 ~ T2 + arm + blood`) at the protein, set (singscore) and module levels. | Every interaction hit shows HR starting low and catching up, or starting high and dropping (OXPHOS NES −2.59 at baseline, +1.82 interaction); ANCOVA separates that from regression to the mean. |
+| Effect size | Nominal p < 0.05 with logFC reported; no `treat()` or fold filter for now. | At this n a nominal hit is already a large observed effect (smallest Training_Interaction hit 1.35-fold). |
+| Counting agreement | Rank candidates by raw nominal-hit count; `read_me` notes the training-axis tests share data. | User's choice. |
+| Traits | comp_hypertrophy, fCSA mixed, type I, type II, mCSA, leg-press and leg-extension 1RM. Fibre counts and `type1_share` leave the associate steps. | Size and strength outcomes only. A fibre-type pilot found no HR/LR difference; it was deleted. |
+| Change unit | Percent change only; the `d_*` absolute screens go. | Comparable across traits; one screen per trait. |
+| Per-trait splits | None. HR/LR is the only grouping; every trait runs continuously. | fCSA splits match HR/LR in 14 of 16 subjects; leg press in 8 of 16. |
+| Strength | Two-predictor model per level: training change ~ % comp_hypertrophy + % strength gain, once for leg press, once for leg extension. | Strength and hypertrophy are unrelated here (4/4/4/4 crosstab); leg-press and leg-extension gains correlate −0.45, so no composite. |
+| Blood | Loading-adjusted blood index (Hb minus sample median log2, centred) as one term in every model; the unadjusted fit is kept as a sheet. | LR T3 carries +1.25 vs about 0 elsewhere. Pilot: training contrasts move r ≥ 0.94; Acute_LR OXPHOS goes from −1.08 to +2.00*; the acute interaction sharpens. |
+| Set tests | Report fgsea and fry side by side; the README explains fry (samples as the unit, direction, power set by people). | User's choice. |
+| Quantification | Stay on proteoDA; mirror BFR's layout, not limpa. | Only a protein-level matrix exists; no DIA-NN precursor report. |
+| Naming | Keep V2 step names; add a "maps to BFR" table to the README. | One slot layout at every level. |
+| Summary | `05_Summary` builds a candidate table only, no figures. | User's choice. |
+
+Open: whether `volume_load_total_kg` stays as its own screen; whether the blood, ANCOVA and two-predictor helpers move into a tested `R/` file.
+
+## 2026-09-29: protein candidate rules
+
+| Question | Decision | Reason |
+|---|---|---|
+| Organisation | Two lists, training and acute; a protein on both is flagged. | Chronic remodelling and the bout response are different questions with different caveats. |
+| Training-list DE evidence | Training_Interaction, ANCOVA training, Trained_HRvLR, Acute_Interaction. | User's choice; Acute_Interaction counts on both lists. |
+| Acute-list DE evidence | Acute_Interaction, ANCOVA acute, Acute_HRvLR. | |
+| DE hit | Nominal p < 0.05, logFC reported. | FDR is empty on every HR-vs-LR contrast even at 0.25. |
+| Classification hit | Wilcoxon p < 0.05, AUC and median change reported. Training list: training change and T2; acute list: acute change. | At 6 to 8 per arm p < 0.05 already needs AUC of about 0.83. |
+| Association | Pooled, within HR, within LR, and the trait-by-arm slope difference, over the seven traits' percent change; plus the two-predictor growth and strength terms. | Within-arm links and a formal test that they differ. |
+| Counting | Every p < 0.05 counts once. | Simple and fully reported; correlated traits are not grouped. |
+| Inclusion | Proteins with at least one hit, sorted by hit count then smallest p. Baseline logFC and p, blood-unadjusted p and module are columns, never filters. | Nothing hidden. |

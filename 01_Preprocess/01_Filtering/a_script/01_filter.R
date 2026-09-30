@@ -144,6 +144,10 @@ blood_cor <- suppressWarnings(as.vector(cor(
   method = "spearman", use = "pairwise.complete.obs"
 )))
 blood_cor[!testable] <- NA
+# The model covariate is haemoglobin relative to the sample's median log2 intensity, so loading
+# does not enter it. 02_normalize centres it and removes its slope from every protein.
+blood_rel <- blood_index - apply(log_int, 2, median, na.rm = TRUE)
+metadata$blood_rel <- unname(blood_rel[metadata$sample_id])
 
 qc_index <- imap(qc_panels, \(genes, panel) {
   tibble(
@@ -373,7 +377,10 @@ sheets <- list(
   rescued = arrange(filter(protein_calls, str_detect(verdict, "rescued")), desc(myo)),
   protein_calls = protein_calls,
   contamination_index = qc_index,
-  blood_index = tibble(sample_id = names(blood_index), blood_index = unname(blood_index)),
+  blood_index = tibble(
+    sample_id = names(blood_index), blood_index = unname(blood_index),
+    blood_rel = unname(blood_rel)
+  ),
   outlier_diagnostics = outlier_diag,
   blood_by_arm = blood_by_arm,
   blood_cor_null = blood_null,
@@ -390,7 +397,7 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Blood-tagged proteins kept by the muscle rescue.",
   "One verdict per protein, with the annotation behind it.",
   "Share of each sample's signal per contamination panel, before removal.",
-  "Mean log2 haemoglobin intensity per sample.",
+  "Mean log2 haemoglobin per sample, raw and relative to the sample's median log2 intensity.",
   "The four outlier flags per sample.",
   "Arm by T3 blood term on two scales, with a permutation p.",
   "99.9th percentile of the blood_cor permutation null, by observation count.",

@@ -22,6 +22,7 @@ for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = 
 inputs <- c(
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
   imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
+  unadjusted = "01_Preprocess/02_Normalization/c_data/DAList_unadjusted.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
@@ -42,6 +43,26 @@ invisible(callr::r(\(res, figures) {
     table_columns = c("uniprot_id", "gene", "protein"), title_column = "gene", overwrite = TRUE
   )
 }, args = list(res = res, figures = figures)))
+
+# The same nine contrasts on the matrix before the blood slope came off, without the blood term:
+# the sensitivity check for the blood adjustment.
+raw_design <- dal$design$design_matrix[, colnames(dal$design$design_matrix) != "blood"]
+raw_values <- as.matrix(readRDS(paths[["unadjusted"]])$data)
+stopifnot(identical(colnames(raw_values), rownames(raw_design)))
+raw_correlation <- duplicateCorrelation(raw_values, raw_design, block = dal$metadata$subject)
+raw_eb <- lmFit(raw_values, raw_design,
+  block = dal$metadata$subject, correlation = raw_correlation$consensus.correlation
+) |>
+  contrasts.fit(dal$design$contrast_matrix[colnames(raw_design), ]) |>
+  eBayes()
+unadjusted <- tibble(
+  uniprot_id = rep(rownames(raw_values), length(contrast_names)),
+  contrast = rep(contrast_names, each = nrow(raw_values)),
+  logFC = c(raw_eb$coefficients[, contrast_names]), p = c(raw_eb$p.value[, contrast_names])
+) |>
+  pivot_wider(
+    names_from = contrast, values_from = c(logFC, p), names_glue = "{contrast}_{.value}"
+  )
 
 # Effect the primary contrast could detect at 80% power, two-sided 0.05.
 se <- eb$stdev.unscaled[, "Training_Interaction"] * sqrt(eb$s2.post)
@@ -323,7 +344,8 @@ overviews <- imap(row_groups, \(rows, group) {
     column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
   )
   contrast_grid <- \(value) as_grid(contrast_results, rows, contrast_names, "contrast", value)
-  contrast_maps <- heat(contrast_grid(\(d) d$effect), "log2 fold change",
+  contrast_maps <- heat(
+    contrast_grid(\(d) d$effect), "log2 fold change",
     c(-effect_limit, 0, effect_limit), "log2 FC"
   ) +
     heat(contrast_grid(\(d) status_of(d$p, d$fdr)), "moderated t p and BH q", row_names = TRUE)
@@ -367,7 +389,8 @@ write_workbook(
       contrast = "Training_Interaction", quantile = c(0.5, 0.9),
       log2_fc = round(quantile(detectable, c(0.5, 0.9), na.rm = TRUE, names = FALSE), 3)
     ),
-    fry_concordance = fry_concordance
+    fry_concordance = fry_concordance,
+    unadjusted = unadjusted
   ),
   c(
     "logFC, p and BH FDR per protein and contrast, with samples observed.",
@@ -375,7 +398,8 @@ write_workbook(
     "propTrueNull, median |t| and share of p below 0.2 per contrast.",
     "Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
-    "fry: one arm's responders tested in the other arm's contrast."
+    "fry: one arm's responders tested in the other arm's contrast.",
+    "logFC and p per protein and contrast before blood adjustment, for sensitivity."
   ),
   file.path(out, "02_contrasts.xlsx")
 )

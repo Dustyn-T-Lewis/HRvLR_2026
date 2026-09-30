@@ -1,5 +1,5 @@
-# Six cell means with subject random, the nine contrasts and their roles, and the within-subject
-# correlation. Every later limma fit reads design.rds.
+# Six cell means and the blood index with subject random, the nine contrasts and their roles, and
+# the within-subject correlation. Every later limma fit reads design.rds.
 
 suppressPackageStartupMessages({
   library(here)
@@ -28,8 +28,13 @@ stopifnot(!anyNA(meta$group), !any(is.na(meta$subject) | meta$subject == ""))
 dal$metadata <- meta
 
 # HR and LR are different people, so subject is a random effect: a fixed subject term would absorb
-# the between-arm contrasts.
-dal <- add_design(dal, "~ 0 + group + (1 | subject)")
+# the between-arm contrasts. 02_normalize already removed the blood slope; the blood term stays so
+# the fit counts the degree of freedom that removal spent.
+dal <- add_design(dal, "~ 0 + group + blood + (1 | subject)")
+# add_design() strips each variable's name from its columns, which leaves a numeric covariate's
+# column unnamed.
+stopifnot(identical(colnames(dal$design$design_matrix)[7], ""))
+colnames(dal$design$design_matrix)[7] <- "blood"
 design <- dal$design$design_matrix
 
 # Rank deficiency would make the contrasts inestimable and surface as silent NAs.
