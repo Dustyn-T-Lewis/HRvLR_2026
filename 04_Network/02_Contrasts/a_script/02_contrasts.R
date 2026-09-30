@@ -24,6 +24,7 @@ suppressPackageStartupMessages({
   library(ComplexHeatmap)
   library(writexl)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("04_Network", "02_Contrasts")
 out <- file.path(stage, "c_data")
@@ -219,67 +220,6 @@ feature_label <- set_names(module_order)
 feature_noun <- "modules"
 contrast_results <- transmute(eigengene_tests, feature = module, contrast, effect = logFC, p, fdr)
 row_groups <- list(modules = module_order)
-# Heatmap and workbook helpers, the same in every contrasts, classify and associate script.
-# Display only: row order, colour limits and centring touch no test.
-ht_opt$message <- FALSE
-diverging <- c("#5E3C99", "white", "#E66101")
-status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
-status_legend <- Legend(
-  labels = c(names(status_colours), "not tested"), title = "status",
-  legend_gp = gpar(fill = c(status_colours, "grey80"))
-)
-status_of <- \(p, fdr) {
-  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
-}
-# Colours stop at the 99th percentile of |x| so a few extremes do not wash out the rest.
-cap <- \(x) unname(quantile(abs(x), 0.99, na.rm = TRUE))
-# Long results to a feature-by-column matrix; untested cells stay NA and draw grey.
-as_grid <- function(d, rows, cols, col, value) {
-  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
-  d <- filter(d, feature %in% rows, .data[[col]] %in% cols)
-  m[cbind(d$feature, d[[col]])] <- value(d)
-  m
-}
-# An effect map on a diverging scale when breaks are given, otherwise a status map.
-heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
-                 column_title = title, column_names_gp = gpar(fontsize = 7), ...) {
-  rows <- rownames(m)
-  Heatmap(m,
-    name = title, na_col = "grey80",
-    col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
-    show_heatmap_legend = !is.null(breaks) && !is.null(legend),
-    heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
-    cluster_rows = FALSE, cluster_columns = FALSE, column_title = column_title,
-    column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
-    show_row_names = row_names && length(rows) <= 80,
-    row_labels = gsub("\n", " ", feature_label[rows]),
-    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
-    use_raster = length(rows) > 200, ...
-  )
-}
-heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
-  list(title = title, draw = function() {
-    draw(maps,
-      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
-      merge_legend = TRUE, heatmap_legend_list = legends, padding = unit(c(14, 4, 4, 4), "mm")
-    )
-    grid.text(stringr::str_wrap(caption, 190),
-      x = unit(4, "mm"), y = unit(3, "mm"), just = c("left", "bottom"), gp = gpar(fontsize = 7)
-    )
-  })
-}
-write_workbook <- function(sheets, holds, file) {
-  sheets <- c(sheets, list(
-    input_manifest = tibble(
-      input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-    ),
-    package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-      as_tibble() |>
-      select(package, version = loadedversion, source)
-  ))
-  holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
-  write_xlsx(c(list(read_me = tibble(sheet = names(sheets), holds = holds)), sheets), file)
-}
 
 # Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
 # sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
@@ -358,39 +298,6 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-# ANCOVA beside the interactions: the later value on the earlier one plus arm, per module and
-# window, over subjects with both biopsies and at least three per arm. The arm term is HR minus LR
-# at equal starting values, so an arm that starts low and catches up does not read as a different
-# response. BH within window.
-ancova <- function(values, meta) {
-  by_subject <- function(timepoint) {
-    rows <- filter(meta, timepoint == .env$timepoint)
-    set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
-  }
-  windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
-  imap(windows, \(timepoints, window) {
-    before <- by_subject(timepoints[1])
-    after <- by_subject(timepoints[2])
-    both <- intersect(colnames(before), colnames(after))
-    arm <- factor(meta$arm[match(both, meta$subject)], c("LR", "HR"))
-    map(rownames(values), \(feature) {
-      x <- before[feature, both]
-      y <- after[feature, both]
-      ok <- !is.na(x) & !is.na(y)
-      n <- table(arm[ok])
-      if (min(n) < 3) {
-        return(NULL)
-      }
-      coefs <- summary(lm(y[ok] ~ x[ok] + arm[ok]))$coefficients
-      tibble(
-        feature, window,
-        n_HR = n[["HR"]], n_LR = n[["LR"]], effect = coefs[3, 1], t = coefs[3, 3], p = coefs[3, 4]
-      )
-    }) |>
-      list_rbind()
-  }) |>
-    list_rbind()
-}
 ancova_results <- ancova(me, as_tibble(d$dal$metadata)) |>
   mutate(fdr = p.adjust(p, "BH"), .by = window)
 ancova_figure <- ancova_results |>
@@ -446,5 +353,6 @@ write_workbook(
     "Within-subject correlation on the eigengenes and on the imputed matrix.",
     "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR."
   ),
-  file.path(out, "02_contrasts.xlsx")
+  file.path(out, "02_contrasts.xlsx"),
+  inputs, paths
 )

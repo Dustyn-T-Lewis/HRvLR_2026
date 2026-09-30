@@ -72,7 +72,7 @@ classify <- function(input) {
     filter(!paired) |>
     transmute(feature, task, test = paste("classify", task), effect = auc, p, family = "classify")
 }
-ancova <- function(input) {
+ancova_rows <- function(input) {
   sheet(input, "ancova") |>
     transmute(feature,
       window = paste0("ancova_", window), test = paste("ANCOVA", window), effect, p,
@@ -103,14 +103,14 @@ module_de <- bind_rows(
 
 evidence <- list(
   proteins = bind_rows(
-    protein_de, ancova("protein_contrasts"), classify("protein_classify"),
+    protein_de, ancova_rows("protein_contrasts"), classify("protein_classify"),
     associations("protein_associate")
   ),
   sets = bind_rows(
-    set_de, ancova("set_contrasts"), classify("set_classify"), associations("set_associate")
+    set_de, ancova_rows("set_contrasts"), classify("set_classify"), associations("set_associate")
   ),
   modules = bind_rows(
-    module_de, ancova("module_contrasts"), classify("module_classify"),
+    module_de, ancova_rows("module_contrasts"), classify("module_classify"),
     associations("module_associate")
   )
 ) |>

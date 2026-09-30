@@ -33,6 +33,15 @@ Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.p
 `read_me` sheet and ends with `input_manifest` and `package_versions`. Data passes through disk, so
 any sub-stage re-runs on its own once its inputs exist.
 
+Every script sources `R/helpers.R`, which holds the statistics written for this study (blood
+adjustment, ANCOVA, the Wilcoxon and AUC row, the Spearman p-values, the per-subject limma fit) and
+the heatmap, page and workbook plumbing the steps share. `tests/testthat/` checks each of them
+against base R or a hand-built answer:
+
+```sh
+Rscript -e 'testthat::test_dir("tests/testthat")'
+```
+
 ## One command per step, in order
 
 ```sh

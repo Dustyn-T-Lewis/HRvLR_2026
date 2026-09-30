@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
   library(ComplexHeatmap)
   library(writexl)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("03_Pathway_Enrichment", "03_Classify")
 out <- file.path(stage, "c_data")
@@ -80,40 +81,6 @@ tasks <- list(
   Acute_change_HRvLR = between_arm(change("T2", "T3"), "HR vs LR, acute change")
 )
 
-# Ties push wilcox.test to its normal approximation and it warns on every call.
-sides <- function(spec, id) {
-  pos <- spec$positive[id, ]
-  neg <- spec$negative[id, ]
-  if (spec$paired) {
-    kept <- !is.na(pos) & !is.na(neg)
-    return(list(pos = pos[kept], neg = neg[kept]))
-  }
-  list(pos = pos[!is.na(pos)], neg = neg[!is.na(neg)])
-}
-classify_row <- function(spec, id) {
-  s <- sides(spec, id)
-  n <- c(n_positive = length(s$pos), n_negative = length(s$neg))
-  if (min(n) < 3) {
-    return(c(auc = NA, auc_lower = NA, auc_upper = NA, median_change = NA, p = NA, n))
-  }
-  w <- suppressWarnings(wilcox.test(s$pos, s$neg)$statistic)
-  # direction = "<" pins HR as the higher side; pROC otherwise flips any AUC below 0.5. At perfect
-  # separation DeLong's variance is zero and the interval collapses to a point, so none is given.
-  interval <- if (spec$paired || w %in% c(0, prod(n))) {
-    c(NA, NA)
-  } else {
-    pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE) |>
-      pROC::ci.auc(method = "delong") |>
-      as.numeric() |>
-      _[c(1, 3)]
-  }
-  c(
-    auc = unname(w) / prod(n), auc_lower = interval[1], auc_upper = interval[2],
-    median_change = if (spec$paired) median(s$pos - s$neg) else NA,
-    p = suppressWarnings(wilcox.test(s$pos, s$neg, paired = spec$paired)$p.value),
-    n
-  )
-}
 auc <- imap(tasks, \(spec, name) {
   fits <- vapply(rownames(values), \(id) classify_row(spec, id), numeric(7))
   tibble(
@@ -139,90 +106,7 @@ counts <- auc |>
     .after = n_negative
   )
 
-# Heatmap and workbook helpers, the same in every contrasts, classify and associate script.
-# Display only: row order, colour limits and centring touch no test.
-ht_opt$message <- FALSE
-diverging <- c("#5E3C99", "white", "#E66101")
-status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
-status_legend <- Legend(
-  labels = c(names(status_colours), "not tested"), title = "status",
-  legend_gp = gpar(fill = c(status_colours, "grey80"))
-)
-status_of <- \(p, fdr) {
-  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
-}
-# Colours stop at the 99th percentile of |x| so a few extremes do not wash out the rest.
-cap <- \(x) unname(quantile(abs(x), 0.99, na.rm = TRUE))
-# Long results to a feature-by-column matrix; untested cells stay NA and draw grey.
-as_grid <- function(d, rows, cols, col, value) {
-  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
-  d <- filter(d, feature %in% rows, .data[[col]] %in% cols)
-  m[cbind(d$feature, d[[col]])] <- value(d)
-  m
-}
-# An effect map on a diverging scale when breaks are given, otherwise a status map.
-heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
-                 column_title = title, column_names_gp = gpar(fontsize = 7), ...) {
-  rows <- rownames(m)
-  Heatmap(m,
-    name = title, na_col = "grey80",
-    col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
-    show_heatmap_legend = !is.null(breaks) && !is.null(legend),
-    heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
-    cluster_rows = FALSE, cluster_columns = FALSE, column_title = column_title,
-    column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
-    show_row_names = row_names && length(rows) <= 80,
-    row_labels = gsub("\n", " ", feature_label[rows]),
-    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
-    use_raster = length(rows) > 200, ...
-  )
-}
-heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
-  list(title = title, draw = function() {
-    draw(maps,
-      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
-      merge_legend = TRUE, heatmap_legend_list = legends, padding = unit(c(14, 4, 4, 4), "mm")
-    )
-    grid.text(stringr::str_wrap(caption, 190),
-      x = unit(4, "mm"), y = unit(3, "mm"), just = c("left", "bottom"), gp = gpar(fontsize = 7)
-    )
-  })
-}
-write_workbook <- function(sheets, holds, file) {
-  sheets <- c(sheets, list(
-    input_manifest = tibble(
-      input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-    ),
-    package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-      as_tibble() |>
-      select(package, version = loadedversion, source)
-  ))
-  holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
-  write_xlsx(c(list(read_me = tibble(sheet = names(sheets), holds = holds)), sheets), file)
-}
 
-# Grid helpers, the same in every classify and associate script. Twelve panels to a page; blank
-# slots keep a short last page at the same panel size.
-slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
-paginate <- function(hits, by) {
-  hits |>
-    mutate(
-      page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
-      position = (row_number() - 1) %% 12 + 1, .by = all_of(by)
-    ) |>
-    mutate(pdf_page = consecutive_id(pick(all_of(by)), page))
-}
-page_theme <- theme_minimal(base_size = 9) +
-  theme(
-    strip.text = element_text(size = 7), plot.title = element_text(face = "bold"),
-    plot.caption = element_text(hjust = 0), legend.position = "top"
-  )
-counts_line <- \(info, noun, hits) {
-  sprintf(
-    "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.", info$n_nominal, info$n_tested,
-    noun, info$n_fdr_05, hits$page[1], hits$n_pages[1]
-  )
-}
 
 # Overview: every feature by task, median paired change and AUC each on its own scale.
 paired_tasks <- names(tasks)[map_lgl(tasks, "paired")]
@@ -359,5 +243,6 @@ write_workbook(
     "Per set and task: AUC, median paired change (paired tasks), Wilcoxon p and BH FDR.",
     "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row."
   ),
-  file.path(out, "03_classify.xlsx")
+  file.path(out, "03_classify.xlsx"),
+  inputs, paths
 )
