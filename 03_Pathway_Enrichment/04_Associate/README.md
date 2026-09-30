@@ -44,9 +44,9 @@ arm-difference and two-predictor hit at p < 0.05, drawn the same way as the chan
 | Sheet | Holds |
 |---|---|
 | `counts` | Tested, p < 0.05 and BH < 0.05 counts per term and trait, and per window and outcome. |
-| `model` | Sample model: effect per trait unit, t, p and BH FDR per set, trait and term. |
-| `change_score` | Change score: pooled Spearman rho, p and BH FDR per set, window and outcome. |
+| `model` | Sample model: effect per trait unit, t, p, BH FDR and Storey q per set, trait and term. |
+| `change_score` | Change score: pooled Spearman rho, p, BH FDR and Storey q per set, window and outcome. |
 | `change_score_by_arm` | Change score within each arm, exact p, rows with p < 0.05. |
-| `arm_difference` | HR slope minus LR slope, t, p and BH FDR per set, window and outcome. |
-| `two_predictor` | Growth and strength terms, t, p and BH FDR per set, window and test. |
+| `arm_difference` | HR slope minus LR slope, t, p, BH FDR and Storey q per set, window and outcome. |
+| `two_predictor` | Growth and strength terms, t, p, BH FDR and Storey q per set, window and test. |
 | `plot_index` | PDF page of each overview, and page and panel position of every p < 0.05 row. |

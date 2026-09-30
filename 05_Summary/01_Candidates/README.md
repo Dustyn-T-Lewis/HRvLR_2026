@@ -11,7 +11,9 @@ against LR, one table for training and one for the acute bout.
 
 ## Method
 
-Each feature collects the tests below; every p < 0.05 counts once and nothing is weighted. Rows are
+Each feature collects the tests below; every p < 0.05 counts once and nothing is weighted. Each hit
+carries its BH FDR and Storey q from its own screen, as exploratory corrections; `n_bh_20` and
+`n_storey_20` count hits below 0.20 and `min_bh` and `min_storey` give the smallest. Rows are
 sorted by hit count, then by the smallest p.
 
 | Family | Training list | Acute list |

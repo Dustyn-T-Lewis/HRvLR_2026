@@ -121,3 +121,11 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 |---|---|---|
 | Panels beyond their nulls | Modules at T3: AUC 0.83 against a null median of 0.38, permutation p = 0.006, carried by salmon (kept in 100% of models) and yellow (96%). Proteins in the acute change: AUC 0.58, p = 0.042, RPS20 kept in 64%. The other eight panels sit inside their nulls. Ten panels were tested, so p = 0.042 is within chance and p = 0.006 is near a Bonferroni line of 0.005. | 1,000 permutations each. |
 | Reading the T3 module panel | Confounded with blood. At T3 the salmon eigengene correlates rho = -0.83 with the blood index (p = 1e-4) and yellow -0.63; both sit lower in LR, the bloodier arm. The blood adjustment fits its slope within group cells, so the HR-against-LR blood difference at T3 is aliased with the group means and cannot be removed. | Any HR-against-LR result at T3 carries this caveat, not only the panel. |
+
+## 2026-09-30: exploratory corrections, tests removed, outputs audited
+
+| Question | Decision | Reason |
+|---|---|---|
+| Correction beside nominal results | BH and Storey's q in every table, within the same screen; the candidate tables carry both per hit and count hits below 0.20. | User's choice. Storey uses a bootstrap pi0, which copes with discrete Wilcoxon p; screens under 100 tests (modules) set pi0 = 1, so q equals BH. |
+| Unit tests | `tests/` removed at the user's request. Supersedes the tested-helpers part of 2026-09-30. | Overrides the global testing policy for this project, by explicit instruction. |
+| Output audit | All 58 tracked files under `c_data/` and `b_reports/` are written by their own step's script; two empty `b_reports/` folders left by older versions were removed. | |

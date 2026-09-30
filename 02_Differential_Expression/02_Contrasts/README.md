@@ -40,12 +40,12 @@ beside a status map. Then the p-value histogram, a volcano per contrast, and the
 
 | Sheet | Holds |
 |---|---|
-| `DEP_matrix` | logFC, p and BH FDR per protein and contrast, with samples observed. |
+| `DEP_matrix` | logFC, p, BH FDR and Storey q per protein and contrast, with samples observed. |
 | `contrast_summary` | Tested, p < 0.05 and BH counts per contrast, with its role. |
 | `null_calibration` | propTrueNull, median |t| and share of p below 0.2 per contrast. |
 | `treat` | Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast. |
 | `detectable_effect` | log2 effect the primary contrast detects at 80% power, median and 90th percentile. |
 | `fry_concordance` | fry: one arm's responders tested in the other arm's contrast. |
 | `unadjusted` | logFC and p per protein and contrast before blood adjustment, for sensitivity. |
-| `ancova` | ANCOVA per protein and window: arm effect at equal starting value, t, p and BH FDR. |
+| `ancova` | ANCOVA per protein and window: arm effect at equal starting value, t, p, BH FDR and Storey q. |
 | `leave_one_out` | Per protein and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |

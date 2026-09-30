@@ -34,13 +34,9 @@ Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.p
 any sub-stage re-runs on its own once its inputs exist.
 
 Every script sources `R/helpers.R`, which holds the statistics written for this study (blood
-adjustment, ANCOVA, the Wilcoxon and AUC row, the Spearman p-values, the per-subject limma fit) and
-the heatmap, page and workbook plumbing the steps share. `tests/testthat/` checks each of them
-against base R or a hand-built answer:
-
-```sh
-Rscript -e 'testthat::test_dir("tests/testthat")'
-```
+adjustment, ANCOVA, the Wilcoxon and AUC row, the Spearman p-values, the per-subject limma fit,
+leave one subject out, Storey's q, the panel) and the heatmap, page and workbook plumbing the steps
+share.
 
 ## One command per step, in order
 
@@ -91,7 +87,10 @@ The fitted matrix stays unimputed: limma fits each protein on the samples where 
 missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and
 WGCNA.
 
-BH runs within each contrast, task, trait and term, or window and outcome. Set tests pool the five
+BH runs within each contrast, task, trait and term, or window and outcome. Storey's q sits beside
+every BH column as a second exploratory correction over the same screen (`storey_q()` in
+`R/helpers.R`: bootstrap pi0, equal to BH in screens under 100 tests). Both rank and flag nominal
+results; neither gates them. Set tests pool the five
 collections within a contrast; set classification and association split by collection.
 
 ## renv.lock pins every package

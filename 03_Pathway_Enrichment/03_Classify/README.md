@@ -29,5 +29,5 @@ ordered by p, then the larger effect, then ID: a paired grid for within-arm task
 | Sheet | Holds |
 |---|---|
 | `counts` | Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts. |
-| `auc` | Per set and task: AUC with a DeLong 95% interval (between-arm tasks, none at AUC 0 or 1), median paired change (paired tasks), Wilcoxon p and BH FDR. |
+| `auc` | Per set and task: AUC with a DeLong 95% interval (between-arm tasks, none at AUC 0 or 1), median paired change (paired tasks), Wilcoxon p, BH FDR and Storey q. |
 | `plot_index` | PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row. |

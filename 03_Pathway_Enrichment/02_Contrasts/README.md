@@ -55,5 +55,5 @@ sets to a page. Then the ANCOVA volcano for both windows.
 | `significant` | Every set at FDR < 0.05, either method. The full table is set_tests in set_tests.rds. |
 | `protein_summary` | Proteins tested and at BH < 0.05 per contrast. |
 | `fry_correlation` | Within-subject correlation fry used, estimated on the imputed matrix. |
-| `ancova` | ANCOVA per set and window on singscore: arm effect at equal starting value, t, p, BH FDR. |
+| `ancova` | ANCOVA per set and window on singscore: arm effect at equal starting value, t, p, BH FDR, Storey q. |
 | `leave_one_out` | Per set and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |

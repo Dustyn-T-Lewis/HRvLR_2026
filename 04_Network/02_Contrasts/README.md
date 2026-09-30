@@ -37,10 +37,10 @@ against moderated t for `Training_Interaction` in every module, and the ANCOVA v
 
 | Sheet | Holds |
 |---|---|
-| `eigengene_tests` | limma on module eigengenes: logFC, moderated t, p and BH FDR per contrast. |
+| `eigengene_tests` | limma on module eigengenes: logFC, moderated t, p, BH FDR and Storey q per contrast. |
 | `fry_tests` | fry on each module as a protein set: direction, p and FDR per contrast. |
 | `membership_contrast` | Spearman rho between member kME and protein moderated t, per module and contrast. |
 | `membership_phenotype` | Spearman rho between member kME and protein rho with each phenotype over training. |
 | `correlation` | Within-subject correlation on the eigengenes and on the imputed matrix. |
-| `ancova` | ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR. |
+| `ancova` | ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR, Storey q. |
 | `leave_one_out` | Per module and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |
