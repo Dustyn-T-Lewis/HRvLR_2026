@@ -311,6 +311,24 @@ stopifnot(length(overviews) == 2 * length(row_groups))
 
 ancova_results <- ancova(as.matrix(fit$data), as_tibble(fit$metadata)) |>
   mutate(fdr = p.adjust(p, "BH"), .by = window)
+# Leave one subject out on the tests that feed the candidate tables: the four HR-against-LR
+# contrasts and both ANCOVA windows. A hit that stays at p < 0.05 in every rerun does not rest on
+# one person.
+sample_meta <- as_tibble(fit$metadata)
+protein_values <- as.matrix(fit$data)
+robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
+  kept <- sample_meta$subject %in% keep
+  bind_rows(
+    fit_contrasts(
+      protein_values[, kept], dal$design$design_matrix[kept, ],
+      dal$design$contrast_matrix[, hr_lr_contrasts], sample_meta$subject[kept]
+    ) |>
+      contrast_rows(),
+    ancova(protein_values[, kept], sample_meta[kept, ]) |>
+      transmute(feature, test = paste("ANCOVA", window), p)
+  ) |>
+    select(feature, test, p)
+})
 ancova_figure <- ancova_results |>
   mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
   ggplot(aes(effect, -log10(p), colour = call)) +
@@ -361,7 +379,8 @@ write_workbook(
     ),
     fry_concordance = fry_concordance,
     unadjusted = unadjusted,
-    ancova = ancova_results
+    ancova = ancova_results,
+    leave_one_out = robustness
   ),
   c(
     "logFC, p and BH FDR per protein and contrast, with samples observed.",
@@ -371,7 +390,8 @@ write_workbook(
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
     "fry: one arm's responders tested in the other arm's contrast.",
     "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
-    "ANCOVA per protein and window: arm effect at equal starting value, t, p and BH FDR."
+    "ANCOVA per protein and window: arm effect at equal starting value, t, p and BH FDR.",
+    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
   ),
   file.path(out, "02_contrasts.xlsx"),
   inputs, paths

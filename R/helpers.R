@@ -2,7 +2,6 @@
 # study, and the heatmap, page and workbook plumbing the contrasts, classify and associate steps
 # share. tests/testthat/test-helpers.R checks the statistics against hand-computed answers.
 
-
 # Removes each feature's blood slope. The design carries the group means beside a centred `blood`
 # column, so the slope comes from spread within cells and no contrast leaks into it. A feature with
 # no estimable slope stays as it was.
@@ -15,6 +14,52 @@ remove_blood <- function(values, design, subject) {
     values = values - outer(coalesce(slope, 0), design[, "blood"]),
     slope = slope, p = fit$p.value[, "blood"]
   )
+}
+
+# The four contrasts that compare HR with LR in the candidate tables.
+hr_lr_contrasts <- c("Training_Interaction", "Trained_HRvLR", "Acute_Interaction", "Acute_HRvLR")
+
+# limma on a design and contrast matrix with subject blocked, as proteoDA's fit_limma_model() fits
+# it (moderated eBayes, not robust); the eigengene fits ask for robust.
+fit_contrasts <- function(values, design, contrasts, subject, robust = FALSE) {
+  correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
+  lmFit(values, design, block = subject, correlation = correlation) |>
+    contrasts.fit(contrasts) |>
+    eBayes(robust = robust)
+}
+# One row per feature and contrast from a contrasts fit: logFC, t and p.
+contrast_rows <- function(fit, prefix = "") {
+  tibble(
+    feature = rep(rownames(fit$coefficients), ncol(fit$coefficients)),
+    test = rep(paste0(prefix, colnames(fit$coefficients)), each = nrow(fit$coefficients)),
+    effect = c(fit$coefficients), t = c(fit$t), p = c(fit$p.value)
+  )
+}
+
+# fry per contrast on a complete matrix, sets given as row indices: one row per set and contrast.
+fry_rows <- function(values, index, design, contrasts, subject) {
+  correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
+  map(colnames(contrasts), \(contrast) {
+    fry(values, index, design, contrasts[, contrast],
+      block = subject, correlation = correlation, sort = "none"
+    ) |>
+      rownames_to_column("feature") |>
+      transmute(feature, test = paste("fry", contrast), p = PValue)
+  }) |>
+    list_rbind()
+}
+
+# Reruns test() once per subject left out; test(keep) returns feature, test and p for the kept
+# subjects. Per feature and test: reruns made, reruns still at p < 0.05, the largest p, and the
+# subject whose removal gave it.
+leave_one_out <- function(subjects, test) {
+  map(set_names(subjects), \(dropped) test(setdiff(subjects, dropped))) |>
+    list_rbind(names_to = "dropped") |>
+    filter(!is.na(p)) |>
+    summarise(
+      n_reruns = n(), n_nominal = sum(p < 0.05), max_p = max(p), worst = dropped[which.max(p)],
+      .by = c(feature, test)
+    )
 }
 
 # ANCOVA per feature and window: the later value on the earlier one plus arm, over subjects with

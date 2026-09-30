@@ -300,6 +300,23 @@ stopifnot(length(overviews) == 2 * length(row_groups))
 
 ancova_results <- ancova(me, as_tibble(d$dal$metadata)) |>
   mutate(fdr = p.adjust(p, "BH"), .by = window)
+# Leave one subject out on the tests that feed the candidate tables: eigengene limma and fry on
+# the four HR-against-LR contrasts, and ANCOVA on eigengenes. A hit that stays at p < 0.05 in
+# every rerun does not rest on one person.
+sample_meta <- as_tibble(d$dal$metadata)
+key_contrasts <- contrast_matrix[, hr_lr_contrasts]
+robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
+  kept <- sample_meta$subject %in% keep
+  ids <- sample_meta$sample_id[kept]
+  bind_rows(
+    fit_contrasts(me[, ids], design[ids, ], key_contrasts, subject[kept], robust = TRUE) |>
+      contrast_rows("eigengene "),
+    fry_rows(abundance[, ids], module_rows, design[ids, ], key_contrasts, subject[kept]),
+    ancova(me[, ids], sample_meta[kept, ]) |>
+      transmute(feature, test = paste("ANCOVA", window), p)
+  ) |>
+    select(feature, test, p)
+})
 ancova_figure <- ancova_results |>
   mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
   ggplot(aes(effect, -log10(p), colour = call)) +
@@ -343,7 +360,8 @@ write_workbook(
     correlation = tibble(
       matrix = c("eigengenes", "imputed"), correlation = c(me_correlation, fry_correlation)
     ),
-    ancova = ancova_results
+    ancova = ancova_results,
+    leave_one_out = robustness
   ),
   c(
     "limma on module eigengenes: logFC, moderated t, p and BH FDR per contrast.",
@@ -351,7 +369,8 @@ write_workbook(
     "Spearman rho between member kME and protein moderated t, per module and contrast.",
     "Spearman rho between member kME and protein rho with each phenotype over training.",
     "Within-subject correlation on the eigengenes and on the imputed matrix.",
-    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR."
+    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR.",
+    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
   ),
   file.path(out, "02_contrasts.xlsx"),
   inputs, paths

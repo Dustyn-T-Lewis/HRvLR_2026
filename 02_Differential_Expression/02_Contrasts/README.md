@@ -25,6 +25,10 @@ subjects with both biopsies and at least three per arm: T2 on T1 for training, T
 acute bout. The arm term is HR minus LR at equal starting value, so an arm that starts low and
 catches up does not read as a different response. BH within window.
 
+Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
+through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not
+rest on one person.
+
 ## Figures
 
 Two overview pages: every protein across the 45 biopsies, centred per protein, with arm, time point,
@@ -44,3 +48,4 @@ beside a status map. Then the p-value histogram, a volcano per contrast, and the
 | `fry_concordance` | fry: one arm's responders tested in the other arm's contrast. |
 | `unadjusted` | logFC and p per protein and contrast before blood adjustment, for sensitivity. |
 | `ancova` | ANCOVA per protein and window: arm effect at equal starting value, t, p and BH FDR. |
+| `leave_one_out` | Per protein and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |

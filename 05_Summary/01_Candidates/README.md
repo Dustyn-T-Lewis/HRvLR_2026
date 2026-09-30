@@ -28,7 +28,8 @@ Hit counts overlap by construction: the interaction, the training-change classif
 of `comp_hypertrophy`. The `hit_distribution` sheet gives the reference: the same rules at T1
 (`Baseline_HRvLR`, the T1 classification and the T1-level associations), before any training.
 Baseline logFC and p, and for proteins the interaction p before blood adjustment, sit beside each row
-and filter nothing.
+and filter nothing. `n_stable` counts the contrast hits that stay at p < 0.05 in every
+leave-one-subject-out rerun (each level's `02_Contrasts`, sheet `leave_one_out`).
 
 ## Figures
 

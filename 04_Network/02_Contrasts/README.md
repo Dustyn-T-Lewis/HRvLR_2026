@@ -22,6 +22,10 @@ ANCOVA on eigengenes sits beside the interactions: per module and window, `lm(la
 arm)` over subjects with both biopsies, T2 on T1 for training and T3 on T2 for the acute bout. BH
 within window.
 
+Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
+through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not
+rest on one person.
+
 ## Figures
 
 Two overview pages: the eigengenes across the 45 biopsies, with arm, time point, fCSA mixed, mCSA, leg press 1RM and comp_hypertrophy above the columns (the biopsy traits are blank at
@@ -39,3 +43,4 @@ against moderated t for `Training_Interaction` in every module, and the ANCOVA v
 | `membership_phenotype` | Spearman rho between member kME and protein rho with each phenotype over training. |
 | `correlation` | Within-subject correlation on the eigengenes and on the imputed matrix. |
 | `ancova` | ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR. |
+| `leave_one_out` | Per module and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |

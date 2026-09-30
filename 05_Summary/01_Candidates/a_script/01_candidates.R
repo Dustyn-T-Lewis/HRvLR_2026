@@ -150,12 +150,21 @@ unadjusted <- sheet("protein_contrasts", "unadjusted") |>
     unadjusted_p_training = Training_Interaction_p, unadjusted_p_acute = Acute_Interaction_p
   )
 
-hits <- filter(on_list, p < 0.05)
+# A contrast hit is stable when it stays at p < 0.05 with any one subject left out.
+stability <- list(
+  proteins = "protein_contrasts", sets = "set_contrasts", modules = "module_contrasts"
+) |>
+  map(\(input) sheet(input, "leave_one_out")) |>
+  list_rbind(names_to = "level") |>
+  transmute(level, feature, test, stable = n_nominal == n_reruns)
+hits <- filter(on_list, p < 0.05) |>
+  left_join(stability, by = c("level", "feature", "test"))
 candidates <- hits |>
   arrange(p) |>
   summarise(
     n_hits = n(), n_contrast = sum(family == "contrast"), n_classify = sum(family == "classify"),
-    n_associate = sum(family == "associate"), min_p = min(p),
+    n_associate = sum(family == "associate"), n_stable = sum(stable, na.rm = TRUE),
+    min_p = min(p),
     hits = paste(sprintf("%s (%+.3g, p %.2g)", test, effect, p), collapse = "; "),
     .by = c(level, list, feature)
   ) |>
@@ -185,7 +194,8 @@ table_of <- function(level, list) {
   d <- filter(candidates, .data$level == .env$level, .data$list == .env$list)
   cols <- c(
     "feature", "label", if (level == "proteins") "module", if (level == "sets") "collection",
-    "n_hits", "n_contrast", "n_classify", "n_associate", "min_p", "on_both", "baseline_effect",
+    "n_hits", "n_contrast", "n_stable", "n_classify", "n_associate", "min_p", "on_both",
+    "baseline_effect",
     "baseline_p", if (level == "proteins") paste0("unadjusted_p_", list), "hits"
   )
   select(d, all_of(cols))
@@ -202,8 +212,8 @@ holds <- sprintf(
 
 sheets <- c(sheets, list(
   hit_distribution = distribution,
-  evidence = filter(on_list, p < 0.05) |>
-    select(level, list, feature, family, test, effect, p) |>
+  evidence = hits |>
+    select(level, list, feature, family, test, effect, p, stable) |>
     arrange(level, list, feature, p),
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
@@ -218,7 +228,10 @@ holds <- c(
     "Features by hit count per level and list, with tests per feature. The baseline list applies",
     "the same rules at T1, before training, as the reference."
   ),
-  "Every p < 0.05 behind the tables, one row per test.",
+  paste(
+    "Every p < 0.05 behind the tables, one row per test; stable marks contrast hits that hold",
+    "with any one subject left out."
+  ),
   "Files read, with md5.",
   "Packages loaded at run time."
 )
@@ -229,6 +242,7 @@ read_me <- tibble(sheet = names(sheets), holds = holds) |>
     "and arm is the median split of comp_hypertrophy. Effects: logFC for protein contrasts, NES",
     "for fgsea, +1 or -1 for fry direction, eigengene logFC, ANCOVA arm effect, AUC, Spearman rho,",
     "slope difference or model coefficient. Contrast rows come from the blood-adjusted fit;",
-    "unadjusted_p is the protein interaction p before adjustment."
+    "unadjusted_p is the protein interaction p before adjustment. n_stable counts contrast hits",
+    "that stay at p < 0.05 in every leave-one-subject-out rerun."
   ))
 write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_candidates.xlsx"))

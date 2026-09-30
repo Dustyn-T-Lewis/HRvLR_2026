@@ -176,3 +176,52 @@ test_that("display and workbook helpers produce what the scripts expect", {
     readxl::excel_sheets(file), c("read_me", "results", "input_manifest", "package_versions")
   )
 })
+
+test_that("fit_contrasts matches a direct limma fit and contrast_rows lays it out", {
+  meta <- toy_meta()
+  set.seed(8)
+  values <- matrix(rnorm(3 * nrow(meta)), 3, dimnames = list(c("a", "b", "c"), meta$sample_id))
+  design <- model.matrix(~ 0 + group, meta)
+  colnames(design) <- levels(meta$group)
+  contrasts <- makeContrasts(HR_T2 - LR_T2, levels = design)
+  fit <- fit_contrasts(values, design, contrasts, meta$subject)
+  correlation <- duplicateCorrelation(values, design, block = meta$subject)$consensus.correlation
+  direct <- lmFit(values, design, block = meta$subject, correlation = correlation) |>
+    contrasts.fit(contrasts) |>
+    eBayes()
+  expect_equal(fit$p.value, direct$p.value)
+  rows <- contrast_rows(fit, "x ")
+  expect_equal(rows$test, rep("x HR_T2 - LR_T2", 3))
+  expect_equal(rows$p, unname(direct$p.value[, 1]))
+})
+
+test_that("leave_one_out counts reruns that stay nominal and names the worst drop", {
+  test <- function(keep) {
+    tibble(
+      feature = "f", test = "t",
+      p = if ("s2" %in% keep) 0.01 else 0.2
+    )
+  }
+  out <- leave_one_out(c("s1", "s2", "s3"), test)
+  expect_equal(out$n_reruns, 3)
+  expect_equal(out$n_nominal, 2)
+  expect_equal(out$max_p, 0.2)
+  expect_equal(out$worst, "s2")
+})
+
+test_that("fry_rows returns fry's p for each set and contrast", {
+  meta <- toy_meta()
+  set.seed(9)
+  values <- matrix(rnorm(6 * nrow(meta)), 6, dimnames = list(letters[1:6], meta$sample_id))
+  design <- model.matrix(~ 0 + group, meta)
+  colnames(design) <- levels(meta$group)
+  contrasts <- makeContrasts(up = HR_T2 - LR_T2, levels = design)
+  index <- list(s1 = 1:3, s2 = 4:6)
+  out <- fry_rows(values, index, design, contrasts, meta$subject)
+  correlation <- duplicateCorrelation(values, design, block = meta$subject)$consensus.correlation
+  direct <- fry(values, index, design, contrasts[, "up"],
+    block = meta$subject, correlation = correlation, sort = "none"
+  )
+  expect_equal(out$test, c("fry up", "fry up"))
+  expect_equal(out$p, direct$PValue)
+})

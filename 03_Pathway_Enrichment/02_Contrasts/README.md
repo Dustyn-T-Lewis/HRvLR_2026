@@ -34,6 +34,10 @@ ANCOVA on singscore sits beside the interactions: per set and window, `lm(later 
 over subjects with both biopsies, T2 on T1 for training and T3 on T2 for the acute bout. BH within
 window and collection.
 
+Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
+through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not
+rest on one person.
+
 ## Figures
 
 Two overview pages per collection: singscore across the 45 biopsies, centred per set, with arm, time
@@ -52,3 +56,4 @@ sets to a page. Then the ANCOVA volcano for both windows.
 | `protein_summary` | Proteins tested and at BH < 0.05 per contrast. |
 | `fry_correlation` | Within-subject correlation fry used, estimated on the imputed matrix. |
 | `ancova` | ANCOVA per set and window on singscore: arm effect at equal starting value, t, p, BH FDR. |
+| `leave_one_out` | Per set and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |
