@@ -342,7 +342,8 @@ overviews <- imap(row_groups, \(rows, group) {
     column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
   )
   contrast_grid <- \(value) as_grid(contrast_results, rows, contrast_names, "contrast", value)
-  contrast_maps <- heat(contrast_grid(\(d) d$effect), "fgsea NES",
+  contrast_maps <- heat(
+    contrast_grid(\(d) d$effect), "fgsea NES",
     c(-effect_limit, 0, effect_limit), "NES"
   ) +
     heat(contrast_grid(\(d) status_of(d$p, d$fdr)), "fgsea p and BH q", row_names = TRUE)
@@ -367,9 +368,73 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
+# ANCOVA beside the interactions: the later value on the earlier one plus arm, per set and
+# window, over subjects with both biopsies and at least three per arm. The arm term is HR minus LR
+# at equal starting values, so an arm that starts low and catches up does not read as a different
+# response. BH within window and collection.
+ancova <- function(values, meta) {
+  by_subject <- function(timepoint) {
+    rows <- filter(meta, timepoint == .env$timepoint)
+    set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
+  }
+  windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
+  imap(windows, \(timepoints, window) {
+    before <- by_subject(timepoints[1])
+    after <- by_subject(timepoints[2])
+    both <- intersect(colnames(before), colnames(after))
+    arm <- factor(meta$arm[match(both, meta$subject)], c("LR", "HR"))
+    map(rownames(values), \(feature) {
+      x <- before[feature, both]
+      y <- after[feature, both]
+      ok <- !is.na(x) & !is.na(y)
+      n <- table(arm[ok])
+      if (min(n) < 3) {
+        return(NULL)
+      }
+      coefs <- summary(lm(y[ok] ~ x[ok] + arm[ok]))$coefficients
+      tibble(
+        feature, window,
+        n_HR = n[["HR"]], n_LR = n[["LR"]], effect = coefs[3, 1], t = coefs[3, 3], p = coefs[3, 4]
+      )
+    }) |>
+      list_rbind()
+  }) |>
+    list_rbind()
+}
+ancova_results <- ancova(sample_values, as_tibble(column_meta)) |>
+  mutate(collection = catalog$collection[match(feature, catalog$set_id)], .after = feature) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(window, collection))
+ancova_figure <- ancova_results |>
+  mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
+  ggplot(aes(effect, -log10(p), colour = call)) +
+  geom_point(size = 0.8, alpha = 0.7) +
+  geom_hline(yintercept = -log10(0.05), linetype = 2, colour = "grey50") +
+  facet_wrap(~window) +
+  scale_colour_manual(
+    values = c(`BH < 0.05` = "#B2182B", `p < 0.05` = "#2166AC", `not nominal` = "grey75"),
+    name = NULL
+  ) +
+  labs(
+    title = "ANCOVA: HR minus LR at the later time point, at equal starting value",
+    subtitle = sprintf(
+      "Training: %d of %d sets at p < 0.05. Acute: %d of %d.",
+      sum(ancova_results$p[ancova_results$window == "training"] < 0.05),
+      sum(ancova_results$window == "training"),
+      sum(ancova_results$p[ancova_results$window == "acute"] < 0.05),
+      sum(ancova_results$window == "acute")
+    ),
+    x = "singscore, HR minus LR", y = "-log10 p",
+    caption = paste(
+      "lm(later ~ earlier + arm) per set; training is T2 on T1, acute T3 on T2. Dashed line:",
+      "p = 0.05. BH within window and collection. Table: c_data/02_contrasts.xlsx, ancova."
+    )
+  ) +
+  theme_minimal(base_size = 9) +
+  theme(legend.position = "top", plot.caption = element_text(hjust = 0))
+
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
-walk(pages, print)
+walk(c(pages, list(ancova_figure)), print)
 invisible(dev.off())
 
 saveRDS(
@@ -384,13 +449,15 @@ write_workbook(
       filter(fdr < 0.05) |>
       mutate(leading_edge = map_chr(leading_edge, paste, collapse = ";")),
     protein_summary = protein_summary,
-    fry_correlation = tibble(matrix = "imputed", correlation = correlation)
+    fry_correlation = tibble(matrix = "imputed", correlation = correlation),
+    ancova = ancova_results
   ),
   c(
     "Sets tested and called per contrast, by method, and fgsea survivors of collapsePathways.",
     "Every set at FDR < 0.05, either method. The full table is set_tests in set_tests.rds.",
     "Proteins tested and at BH < 0.05 per contrast.",
-    "Within-subject correlation fry used, estimated on the imputed matrix."
+    "Within-subject correlation fry used, estimated on the imputed matrix.",
+    "ANCOVA per set and window on singscore: arm effect at equal starting value, t, p, BH FDR."
   ),
   file.path(out, "02_contrasts.xlsx")
 )

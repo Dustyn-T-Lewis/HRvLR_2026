@@ -369,9 +369,72 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
+# ANCOVA beside the interactions: the later value on the earlier one plus arm, per protein and
+# window, over subjects with both biopsies and at least three per arm. The arm term is HR minus LR
+# at equal starting values, so an arm that starts low and catches up does not read as a different
+# response. BH within window.
+ancova <- function(values, meta) {
+  by_subject <- function(timepoint) {
+    rows <- filter(meta, timepoint == .env$timepoint)
+    set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
+  }
+  windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
+  imap(windows, \(timepoints, window) {
+    before <- by_subject(timepoints[1])
+    after <- by_subject(timepoints[2])
+    both <- intersect(colnames(before), colnames(after))
+    arm <- factor(meta$arm[match(both, meta$subject)], c("LR", "HR"))
+    map(rownames(values), \(feature) {
+      x <- before[feature, both]
+      y <- after[feature, both]
+      ok <- !is.na(x) & !is.na(y)
+      n <- table(arm[ok])
+      if (min(n) < 3) {
+        return(NULL)
+      }
+      coefs <- summary(lm(y[ok] ~ x[ok] + arm[ok]))$coefficients
+      tibble(
+        feature, window,
+        n_HR = n[["HR"]], n_LR = n[["LR"]], effect = coefs[3, 1], t = coefs[3, 3], p = coefs[3, 4]
+      )
+    }) |>
+      list_rbind()
+  }) |>
+    list_rbind()
+}
+ancova_results <- ancova(as.matrix(fit$data), as_tibble(fit$metadata)) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = window)
+ancova_figure <- ancova_results |>
+  mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
+  ggplot(aes(effect, -log10(p), colour = call)) +
+  geom_point(size = 0.8, alpha = 0.7) +
+  geom_hline(yintercept = -log10(0.05), linetype = 2, colour = "grey50") +
+  facet_wrap(~window) +
+  scale_colour_manual(
+    values = c(`BH < 0.05` = "#B2182B", `p < 0.05` = "#2166AC", `not nominal` = "grey75"),
+    name = NULL
+  ) +
+  labs(
+    title = "ANCOVA: HR minus LR at the later time point, at equal starting value",
+    subtitle = sprintf(
+      "Training: %d of %d proteins at p < 0.05. Acute: %d of %d.",
+      sum(ancova_results$p[ancova_results$window == "training"] < 0.05),
+      sum(ancova_results$window == "training"),
+      sum(ancova_results$p[ancova_results$window == "acute"] < 0.05),
+      sum(ancova_results$window == "acute")
+    ),
+    x = "log2 abundance, HR minus LR", y = "-log10 p",
+    caption = paste(
+      "lm(later ~ earlier + arm) per protein; training is T2 on T1, acute T3 on T2. Dashed line:",
+      "p = 0.05. BH within window. Table: c_data/02_contrasts.xlsx, ancova."
+    )
+  ) +
+  theme_minimal(base_size = 9) +
+  theme(legend.position = "top", plot.caption = element_text(hjust = 0))
+
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
-walk(list(p_histogram, volcano), print)
+walk(list(p_histogram, volcano, ancova_figure), print)
 invisible(dev.off())
 
 write_workbook(
@@ -390,7 +453,8 @@ write_workbook(
       log2_fc = round(quantile(detectable, c(0.5, 0.9), na.rm = TRUE, names = FALSE), 3)
     ),
     fry_concordance = fry_concordance,
-    unadjusted = unadjusted
+    unadjusted = unadjusted,
+    ancova = ancova_results
   ),
   c(
     "logFC, p and BH FDR per protein and contrast, with samples observed.",
@@ -399,7 +463,8 @@ write_workbook(
     "Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
     "fry: one arm's responders tested in the other arm's contrast.",
-    "logFC and p per protein and contrast before blood adjustment, for sensitivity."
+    "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
+    "ANCOVA per protein and window: arm effect at equal starting value, t, p and BH FDR."
   ),
   file.path(out, "02_contrasts.xlsx")
 )
