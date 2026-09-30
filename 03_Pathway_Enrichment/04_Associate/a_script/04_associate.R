@@ -100,18 +100,10 @@ model <- map(set_names(traits), \(trait) {
   mutate(collection = collection_of[feature], label = feature_label[feature], .after = feature) |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(trait, term, collection))
 
-by_subject <- function(timepoint) {
-  rows <- filter(meta, timepoint == .env$timepoint)
-  set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
-}
-change <- function(from, to) {
-  a <- by_subject(from)
-  b <- by_subject(to)
-  both <- intersect(colnames(a), colnames(b))
-  b[, both, drop = FALSE] - a[, both, drop = FALSE]
-}
 windows <- list(
-  training = change("T1", "T2"), baseline = by_subject("T1"), acute = change("T2", "T3")
+  training = subject_change(values, meta, "T1", "T2"),
+  baseline = subject_values(values, meta, "T1"),
+  acute = subject_change(values, meta, "T2", "T3")
 )
 
 correlate <- function(x, exact = FALSE) {

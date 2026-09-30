@@ -62,17 +62,26 @@ leave_one_out <- function(subjects, test) {
     )
 }
 
+# One column per subject at a time point, and the change between two time points over the
+# subjects sampled at both.
+subject_values <- function(values, meta, timepoint) {
+  rows <- filter(meta, timepoint == .env$timepoint)
+  set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
+}
+subject_change <- function(values, meta, from, to) {
+  before <- subject_values(values, meta, from)
+  after <- subject_values(values, meta, to)
+  both <- intersect(colnames(before), colnames(after))
+  after[, both, drop = FALSE] - before[, both, drop = FALSE]
+}
+
 # ANCOVA per feature and window: the later value on the earlier one plus arm, over subjects with
 # both biopsies and at least three per arm. The arm term is HR minus LR at equal starting value.
 ancova <- function(values, meta) {
-  by_subject <- function(timepoint) {
-    rows <- filter(meta, timepoint == .env$timepoint)
-    set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
-  }
   windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
   imap(windows, \(timepoints, window) {
-    before <- by_subject(timepoints[1])
-    after <- by_subject(timepoints[2])
+    before <- subject_values(values, meta, timepoints[1])
+    after <- subject_values(values, meta, timepoints[2])
     both <- intersect(colnames(before), colnames(after))
     arm <- factor(meta$arm[match(both, meta$subject)], c("LR", "HR"))
     map(rownames(values), \(feature) {
@@ -93,6 +102,38 @@ ancova <- function(values, meta) {
   }) |>
     list_rbind()
 }
+
+# Exploratory elastic-net panel: repeated stratified k-fold CV around nestedcv's glmnet, alpha 0.5
+# fixed and lambda.1se from an inner leave-one-out. Stratified outer folds keep the HR:LR balance
+# of every training set; pooled leave-one-out does not, and an empty model then scores AUC 0
+# (Airola et al. 2011). x has one row per subject. Returns each repeat's out-of-fold AUC, how
+# often each feature was kept across the repeat-by-fold models, and the share that kept none.
+panel_cv <- function(x, y, repeats = 10, k = 5, seed = 1) {
+  inner <- length(y) - ceiling(length(y) / k)
+  runs <- map(seq_len(repeats), \(r) {
+    set.seed(seed + r)
+    fit <- suppressWarnings(nestedcv::nestcv.glmnet(y, x,
+      family = "binomial", outer_folds = caret::createFolds(y, k = k), n_inner_folds = inner,
+      alphaSet = 0.5, min_1se = 1, finalCV = FALSE
+    ))
+    list(
+      auc = pROC::roc(fit$output$testy, fit$output$predyp,
+        levels = levels(y), direction = "<", quiet = TRUE
+      ) |>
+        pROC::auc() |>
+        as.numeric(),
+      kept = map(fit$outer_result, \(fold) setdiff(names(fold$coef), "(Intercept)"))
+    )
+  })
+  kept <- list_flatten(map(runs, "kept"))
+  list(
+    auc = map_dbl(runs, "auc"),
+    frequency = table(factor(unlist(kept), colnames(x))) / length(kept),
+    empty = mean(lengths(kept) == 0)
+  )
+}
+# Permutation p that is never zero: (b + 1) / (m + 1) (Phipson & Smyth 2010).
+permutation_p <- function(observed, null) (sum(null >= observed) + 1) / (length(null) + 1)
 
 # A feature needs three observations per side. Ties push wilcox.test to its normal approximation
 # and it warns on every call.

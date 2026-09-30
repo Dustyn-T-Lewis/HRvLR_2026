@@ -106,3 +106,11 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 |---|---|---|
 | Why Training_LR fgsea sets fell from 121 to 4 | Expected. LR's blood index falls 0.63 units from T1 to T2, HR's 0.21, so the unadjusted contrast carried less blood after training. Protein logFC barely moves (r = 0.94, median shift 0.05); set NES agree at r = 0.84. The lost sets are 88 Reactome sets, mostly one proteasome-driven cluster (APC/C, neddylation, CLEC7A, BCR signalling, DNA damage checkpoints), whose NES shrank from about -2.1 to -1.8 and crossed FDR 0.05 together. Proteasome subunits carry a larger blood slope than the proteome (median 0.021 against 0.002); red cells hold proteasome. | Threshold effect on a correlated cluster, not a failure of the adjustment. |
 | Refactor check | 21 workbooks rerun after moving shared code to `R/helpers.R`: every result sheet identical; only `.xlsx` input checksums differ, because writexl stamps a creation time. | No number moved. |
+
+## 2026-09-30: panel outer loop
+
+| Question | Decision | Reason |
+|---|---|---|
+| Outer cross-validation | Stratified 5-fold, 10 repeats, replacing leave-one-out. | On T1 proteins `lambda.1se` kept nothing in every fold, and pooled leave-one-out then scored AUC 0.00: each held-out HR subject leaves a training set tipped towards LR (Airola et al. 2011). Replicated CV is unbiased in Smith et al. 2014. |
+| Reading the AUC | Against the permutation null only. | A 5-permutation smoke run put the null median near 0.39; with 7 against 8 no fold split is balanced. |
+| Missing values | Proteins observed in every subject of the input; nothing imputed. | glmnet takes no NA, and imputation outside the folds would leak. 974 to 1,115 proteins per input. |

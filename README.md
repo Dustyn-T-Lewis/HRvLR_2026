@@ -18,7 +18,7 @@ separate the groups, and which track the phenotype measured on each biopsy.
 | [`02_Differential_Expression/`](02_Differential_Expression/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
 | [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
 | [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
-| [`05_Summary/`](05_Summary/README.md) | candidate tables across the three levels | `01_candidates.xlsx` |
+| [`05_Summary/`](05_Summary/README.md) | candidate tables across the three levels, exploratory panels | `01_candidates.xlsx`, `02_panel.xlsx` |
 
 Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts and a baseline-adjusted
 ANCOVA, `03_Classify` scores
@@ -71,6 +71,7 @@ for s in 01_Build_Modules/a_script/01_build_modules 02_Contrasts/a_script/02_con
 done
 
 Rscript 05_Summary/01_Candidates/a_script/01_candidates.R
+Rscript 05_Summary/02_Panel/a_script/02_panel.R
 ```
 
 The run takes about 20 minutes, most of it the three associate steps and the preservation
@@ -99,7 +100,8 @@ Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`, 
 `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`,
 `ComplexHeatmap`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
 `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
-`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`.
+`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Stage 05 adds
+`nestedcv`, which brings `glmnet` and `caret`.
 
 `enrichVolcano` 0.3.0.9000 is recorded in `renv.lock` without a remote, so `renv::restore()`
 cannot fetch it. To move to the GitHub release, install it and snapshot, then rerun stage 03 and

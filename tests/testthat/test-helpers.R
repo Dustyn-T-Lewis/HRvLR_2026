@@ -225,3 +225,31 @@ test_that("fry_rows returns fry's p for each set and contrast", {
   expect_equal(out$test, c("fry up", "fry up"))
   expect_equal(out$p, direct$PValue)
 })
+
+test_that("subject_values and subject_change line subjects up across time points", {
+  meta <- toy_meta() |> filter(!(subject == "S01" & timepoint == "T2"))
+  values <- matrix(seq_len(nrow(meta)), 1, dimnames = list("a", meta$sample_id))
+  t1 <- subject_values(values, meta, "T1")
+  expect_equal(colnames(t1), sprintf("S%02d", 1:10))
+  delta <- subject_change(values, meta, "T1", "T2")
+  expect_false("S01" %in% colnames(delta))
+  expect_equal(
+    delta["a", "S02"],
+    values["a", "S02_T2"] - values["a", "S02_T1"]
+  )
+})
+
+test_that("panel_cv finds a planted feature and permutation_p is never zero", {
+  skip_if_not_installed("nestedcv")
+  set.seed(10)
+  y <- factor(rep(c("LR", "HR"), each = 8), c("LR", "HR"))
+  x <- matrix(rnorm(16 * 30), 16, dimnames = list(NULL, paste0("p", 1:30)))
+  x[, "p1"] <- x[, "p1"] + 3 * (y == "HR")
+  out <- panel_cv(x, y, repeats = 3)
+  expect_length(out$auc, 3)
+  expect_gt(mean(out$auc), 0.8)
+  expect_equal(names(which.max(out$frequency)), "p1")
+  expect_gte(out$empty, 0)
+  expect_equal(permutation_p(0.9, c(0.1, 0.95, 0.5)), 0.5)
+  expect_equal(permutation_p(1, rep(0.5, 999)), 0.001)
+})
