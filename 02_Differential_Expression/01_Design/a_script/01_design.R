@@ -1,44 +1,36 @@
-# Six cell means and the blood index with subject random, the nine contrasts and their roles, and
-# the within-subject correlation. Every later limma fit reads design.rds.
+# Six cell means and the blood index with subject blocked, the nine contrasts and their roles, and
+# the within-subject correlation limpa's fit estimates. Every later limma fit reads design.rds.
 
 suppressPackageStartupMessages({
   library(here)
-  library(proteoDA)
   library(limma)
   library(dplyr)
   library(tibble)
   library(writexl)
 })
 
-inputs <- c(normalized = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds")
+inputs <- c(proteins = "01_Preprocess/03_Quantification/c_data/proteins.rds")
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
-dal <- readRDS(paths[["normalized"]])
-stopifnot(identical(dal$metadata$sample_id, colnames(dal$data)))
-
-group_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
-meta <- dal$metadata |>
+quantified <- readRDS(paths[["proteins"]])
+proteins <- quantified$proteins
+meta <- quantified$metadata |>
   mutate(
     arm = factor(arm, levels = c("HR", "LR")),
-    timepoint = factor(timepoint, levels = c("T1", "T2", "T3")),
-    group = factor(group, levels = group_levels)
+    timepoint = factor(timepoint, levels = c("T1", "T2", "T3"))
   )
-rownames(meta) <- meta$sample_id
-stopifnot(!anyNA(meta$group), !any(is.na(meta$subject) | meta$subject == ""))
-dal$metadata <- meta
+stopifnot(
+  identical(meta$sample_id, colnames(proteins$E)), !anyNA(meta$group),
+  !any(is.na(meta$subject) | meta$subject == "")
+)
 
-# HR and LR are different people, so subject is a random effect: a fixed subject term would absorb
-# the between-arm contrasts. 02_normalize already removed the blood slope; the blood term stays so
-# the fit counts the degree of freedom that removal spent.
-dal <- add_design(dal, "~ 0 + group + blood + (1 | subject)")
-# add_design() strips each variable's name from its columns, which leaves a numeric covariate's
-# column unnamed.
-stopifnot(identical(colnames(dal$design$design_matrix)[7], ""))
-colnames(dal$design$design_matrix)[7] <- "blood"
-design <- dal$design$design_matrix
+# HR and LR are different people, so subject is blocked rather than fixed: a fixed subject term
+# would absorb the between-arm contrasts. Blood enters as a covariate.
+design <- model.matrix(~ 0 + group + blood, meta)
+colnames(design) <- sub("^group", "", colnames(design))
+rownames(design) <- meta$sample_id
 
 # Rank deficiency would make the contrasts inestimable and surface as silent NAs.
-# add_contrasts() parses the contrast strings, so every column name must survive make.names().
 stopifnot(
   qr(design)$rank == ncol(design),
   identical(make.names(colnames(design)), colnames(design))
@@ -55,8 +47,9 @@ contrast_vector <- c(
   "Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1)",
   "Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2)"
 )
-dal <- add_contrasts(dal, contrasts_vector = contrast_vector)
-contrast_names <- colnames(dal$design$contrast_matrix)
+contrast_matrix <- makeContrasts(contrasts = sub(".*= ", "", contrast_vector), levels = design)
+contrast_names <- sub(" =.*", "", contrast_vector)
+colnames(contrast_matrix) <- contrast_names
 
 # Baseline_HRvLR is the floor, not a negative control: the arm label comes from the outcome.
 roles <- tibble(
@@ -70,8 +63,13 @@ roles <- tibble(
 )
 
 strata <- tibble(
-  level = "within subject, subject random (unweighted matrix correlation)",
-  correlation = duplicateCorrelation(dal$data, design, block = meta$subject)$consensus.correlation
+  level = "within subject, from limpa's dpcDE fit with subject blocked",
+  correlation = limpa::dpcDE(proteins, design, block = meta$subject, plot = FALSE)$correlation
+)
+# Downstream steps read the object proteoDA used to write: data, annotation, metadata, design.
+dal <- list(
+  data = proteins$E, annotation = quantified$annotation, metadata = meta,
+  design = list(design_matrix = design, contrast_matrix = contrast_matrix)
 )
 
 out <- here("02_Differential_Expression", "01_Design", "c_data")
@@ -94,7 +92,7 @@ sheets <- list(
 )
 read_me <- tibble(sheet = names(sheets), holds = c(
   "The nine contrasts, their definitions and roles.",
-  "Within-subject correlation from duplicateCorrelation, blocked by subject.",
+  "Within-subject correlation from limpa's fit, blocked by subject.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))

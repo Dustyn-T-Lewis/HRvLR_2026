@@ -45,7 +45,9 @@ cfg <- list(
   # ANXA2 (40.2) and PPIA (21.1); blood_max, not this floor, separates plasma from muscle.
   myo_cut = 20,
   blood_max = 1e9, # rescue only below this plasma concentration, pg/L
-  blood_anchor = c("HBB", "HBA1", "HBD", "HBG1", "HBG2")
+  # The adult chains, seen in all 48 runs. HBG2 was missing in 20 runs, the low-blood ones, so
+  # averaging what was present lifted exactly those runs.
+  blood_anchor = c("HBB", "HBA1")
 )
 
 # Matched by accession only. cRAP collides with muscle on symbol (ALDOA against ALDOA_RABIT) and on
@@ -135,9 +137,9 @@ n_dedup <- length(keep_row)
 # blood_cor, each protein's Spearman correlation with it, is reported and gates nothing.
 log_int <- log2(intensity)
 log_int[!is.finite(log_int)] <- NA
-blood_index <- colMeans(log_int[annotation$gene %in% cfg$blood_anchor, , drop = FALSE],
-  na.rm = TRUE
-)
+anchors <- log_int[annotation$gene %in% cfg$blood_anchor, , drop = FALSE]
+stopifnot(nrow(anchors) == length(cfg$blood_anchor), !anyNA(anchors))
+blood_index <- colMeans(anchors)
 testable <- rowSums(!is.na(log_int)) >= cfg$cor_min_obs
 blood_cor <- suppressWarnings(as.vector(cor(
   t(log_int), blood_index,
@@ -145,7 +147,7 @@ blood_cor <- suppressWarnings(as.vector(cor(
 )))
 blood_cor[!testable] <- NA
 # The model covariate is haemoglobin relative to the sample's median log2 intensity, so loading
-# does not enter it. 02_normalize centres it and removes its slope from every protein.
+# does not enter it. 01_Design centres it and every model carries it as a covariate.
 blood_rel <- blood_index - apply(log_int, 2, median, na.rm = TRUE)
 metadata$blood_rel <- unname(blood_rel[metadata$sample_id])
 

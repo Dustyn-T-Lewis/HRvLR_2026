@@ -312,7 +312,7 @@ robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
   kept <- sample_meta$subject %in% keep
   ids <- sample_meta$sample_id[kept]
   bind_rows(
-    fit_contrasts(me[, ids], design[ids, ], key_contrasts, subject[kept], robust = TRUE) |>
+    fit_contrasts(me[, ids], design[ids, ], key_contrasts, subject[kept]) |>
       contrast_rows("eigengene "),
     fry_rows(abundance[, ids], module_rows, design[ids, ], key_contrasts, subject[kept]),
     ancova(me[, ids], sample_meta[kept, ]) |>

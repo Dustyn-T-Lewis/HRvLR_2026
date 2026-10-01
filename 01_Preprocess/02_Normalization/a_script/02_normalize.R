@@ -1,5 +1,5 @@
-# Cyclic loess on the filtered DAList, then the blood slope comes off every protein. The matrix
-# stays unimputed: limma fits each protein on the samples where it was seen.
+# Cyclic loess on the filtered DAList. Missing values stay missing: 03_Quantification models them
+# with limpa, and blood enters every model as a covariate.
 
 suppressPackageStartupMessages({
   library(here)
@@ -10,7 +10,6 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(writexl)
 })
-source(here("R", "helpers.R"))
 
 inputs <- c(filtered = "01_Preprocess/01_Filtering/c_data/DAList_filtered.rds")
 paths <- vapply(inputs, here, character(1))
@@ -38,15 +37,6 @@ write_qc_report(dal,
 )
 
 stopifnot(identical(dal$metadata$sample_id, colnames(dal$data)))
-# LR's T3 biopsies carry more blood than any other cell (01_filter.xlsx, blood_by_arm). Removing
-# each protein's slope on the centred blood index leaves the group means as the covariate model
-# estimates them.
-dal$metadata$blood <- dal$metadata$blood_rel - mean(dal$metadata$blood_rel)
-unadjusted <- dal
-blood <- remove_blood(
-  dal$data, model.matrix(~ 0 + group + blood, dal$metadata), dal$metadata$subject
-)
-dal$data <- blood$values
 # eta squared: share of each protein's variance the six group cells explain.
 cell_fit <- lmFit(dal$data, model.matrix(~group, dal$metadata))
 total_ss <- apply(dal$data, 1, \(x) sum((x - mean(x, na.rm = TRUE))^2, na.rm = TRUE))
@@ -73,7 +63,6 @@ pca_figure <- ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm))
   theme_minimal(base_size = 10)
 
 saveRDS(dal, file.path(out, "DAList_normalized.rds"), compress = "xz")
-saveRDS(unadjusted, file.path(out, "DAList_unadjusted.rds"), compress = "xz")
 pdf(file.path(reports, "02_normalize_figures.pdf"), width = 11, height = 8.5)
 print(pca_figure)
 invisible(dev.off())
@@ -85,10 +74,6 @@ sheets <- list(
   components = components,
   pca_scores = select(pca_scores, sample_id, subject, arm, timepoint, PC1, PC2),
   eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2)),
-  blood_slope = tibble(
-    uniprot_id = rownames(dal$data), gene = dal$annotation$gene,
-    slope = unname(blood$slope), p = unname(blood$p)
-  ),
   input_manifest = tibble(
     input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
   ),
@@ -97,11 +82,10 @@ sheets <- list(
     select(package, version = loadedversion, source)
 )
 read_me <- tibble(sheet = names(sheets), holds = c(
-  "Cyclic-loess log2 abundance with the blood slope removed, one row per protein.",
+  "Cyclic-loess log2 abundance, one row per protein.",
   "Variance explained by the first four principal components.",
   "Each sample's PC1 and PC2 score.",
   "Share of each protein's variance explained by the six group cells.",
-  "log2 change per unit of the centred blood index, with its moderated p, per protein.",
   "Files read, with md5.",
   "Packages loaded at run time."
 ))

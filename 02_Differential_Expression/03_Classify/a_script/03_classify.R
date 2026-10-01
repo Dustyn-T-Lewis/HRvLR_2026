@@ -126,7 +126,7 @@ overviews <- imap(row_groups, \(rows, group) {
     )
   heatmap_page(maps, sprintf("Classification overview: %s", group), paste(
     sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
-    "Rows are ordered by average-linkage clustering (1 - Pearson r) of the imputed",
+    "Rows are ordered by average-linkage clustering (1 - Pearson r) of limpa's",
     "matrix, for display only.",
     sprintf("Median change colours stop at the 99th percentile of |change|, %.2g.", change_limit),
     "Grey: not tested. Table: c_data/03_classify.xlsx, auc."

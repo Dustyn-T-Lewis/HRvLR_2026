@@ -2,18 +2,19 @@
 # study, and the heatmap, page and workbook plumbing the contrasts, classify and associate steps
 # share.
 
-# Removes each feature's blood slope. The design carries the group means beside a centred `blood`
-# column, so the slope comes from spread within cells and no contrast leaks into it. A feature with
-# no estimable slope stays as it was.
-remove_blood <- function(values, design, subject) {
-  correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
-  fit <- lmFit(values, design, block = subject, correlation = correlation) |>
-    eBayes()
-  slope <- fit$coefficients[, "blood"]
-  list(
-    values = values - outer(coalesce(slope, 0), design[, "blood"]),
-    slope = slope, p = fit$p.value[, "blood"]
-  )
+# Blood-corrected values for the methods that cannot carry a covariate: each feature's blood slope,
+# fitted beside the given design, is removed (limma::removeBatchEffect). The design protects what
+# the analysis compares; pass one without arm when the labels must not inform the correction.
+blood_corrected <- function(values, blood, design) {
+  removeBatchEffect(values, covariates = blood, design = design)
+}
+
+# limpa's fit on its row-wise quantification: precision weights from the standard errors, subject
+# blocked, then the contrasts with robust moderation. Every protein-level contrast uses it.
+fit_limpa <- function(proteins, design, contrasts, subject) {
+  limpa::dpcDE(proteins, design, block = subject, plot = FALSE) |>
+    contrasts.fit(contrasts) |>
+    eBayes(robust = TRUE)
 }
 
 # Storey's q-value within one screen, beside BH as an exploratory correction: BH scaled by the
@@ -33,13 +34,12 @@ storey_q <- function(p) {
 # The four contrasts that compare HR with LR in the candidate tables.
 hr_lr_contrasts <- c("Training_Interaction", "Trained_HRvLR", "Acute_Interaction", "Acute_HRvLR")
 
-# limma on a design and contrast matrix with subject blocked, as proteoDA's fit_limma_model() fits
-# it (moderated eBayes, not robust); the eigengene fits ask for robust.
-fit_contrasts <- function(values, design, contrasts, subject, robust = FALSE) {
+# limma on a complete matrix (module eigengenes) with subject blocked and robust moderation.
+fit_contrasts <- function(values, design, contrasts, subject) {
   correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
   lmFit(values, design, block = subject, correlation = correlation) |>
     contrasts.fit(contrasts) |>
-    eBayes(robust = robust)
+    eBayes(robust = TRUE)
 }
 # One row per feature and contrast from a contrasts fit: logFC, t and p.
 contrast_rows <- function(fit, prefix = "") {
@@ -91,6 +91,8 @@ subject_change <- function(values, meta, from, to) {
 
 # ANCOVA per feature and window: the later value on the earlier one plus arm, over subjects with
 # both biopsies and at least three per arm. The arm term is HR minus LR at equal starting value.
+# Residual variances are moderated across features within each window (limma::squeezeVar), as
+# limma moderates its own fits, so a feature that looks quiet by chance does not earn a large t.
 ancova <- function(values, meta) {
   windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
   imap(windows, \(timepoints, window) {
@@ -106,15 +108,27 @@ ancova <- function(values, meta) {
       if (min(n) < 3) {
         return(NULL)
       }
-      coefs <- summary(lm(y[ok] ~ x[ok] + arm[ok]))$coefficients
+      fit <- summary(lm(y[ok] ~ x[ok] + arm[ok]))
       tibble(
         feature, window,
-        n_HR = n[["HR"]], n_LR = n[["LR"]], effect = coefs[3, 1], t = coefs[3, 3], p = coefs[3, 4]
+        n_HR = n[["HR"]], n_LR = n[["LR"]], effect = fit$coefficients[3, 1],
+        unscaled = fit$coefficients[3, 2] / fit$sigma, s2 = fit$sigma^2, df = fit$df[2]
       )
     }) |>
       list_rbind()
   }) |>
-    list_rbind()
+    list_rbind() |>
+    split(~window) |>
+    map(\(rows) {
+      squeezed <- squeezeVar(rows$s2, rows$df)
+      # As eBayes does, total df never exceed the pooled residual df.
+      df_total <- pmin(rows$df + squeezed$df.prior, sum(rows$df))
+      mutate(rows,
+        t = effect / (unscaled * sqrt(squeezed$var.post)), p = 2 * pt(-abs(t), df_total)
+      )
+    }) |>
+    list_rbind() |>
+    select(feature, window, n_HR, n_LR, effect, t, p)
 }
 
 # Exploratory elastic-net panel: repeated stratified k-fold CV around nestedcv's glmnet, alpha 0.5

@@ -220,7 +220,7 @@ arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
 # Overviews: sample-model t by trait, then change-score rho by outcome, one page per window.
 t_limit <- cap(model$t)
 row_order <- paste(
-  "Rows are ordered by average-linkage clustering (1 - Pearson r) of the imputed",
+  "Rows are ordered by average-linkage clustering (1 - Pearson r) of limpa's",
   "matrix, for display only."
 )
 overviews <- imap(row_groups, \(rows, group) {

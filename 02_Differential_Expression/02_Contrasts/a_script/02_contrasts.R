@@ -1,9 +1,9 @@
-# The nine contrasts on the unimputed protein matrix: proteoDA's limma fit, BH within each
-# contrast, null checks, treat() at 1.15-fold, and fry on one arm's responders in the other arm.
+# The nine contrasts on limpa's quantification: limma with precision weights from limpa's standard
+# errors, subject blocked, blood as a covariate; BH within each contrast, null checks, treat() at
+# 1.15-fold, and fry on one arm's responders in the other arm.
 
 suppressPackageStartupMessages({
   library(here)
-  library(proteoDA)
   library(limma)
   library(dplyr)
   library(tidyr)
@@ -22,8 +22,8 @@ figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
-  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
-  unadjusted = "01_Preprocess/02_Normalization/c_data/DAList_unadjusted.rds",
+  proteins = "01_Preprocess/03_Quantification/c_data/proteins.rds",
+  corrected = "01_Preprocess/03_Quantification/c_data/DAList_corrected.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
@@ -33,32 +33,19 @@ dal <- d$dal
 contrast_names <- colnames(dal$design$contrast_matrix)
 stopifnot(identical(rownames(dal$design$design_matrix), colnames(dal$data)))
 
-fit <- fit_limma_model(dal)
-res <- extract_DA_results(fit, pval_thresh = 0.05, lfc_thresh = 0, adj_method = "BH")
-eb <- fit$eBayes_fit
-# write_limma_plots() knits its own R Markdown, so it runs in a fresh R session. Its interactive
-# reports land in b_reports/ and git ignores them.
-invisible(callr::r(\(res, figures) {
-  proteoDA::write_limma_plots(res,
-    grouping_column = "group", output_dir = figures,
-    table_columns = c("uniprot_id", "gene", "protein"), title_column = "gene", overwrite = TRUE
-  )
-}, args = list(res = res, figures = figures)))
+proteins <- readRDS(paths[["proteins"]])$proteins
+design <- dal$design$design_matrix
+contrast_matrix <- dal$design$contrast_matrix
+meta <- dal$metadata
+stopifnot(identical(colnames(proteins$E), rownames(design)))
+eb <- fit_limpa(proteins, design, contrast_matrix, meta$subject)
 
-# The same nine contrasts on the matrix before the blood slope came off, without the blood term:
-# the sensitivity check for the blood adjustment.
-raw_design <- dal$design$design_matrix[, colnames(dal$design$design_matrix) != "blood"]
-raw_values <- as.matrix(readRDS(paths[["unadjusted"]])$data)
-stopifnot(identical(colnames(raw_values), rownames(raw_design)))
-raw_correlation <- duplicateCorrelation(raw_values, raw_design, block = dal$metadata$subject)
-raw_eb <- lmFit(raw_values, raw_design,
-  block = dal$metadata$subject, correlation = raw_correlation$consensus.correlation
-) |>
-  contrasts.fit(dal$design$contrast_matrix[colnames(raw_design), ]) |>
-  eBayes()
+# The same nine contrasts without the blood term: the sensitivity check for the blood covariate.
+blood_free <- design[, colnames(design) != "blood"]
+raw_eb <- fit_limpa(proteins, blood_free, contrast_matrix[colnames(blood_free), ], meta$subject)
 unadjusted <- tibble(
-  uniprot_id = rep(rownames(raw_values), length(contrast_names)),
-  contrast = rep(contrast_names, each = nrow(raw_values)),
+  uniprot_id = rep(rownames(proteins$E), length(contrast_names)),
+  contrast = rep(contrast_names, each = nrow(proteins$E)),
   logFC = c(raw_eb$coefficients[, contrast_names]), p = c(raw_eb$p.value[, contrast_names])
 ) |>
   pivot_wider(
@@ -69,14 +56,17 @@ unadjusted <- tibble(
 se <- eb$stdev.unscaled[, "Training_Interaction"] * sqrt(eb$s2.post)
 detectable <- se * (qt(0.975, eb$df.total) + qt(0.80, eb$df.total))
 
-annotation <- fit$annotation[, c("uniprot_id", "gene", "protein", "description")]
-stopifnot(identical(rownames(res$results[[1]]), rownames(annotation)))
-# A protein with an empty cell in a contrast comes back NA there, so each contrast has its own
-# denominator. pi_score (Xiao et al. 2014, inverted) only selects sets for the fry check below.
-results <- res$results |>
-  map(\(r) bind_cols(annotation, r)) |>
+annotation <- as_tibble(dal$annotation)[, c("uniprot_id", "gene", "protein", "description")]
+stopifnot(identical(rownames(eb$coefficients), annotation$uniprot_id))
+# limpa gives every protein a value in every sample, so every contrast tests every protein.
+# pi_score (Xiao et al. 2014, inverted) only selects sets for the fry check below.
+results <- map(set_names(contrast_names), \(contrast) {
+  topTable(eb, coef = contrast, number = Inf, sort.by = "none") |>
+    as_tibble() |>
+    select(logFC, AveExpr, t, P.Value, adj.P.Val) |>
+    bind_cols(annotation, x = _)
+}) |>
   list_rbind(names_to = "contrast") |>
-  as_tibble() |>
   rename(p = P.Value, fdr = adj.P.Val) |>
   mutate(qvalue = storey_q(p), .by = contrast) |>
   mutate(
@@ -87,7 +77,7 @@ results <- res$results |>
       TRUE ~ 0L
     )
   )
-n_obs <- rowSums(!is.na(fit$data))
+n_obs <- set_names(rowSums(proteins$other$n.observations > 0), rownames(proteins$E))
 
 contrast_summary <- results |>
   summarise(
@@ -117,12 +107,8 @@ treat_counts <- tibble(
 )
 
 # fry on one arm's responders, tested in the other arm's contrast. Only mirrored within-arm pairs
-# share no cell mean. fry takes no missing value, so it reads the imputed matrix with the same
-# design and block.
-imputed <- readRDS(paths[["imputed"]])
-abundance <- as.matrix(imputed$data)
-design <- fit$design$design_matrix
-meta <- fit$metadata
+# share no cell mean. fry reads limpa's complete matrix with the same design and block.
+abundance <- proteins$E
 stopifnot(
   identical(colnames(abundance), rownames(design)), identical(meta$sample_id, rownames(design)),
   !anyNA(abundance)
@@ -156,7 +142,7 @@ fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
     return(NULL)
   }
   fry(abundance,
-    index = sets, design = design, contrast = fit$design$contrast_matrix[, ranked_on],
+    index = sets, design = design, contrast = contrast_matrix[, ranked_on],
     block = meta$subject, correlation = fry_correlation
   ) |>
     as_tibble(rownames = "set") |>
@@ -214,20 +200,28 @@ volcano <- results |>
     ),
     x = "log2 fold change", y = "-log10 p",
     caption = paste(
-      "limma via proteoDA on the unimputed matrix, subject as a random effect. Dashed line:",
+      "limma on limpa's quantification, subject blocked, blood as a covariate. Dashed line:",
       "p = 0.05. BH within contrast. Table: c_data/02_contrasts.xlsx, DEP_matrix."
     )
   ) +
   theme_minimal(base_size = 9) +
   theme(legend.position = "top", plot.caption = element_text(hjust = 0))
 
-saveRDS(res, file.path(out, "fit.rds"), compress = "xz")
-sample_values <- as.matrix(fit$data)
-column_meta <- fit$metadata
+# Later steps read the fit, its design and limpa's matrix from here.
+saveRDS(
+  list(
+    eBayes_fit = eb, design = dal$design, metadata = meta, data = proteins$E,
+    annotation = dal$annotation, proteins = proteins
+  ),
+  file.path(out, "fit.rds"),
+  compress = "xz"
+)
+sample_values <- proteins$E
+column_meta <- meta
 feature_label <- set_names(annotation$gene, annotation$uniprot_id)
 feature_noun <- "proteins"
 contrast_results <- transmute(results, feature = uniprot_id, contrast, effect = logFC, p, fdr)
-# Display order: average-linkage clustering on 1 - Pearson r of the imputed matrix.
+# Display order: average-linkage clustering on 1 - Pearson r of limpa's matrix.
 row_groups <- list(
   proteins = rownames(abundance)[hclust(as.dist(1 - cor(t(abundance))), "average")$order]
 )
@@ -271,7 +265,7 @@ sample_annotation <- HeatmapAnnotation(
   simple_anno_size = unit(3, "mm")
 )
 row_order <- paste(
-  "Rows are ordered by average-linkage clustering (1 - Pearson r) of the imputed",
+  "Rows are ordered by average-linkage clustering (1 - Pearson r) of limpa's",
   "matrix, for display only."
 )
 effect_limit <- cap(contrast_results$effect)
@@ -310,22 +304,24 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-ancova_results <- ancova(as.matrix(fit$data), as_tibble(fit$metadata)) |>
+# ANCOVA, like the rank tests, reads the blood-corrected matrix where a value was observed.
+corrected <- readRDS(paths[["corrected"]])
+observed_values <- replace(corrected$data, !corrected$observed, NA)
+ancova_results <- ancova(observed_values, as_tibble(meta)) |>
   mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
 # Leave one subject out on the tests that feed the candidate tables: the four HR-against-LR
 # contrasts and both ANCOVA windows. A hit that stays at p < 0.05 in every rerun does not rest on
 # one person.
-sample_meta <- as_tibble(fit$metadata)
-protein_values <- as.matrix(fit$data)
+sample_meta <- as_tibble(meta)
 robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
   kept <- sample_meta$subject %in% keep
   bind_rows(
-    fit_contrasts(
-      protein_values[, kept], dal$design$design_matrix[kept, ],
-      dal$design$contrast_matrix[, hr_lr_contrasts], sample_meta$subject[kept]
+    fit_limpa(
+      proteins[, kept], design[kept, ], contrast_matrix[, hr_lr_contrasts],
+      sample_meta$subject[kept]
     ) |>
       contrast_rows(),
-    ancova(protein_values[, kept], sample_meta[kept, ]) |>
+    ancova(observed_values[, kept], sample_meta[kept, ]) |>
       transmute(feature, test = paste("ANCOVA", window), p)
   ) |>
     select(feature, test, p)
