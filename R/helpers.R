@@ -6,7 +6,7 @@
 # fitted beside the given design, is removed (limma::removeBatchEffect). The design protects what
 # the analysis compares; pass one without arm when the labels must not inform the correction.
 blood_corrected <- function(values, blood, design) {
-  removeBatchEffect(values, covariates = blood, design = design)
+  limma::removeBatchEffect(values, covariates = blood, design = design)
 }
 
 # limpa's fit on its row-wise quantification: precision weights from the standard errors, subject
