@@ -6,8 +6,8 @@
 # defined on subject-centred abundance and scored on raw abundance, so between-arm differences
 # stay testable. A subject with one biopsy centres to a column of zeros and carries no
 # within-subject information, so it is left out of the definition and kept in the scoring.
-# Construction never sees a label or a phenotype. WGCNA needs a complete matrix, so this reads the
-# imputed one.
+# Construction never sees a label or a phenotype. It reads limpa's complete matrix with the blood
+# slope removed.
 #
 # Parameters follow the WGCNA FAQ's two recommended departures from default, a signed network and
 # biweight midcorrelation. minModuleSize is 30 against a default of min(20, n/2), and maxBlockSize
@@ -28,21 +28,21 @@ out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 
-inputs <- c(imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds")
+inputs <- c(corrected = "01_Preprocess/03_Quantification/c_data/DAList_corrected.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop("Run 01_Preprocess first. Missing: ", paste(inputs[!file.exists(paths)], collapse = ", "))
 }
-imputed <- readRDS(paths[["imputed"]])
+corrected <- readRDS(paths[["corrected"]])
 
-abund <- as.matrix(imputed$data)
-meta <- as_tibble(imputed$metadata) |>
+abund <- as.matrix(corrected$data)
+meta <- as_tibble(corrected$metadata) |>
   select(sample_id, subject, arm, timepoint)
 stopifnot(identical(colnames(abund), meta$sample_id))
 disableWGCNAThreads()
 
 # maxPOutliers = 0.05 is the FAQ's "strongly recommend"; the default of 1 disables the outlier
-# guard. pearsonFallback covers proteins with zero MAD, which imputation can produce.
+# guard. pearsonFallback covers proteins with zero MAD.
 bicor_args <- list(corType = "bicor", maxPOutliers = 0.05, pearsonFallback = "individual")
 repeated <- meta |>
   add_count(subject) |>
@@ -80,11 +80,14 @@ rownames(me) <- colnames(abund)
 eigengenes <- t(as.matrix(me))
 rownames(eigengenes) <- sub("^ME", "", rownames(eigengenes))
 
-kme <- signedKME(t(abund), me,
+# Membership is read on the subject-centred data that defined the modules; on raw abundance the
+# subject differences dilute it.
+centred_me <- moduleEigengenes(expr, colors = colours, excludeGrey = TRUE)$eigengenes
+kme <- signedKME(expr, centred_me,
   corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'"
 )
 colnames(kme) <- sub("^kME", "", colnames(kme))
-gene_of <- set_names(imputed$annotation$gene, imputed$annotation$uniprot_id)
+gene_of <- set_names(corrected$annotation$gene, corrected$annotation$uniprot_id)
 membership <- tibble(
   uniprot_id = names(colours), gene = unname(gene_of[names(colours)]), module = unname(colours)
 ) |>
@@ -94,13 +97,13 @@ eigengene_long <- as_tibble(t(eigengenes), rownames = "sample_id") |>
   pivot_longer(-sample_id, names_to = "module", values_to = "eigengene") |>
   left_join(meta, by = "sample_id")
 
-# Whether subject identity still drives a scored eigengene. Raw R2 is inflated by 15 subject
-# degrees of freedom on 45 samples, so the intraclass correlation is the number reported.
+# Whether subject identity still drives a scored eigengene: the intraclass correlation with time
+# point fitted, so time effects do not count as noise.
 subject_icc <- eigengene_long |>
   summarise(
     icc = {
       v <- as.data.frame(lme4::VarCorr(suppressMessages(
-        lme4::lmer(eigengene ~ 1 + (1 | subject))
+        lme4::lmer(eigengene ~ timepoint + (1 | subject))
       )))$vcov
       v[1] / (v[1] + v[2])
     },

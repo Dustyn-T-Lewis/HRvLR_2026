@@ -3,7 +3,7 @@
 #
 # Eigengenes: lmFit on the module eigengenes with the protein design and subject block, the
 # within-subject correlation re-estimated on the eigengenes. fry: each module as a protein set
-# on the imputed matrix, rotating residuals under the same design, block and a correlation
+# on limpa's matrix, rotating residuals under the same design, block and a correlation
 # estimated on that matrix, as 03_Pathway_Enrichment/02_Contrasts does for gene sets.
 #
 # Membership against significance (WGCNA's MM against GS): within each module, Spearman between a
@@ -35,7 +35,7 @@ inputs <- c(
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
   fit = "02_Differential_Expression/02_Contrasts/c_data/fit.rds",
   associate = "02_Differential_Expression/04_Associate/c_data/associate.rds",
-  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
+  limpa = "01_Preprocess/03_Quantification/c_data/DAList_limpa.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
@@ -44,14 +44,14 @@ modules <- readRDS(paths[["modules"]])
 d <- readRDS(paths[["design"]])
 fit <- readRDS(paths[["fit"]])
 phenotype <- readRDS(paths[["associate"]])$change_score |> rename(uniprot_id = feature)
-imputed <- readRDS(paths[["imputed"]])
+complete <- readRDS(paths[["limpa"]])
 
 me <- modules$eigengenes
 design <- d$dal$design$design_matrix
 contrast_matrix <- d$dal$design$contrast_matrix
 contrast_names <- colnames(contrast_matrix)
 subject <- d$dal$metadata$subject
-abundance <- as.matrix(imputed$data)
+abundance <- complete$data
 members <- filter(modules$membership, module != "grey")
 module_order <- modules$module_summary$module
 outcomes <- unique(phenotype$outcome)
@@ -87,7 +87,7 @@ fry_tests <- map(contrast_names, \(contrast) {
 }) |>
   list_rbind()
 message(
-  "correlation: eigengenes ", round(me_correlation, 3), ", imputed matrix ",
+  "correlation: eigengenes ", round(me_correlation, 3), ", limpa matrix ",
   round(fry_correlation, 3)
 )
 
@@ -160,7 +160,7 @@ fry_figure <- module_tiles(
   rename(fry_signed, column = contrast), contrast_names, "signed\n-log10 p", NULL,
   "Modules as protein sets across the nine contrasts",
   sprintf(
-    "limma::fry on the imputed matrix, protein design, subject block (correlation %.3f)",
+    "limma::fry on limpa's matrix, protein design, subject block (correlation %.3f)",
     fry_correlation
   ),
   paste(
@@ -361,7 +361,7 @@ write_workbook(
     eigengene_tests = eigengene_tests, fry_tests = fry_tests,
     membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
     correlation = tibble(
-      matrix = c("eigengenes", "imputed"), correlation = c(me_correlation, fry_correlation)
+      matrix = c("eigengenes", "limpa"), correlation = c(me_correlation, fry_correlation)
     ),
     ancova = ancova_results,
     leave_one_out = robustness
@@ -371,7 +371,7 @@ write_workbook(
     "fry on each module as a protein set: direction, p and FDR per contrast.",
     "Spearman rho between member kME and protein moderated t, per module and contrast.",
     "Spearman rho between member kME and protein rho with each phenotype over training.",
-    "Within-subject correlation on the eigengenes and on the imputed matrix.",
+    "Within-subject correlation on the eigengenes and on limpa's matrix.",
     "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH, Storey q.",
     "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
   ),
