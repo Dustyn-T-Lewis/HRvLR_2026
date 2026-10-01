@@ -5,11 +5,13 @@ correlation per subject.
 
 | | |
 |---|---|
-| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (overview row order), `00_Input/phenotype.csv` |
+| Reads | `01_Preprocess/03_Quantification/c_data/DAList_corrected.rds`, `DAList_limpa.rds` (overview row order), `00_Input/phenotype.csv` |
 | Writes | `c_data/associate.rds`, `c_data/04_associate.xlsx`, `b_reports/04_associate_figures.pdf` |
 | Run | `Rscript 02_Differential_Expression/04_Associate/a_script/04_associate.R` |
 
 ## Method
+
+Every test reads blood-corrected abundance where a value was observed.
 
 Sample model. Each T1 and T2 biopsy carries its own values for six traits: fibre area (mixed, type
 I, type II), mCSA and the two 1RMs. Per trait, limma fits
@@ -30,8 +32,10 @@ Two limma models read the same per-subject values. Arm difference: `protein ~ ar
 interaction is HR's slope minus LR's per outcome unit, the test of whether a protein tracks an
 outcome differently in the two arms. Two predictor: `protein ~ comp_hypertrophy + strength gain`,
 once per 1RM test, so growth and strength each come adjusted for the other (the two are unrelated
-here). The two-thirds floor applies. BH within window and outcome, or window, strength test and
-term.
+here). The two-thirds floor applies, and an arm-difference test needs five subjects with the
+value and the outcome observed in each arm. `comp_hypertrophy` is left out of the arm-difference
+screen: arm is its median split, so a slope difference on it re-measures the split. BH within
+window and outcome, or window, strength test and term.
 
 ## Figures
 

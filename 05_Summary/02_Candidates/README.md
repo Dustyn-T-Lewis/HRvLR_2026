@@ -1,20 +1,22 @@
-# 01_Candidates
+# 02_Candidates
 
 Lists every protein, set and module with at least one p < 0.05 among the tests that bear on HR
 against LR, one table for training and one for the acute bout.
 
 | | |
 |---|---|
-| Reads | the contrasts, classify and associate workbooks of stages 02 to 04, `03_Pathway_Enrichment/02_Contrasts/c_data/set_tests.rds`, `03_Pathway_Enrichment/00_Gene_Sets/c_data/gene_sets.rds`, `04_Network/01_Build_Modules/c_data/01_build_modules.xlsx` |
-| Writes | `c_data/01_candidates.xlsx` |
-| Run | `Rscript 05_Summary/01_Candidates/a_script/01_candidates.R` |
+| Reads | the contrasts, classify and associate workbooks of stages 02 to 04, `03_Pathway_Enrichment/02_Contrasts/c_data/set_tests.rds`, `03_Pathway_Enrichment/00_Gene_Sets/c_data/gene_sets.rds`, `04_Network/01_Build_Modules/c_data/01_build_modules.xlsx`, `05_Summary/01_Permutation/c_data/01_permutation.xlsx` |
+| Writes | `c_data/02_candidates.xlsx` |
+| Run | `Rscript 05_Summary/02_Candidates/a_script/02_candidates.R` |
 
 ## Method
 
 Each feature collects the tests below; every p < 0.05 counts once and nothing is weighted. Each hit
 carries its BH FDR and Storey q from its own screen, as exploratory corrections; `n_bh_20` and
-`n_storey_20` count hits below 0.20 and `min_bh` and `min_storey` give the smallest. Rows are
-sorted by hit count, then by the smallest p.
+`n_storey_20` count hits below 0.20 and `min_bh` and `min_storey` give the smallest.
+`permutation_score` (from `01_Permutation`) is the share of label shuffles in which the feature
+reached at least its hit count: context, not a filter. Rows are sorted by hit count, then by the
+smallest p. cameraPR rows corroborate fgsea and are not counted as hits.
 
 | Family | Training list | Acute list |
 |---|---|---|

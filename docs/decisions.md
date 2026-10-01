@@ -129,3 +129,22 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Correction beside nominal results | BH and Storey's q in every table, within the same screen; the candidate tables carry both per hit and count hits below 0.20. | User's choice. Storey uses a bootstrap pi0, which copes with discrete Wilcoxon p; screens under 100 tests (modules) set pi0 = 1, so q equals BH. |
 | Unit tests | `tests/` removed at the user's request. Supersedes the tested-helpers part of 2026-09-30. | Overrides the global testing policy for this project, by explicit instruction. |
 | Output audit | All 58 tracked files under `c_data/` and `b_reports/` are written by their own step's script; two empty `b_reports/` folders left by older versions were removed. | |
+
+## 2026-10-01: statistical audit and limpa rebuild
+
+Three read-only audits (preprocessing; protein and pathway statistics; network and summary) checked
+every stage against its package documentation and its outputs. The interview settled each finding.
+
+| Question | Decision | Reason |
+|---|---|---|
+| Blood index | Mean log2 of HBB and HBA1 against the sample median; HBG2, HBD and HBG1 dropped. | HBG2 was missing in 20 of 48 runs, the low-blood ones, and averaging what was present lifted those runs by about 1.57 log2. With the fixed index the arm-by-T3 blood difference falls from 1.21 (p = 0.023) to 0.84 (p = 0.23). |
+| Blood handling | A covariate in every limma model, no pre-subtraction; `removeBatchEffect` for methods that cannot take one (group design; time point only for the panel, so no label leak). | Standard covariate route (limma user guide); the earlier pre-subtraction used unshrunk slopes. BFR_limpa uses sample weights instead. |
+| Missing values | limpa row-wise: `dpc()`, `dpcQuantByRow()`, `dpcDE(block = subject)`. Replaces the proteoDA fit and missForest. | Missingness is intensity-dependent (rho -0.77); 17 of 49 primary hits rested on a cell with 3 or fewer values; missForest imputed mid-range and shrank variance. The limpa vignette gives this route for protein-level input; Smyth (support.bioconductor.org/p/9163224) requires intensity-based log values. DPC slope 0.67. |
+| Set tests | fgsea primary; cameraPR added as a corroboration column with a `camera_agrees` flag; fry kept as the strict test. | cameraPR kept 92% or more of fgsea hits nominal in the same direction (rank rho 0.94-0.97), so it trims without washing out; it also finds sets on Baseline_HRvLR, so that contrast is a comparison, not a null. |
+| ANCOVA | Blood-corrected observed values, variances moderated with `squeezeVar`. | Residual df were 3 to 12. |
+| Classification | Unchanged. | User's choice. |
+| Arm slopes | Five observed subjects per arm; `comp_hypertrophy` out of the arm-difference screen. | The overall floor let an arm's slope rest on 3 or 4 people; arm is the median split of comp_hypertrophy. |
+| Modules | Zsummary bands per Langfelder 2011 (2-10 weak to moderate); random-halves calibration; ICC with time point; kME on the subject-centred matrix. | The calibration splits all 16 subjects into random halves of 8 rather than each arm in half: same network size as the arm comparison, one population. |
+| Candidates | Raw hit-count ranking kept; ANCOVA label bug fixed; cameraPR not counted. | User's choice; the bug left every ANCOVA hit without a stability call. |
+| Chance line | `05_Summary/01_Permutation`: 200 shuffles of subjects' phenotype rows at all three levels, context only. | The baseline list is not a null. |
+| Step numbering | `05_Summary` reordered to run order: 01_Permutation, 02_Candidates, 03_Panel. | Candidates read the permutation scores. |

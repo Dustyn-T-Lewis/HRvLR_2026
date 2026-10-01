@@ -27,8 +27,10 @@ Two limma models read the same per-subject values. Arm difference: `eigengene ~ 
 interaction is HR's slope minus LR's per outcome unit, the test of whether a eigengene tracks an
 outcome differently in the two arms. Two predictor: `eigengene ~ comp_hypertrophy + strength gain`,
 once per 1RM test, so growth and strength each come adjusted for the other (the two are unrelated
-here). The two-thirds floor applies. BH within window and outcome, or window, strength test and
-term.
+here). The two-thirds floor applies, and an arm-difference test needs five subjects with the
+value and the outcome observed in each arm. `comp_hypertrophy` is left out of the arm-difference
+screen: arm is its median split, so a slope difference on it re-measures the split. BH within
+window and outcome, or window, strength test and term.
 
 ## Figures
 

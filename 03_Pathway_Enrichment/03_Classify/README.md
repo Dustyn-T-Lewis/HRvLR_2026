@@ -4,7 +4,7 @@ Scores how well each set's singscore separates the groups on the protein level's
 
 | | |
 |---|---|
-| Reads | `01_Scores/c_data/singscore.rds`, `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (sample sheet) |
+| Reads | `01_Scores/c_data/singscore.rds`, `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Quantification/c_data/DAList_corrected.rds` (sample sheet) |
 | Writes | `c_data/03_classify.xlsx`, `b_reports/03_classify_figures.pdf` |
 | Run | `Rscript 03_Pathway_Enrichment/03_Classify/a_script/03_classify.R` |
 

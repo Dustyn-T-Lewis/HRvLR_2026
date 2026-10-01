@@ -1,25 +1,50 @@
-# 03_Imputation
+# 03_Quantification
 
-Fills the normalised matrix with missForest for the methods that need it complete.
+Models the missing values with limpa, so every protein has a value in every sample with a standard
+error, and writes the matrices the later steps read.
 
 | | |
 |---|---|
 | Reads | `02_Normalization/c_data/DAList_normalized.rds` |
-| Writes | `c_data/DAList_imputed.rds`, `c_data/03_impute.xlsx` |
-| Run | `Rscript 01_Preprocess/03_Imputation/a_script/03_impute.R` |
+| Writes | `c_data/proteins.rds`, `c_data/DAList_limpa.rds`, `c_data/DAList_corrected.rds`, `c_data/03_quantify.xlsx`, `b_reports/03_quantify_figures.pdf` |
+| Run | `Rscript 01_Preprocess/03_Quantification/a_script/03_quantify.R` |
 
 ## Method
 
-missForest with the ranger backend, 10 iterations, 100 trees and seed 42, rows sorted before the
-fit. Only fry, singscore and WGCNA read the imputed matrix; every limma fit reads the normalised
-one.
+A protein goes undetected more often when it is faint: here 31% of values are missing in the
+faintest quarter of proteins and 1% in the brightest. A missing value therefore carries
+information, and both ignoring it and imputing it as if measured bias the result. limpa (Li,
+Cobbold & Smyth 2025) fits one detection probability curve for the run with `dpc()`: the
+probability that a value is detected, as a logistic function of its true intensity. Here the
+slope is 0.67, a little below the 0.7 to 1 the authors find typical; they note it runs low when
+values are noisy.
+
+`dpcQuantByRow()` then gives every protein a value in every sample, with a posterior standard error
+of about 0.01 log2 where observed and about 0.8 where missing. Our input is already summarised to
+proteins, so each row is its own feature: the route the limpa vignette gives for protein-level
+input ("Working with data already summarized at the protein-level"). The authors recommend
+precursor-level input when it exists; without it there are no peptides to pool, so the gain over
+other methods is smaller than in a precursor pipeline such as BFR_limpa.
+
+Three objects come out:
+
+| File | Holds | Read by |
+|---|---|---|
+| `proteins.rds` | limpa's EList (values, standard errors, observation counts) with the sample sheet | the protein fit (`dpcDE`), the leave-one-out reruns, the permutation |
+| `DAList_limpa.rds` | the complete matrix | fry, the overview row order, the panel |
+| `DAList_corrected.rds` | the complete matrix with each protein's blood slope removed (`limma::removeBatchEffect`, design = the six group cells) and the observed mask | singscore, WGCNA, and the rank tests, correlations and ANCOVA, which use observed values only |
+
+Blood is centred here: `blood` is the 01_Filtering index (mean log2 HBB and HBA1 against the
+sample median) minus its mean.
 
 ## Figures
 
-None.
+One page: the detection probability curve.
 
 ## Workbook
 
 | Sheet | Holds |
 |---|---|
-| `imputation` | missForest settings, share of values imputed, out-of-bag error. |
+| `curve` | DPC intercept and slope on the logit scale, and the share of values missing. |
+| `proteins` | Per protein: values observed, and the median standard error where observed and where missing. |
+| `blood` | Per sample: blood index and its centred value. |

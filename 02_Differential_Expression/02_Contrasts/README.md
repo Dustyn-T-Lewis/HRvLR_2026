@@ -1,29 +1,32 @@
 # 02_Contrasts
 
-Fits the nine contrasts with proteoDA and limma on the unimputed matrix.
+Fits the nine contrasts with limpa and limma.
 
 | | |
 |---|---|
-| Reads | `01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds`, `01_Preprocess/02_Normalization/c_data/DAList_unadjusted.rds`, `00_Input/phenotype.csv` |
-| Writes | `c_data/fit.rds`, `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf`, and proteoDA's per-contrast HTML reports in `b_reports/` (ignored) |
+| Reads | `01_Design/c_data/design.rds`, `01_Preprocess/03_Quantification/c_data/proteins.rds`, `01_Preprocess/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Writes | `c_data/fit.rds`, `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf` |
 | Run | `Rscript 02_Differential_Expression/02_Contrasts/a_script/02_contrasts.R` |
 
 ## Method
 
-`fit_limma_model()` fits every protein on the samples where it was seen, subject blocked, then
-`eBayes(robust = TRUE)`; `extract_DA_results()` applies BH within each contrast. A protein with an
-empty cell in a contrast is not tested there. `treat()` retests at a 1.15-fold floor. The fry
-concordance check takes one arm's responders and tests them in the other arm's contrast on the
-imputed matrix, since fry takes no missing value. `fit.rds` holds the full proteoDA result; the
-pathway and module contrasts read it.
+`fit_limpa()` in `R/helpers.R`: limpa's `dpcDE()` turns each value's standard error into a
+precision weight (vooma), fits the design with subject blocked and blood as a covariate, then
+`contrasts.fit()` and `eBayes(robust = TRUE)`; BH within each contrast. limpa gives every protein a
+value in every sample, so every contrast tests all 1,900 proteins, and uncertain values count less.
+`treat()` retests at a 1.15-fold floor. The fry concordance check takes one arm's responders and
+tests them in the other arm's contrast on limpa's complete matrix. `fit.rds` holds the fit, its
+design, limpa's matrix and object; the pathway and module contrasts read it.
 
-The `unadjusted` sheet refits the nine contrasts on the matrix before blood adjustment, without the
-blood term: the sensitivity check for that adjustment.
+The `unadjusted` sheet refits the nine contrasts without the blood term: the sensitivity check for
+the blood covariate.
 
-ANCOVA sits beside the interactions. Per protein and window, `lm(later ~ earlier + arm)` over
-subjects with both biopsies and at least three per arm: T2 on T1 for training, T3 on T2 for the
-acute bout. The arm term is HR minus LR at equal starting value, so an arm that starts low and
-catches up does not read as a different response. BH within window.
+ANCOVA sits beside the interactions. Per protein and window, `lm(later ~ earlier + arm)` on the
+blood-corrected values where observed, over subjects with both biopsies and at least three per arm:
+T2 on T1 for training, T3 on T2 for the acute bout. The arm term is HR minus LR at equal starting
+value, so an arm that starts low and catches up does not read as a different response. Residual
+variances are moderated across proteins (`limma::squeezeVar`), as limma moderates its own fits. BH
+within window.
 
 Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
 through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not

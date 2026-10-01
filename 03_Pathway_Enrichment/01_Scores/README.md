@@ -4,13 +4,14 @@ Scores every sample on every set with singscore.
 
 | | |
 |---|---|
-| Reads | `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` |
+| Reads | `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Quantification/c_data/DAList_corrected.rds` |
 | Writes | `c_data/singscore.rds`, `c_data/01_scores.xlsx`, `b_reports/01_scores_figures.pdf` |
 | Run | `Rscript 03_Pathway_Enrichment/01_Scores/a_script/01_scores.R` |
 
 ## Method
 
-`singscore::rankGenes()` then `multiScore()` on the imputed matrix: one rank-based score per set and
+`singscore::rankGenes()` then `multiScore()` on limpa's complete matrix with the blood slope
+removed: one rank-based score per set and
 sample. It carries no p-value and never sees a contrast.
 
 ## Figures

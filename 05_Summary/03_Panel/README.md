@@ -1,19 +1,21 @@
-# 02_Panel
+# 03_Panel
 
 Asks whether an elastic-net model can tell HR from LR in subjects it did not train on. Exploratory:
 nothing here is validated outside this cohort.
 
 | | |
 |---|---|
-| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds`, `04_Network/01_Build_Modules/c_data/modules.rds` |
-| Writes | `c_data/02_panel.xlsx`, `b_reports/02_panel_figures.pdf` |
-| Run | `Rscript 05_Summary/02_Panel/a_script/02_panel.R` (about an hour on eight cores) |
+| Reads | `01_Preprocess/03_Quantification/c_data/DAList_limpa.rds`, `04_Network/01_Build_Modules/c_data/modules.rds` |
+| Writes | `c_data/03_panel.xlsx`, `b_reports/03_panel_figures.pdf` |
+| Run | `Rscript 05_Summary/03_Panel/a_script/03_panel.R` (about an hour on eight cores) |
 
 ## Method
 
 Ten panels: five inputs (T1, T2 and T3 levels, training change, acute change) by two feature sets
 (the module eigengenes, and the proteins observed in every subject of that input, so nothing is
-imputed outside a fold). `panel_cv()` in `R/helpers.R` wraps `nestedcv::nestcv.glmnet()`:
+filled in outside a fold). The input is limpa's matrix with the blood slope removed against time
+point only, never arm, so the labels cannot inform the correction; the eigengenes are rescored on
+that matrix with the modules from `01_Build_Modules`. `panel_cv()` in `R/helpers.R` wraps `nestedcv::nestcv.glmnet()`:
 
 | Setting | Value | Source |
 |---|---|---|

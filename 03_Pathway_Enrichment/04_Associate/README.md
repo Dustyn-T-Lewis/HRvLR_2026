@@ -4,7 +4,7 @@ Ties each set's singscore to phenotype, the protein level's two ways.
 
 | | |
 |---|---|
-| Reads | `01_Scores/c_data/singscore.rds`, `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (sample sheet), `00_Input/phenotype.csv` |
+| Reads | `01_Scores/c_data/singscore.rds`, `00_Gene_Sets/c_data/gene_sets.rds`, `01_Preprocess/03_Quantification/c_data/DAList_corrected.rds` (sample sheet), `00_Input/phenotype.csv` |
 | Writes | `c_data/04_associate.xlsx`, `b_reports/04_associate_figures.pdf` |
 | Run | `Rscript 03_Pathway_Enrichment/04_Associate/a_script/04_associate.R` |
 
@@ -27,8 +27,10 @@ Two limma models read the same per-subject values. Arm difference: `set ~ arm * 
 interaction is HR's slope minus LR's per outcome unit, the test of whether a set tracks an
 outcome differently in the two arms. Two predictor: `set ~ comp_hypertrophy + strength gain`,
 once per 1RM test, so growth and strength each come adjusted for the other (the two are unrelated
-here). The two-thirds floor applies. BH within window and outcome, or window, strength test and
-term, each within collection.
+here). The two-thirds floor applies, and an arm-difference test needs five subjects with the
+value and the outcome observed in each arm. `comp_hypertrophy` is left out of the arm-difference
+screen: arm is its median split, so a slope difference on it re-measures the split. BH within
+window and outcome, or window, strength test and term, each within collection.
 
 ## Figures
 

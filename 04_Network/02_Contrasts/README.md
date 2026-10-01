@@ -5,7 +5,7 @@ protein-level results.
 
 | | |
 |---|---|
-| Reads | `01_Build_Modules/c_data/modules.rds`, `02_Differential_Expression/01_Design/c_data/design.rds`, `02_Differential_Expression/02_Contrasts/c_data/fit.rds`, `02_Differential_Expression/04_Associate/c_data/associate.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Build_Modules/c_data/modules.rds`, `02_Differential_Expression/01_Design/c_data/design.rds`, `02_Differential_Expression/02_Contrasts/c_data/fit.rds`, `02_Differential_Expression/04_Associate/c_data/associate.rds`, `01_Preprocess/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf` |
 | Run | `Rscript 04_Network/02_Contrasts/a_script/02_contrasts.R` |
 
@@ -13,14 +13,14 @@ protein-level results.
 
 Eigengenes get the protein design and subject block with their own within-subject correlation,
 `eBayes(robust = TRUE)` and BH within contrast. fry tests each module as a protein set on the
-imputed matrix, FDR over the modules within contrast. Membership against significance is the
+limpa's complete matrix, FDR over the modules within contrast. Membership against significance is the
 Spearman correlation, within module, between a member's kME and its protein-level moderated t, and
 between kME and its training change-score rho with each outcome. Members share a module, so these
 correlations are descriptive.
 
 ANCOVA on eigengenes sits beside the interactions: per module and window, `lm(later ~ earlier +
-arm)` over subjects with both biopsies, T2 on T1 for training and T3 on T2 for the acute bout. BH
-within window.
+arm)` over subjects with both biopsies, T2 on T1 for training and T3 on T2 for the acute bout, variances
+moderated across modules (`squeezeVar`). BH within window.
 
 Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
 through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not
@@ -41,6 +41,6 @@ against moderated t for `Training_Interaction` in every module, and the ANCOVA v
 | `fry_tests` | fry on each module as a protein set: direction, p and FDR per contrast. |
 | `membership_contrast` | Spearman rho between member kME and protein moderated t, per module and contrast. |
 | `membership_phenotype` | Spearman rho between member kME and protein rho with each phenotype over training. |
-| `correlation` | Within-subject correlation on the eigengenes and on the imputed matrix. |
+| `correlation` | Within-subject correlation on the eigengenes and on limpa's matrix. |
 | `ancova` | ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH FDR, Storey q. |
 | `leave_one_out` | Per module and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |

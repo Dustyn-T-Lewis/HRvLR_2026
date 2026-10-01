@@ -4,13 +4,14 @@ Scores how well each protein separates the groups on eight tasks.
 
 | | |
 |---|---|
-| Reads | `01_Design/c_data/design.rds`, `01_Preprocess/03_Imputation/c_data/DAList_imputed.rds` (overview row order) |
+| Reads | `01_Preprocess/03_Quantification/c_data/DAList_corrected.rds`, `DAList_limpa.rds` (overview row order) |
 | Writes | `c_data/03_classify.xlsx`, `b_reports/03_classify_figures.pdf` |
 | Run | `Rscript 02_Differential_Expression/03_Classify/a_script/03_classify.R` |
 
 ## Method
 
-Eight tasks on log2 abundance. Within-arm tasks (training and the acute bout, in each arm) pair each
+Eight tasks on blood-corrected log2 abundance, where a value was observed (limpa's estimates for
+missing values carry errors these tests cannot weigh). Within-arm tasks (training and the acute bout, in each arm) pair each
 subject's two biopsies: the Wilcoxon signed-rank test gives p and the effect is the median paired
 change. HR-vs-LR tasks (T1 level, T2 level, training change, acute change) use the rank-sum test,
 and AUC = W / (n1 x n2), above 0.5 when higher in HR. A feature needs three observations per side.

@@ -4,18 +4,19 @@ Attaches the design and the nine contrasts to the DAList and records the within-
 
 | | |
 |---|---|
-| Reads | `01_Preprocess/02_Normalization/c_data/DAList_normalized.rds` |
+| Reads | `01_Preprocess/03_Quantification/c_data/proteins.rds` |
 | Writes | `c_data/design.rds`, `c_data/01_design.xlsx` |
 | Run | `Rscript 02_Differential_Expression/01_Design/a_script/01_design.R` |
 
 ## Method
 
-`add_design(dal, "~ 0 + group + blood + (1 | subject)")`: one cell mean per arm and time point and
-the centred blood index, subject as a random effect, since HR and LR are different people and a
-fixed subject term would absorb every between-arm contrast. `02_Normalization` already removed the
-blood slope; the term stays so the fit counts the degree of freedom that removal spent.
-`add_design()` leaves a numeric covariate's column unnamed, so the script names it `blood`. `duplicateCorrelation()` estimates the within-subject correlation. The script
-stops if the design is rank deficient or a column name fails `make.names()`.
+`model.matrix(~ 0 + group + blood)`: one cell mean per arm and time point, and the centred blood
+index as a covariate. Subject is blocked rather than fixed, since HR and LR are different people
+and a fixed subject term would absorb every between-arm contrast; limpa's `dpcDE()` estimates the
+within-subject correlation. Contrasts come from `limma::makeContrasts()`. The script stops if the
+design is rank deficient or a column name fails `make.names()`. `design.rds` keeps the fields
+proteoDA's object used to carry (data, annotation, metadata, design and contrast matrices), so the
+later steps read it unchanged.
 
 | Contrast | Role | Definition |
 |---|---|---|
@@ -38,4 +39,4 @@ None.
 | Sheet | Holds |
 |---|---|
 | `contrasts` | The nine contrasts, their definitions and roles. |
-| `correlation_strata` | Within-subject correlation from duplicateCorrelation, blocked by subject. |
+| `correlation_strata` | Within-subject correlation from limpa's fit, blocked by subject. |

@@ -18,4 +18,4 @@ describe co-movement rather than who a biopsy came from. Eigengene tests use the
 subject block.
 
 Results live in each step workbook and PDF; each sub-stage README lists the sheets.
-`05_Summary/01_Candidates` gathers the nominal hits across levels.
+`05_Summary/02_Candidates` gathers the nominal hits across levels.

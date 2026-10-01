@@ -14,17 +14,17 @@ separate the groups, and which track the phenotype measured on each biopsy.
 | Stage | Runs | Writes |
 |---|---|---|
 | [`00_Input/`](00_Input/README.md) | study data, no code | |
-| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, blood adjustment, missForest | `DAList_normalized.rds`, `DAList_imputed.rds` |
+| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, limpa quantification | `proteins.rds`, `DAList_limpa.rds`, `DAList_corrected.rds` |
 | [`02_Differential_Expression/`](02_Differential_Expression/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
 | [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
 | [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
-| [`05_Summary/`](05_Summary/README.md) | candidate tables across the three levels, exploratory panels | `01_candidates.xlsx`, `02_panel.xlsx` |
+| [`05_Summary/`](05_Summary/README.md) | permutation chance line, candidate tables across the three levels, exploratory panels | `01_permutation.xlsx`, `02_candidates.xlsx`, `03_panel.xlsx` |
 
-Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts and a baseline-adjusted
-ANCOVA, `03_Classify` scores
-eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
-sample-level limma model, by change-score correlation pooled and within each arm, by a test of
-whether that slope differs between arms, and by a model with growth and strength side by side. Each level adds its own steps around them.
+Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts and a
+baseline-adjusted ANCOVA, `03_Classify` scores eight classification tasks by AUC, and
+`04_Associate` ties each feature to phenotype by a sample-level limma model, by change-score
+correlation pooled and within each arm, by a test of whether that slope differs between arms, and
+by a model with growth and strength side by side. Each level adds its own steps around them.
 Each step's PDF opens with overview heatmaps of every feature, then gives every nominal result a
 panel, and every table reports the tested, p < 0.05 and BH < 0.05 counts.
 
@@ -44,7 +44,7 @@ share.
 Rscript -e 'renv::restore()'
 
 for s in 01_Filtering/a_script/01_filter 02_Normalization/a_script/02_normalize \
-         03_Imputation/a_script/03_impute; do
+         03_Quantification/a_script/03_quantify; do
   Rscript 01_Preprocess/$s.R
 done
 
@@ -66,26 +66,30 @@ for s in 01_Build_Modules/a_script/01_build_modules 02_Contrasts/a_script/02_con
   Rscript 04_Network/$s.R
 done
 
-Rscript 05_Summary/01_Candidates/a_script/01_candidates.R
-Rscript 05_Summary/02_Panel/a_script/02_panel.R
+for s in 01_Permutation/a_script/01_permutation 02_Candidates/a_script/02_candidates \
+         03_Panel/a_script/03_panel; do
+  Rscript 05_Summary/$s.R
+done
 ```
 
-The run takes about 20 minutes, most of it the three associate steps and the preservation
-permutations. `04_Network/05_Characterise` needs the STRING files; `00_Input/README.md` has the
+The run takes about 75 minutes on eight cores, most of it the panel, the preservation calibration
+and the candidate permutation. `04_Network/05_Characterise` needs the STRING files; `00_Input/README.md` has the
 download command.
 
-## proteoDA fits the unimputed matrix; BH never pools across screens
+## limpa models the missing values; blood is a covariate; BH never pools across screens
 
-Preprocessing and the fit use proteoDA: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
-`filter_samples`, `normalize_data("cycloess")`, then `add_design`, `add_contrasts`,
-`fit_limma_model` and `extract_DA_results`. The design is six cell means plus the blood index with
-subject as a random effect. LR's post-bout biopsies carry more blood than any other cell, so each
-protein's blood slope, fitted beside the group means, comes off in `02_Normalization`; the matrix
-before that step is kept for a sensitivity sheet.
+Filtering and normalisation use proteoDA (`DAList`, `zero_to_missing`, `filter_proteins_by_group`,
+`filter_samples`, `normalize_data("cycloess")`). A missing value here says the protein was probably
+faint, so limpa (Li, Cobbold & Smyth 2025) fits a detection probability curve and gives every
+protein a value in every sample with a standard error (`dpcQuantByRow`, the vignette's route for
+protein-level input). The protein fit is limpa's `dpcDE`: precision weights from those errors,
+six cell means plus the blood index, subject blocked, robust moderation. Without precursor data
+the gain over other methods is smaller than in a precursor pipeline such as BFR_limpa.
 
-The fitted matrix stays unimputed: limma fits each protein on the samples where it was seen. A
-missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and
-WGCNA.
+Blood enters every limma model as a covariate (index: mean log2 HBB and HBA1 against the sample
+median). The rank tests, correlations, ANCOVA, singscore and WGCNA cannot carry a covariate, so they
+read a copy with each protein's blood slope removed (`limma::removeBatchEffect`); the tests among
+them use observed values only.
 
 BH runs within each contrast, task, trait and term, or window and outcome. Storey's q sits beside
 every BH column as a second exploratory correction over the same screen (`storey_q()` in
@@ -95,7 +99,7 @@ collections within a contrast; set classification and association split by colle
 
 ## renv.lock pins every package
 
-Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`, `here`, `dplyr`,
+Stages 01 and 02: `proteoDA`, `limma`, `limpa`, `lme4`, `here`, `dplyr`,
 `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`,
 `ComplexHeatmap`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
 `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,

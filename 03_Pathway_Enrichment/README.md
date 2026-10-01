@@ -18,4 +18,4 @@ collection for classification and association. Set contrasts pool the five colle
 contrast.
 
 Results live in each step workbook and PDF; each sub-stage README lists the sheets.
-`05_Summary/01_Candidates` gathers the nominal hits across levels.
+`05_Summary/02_Candidates` gathers the nominal hits across levels.
