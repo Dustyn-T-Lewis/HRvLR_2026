@@ -23,24 +23,27 @@ out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  design = "02_Differential_Expression/01_Design/c_data/design.rds",
-  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds"
+  corrected = "01_Preprocess/03_Quantification/c_data/DAList_corrected.rds",
+  limpa = "01_Preprocess/03_Quantification/c_data/DAList_limpa.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
-dal <- readRDS(paths[["design"]])$dal
-values <- as.matrix(dal$data)
+# Rank tests and correlations take no covariate, so they read the blood-corrected matrix, and
+# only where a value was observed: limpa's estimates for missing values carry wide errors that
+# these tests cannot weigh.
+dal <- readRDS(paths[["corrected"]])
+values <- replace(dal$data, !dal$observed, NA)
 meta <- dal$metadata
 # Every protein carries one distinct gene symbol.
 feature_label <- with(dal$annotation, set_names(gene, uniprot_id))
 stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
 feature_noun <- "proteins"
 value_label <- "log2 abundance"
-# Display order for the overview: average-linkage clustering on 1 - Pearson r of the imputed
+# Display order for the overviews: average-linkage clustering on 1 - Pearson r of limpa's
 # matrix, shared by every protein overview.
-imputed <- as.matrix(readRDS(paths[["imputed"]])$data)
+complete <- readRDS(paths[["limpa"]])$data
 row_groups <- list(
-  proteins = rownames(imputed)[hclust(as.dist(1 - cor(t(imputed))), "average")$order]
+  proteins = rownames(complete)[hclust(as.dist(1 - cor(t(complete))), "average")$order]
 )
 
 by_subject <- function(timepoint, arm = c("HR", "LR")) {

@@ -128,12 +128,20 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   list_rbind(names_to = "arm") |>
   filter(!is.na(rho))
 
+# comp_hypertrophy defines the arms, so a slope difference on it re-measures the split; it stays
+# in the pooled correlation and the two-predictor model. Each arm's slope needs five subjects
+# with both the feature and the outcome observed.
 arm_difference <- imap(windows, \(x, window) {
-  map(set_names(outcomes), \(name) {
+  map(set_names(setdiff(outcomes, "comp_hypertrophy")), \(name) {
     predictors <- data.frame(
       arm = factor(arm_of[colnames(x)], c("LR", "HR")), outcome = outcome_of(name, colnames(x))
     )
-    subject_fit(x, predictors, ~ arm * outcome, "armHR:outcome")
+    seen <- !is.na(x) & rep(!is.na(predictors$outcome), each = nrow(x))
+    per_arm <- sapply(c("HR", "LR"), \(a) rowSums(seen[, predictors$arm %in% a, drop = FALSE]))
+    subject_fit(
+      x[apply(per_arm, 1, min) >= 5, , drop = FALSE], predictors, ~ arm * outcome,
+      "armHR:outcome"
+    )
   }) |>
     list_rbind(names_to = "outcome") |>
     mutate(window = window, .before = 1)

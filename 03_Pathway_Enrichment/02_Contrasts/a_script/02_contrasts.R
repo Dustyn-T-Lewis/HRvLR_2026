@@ -27,7 +27,7 @@ inputs <- c(
   gene_sets = "03_Pathway_Enrichment/00_Gene_Sets/c_data/gene_sets.rds",
   fit = "02_Differential_Expression/02_Contrasts/c_data/fit.rds",
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
-  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
+  limpa = "01_Preprocess/03_Quantification/c_data/DAList_limpa.rds",
   singscore = "03_Pathway_Enrichment/01_Scores/c_data/singscore.rds",
   phenotype = "00_Input/phenotype.csv"
 )
@@ -36,7 +36,7 @@ stopifnot(file.exists(paths))
 gs <- readRDS(paths[["gene_sets"]])
 fit <- readRDS(paths[["fit"]])
 d <- readRDS(paths[["design"]])
-imputed <- readRDS(paths[["imputed"]])
+complete <- readRDS(paths[["limpa"]])
 
 sets <- gs$sets
 protein_map <- gs$protein_map
@@ -49,8 +49,8 @@ subject <- fit$metadata$subject
 stopifnot(
   identical(rownames(eb$coefficients), protein_ids),
   identical(colnames(eb$coefficients), contrast_names),
-  identical(rownames(imputed$data), protein_ids),
-  identical(colnames(imputed$data), rownames(design)),
+  identical(rownames(complete$data), protein_ids),
+  identical(colnames(complete$data), rownames(design)),
   identical(fit$metadata$sample_id, rownames(design)),
   d$floor %in% contrast_names
 )
@@ -91,15 +91,30 @@ gene_map <- filter(protein_map, selected)
 set_rows <- map(sets, \(genes) match(gene_map$uniprot_id[match(genes, gene_map$gene)], protein_ids))
 stopifnot(!any(map_lgl(set_rows, anyNA)))
 
-abundance <- as.matrix(imputed$data)
+abundance <- complete$data
 correlation <- duplicateCorrelation(abundance, design, block = subject)$consensus.correlation
-message("within-subject correlation on the imputed matrix: ", round(correlation, 3))
+message("within-subject correlation on limpa's matrix: ", round(correlation, 3))
 
 set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
 
-# Both packages return their own BH column over the list they were given, fgsea's padj and fry's
-# FDR, kept here as fdr. Neither is recomputed.
+# cameraPR ranks the same moderated t as fgsea but widens each set's error by the correlation among
+# its members (Wu & Smyth 2012). It corroborates fgsea and adds no hit of its own.
+camera_rows <- map(contrast_names, \(contrast) {
+  stats <- ranked[[contrast]]
+  index <- map(sets, \(genes) which(names(stats) %in% genes))
+  index <- index[between(lengths(index), 15, 500)]
+  cameraPR(stats, index, sort = FALSE) |>
+    rownames_to_column("set_id") |>
+    transmute(
+      set_id, contrast,
+      method = "cameraPR", n_proteins = NGenes,
+      direction = Direction, nes = NA_real_, p = PValue, fdr = FDR, leading_edge = list(NULL)
+    )
+})
+
+# Each package returns its own BH column over the list it was given, kept here as fdr. None is
+# recomputed.
 set_tests <- bind_rows(
   map(contrast_names, \(contrast) {
     as_tibble(fgsea_raw[[contrast]]) |>
@@ -120,9 +135,21 @@ set_tests <- bind_rows(
         direction = Direction, nes = NA_real_, p = PValue, fdr = FDR,
         leading_edge = list(NULL)
       )
-  })
+  }),
+  camera_rows
 ) |>
   mutate(qvalue = storey_q(p), .by = c(contrast, method))
+# A set fgsea calls at FDR < 0.05 is corroborated when cameraPR reaches p < 0.05 the same way.
+camera_check <- set_tests |>
+  filter(method == "cameraPR") |>
+  transmute(contrast, set_id, camera_p = p, camera_direction = direction)
+set_tests <- set_tests |>
+  left_join(camera_check, by = c("contrast", "set_id")) |>
+  mutate(
+    camera_agrees = method == "fgsea" & fdr < 0.05 & camera_p < 0.05 &
+      direction == camera_direction,
+    camera_p = NULL, camera_direction = NULL
+  )
 
 # Five collections overlap, so glycolysis is tested in Hallmark, KEGG, Reactome and GO.
 # collapsePathways re-runs each significant set conditioned on a more significant one's leading
@@ -156,6 +183,8 @@ set_summary <- set_tests |>
     n_fdr_fgsea = sum(method == "fgsea" & fdr < 0.05),
     n_collapsed = sum(method == "fgsea" & fdr < 0.05 & main),
     n_fdr_fry = sum(method == "fry" & fdr < 0.05),
+    n_fdr_camera = sum(method == "cameraPR" & fdr < 0.05),
+    n_fgsea_corroborated = sum(camera_agrees, na.rm = TRUE),
     .by = contrast
   ) |>
   arrange(contrast != d$floor)
@@ -220,7 +249,7 @@ stopifnot(
 
 catalog <- filter(gs$set_catalog, qualifies)
 sample_values <- readRDS(paths[["singscore"]])$scores[catalog$set_id, ]
-column_meta <- imputed$metadata
+column_meta <- complete$metadata
 feature_label <- with(catalog, set_names(enrichVolcano::ev_clean_label(pathway), set_id))
 feature_noun <- "sets"
 contrast_results <- set_tests |>
@@ -321,8 +350,8 @@ selected <- filter(protein_map, selected)
 robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
   kept <- sample_meta$subject %in% keep
   ids <- sample_meta$sample_id[kept]
-  protein_fit <- fit_contrasts(
-    as.matrix(fit$data)[, ids], design[ids, ], key_contrasts, sample_meta$subject[kept]
+  protein_fit <- fit_limpa(
+    fit$proteins[, ids], design[ids, ], key_contrasts, sample_meta$subject[kept]
   )
   fgsea_rows <- map(hr_lr_contrasts, \(contrast) {
     stats <- set_names(protein_fit$t[selected$uniprot_id, contrast], selected$gene)
@@ -384,15 +413,21 @@ write_workbook(
       filter(fdr < 0.05) |>
       mutate(leading_edge = map_chr(leading_edge, paste, collapse = ";")),
     protein_summary = protein_summary,
-    fry_correlation = tibble(matrix = "imputed", correlation = correlation),
+    fry_correlation = tibble(matrix = "limpa", correlation = correlation),
     ancova = ancova_results,
     leave_one_out = robustness
   ),
   c(
-    "Sets tested and called per contrast, by method, and fgsea survivors of collapsePathways.",
-    "Every set at FDR < 0.05, either method. The full table is set_tests in set_tests.rds.",
+    paste(
+      "Sets tested and called per contrast by method, fgsea collapse survivors, and fgsea hits",
+      "cameraPR corroborates."
+    ),
+    paste(
+      "Every set at FDR < 0.05, any method; camera_agrees marks fgsea hits cameraPR corroborates.",
+      "The full table is set_tests in set_tests.rds."
+    ),
     "Proteins tested and at BH < 0.05 per contrast.",
-    "Within-subject correlation fry used, estimated on the imputed matrix.",
+    "Within-subject correlation fry used, estimated on limpa's matrix.",
     "ANCOVA per set and window on singscore: arm effect at equal start, t, p, BH, Storey q.",
     "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
   ),

@@ -26,7 +26,7 @@ for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = 
 inputs <- c(
   singscore = "03_Pathway_Enrichment/01_Scores/c_data/singscore.rds",
   gene_sets = "03_Pathway_Enrichment/00_Gene_Sets/c_data/gene_sets.rds",
-  proteins = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds"
+  proteins = "01_Preprocess/03_Quantification/c_data/DAList_corrected.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

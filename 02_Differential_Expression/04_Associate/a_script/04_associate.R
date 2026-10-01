@@ -30,25 +30,28 @@ out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds",
-  imputed = "01_Preprocess/03_Imputation/c_data/DAList_imputed.rds",
+  corrected = "01_Preprocess/03_Quantification/c_data/DAList_corrected.rds",
+  limpa = "01_Preprocess/03_Quantification/c_data/DAList_limpa.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
-dal <- readRDS(paths[["proteins"]])
-values <- as.matrix(dal$data)
+# Rank tests and correlations take no covariate, so they read the blood-corrected matrix, and
+# only where a value was observed: limpa's estimates for missing values carry wide errors that
+# these tests cannot weigh.
+dal <- readRDS(paths[["corrected"]])
+values <- replace(dal$data, !dal$observed, NA)
 meta <- as_tibble(dal$metadata)
 # Every protein carries one distinct gene symbol.
 feature_label <- with(dal$annotation, set_names(gene, uniprot_id))
 stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
 feature_noun <- "proteins"
 value_label <- "log2 abundance"
-# Display order for the overviews: average-linkage clustering on 1 - Pearson r of the imputed
+# Display order for the overviews: average-linkage clustering on 1 - Pearson r of limpa's
 # matrix, shared by every protein overview.
-imputed <- as.matrix(readRDS(paths[["imputed"]])$data)
+complete <- readRDS(paths[["limpa"]])$data
 row_groups <- list(
-  proteins = rownames(imputed)[hclust(as.dist(1 - cor(t(imputed))), "average")$order]
+  proteins = rownames(complete)[hclust(as.dist(1 - cor(t(complete))), "average")$order]
 )
 
 # One row per subject and biopsy, pre as T1 and post as T2. Size and strength traits only; the
@@ -139,12 +142,20 @@ by_arm <- map(set_names(c("HR", "LR")), \(arm) {
   list_rbind(names_to = "arm") |>
   filter(!is.na(rho))
 
+# comp_hypertrophy defines the arms, so a slope difference on it re-measures the split; it stays
+# in the pooled correlation and the two-predictor model. Each arm's slope needs five subjects
+# with both the feature and the outcome observed.
 arm_difference <- imap(windows, \(x, window) {
-  map(set_names(outcomes), \(name) {
+  map(set_names(setdiff(outcomes, "comp_hypertrophy")), \(name) {
     predictors <- data.frame(
       arm = factor(arm_of[colnames(x)], c("LR", "HR")), outcome = outcome_of(name, colnames(x))
     )
-    subject_fit(x, predictors, ~ arm * outcome, "armHR:outcome")
+    seen <- !is.na(x) & rep(!is.na(predictors$outcome), each = nrow(x))
+    per_arm <- sapply(c("HR", "LR"), \(a) rowSums(seen[, predictors$arm %in% a, drop = FALSE]))
+    subject_fit(
+      x[apply(per_arm, 1, min) >= 5, , drop = FALSE], predictors, ~ arm * outcome,
+      "armHR:outcome"
+    )
   }) |>
     list_rbind(names_to = "outcome") |>
     mutate(window = window, .before = 1)
