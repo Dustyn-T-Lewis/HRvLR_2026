@@ -104,7 +104,7 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 
 | Question | Finding | Reason |
 |---|---|---|
-| Why Training_LR fgsea sets fell from 121 to 4 | Expected. LR's blood index falls 0.63 units from T1 to T2, HR's 0.21, so the unadjusted contrast carried less blood after training. Protein logFC barely moves (r = 0.94, median shift 0.05); set NES agree at r = 0.84. The lost sets are 88 Reactome sets, mostly one proteasome-driven cluster (APC/C, neddylation, CLEC7A, BCR signalling, DNA damage checkpoints), whose NES shrank from about -2.1 to -1.8 and crossed FDR 0.05 together. Proteasome subunits carry a larger blood slope than the proteome (median 0.021 against 0.002); red cells hold proteasome. | Threshold effect on a correlated cluster, not a failure of the adjustment. |
+| Why Training_LR fgsea sets fell from 121 to 4 | Superseded 2026-10-01: the fall came largely from the HBG2-inflated blood index. Original reading: expected. LR's blood index falls 0.63 units from T1 to T2, HR's 0.21, so the unadjusted contrast carried less blood after training. Protein logFC barely moves (r = 0.94, median shift 0.05); set NES agree at r = 0.84. The lost sets are 88 Reactome sets, mostly one proteasome-driven cluster (APC/C, neddylation, CLEC7A, BCR signalling, DNA damage checkpoints), whose NES shrank from about -2.1 to -1.8 and crossed FDR 0.05 together. Proteasome subunits carry a larger blood slope than the proteome (median 0.021 against 0.002); red cells hold proteasome. | Threshold effect on a correlated cluster, not a failure of the adjustment. |
 | Refactor check | 21 workbooks rerun after moving shared code to `R/helpers.R`: every result sheet identical; only `.xlsx` input checksums differ, because writexl stamps a creation time. | No number moved. |
 
 ## 2026-09-30: panel outer loop
@@ -148,3 +148,19 @@ every stage against its package documentation and its outputs. The interview set
 | Candidates | Raw hit-count ranking kept; ANCOVA label bug fixed; cameraPR not counted. | User's choice; the bug left every ANCOVA hit without a stability call. |
 | Chance line | `05_Summary/01_Permutation`: 200 shuffles of subjects' phenotype rows at all three levels, context only. | The baseline list is not a null. |
 | Step numbering | `05_Summary` reordered to run order: 01_Permutation, 02_Candidates, 03_Panel. | Candidates read the permutation scores. |
+
+## 2026-10-01: results after the limpa rebuild
+
+| Measure | Before | After | Reading |
+|---|---|---|---|
+| Training_Interaction nominal proteins (median abs t) | 49 (0.63) | 41 (0.58) | Every protein now tested in every contrast; calibration unchanged or tighter. |
+| Acute_Interaction nominal (median abs t) | 99 (0.72) | 79 (0.69) | |
+| Interaction hits stable to leaving one subject out | 18 training, 23 acute | 5 training, 11 acute | limpa's weights lean less on a few sparse values. |
+| ANCOVA nominal (training, acute) | 62, 173 | 53, 171 | Now moderated. |
+| fgsea FDR < 0.05, Training_LR | 4 | 116 | The earlier collapse (entry of 2026-09-30) came largely from the HBG2-inflated blood index over-correcting, not from proteasome biology. |
+| fgsea hits cameraPR corroborates, Training_Interaction / Acute_Interaction | n/a | 62 of 64 / 189 of 206 | |
+| Modules | 15 | 10 | Built on limpa's blood-corrected matrix. |
+| Arm networks inside the random-halves preservation range | n/a | 35 of 37 | HR and LR share structure as fully as one population does with itself. |
+| Leg-press slope difference, FDR < 0.05 | 27 | 20 | Per-arm floor of five. |
+| Candidate lists against the permutation chance line | n/a | every list at chance (share of shuffles at or above the real count 0.10 to 1.0) | A random relabelling yields as many multi-hit candidates as the real labels. |
+| Panels | modules T3 p = 0.006 | all at chance (p 0.28 to 0.99), no feature kept in half the models | The T3 result was carried by blood and the label-informed correction. |
