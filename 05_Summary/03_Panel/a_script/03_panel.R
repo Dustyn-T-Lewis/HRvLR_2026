@@ -15,12 +15,12 @@ suppressPackageStartupMessages({
 })
 source(here("R", "helpers.R"))
 
-stage <- here("05_Summary", "02_Panel")
+stage <- here("05_Summary", "03_Panel")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  proteins = "01_Preprocess/02_Normalization/c_data/DAList_normalized.rds",
+  limpa = "01_Preprocess/03_Quantification/c_data/DAList_limpa.rds",
   modules = "04_Network/01_Build_Modules/c_data/modules.rds"
 )
 paths <- map_chr(inputs, here)
@@ -28,13 +28,13 @@ stopifnot(file.exists(paths))
 n_permutations <- 1000
 cores <- min(8, parallel::detectCores())
 
-dal <- readRDS(paths[["proteins"]])
+dal <- readRDS(paths[["limpa"]])
 meta <- as_tibble(dal$metadata)
 modules <- readRDS(paths[["modules"]])
 stopifnot(identical(colnames(modules$eigengenes), meta$sample_id))
 feature_label <- c(
   with(dal$annotation, set_names(gene, uniprot_id)),
-  set_names(rownames(modules$eigengenes))
+  set_names(rownames(modules$eigengenes), rownames(modules$eigengenes))
 )
 arm_of <- set_names(meta$arm, meta$subject)
 
@@ -47,12 +47,19 @@ views <- function(values) {
     acute = subject_change(values, meta, "T2", "T3")
   )
 }
-# glmnet takes no missing value; keeping only proteins seen in every subject of the input avoids
+# The blood correction here sees time point only, never arm, so the labels cannot inform it. The
+# eigengenes are rescored on that matrix with the module assignments from 01_Build_Modules. glmnet
+# takes no missing value; keeping only proteins observed in every subject of the input avoids
 # imputing outside the folds. The modules were built on all 16 subjects, a leak the protein
 # panels do not share.
+label_free <- blood_corrected(dal$data, meta$blood, model.matrix(~ 0 + timepoint, meta))
+colours <- set_names(modules$membership$module, modules$membership$uniprot_id)[rownames(label_free)]
+eigengenes <- WGCNA::moduleEigengenes(t(label_free), colors = colours, excludeGrey = TRUE)
+eigengenes <- t(as.matrix(eigengenes$eigengenes))
+dimnames(eigengenes) <- list(sub("^ME", "", rownames(eigengenes)), colnames(label_free))
 matrices <- list(
-  modules = views(modules$eigengenes),
-  proteins = views(as.matrix(dal$data))
+  modules = views(eigengenes),
+  proteins = views(replace(label_free, !dal$observed, NA))
 ) |>
   map_depth(2, \(m) t(m[rowSums(is.na(m)) == 0, , drop = FALSE]))
 
@@ -113,10 +120,10 @@ null_page <- panels |>
       "Elastic net (alpha 0.5, lambda.1se from inner leave-one-out) scored by 10 repeats of",
       "stratified 5-fold CV. Grey: mean AUC over the same pipeline with HR and LR labels",
       sprintf("shuffled, %d times; red: observed.", n_permutations),
-      "p = (b + 1) / (m + 1). The null sits below 0.5: when a model keeps no feature its scores follow",
-      "each training fold's class mix, so compare the red line with the grey, not with 0.5.",
+      "p = (b + 1) / (m + 1). The null sits below 0.5: when a model keeps no feature its scores",
+      "follow each training fold's class mix, so compare the red line with the grey, not with 0.5.",
       "Exploratory; no external validation. The module panels carry a leak:",
-      "modules were built on all 16 subjects. Table: c_data/02_panel.xlsx, panels."
+      "modules were built on all 16 subjects. Table: c_data/03_panel.xlsx, panels."
     ))
   ) +
   theme_minimal(base_size = 9) +
@@ -133,13 +140,13 @@ selection_page <- selection |>
     x = "share of the 50 repeat-by-fold models", y = NULL,
     caption = paste(
       "Up to 15 features per panel. A feature kept in most models is the panel; one kept in a few",
-      "is noise. Table: c_data/02_panel.xlsx, selection."
+      "is noise. Table: c_data/03_panel.xlsx, selection."
     )
   ) +
   theme_minimal(base_size = 8) +
   theme(plot.caption = element_text(hjust = 0))
 
-pdf(file.path(figures, "02_panel_figures.pdf"), width = 11, height = 8.5)
+pdf(file.path(figures, "03_panel_figures.pdf"), width = 11, height = 8.5)
 print(null_page)
 if (nrow(selection) > 0) print(selection_page)
 invisible(dev.off())
@@ -153,6 +160,6 @@ write_workbook(
     ),
     "Per panel and feature: share of the 50 repeat-by-fold models that kept it."
   ),
-  file.path(out, "02_panel.xlsx"),
+  file.path(out, "03_panel.xlsx"),
   inputs, paths
 )

@@ -89,6 +89,35 @@ subject_change <- function(values, meta, from, to) {
   after[, both, drop = FALSE] - before[, both, drop = FALSE]
 }
 
+# Which tests feed which candidate list (docs/decisions.md, 2026-09-29); Acute_Interaction feeds
+# both. The baseline list applies the same rules at T1, before training.
+candidate_lists <- list(
+  training = list(
+    contrasts = c("Training_Interaction", "Trained_HRvLR", "Acute_Interaction"),
+    ancova = "training", tasks = c("Training_change_HRvLR", "Trained_HRvLR"), window = "training"
+  ),
+  acute = list(
+    contrasts = c("Acute_Interaction", "Acute_HRvLR"),
+    ancova = "acute", tasks = "Acute_change_HRvLR", window = "acute"
+  ),
+  baseline = list(
+    contrasts = "Baseline_HRvLR", ancova = character(0), tasks = "Baseline_HRvLR",
+    window = "baseline"
+  )
+)
+# The rows of a long evidence table (columns contrast, task, window) that fall on each list.
+on_lists <- function(evidence) {
+  imap(candidate_lists, \(rule, name) {
+    evidence |>
+      filter(
+        contrast %in% rule$contrasts | window %in% c(paste0("ancova_", rule$ancova), rule$window) |
+          task %in% rule$tasks
+      ) |>
+      mutate(list = name)
+  }) |>
+    list_rbind()
+}
+
 # ANCOVA per feature and window: the later value on the earlier one plus arm, over subjects with
 # both biopsies and at least three per arm. The arm term is HR minus LR at equal starting value.
 # Residual variances are moderated across features within each window (limma::squeezeVar), as

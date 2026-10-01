@@ -12,8 +12,9 @@ suppressPackageStartupMessages({
   library(readxl)
   library(writexl)
 })
+source(here("R", "helpers.R"))
 
-out <- here("05_Summary", "01_Candidates", "c_data")
+out <- here("05_Summary", "02_Candidates", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   protein_contrasts = "02_Differential_Expression/02_Contrasts/c_data/02_contrasts.xlsx",
@@ -27,27 +28,12 @@ inputs <- c(
   modules = "04_Network/01_Build_Modules/c_data/01_build_modules.xlsx",
   module_contrasts = "04_Network/02_Contrasts/c_data/02_contrasts.xlsx",
   module_classify = "04_Network/03_Classify/c_data/03_classify.xlsx",
-  module_associate = "04_Network/04_Associate/c_data/04_associate.xlsx"
+  module_associate = "04_Network/04_Associate/c_data/04_associate.xlsx",
+  permutation = "05_Summary/01_Permutation/c_data/01_permutation.xlsx"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 sheet <- \(input, name) suppressMessages(read_excel(paths[[input]], name))
-
-# Which tests feed which list. Acute_Interaction feeds both, by decision (docs/decisions.md).
-lists <- list(
-  training = list(
-    contrasts = c("Training_Interaction", "Trained_HRvLR", "Acute_Interaction"),
-    ancova = "training", tasks = c("Training_change_HRvLR", "Trained_HRvLR"), window = "training"
-  ),
-  acute = list(
-    contrasts = c("Acute_Interaction", "Acute_HRvLR"),
-    ancova = "acute", tasks = "Acute_change_HRvLR", window = "acute"
-  ),
-  baseline = list(
-    contrasts = "Baseline_HRvLR", ancova = character(0), tasks = "Baseline_HRvLR",
-    window = "baseline"
-  )
-)
 
 # One long table per level: feature, family, test, effect, p with its BH and Storey q (each from
 # its own screen), and the window or contrast that places it on a list. Within-arm correlations
@@ -80,7 +66,7 @@ classify <- function(input) {
 ancova_rows <- function(input) {
   sheet(input, "ancova") |>
     transmute(feature,
-      window = paste0("ancova_", window), test = paste("ANCOVA", window), effect, p, fdr, qvalue,
+      test = paste("ANCOVA", window), window = paste0("ancova_", window), effect, p, fdr, qvalue,
       family = "contrast"
     )
 }
@@ -91,7 +77,9 @@ protein_de <- sheet("protein_contrasts", "DEP_matrix") |>
     names_to = c("contrast", ".value"), names_pattern = "(.*)_(logFC|p|fdr|qvalue)$"
   ) |>
   transmute(feature, contrast, test = contrast, effect = logFC, p, fdr, qvalue, family = "contrast")
+# cameraPR corroborates fgsea and is not counted as a hit of its own.
 set_de <- readRDS(paths[["set_tests"]])$set_tests |>
+  filter(method != "cameraPR") |>
   transmute(
     feature = set_id, contrast, test = paste(method, contrast),
     effect = if_else(method == "fgsea", nes, if_else(direction == "Up", 1, -1)), p, fdr, qvalue,
@@ -127,15 +115,7 @@ evidence <- list(
   list_rbind(names_to = "level") |>
   filter(!is.na(p))
 
-on_list <- imap(lists, \(rule, name) {
-  evidence |>
-    filter(
-      contrast %in% rule$contrasts | window %in% c(paste0("ancova_", rule$ancova), rule$window) |
-        task %in% rule$tasks
-    ) |>
-    mutate(list = name)
-}) |>
-  list_rbind()
+on_list <- on_lists(evidence)
 
 protein_names <- sheet("modules", "membership") |>
   transmute(feature = uniprot_id, label = gene, module)
@@ -189,6 +169,10 @@ candidates <- hits |>
   left_join(labels, by = c("level", "feature")) |>
   left_join(baseline_de, by = c("level", "feature")) |>
   left_join(unadjusted, by = c("level", "feature")) |>
+  left_join(
+    select(sheet("permutation", "feature_scores"), level, list, feature, permutation_score),
+    by = c("level", "list", "feature")
+  ) |>
   arrange(level, list, desc(n_hits), min_p, feature)
 stopifnot(!anyNA(candidates$label[candidates$level != "modules"]))
 
@@ -211,7 +195,8 @@ table_of <- function(level, list) {
   d <- filter(candidates, .data$level == .env$level, .data$list == .env$list)
   cols <- c(
     "feature", "label", if (level == "proteins") "module", if (level == "sets") "collection",
-    "n_hits", "n_contrast", "n_stable", "n_classify", "n_associate", "n_bh_20", "n_storey_20",
+    "n_hits", "permutation_score", "n_contrast", "n_stable", "n_classify", "n_associate",
+    "n_bh_20", "n_storey_20",
     "min_p", "min_bh", "min_storey", "on_both",
     "baseline_effect",
     "baseline_p", if (level == "proteins") paste0("unadjusted_p_", list), "hits"
@@ -266,4 +251,4 @@ read_me <- tibble(sheet = names(sheets), holds = holds) |>
     "unadjusted_p is the protein interaction p before adjustment. n_stable counts contrast hits",
     "that stay at p < 0.05 in every leave-one-subject-out rerun."
   ))
-write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_candidates.xlsx"))
+write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "02_candidates.xlsx"))
