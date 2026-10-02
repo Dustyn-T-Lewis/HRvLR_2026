@@ -3821,7 +3821,7 @@
     "enrichVolcano": {
       "Package": "enrichVolcano",
       "Version": "0.3.0.9000",
-      "Source": "unknown",
+      "Source": "GitHub",
       "Title": "Volcano-in-Ring Composite Plots from Differential Abundance and Enrichment",
       "Authors@R": "person(\"Dustyn\", \"Lewis\", , \"dtlts14@gmail.com\", role = c(\"aut\", \"cre\"))",
       "Description": "Draws a single composite figure that combines a differential abundance volcano in the centre with a ring of enrichment terms around it, using NES-coloured arcs and tick lines from significant volcano points to the pathways they drive. Accepts any tidy differential abundance table and any tidy enrichment table (fgsea, clusterProfiler, enrichR, custom) via configurable column arguments.",
@@ -3841,23 +3841,30 @@
         "ggrepel",
         "patchwork",
         "rlang",
+        "S7",
         "scales",
         "stringr"
       ],
       "Suggests": [
         "covr",
+        "data.table",
+        "fgsea",
         "knitr",
         "pkgdown",
         "rmarkdown",
         "testthat (>= 3.0.0)",
-        "vdiffr"
+        "vdiffr",
+        "withr"
       ],
       "Config/testthat/edition": "3",
       "Config/roxygen2/version": "8.0.0",
       "VignetteBuilder": "knitr",
-      "NeedsCompilation": "no",
-      "Author": "Dustyn Lewis [aut, cre]",
-      "Maintainer": "Dustyn Lewis <dtlts14@gmail.com>"
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "Dustyn-T-Lewis",
+      "RemoteRepo": "enrichVolcano",
+      "RemoteRef": "d3fed631f4ae95e01bd61137699313f8de5cc86e",
+      "RemoteSha": "d3fed631f4ae95e01bd61137699313f8de5cc86e"
     },
     "enrichit": {
       "Package": "enrichit",

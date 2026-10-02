@@ -101,23 +101,18 @@ collections within a contrast; set classification and association split by colle
 
 ## renv.lock pins every package
 
-Stages 01 and 02: `proteoDA`, `limma`, `limpa`, `lme4`, `here`, `dplyr`,
-`tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`,
-`qvalue`, `ComplexHeatmap`, `circlize`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
-`GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
-`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Stage 05 adds
-`nestedcv`, which brings `glmnet` and `caret`.
+Stages 01 and 02: `proteoDA`, `limma`, `limpa`, `lme4`, `here`, `dplyr`, `tidyr`, `tibble`,
+`purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`, `qvalue`,
+`ComplexHeatmap`, `circlize`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`,
+`msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds
+`WGCNA`, `clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Stage 05
+adds `nestedcv`, which brings `glmnet` and `caret`.
 
-`enrichVolcano` 0.3.0.9000 is recorded in `renv.lock` without a remote, so `renv::restore()`
-cannot fetch it. To move to the GitHub release, install it and snapshot, then rerun stage 03 and
-check its figures:
-
-```r
-renv::install("Dustyn-T-Lewis/enrichVolcano")
-renv::snapshot()
-```
-
-The code calls only its exported `volcano_ring()`, `volcano_ring_theme()` and `ev_clean_label()`.
+`enrichVolcano` is pinned to GitHub commit `d3fed631f4` (version 0.3.0.9000), the build that
+reproduces the project's set labels and still exports the three functions the code calls:
+`volcano_ring()`, `volcano_ring_theme()` and `ev_clean_label()`. Earlier commits word some labels
+differently, the next commit changes `volcano_ring()`'s arguments, and 2.2.0 drops all three, so
+updating it means rewriting stage 03's labels, volcano and NES pages.
 
 ## Version 1 is the tag legacy-v1
 
