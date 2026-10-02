@@ -29,14 +29,16 @@ Each step's PDF opens with overview heatmaps of every feature, then gives every 
 panel, and every table reports the tested, p < 0.05 and BH < 0.05 counts.
 
 Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
-`c_data/` (one workbook, plus the `.rds` a later step reads) and a README. Every workbook opens on a
-`read_me` sheet and ends with `input_manifest` and `package_versions`. Data passes through disk, so
-any sub-stage re-runs on its own once its inputs exist.
+`c_data/` (one workbook, plus the `.rds` a later step reads) and a README. `01_Design` and
+`02_Candidates` draw nothing, and `02_Normalization` adds proteoDA's three QC reports. Every
+workbook opens on a `read_me` sheet and ends with `input_manifest` and `package_versions`. Data
+passes through disk, so any sub-stage re-runs on its own once its inputs exist.
 
 Every script sources `R/helpers.R`, which holds the statistics written for this study (blood
 adjustment, ANCOVA, the Wilcoxon and AUC row, the Spearman p-values, the per-subject limma fit,
-leave one subject out, Storey's q, the panel) and the heatmap, page and workbook plumbing the steps
-share.
+leave one subject out, Storey's q) and the heatmap, page and workbook plumbing the steps share.
+`R/classify.R` and `R/associate.R` hold the `03_Classify` and `04_Associate` steps; each level's
+script reads its own matrix and labels and calls them.
 
 ## One command per step, in order
 

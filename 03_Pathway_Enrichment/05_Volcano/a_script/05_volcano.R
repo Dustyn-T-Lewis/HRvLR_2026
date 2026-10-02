@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
   library(purrr)
   library(ggplot2)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("03_Pathway_Enrichment", "05_Volcano")
 figure_dir <- file.path(stage, "b_reports")
@@ -153,21 +154,11 @@ invisible(dev.off())
 
 sheets <- list(
   ringed_sets = list_rbind(map(volcanoes, "ring")),
-  labelled_proteins = list_rbind(map(volcanoes, "labels")),
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  labelled_proteins = list_rbind(map(volcanoes, "labels"))
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "The fgsea sets ringed on each volcano. Points come from set_tests.rds, protein_results.",
-  "The proteins named on each volcano, by FDR or by pi score.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(
-  c(list(read_me = read_me), sheets), file.path(out, "05_volcano.xlsx")
+  "The proteins named on each volcano, by FDR or by pi score."
 )
+write_workbook(sheets, holds, file.path(out, "05_volcano.xlsx"), inputs, paths)
 message("drew ", length(volcanoes), " volcanoes")

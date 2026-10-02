@@ -9,6 +9,7 @@ suppressPackageStartupMessages({
   library(purrr)
   library(ggplot2)
 })
+source(here("R", "helpers.R"))
 
 out <- here("03_Pathway_Enrichment", "01_Scores", "c_data")
 figures <- here("03_Pathway_Enrichment", "01_Scores", "b_reports")
@@ -140,22 +141,14 @@ sheets <- list(
   collection_spread = collection_spread,
   set_spread = set_spread,
   structure_check = structure_check,
-  set_scores = rownames_to_column(as.data.frame(scores), "set_id"),
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  set_scores = rownames_to_column(as.data.frame(scores), "set_id")
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "Range and spread of the score matrix.",
   "Median score and dispersion per collection.",
   "Mean score and dispersion per set across samples.",
   "Variance explained by the first four components, and the subject share of PC1 and PC2.",
-  "The set by sample score matrix, as saved in singscore.rds.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_scores.xlsx"))
+  "The set by sample score matrix, as saved in singscore.rds."
+)
+write_workbook(sheets, holds, file.path(out, "01_scores.xlsx"), inputs, paths)
 message("wrote singscore.rds, 01_scores.xlsx and 2 figures")

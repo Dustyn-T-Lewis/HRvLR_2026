@@ -22,6 +22,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(WGCNA)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("04_Network", "01_Build_Modules")
 out <- file.path(stage, "c_data")
@@ -208,21 +209,13 @@ saveRDS(
 sheets <- list(
   module_summary = module_summary, membership = membership,
   eigengenes = as_tibble(t(eigengenes), rownames = "sample_id"),
-  soft_threshold = fit_indices,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  soft_threshold = fit_indices
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "Proteins per module and the subject ICC of its eigengene.",
   "Every protein's module and its kME in that module.",
   "Module eigengene per sample, scored on raw abundance.",
-  "pickSoftThreshold fit indices per power; chosen marks the power used.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_build_modules.xlsx"))
+  "pickSoftThreshold fit indices per power; chosen marks the power used."
+)
+write_workbook(sheets, holds, file.path(out, "01_build_modules.xlsx"), inputs, paths)
 message("wrote modules.rds, 01_build_modules.xlsx and 3 figures")

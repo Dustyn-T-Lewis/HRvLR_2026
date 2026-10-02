@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("03_Pathway_Enrichment", "06_NES_Scatter")
 figure_dir <- file.path(stage, "b_reports")
@@ -215,21 +216,11 @@ walk(list_flatten(map(pairs, "figures")), print)
 invisible(dev.off())
 sheets <- list(
   concordance = summary_table,
-  nes_scatter = export,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  nes_scatter = export
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "Spearman rho of HR against LR NES, and significant and discordant counts, per population.",
-  "One row per set scored in both arms: both NES, both FDR, significance and discordance.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(
-  c(list(read_me = read_me), sheets), file.path(out, "06_nes_scatter.xlsx")
+  "One row per set scored in both arms: both NES, both FDR, significance and discordance."
 )
+write_workbook(sheets, holds, file.path(out, "06_nes_scatter.xlsx"), inputs, paths)
 message("wrote 06_nes_scatter.xlsx and 4 composites")

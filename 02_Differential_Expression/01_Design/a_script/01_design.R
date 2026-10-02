@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(tibble)
   library(writexl)
 })
+source(here("R", "helpers.R"))
 
 inputs <- c(proteins = "01_Preprocess/03_Quantification/c_data/proteins.rds")
 paths <- vapply(inputs, here, character(1))
@@ -82,18 +83,10 @@ saveRDS(
 sheets <- list(
   contrasts = tibble(definition = contrast_vector, contrast = contrast_names) |>
     left_join(roles, by = "contrast"),
-  correlation_strata = strata,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  correlation_strata = strata
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "The nine contrasts, their definitions and roles.",
-  "Within-subject correlation from limpa's fit, blocked by subject.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_design.xlsx"))
+  "Within-subject correlation from limpa's fit, blocked by subject."
+)
+write_workbook(sheets, holds, file.path(out, "01_design.xlsx"), inputs, paths)

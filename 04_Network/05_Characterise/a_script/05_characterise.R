@@ -23,6 +23,7 @@ suppressPackageStartupMessages({
   library(STRINGdb)
   library(patchwork)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("04_Network", "05_Characterise")
 out <- file.path(stage, "c_data")
@@ -229,24 +230,14 @@ sheets <- list(
     select(hub_nodes, from = STRING_id, from_gene = gene),
     by = "from"
   ) |>
-    left_join(select(hub_nodes, to = STRING_id, to_gene = gene), by = "to"),
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+    left_join(select(hub_nodes, to = STRING_id, to_gene = gene), by = "to")
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "One row per module: size, top set, top GO Slim term, hubs, STRING enrichment.",
   "clusterProfiler ORA of every module against the 00_Gene_Sets sets, BH within module.",
   "The ten highest-kME members of each module.",
   "STRINGdb PPI enrichment per module: observed and expected edges at score >= 700.",
-  "STRING edges among each module's 25 highest-kME members, as drawn.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(
-  c(list(read_me = read_me), sheets), file.path(out, "05_characterise.xlsx")
+  "STRING edges among each module's 25 highest-kME members, as drawn."
 )
+write_workbook(sheets, holds, file.path(out, "05_characterise.xlsx"), inputs, paths)
 message("wrote 05_characterise.xlsx and ", 2 + length(hub_pages), " figure pages")

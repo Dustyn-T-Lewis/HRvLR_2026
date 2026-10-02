@@ -217,13 +217,7 @@ sheets <- c(sheets, list(
   hit_distribution = distribution,
   evidence = hits |>
     select(level, list, feature, family, test, effect, p, fdr, qvalue, stable) |>
-    arrange(level, list, feature, p),
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+    arrange(level, list, feature, p)
 ))
 holds <- c(
   holds,
@@ -234,12 +228,10 @@ holds <- c(
   paste(
     "Every p < 0.05 behind the tables, one row per test; stable marks contrast hits that hold",
     "with any one subject left out."
-  ),
-  "Files read, with md5.",
-  "Packages loaded at run time."
+  )
 )
-read_me <- tibble(sheet = names(sheets), holds = holds) |>
-  add_row(sheet = "note", holds = paste(
+write_workbook(sheets, holds, file.path(out, "02_candidates.xlsx"), inputs, paths,
+  note = paste(
     "Tests are counted as they are and overlap: the interaction, the training-change",
     "classification and the comp_hypertrophy association all read each subject's training change,",
     "and arm is the median split of comp_hypertrophy. Effects: logFC for protein contrasts, NES",
@@ -250,5 +242,5 @@ read_me <- tibble(sheet = names(sheets), holds = holds) |>
     "below 0.20.",
     "unadjusted_p is the protein interaction p before adjustment. n_stable counts contrast hits",
     "that stay at p < 0.05 in every leave-one-subject-out rerun."
-  ))
-write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "02_candidates.xlsx"))
+  )
+)

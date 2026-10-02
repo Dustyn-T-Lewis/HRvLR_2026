@@ -19,6 +19,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(WGCNA)
 })
+source(here("R", "helpers.R"))
 
 stage <- here("04_Network", "06_Preserve")
 out <- file.path(stage, "c_data")
@@ -221,21 +222,13 @@ sheets <- list(
   arm_membership = imap(arm_modules, \(x, arm) {
     tibble(arm = arm, uniprot_id = names(x$colours), module = x$colours)
   }) |>
-    list_rbind(),
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+    list_rbind()
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "Zsummary and median rank of each arm's modules tested in the other arm.",
   "Samples, soft power and module count of each arm's network.",
   "Zsummary of each module across random halves of all subjects, the reference at this size.",
-  "Every protein's module in each arm's network.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "06_preserve.xlsx"))
+  "Every protein's module in each arm's network."
+)
+write_workbook(sheets, holds, file.path(out, "06_preserve.xlsx"), inputs, paths)
 message("wrote 06_preserve.xlsx and 2 figures")

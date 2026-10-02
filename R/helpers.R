@@ -160,35 +160,6 @@ ancova <- function(values, meta) {
     select(feature, window, n_HR, n_LR, effect, t, p)
 }
 
-# Exploratory elastic-net panel: repeated stratified k-fold CV around nestedcv's glmnet, alpha 0.5
-# fixed and lambda.1se from an inner leave-one-out. Stratified outer folds keep the HR:LR balance
-# of every training set; pooled leave-one-out does not, and an empty model then scores AUC 0
-# (Airola et al. 2011). x has one row per subject. Returns each repeat's out-of-fold AUC, how
-# often each feature was kept across the repeat-by-fold models, and the share that kept none.
-panel_cv <- function(x, y, repeats = 10, k = 5, seed = 1) {
-  inner <- length(y) - ceiling(length(y) / k)
-  runs <- map(seq_len(repeats), \(r) {
-    set.seed(seed + r)
-    fit <- suppressWarnings(nestedcv::nestcv.glmnet(y, x,
-      family = "binomial", outer_folds = caret::createFolds(y, k = k), n_inner_folds = inner,
-      alphaSet = 0.5, min_1se = 1, finalCV = FALSE
-    ))
-    list(
-      auc = pROC::roc(fit$output$testy, fit$output$predyp,
-        levels = levels(y), direction = "<", quiet = TRUE
-      ) |>
-        pROC::auc() |>
-        as.numeric(),
-      kept = map(fit$outer_result, \(fold) setdiff(names(fold$coef), "(Intercept)"))
-    )
-  })
-  kept <- list_flatten(map(runs, "kept"))
-  list(
-    auc = map_dbl(runs, "auc"),
-    frequency = table(factor(unlist(kept), colnames(x))) / length(kept),
-    empty = mean(lengths(kept) == 0)
-  )
-}
 # Permutation p that is never zero: (b + 1) / (m + 1) (Phipson & Smyth 2010).
 permutation_p <- function(observed, null) (sum(null >= observed) + 1) / (length(null) + 1)
 
@@ -374,7 +345,9 @@ counts_line <- \(info, noun, hits) {
 
 
 # Every workbook opens on read_me and ends with the files read and the packages loaded.
-write_workbook <- function(sheets, holds, file, inputs, paths) {
+# Every workbook opens on read_me and ends with the inputs' md5 and the loaded packages; note, when
+# given, is one more read_me row.
+write_workbook <- function(sheets, holds, file, inputs, paths, note = NULL) {
   sheets <- c(sheets, list(
     input_manifest = tibble(
       input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
@@ -384,5 +357,7 @@ write_workbook <- function(sheets, holds, file, inputs, paths) {
       select(package, version = loadedversion, source)
   ))
   holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
-  writexl::write_xlsx(c(list(read_me = tibble(sheet = names(sheets), holds = holds)), sheets), file)
+  read_me <- tibble(sheet = names(sheets), holds = holds)
+  if (!is.null(note)) read_me <- add_row(read_me, sheet = "note", holds = note)
+  writexl::write_xlsx(c(list(read_me = read_me), sheets), file)
 }

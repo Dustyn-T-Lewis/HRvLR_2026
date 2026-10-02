@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(tibble)
   library(purrr)
 })
+source(here("R", "helpers.R"))
 
 out <- here("03_Pathway_Enrichment", "00_Gene_Sets", "c_data")
 cache_dir <- file.path(out, "cache")
@@ -210,21 +211,13 @@ sheets <- list(
   collection_summary = collection_summary,
   set_catalog = set_catalog,
   protein_gene_map = protein_map,
-  mapping_summary = mapping_summary,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(here(inputs)))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  mapping_summary = mapping_summary
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "Sets per collection in the source, sets that qualify, median measured size.",
   "Every set with its source and measured size and whether it qualifies (15 to 500).",
   "Every protein, its gene symbol, and the representative chosen per symbol.",
-  "Proteins per mapping status.",
-  "Files read, with md5, including the frozen MSigDB snapshot.",
-  "Packages loaded at run time."
-))
-writexl::write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "00_gene_sets.xlsx"))
+  "Proteins per mapping status."
+)
+write_workbook(sheets, holds, file.path(out, "00_gene_sets.xlsx"), inputs, here(inputs))
 message("wrote gene_sets.rds and 00_gene_sets.xlsx")

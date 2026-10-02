@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(writexl)
 })
+source(here("R", "helpers.R"))
 
 out <- here("01_Preprocess", "01_Filtering", "c_data")
 figures <- here("01_Preprocess", "01_Filtering", "b_reports")
@@ -347,7 +348,7 @@ blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
   tibble(
     scale = response, lr_minus_hr_at_t3 = round(observed[["Estimate"]], 3),
     t = round(observed[["t value"]], 2),
-    permutation_p = (1 + sum(abs(null_t) >= abs(observed[["t value"]]))) / 1000
+    permutation_p = permutation_p(abs(observed[["t value"]]), abs(null_t))
   )
 }) |>
   list_rbind()
@@ -356,12 +357,12 @@ blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
 # samples saw a protein, the null differs by observation count, so no single cut serves all.
 set.seed(42)
 tested <- log_int[testable, ]
-null_rho <- replicate(300, abs(as.vector(suppressWarnings(cor(
+blood_null_rho <- replicate(300, abs(as.vector(suppressWarnings(cor(
   t(tested), sample(blood_index),
   method = "spearman", use = "pairwise.complete.obs"
 )))))
 n_obs <- cut(rowSums(!is.na(tested)), c(0, 25, 40, Inf), c("15-25", "26-40", "41-48"))
-null_999 <- \(rows) round(quantile(null_rho[rows, ], 0.999, na.rm = TRUE, names = FALSE), 3)
+null_999 <- \(rows) round(quantile(blood_null_rho[rows, ], 0.999, na.rm = TRUE, names = FALSE), 3)
 blood_null <- bind_rows(
   map(levels(n_obs), \(bin) {
     tibble(observations = bin, proteins = sum(n_obs == bin), null_999 = null_999(n_obs == bin))
@@ -385,15 +386,9 @@ sheets <- list(
   ),
   outlier_diagnostics = outlier_diag,
   blood_by_arm = blood_by_arm,
-  blood_cor_null = blood_null,
-  input_manifest = tibble(
-    input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-  ),
-  package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
-    as_tibble() |>
-    select(package, version = loadedversion, source)
+  blood_cor_null = blood_null
 )
-read_me <- tibble(sheet = names(sheets), holds = c(
+holds <- c(
   "Proteins left after each step.",
   "Every protein removed as a contaminant, with its verdict and reason.",
   "Blood-tagged proteins kept by the muscle rescue.",
@@ -402,8 +397,6 @@ read_me <- tibble(sheet = names(sheets), holds = c(
   "Mean log2 haemoglobin per sample, raw and relative to the sample's median log2 intensity.",
   "The four outlier flags per sample.",
   "Arm by T3 blood term on two scales, with a permutation p.",
-  "99.9th percentile of the blood_cor permutation null, by observation count.",
-  "Files read, with md5.",
-  "Packages loaded at run time."
-))
-write_xlsx(c(list(read_me = read_me), sheets), file.path(out, "01_filter.xlsx"))
+  "99.9th percentile of the blood_cor permutation null, by observation count."
+)
+write_workbook(sheets, holds, file.path(out, "01_filter.xlsx"), inputs, paths)
