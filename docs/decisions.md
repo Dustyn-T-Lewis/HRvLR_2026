@@ -41,7 +41,7 @@
 | Baseline hits | Drawn like every other task; the task label drops "(floor)". The contrast keeps its floor role in `design.rds`. | Every nominal hit gets a panel; leaving one task out was a hidden cut. |
 | Change-score scatter | ggplot2 `geom_point()` with a least-squares line per arm, captioned as a guide; the tests stay Spearman. `ggpubr` leaves the scripts. | `ggscatter()` did nothing ggplot2 does not, and 25 packages entered the lock only through it. This supersedes the plot-code entry of 2026-09-25 for scatters. |
 | Overviews | Each contrasts, classify and associate PDF opens with ComplexHeatmap pages of every feature: biopsies at the contrasts step, effects beside a status map (not significant, p < 0.05, BH < 0.05, not tested) at every step. Pathway pages repeat per collection. | The grids show hits one at a time; the overviews show every feature at once. ComplexHeatmap was already in the lock through proteoDA. |
-| Overview rows | Proteins by average-linkage clustering on 1 - Pearson r of the imputed matrix, sets the same on singscore within collection, modules by size. Display only. | One order per level, the same in every step. |
+| Overview rows | Proteins by average-linkage clustering on 1 - Pearson r of the imputed matrix (limpa's matrix since 2026-10-01), sets the same on singscore within collection, modules by size. Display only. | One order per level, the same in every step. |
 | Panel order | Within each comparison: p, then the larger effect, then feature ID. | For a fixed n, p is monotone in the effect, so the strongest come first and ties are deterministic. |
 | Panel n | Each header gives the feature's own n: complete pairs, HR and LR subjects, biopsies and subjects, or subjects. | Missing values change n per feature. |
 | Plot index | Every classify and associate workbook gains `plot_index`: result key, PDF page, panel position. | One lookup from a table row to its panel. |
@@ -83,7 +83,7 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Question | Decision | Reason |
 |---|---|---|
 | Blood covariate | Each protein's slope on the loading-adjusted blood index, fitted beside the six group means with subject blocked, comes off in `02_normalize.R`; `blood` stays in the design for its degree of freedom. | One adjustment reaches every method (limma, fry, singscore, WGCNA, rank tests) without a covariate in each. Refit counts match the covariate model contrast for contrast; the `unadjusted` sheet reproduces the old fit exactly. |
-| Modules | WGCNA on the adjusted matrix finds 15 modules, not 12. | Blood co-variation no longer binds proteins together. |
+| Modules | WGCNA on the adjusted matrix finds 15 modules, not 12. Superseded 2026-10-01: 10 modules on limpa's matrix. | Blood co-variation no longer binds proteins together. |
 | Leg-press slope difference | Kept as reported: 27 proteins at FDR < 0.05, 26 in the contractile module (pink). All 27 stay nominal without HR_S03 (+108% leg press) and with the outcome ranked; 15 stay at FDR < 0.05 without HR_S03. | Checked for leverage before reporting. |
 | Classification wording | Per-feature Wilcoxon and AUC is single-feature discrimination, not a predictive classifier; no AUC is out-of-sample. | Literature check: Bamber 1975, Hanley & McNeil 1982 (AUC equals Mann-Whitney), Christin et al. 2013, Ambroise & McLachlan 2002, Varma & Simon 2006. |
 
@@ -97,7 +97,7 @@ Open: whether `volume_load_total_kg` stays as its own screen; whether the blood,
 | Panel method | `nestedcv`: elastic net, alpha 0.5 fixed, `lambda.1se` inside each fold, leave-one-out outer loop, imputation and scaling inside folds, 1,000 whole-pipeline label permutations, p = (b + 1)/(m + 1), selection frequency per feature, labelled exploratory with no external validation. | Airola et al. 2011; Smith et al. 2014; Varma & Simon 2006; Cawley & Talbot 2010; Meinshausen & Bühlmann 2010; Phipson & Smyth 2010; TRIPOD+AI 2024. Leave-pair-out would be less biased but no standard wrapper offers it. |
 | Eigengene panel | Modules come from all 16 subjects; the leak is stated in the output, not removed. | Rebuilding WGCNA inside every fold is impractical. |
 | Extra checks | Leave-one-subject-out on the key tests; trace why Training_LR fgsea sets fell from 121 to 4 after blood adjustment. | Single-subject results; largest shift on the training side. |
-| Code structure | One `R/helpers.R` sourced by every script, unit-tested with testthat; row-wise packages (`matrixTests`, `limma`) replace hand loops. Supersedes "each script carries its own copy" (2026-09-25). | One fix lands everywhere; tests become possible. |
+| Code structure | One `R/helpers.R` sourced by every script, unit-tested with testthat (tests removed later the same day); row-wise packages (`matrixTests`, `limma`) replace hand loops. Supersedes "each script carries its own copy" (2026-09-25). | One fix lands everywhere; tests become possible. |
 | Build order | Refactor first with no number moving (workbook diff), then the new checks, then the panel. | New work builds on the shared helpers. |
 
 ## 2026-09-30: Training_LR after blood adjustment
@@ -164,3 +164,16 @@ every stage against its package documentation and its outputs. The interview set
 | Leg-press slope difference, FDR < 0.05 | 27 | 20 | Per-arm floor of five. |
 | Candidate lists against the permutation chance line | n/a | every list at chance (share of shuffles at or above the real count 0.10 to 1.0) | A random relabelling yields as many multi-hit candidates as the real labels. |
 | Panels | modules T3 p = 0.006 | all at chance (p 0.28 to 0.99), no feature kept in half the models | The T3 result was carried by blood and the label-informed correction. |
+
+## 2026-10-01: results, figures and cleanup plan
+
+| Question | Decision | Reason |
+|---|---|---|
+| Lead | Null first, then three leads: the leg-press sarcomere flip, the acute OXPHOS opposition (down in HR, up in LR), catch-up. | The chance line, panels and preservation all sit at chance; these three stand out against it, each with its own caveat. |
+| Main-figure extras | Shared response, baseline proteins tracking growth, the yellow and purple modules, single-protein leads, and an effect-size-led table among leave-one-out-stable features. | User's choice; the largest effects at n = 16 are the most inflated, so they are leads, not estimates. |
+| Null wording | Deferred until the exploratory methods are in. | They may change the story. |
+| Figures | A `06_Figures` stage, one script per panel; storyboards drawn from the extracted numbers first, then R panels from the same numbers. | Earlier storyboards carried invented data. |
+| Chance-line fix | The permutation step uses `wilcox.test` and the exact within-arm Spearman p, as the level steps do. | matrixTests 0.2.3.1 returned wrong exact Wilcoxon p-values when rows differ in missing values (535 of 1,511 rows, 22 negative), and the t approximation added 619 within-arm hits. Real protein and module counts now equal `02_Candidates`'; no list beats its 95th percentile; the smallest share is 0.155, not 0.095. |
+| Shared steps | `R/classify.R` and `R/associate.R` replace three copies each; every workbook goes through `write_workbook()`. | About 1,300 fewer lines; every workbook diffs identical except the intended changes. |
+| Associate PDFs | Two-point regression lines and Dingbats points. | 11.6 and 10.2 MB down to 3.1 and 2.9 MB, same pictures. |
+| enrichVolcano | Pinned to GitHub commit `d3fed631f4`. | The lock had no remote. The current release drops the functions the code calls; earlier commits word set labels differently. |
