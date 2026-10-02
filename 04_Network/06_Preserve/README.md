@@ -18,7 +18,9 @@ best-overlapping full-cohort module.
 Each arm network rests on 20 to 24 samples, where even one population split in two scores
 modestly. The calibration splits the 16 subjects into random halves of 8, arm ignored, 50 times,
 and runs the same test (50 permutations each): the Zsummary two halves of one population reach at
-this size. Arm modules inside that range are as preserved as the cohort is with itself.
+this size. Arm modules inside that range are as preserved as the cohort is with itself: 36 of
+37 fall inside the central 95% of the random-halves values (1.57 to 28.4), and HR tan (0.94) falls
+below it.
 
 ## Figures
 

@@ -160,7 +160,7 @@ every stage against its package documentation and its outputs. The interview set
 | fgsea FDR < 0.05, Training_LR | 4 | 116 | The earlier collapse (entry of 2026-09-30) came largely from the HBG2-inflated blood index over-correcting, not from proteasome biology. |
 | fgsea hits cameraPR corroborates, Training_Interaction / Acute_Interaction | n/a | 62 of 64 / 189 of 206 | |
 | Modules | 15 | 10 | Built on limpa's blood-corrected matrix. |
-| Arm networks inside the random-halves preservation range | n/a | 35 of 37 | HR and LR share structure as fully as one population does with itself. |
+| Arm networks inside the random-halves preservation range | n/a | 36 of 37 inside the central 95% (1.57 to 28.4), all 37 inside the full range; HR tan (0.94) falls below | HR and LR share structure as fully as one population does with itself. Corrected from 35 on 2026-10-01. |
 | Leg-press slope difference, FDR < 0.05 | 27 | 20 | Per-arm floor of five. |
 | Candidate lists against the permutation chance line | n/a | every list at chance (share of shuffles at or above the real count 0.10 to 1.0) | A random relabelling yields as many multi-hit candidates as the real labels. |
 | Panels | modules T3 p = 0.006 | all at chance (p 0.28 to 0.99), no feature kept in half the models | The T3 result was carried by blood and the label-informed correction. |

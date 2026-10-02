@@ -101,7 +101,7 @@ collections within a contrast; set classification and association split by colle
 
 Stages 01 and 02: `proteoDA`, `limma`, `limpa`, `lme4`, `here`, `dplyr`,
 `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`,
-`ComplexHeatmap`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
+`qvalue`, `ComplexHeatmap`, `circlize`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
 `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
 `clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Stage 05 adds
 `nestedcv`, which brings `glmnet` and `caret`.
