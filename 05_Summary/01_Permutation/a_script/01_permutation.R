@@ -5,9 +5,8 @@
 # can be read against what pure chance produces. Context only: nothing is filtered.
 #
 # Shuffle 0 is the real labelling run through this same code, so observed and permuted counts
-# share one code path. Two simplifications keep 200 shuffles tractable: within-arm Spearman p uses
-# the t approximation rather than the exact permutation p, and set scores (singscore) and module
-# eigengenes are taken as computed once, not rebuilt per shuffle.
+# share one code path. Set scores (singscore) and module eigengenes are taken as computed once, not
+# rebuilt per shuffle, to keep 200 shuffles tractable.
 
 suppressPackageStartupMessages({
   library(here)
@@ -131,7 +130,7 @@ evidence_for <- function(responses) {
       tested <- rowSums(!is.na(hr)) >= 3 & rowSums(!is.na(lr)) >= 3
       tibble(
         feature = rownames(x)[tested], task,
-        p = suppressWarnings(matrixTests::row_wilcoxon_twosample(hr[tested, ], lr[tested, ])$pvalue)
+        p = map_dbl(which(tested), \(i) suppressWarnings(wilcox.test(hr[i, ], lr[i, ])$p.value))
       )
     }) |>
       list_rbind()
@@ -143,7 +142,7 @@ evidence_for <- function(responses) {
       })
       within <- map(c("HR", "LR"), \(a) {
         map(outcomes, \(name) {
-          spearman_by_row(x[, arm == a, drop = FALSE], outcome_of(name)[arm == a]) |>
+          spearman_by_row(x[, arm == a, drop = FALSE], outcome_of(name)[arm == a], exact = TRUE) |>
             mutate(test = paste(a, name))
         })
       }) |>

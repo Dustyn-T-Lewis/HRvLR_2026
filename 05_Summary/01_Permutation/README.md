@@ -19,9 +19,11 @@ and the training, baseline and acute associations. Blood correction is redone wi
 groups. Hits are counted with `on_lists()` in `R/helpers.R`, the rules `02_Candidates` uses.
 
 The real labelling runs through the same code as shuffle 0, so observed and permuted counts share
-one code path. Two simplifications keep 200 shuffles tractable: within-arm Spearman p uses the t
-approximation rather than the exact permutation p (so this step's observed counts run slightly
-above `02_Candidates`'), and set scores and module eigengenes are taken as computed once.
+one code path, and the tests match the level steps': exact within-arm Spearman p and `wilcox.test`
+for the rank tests. Protein and module counts equal `02_Candidates`' exactly. Set counts run about
+1% higher, because fgsea's p-values are estimated by sampling and its random draws differ between
+the two runs (rank correlation of the p-values 0.997). Set scores and module eigengenes are taken
+as computed once, to keep 200 shuffles tractable.
 
 Per feature, `permutation_score` is the share of shuffles in which it reached at least its observed
 hit count, (b + 1)/(m + 1) (Phipson & Smyth 2010). It is more lenient than a per-test correction

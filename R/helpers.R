@@ -235,8 +235,9 @@ spearman_p <- function(rho, n) {
   t <- r / sqrt((1 - r^2) / (n - 2))
   pmin(2 * if_else(s > (n^3 - n) / 6, pt(t, n - 2), pt(t, n - 2, lower.tail = FALSE)), 1)
 }
-# A feature is tested only when two thirds of the window's subjects saw it.
-spearman_by_row <- function(x, outcome) {
+# A feature is tested only when two thirds of the window's subjects saw it. exact = TRUE swaps in
+# the exact p, for within-arm tests at nine subjects or fewer.
+spearman_by_row <- function(x, outcome, exact = FALSE) {
   usable <- !is.na(outcome)
   x <- x[, usable, drop = FALSE]
   n <- rowSums(!is.na(x))
@@ -244,7 +245,12 @@ spearman_by_row <- function(x, outcome) {
     cor(t(x), outcome[usable], method = "spearman", use = "pairwise.complete.obs")[, 1]
   )
   rho[n < ceiling(2 * sum(usable) / 3)] <- NA
-  tibble(feature = rownames(x), n_subjects = unname(n), rho = unname(rho), p = spearman_p(rho, n))
+  p <- spearman_p(rho, n)
+  if (exact) {
+    tested <- which(!is.na(rho))
+    p[tested] <- map_dbl(tested, \(i) exact_spearman_p(x[i, ], outcome[usable]))
+  }
+  tibble(feature = rownames(x), n_subjects = unname(n), rho = unname(rho), p = unname(p))
 }
 # Exact p from every ordering of one variable against the other's ranks, ties kept; without ties
 # it equals cor.test(exact = TRUE). Only used within arms, at 9 subjects or fewer.
