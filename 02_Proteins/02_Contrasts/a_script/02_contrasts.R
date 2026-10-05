@@ -106,8 +106,10 @@ treat_counts <- tibble(
   n_fdr_05 = colSums(decideTests(ft, p.value = 0.05) != 0, na.rm = TRUE)[contrast_names]
 )
 
-# fry on one arm's responders, tested in the other arm's contrast. Only mirrored within-arm pairs
-# share no cell mean. fry reads limpa's complete matrix with the same design and block.
+# fry on one arm's responders, tested in another contrast: the other arm's same window, and each
+# arm's acute bout for the training sets. Only the other-arm pairs share no cell mean; a training
+# set tested on its own arm's acute contrast shares T2, so a protein high at T2 by chance reads as
+# up then down. fry reads limpa's complete matrix with the same design and block.
 abundance <- proteins$E
 stopifnot(
   identical(colnames(abundance), rownames(design)), identical(meta$sample_id, rownames(design)),
@@ -130,7 +132,11 @@ pairings <- tribble(
   "Training_HR", "Training_LR",
   "Training_LR", "Training_HR",
   "Acute_HR", "Acute_LR",
-  "Acute_LR", "Acute_HR"
+  "Acute_LR", "Acute_HR",
+  "Training_HR", "Acute_HR",
+  "Training_HR", "Acute_LR",
+  "Training_LR", "Acute_LR",
+  "Training_LR", "Acute_HR"
 )
 selections <- expand_grid(criterion = c("pi", "bh", "nominal"), direction = c("up", "down"))
 fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
@@ -141,6 +147,20 @@ fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
   if (length(sets) < 2) {
     return(NULL)
   }
+  # The effect sizes behind the test: each set's mean log2 FC in the arm that chose it (inflated
+  # by the choice) and in the other arm (different people, so free of it), and the share of
+  # members whose sign carries over.
+  log_fc <- \(cn, rows) filter(results, contrast == cn)$logFC[rows]
+  carried <- imap(sets, \(rows, set) {
+    own <- log_fc(set_from, rows)
+    other <- log_fc(ranked_on, rows)
+    tibble(
+      set,
+      mean_logfc_own = mean(own), mean_logfc_other = mean(other),
+      same_sign_share = mean(sign(own) == sign(other))
+    )
+  }) |>
+    list_rbind()
   fry(abundance,
     index = sets, design = design, contrast = contrast_matrix[, ranked_on],
     block = meta$subject, correlation = fry_correlation
@@ -148,8 +168,10 @@ fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
     as_tibble(rownames = "set") |>
     transmute(
       set_from, ranked_on, set,
-      n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR
-    )
+      n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR,
+      p_mixed = PValue.Mixed, fdr_mixed = FDR.Mixed
+    ) |>
+    left_join(carried, by = "set")
 }) |>
   list_rbind()
 
@@ -315,6 +337,31 @@ ancova_results <- ancova(corrected$data, as_tibble(meta)) |>
 # contrasts and both ANCOVA windows. A hit that stays at p < 0.05 in every rerun does not rest on
 # one person.
 sample_meta <- as_tibble(meta)
+
+# The path of each arm's p < 0.05 training sets through T1, T2 and T3, in each arm: every
+# subject's set mean minus their own T1 value, then the mean and SE across subjects. A subject with
+# no T1 biopsy drops out.
+stopifnot(identical(rownames(corrected$data), rownames(abundance)))
+set_trajectory <- results |>
+  filter(contrast %in% c("Training_HR", "Training_LR"), p < 0.05) |>
+  mutate(set_from = contrast, set = if_else(logFC > 0, "nominal_up", "nominal_down")) |>
+  summarise(members = list(uniprot_id), .by = c(set_from, set)) |>
+  pmap(\(set_from, set, members) {
+    tibble(
+      sample_id = colnames(corrected$data),
+      value = colMeans(corrected$data[members, , drop = FALSE])
+    ) |>
+      left_join(select(sample_meta, sample_id, subject, arm, timepoint), by = "sample_id") |>
+      filter("T1" %in% timepoint, .by = subject) |>
+      mutate(change = value - value[timepoint == "T1"], .by = subject) |>
+      summarise(
+        mean_change = mean(change), se = sd(change) / sqrt(n()), n_subjects = n(),
+        .by = c(arm, timepoint)
+      ) |>
+      mutate(set_from = set_from, set = set, n_proteins = length(members), .before = 1)
+  }) |>
+  list_rbind()
+
 robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
   kept <- sample_meta$subject %in% keep
   bind_rows(
@@ -323,7 +370,7 @@ robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
       sample_meta$subject[kept]
     ) |>
       contrast_rows(),
-    ancova(observed_values[, kept], sample_meta[kept, ]) |>
+    ancova(corrected$data[, kept], sample_meta[kept, ]) |>
       transmute(feature, test = paste("ANCOVA", window), p)
   ) |>
     select(feature, test, p)
@@ -356,9 +403,87 @@ ancova_figure <- ancova_results |>
   theme_minimal(base_size = 9) +
   theme(legend.position = "top", plot.caption = element_text(hjust = 0))
 
+# Whole-proteome structure: PCA of the complete corrected matrix (proteins scaled), and PERMANOVA on
+# its Euclidean distances. Time is tested within subject (permutations stay inside each person);
+# arm is tested on one profile per subject (the mean of their samples), or on one time point.
+scaled <- scale(t(corrected$data))
+pca <- prcomp(scaled)
+pca_variance <- tibble(
+  component = paste0("PC", 1:4),
+  variance_explained = round(summary(pca)$importance[2, 1:4], 3)
+)
+pca_scores <- as_tibble(pca$x[, 1:2], rownames = "sample_id") |>
+  left_join(select(sample_meta, sample_id, subject, arm, timepoint), by = "sample_id")
+permanova <- function(rows, term, within_subject) {
+  x <- scaled[rows, , drop = FALSE]
+  data <- sample_meta[rows, ]
+  if (!within_subject && anyDuplicated(data$subject)) {
+    x <- rowsum(x, data$subject) / as.vector(table(data$subject))
+    data <- distinct(data, subject, arm)[match(rownames(x), unique(data$subject)), ]
+  }
+  control <- if (within_subject) {
+    permute::how(blocks = factor(data$subject), nperm = 9999)
+  } else {
+    permute::how(nperm = 9999)
+  }
+  set.seed(1)
+  fit <- vegan::adonis2(dist(x) ~ ., data = data[term], permutations = control)
+  tibble(n_samples = nrow(x), r2 = fit$R2[1], f = fit$F[1], p = fit$`Pr(>F)`[1])
+}
+time_pairs <- list(all = c("T1", "T2", "T3"), training = c("T1", "T2"), acute = c("T2", "T3"))
+global_tests <- bind_rows(
+  imap(time_pairs, \(times, window) {
+    map(c("both", "HR", "LR"), \(who) {
+      rows <- sample_meta$timepoint %in% times & (who == "both" | sample_meta$arm == who)
+      permanova(rows, "timepoint", within_subject = TRUE) |>
+        mutate(term = "time", window = window, arms = who, .before = 1)
+    })
+  }) |>
+    list_flatten() |>
+    list_rbind(),
+  map(c("subject mean", "T1", "T2", "T3"), \(when) {
+    rows <- when == "subject mean" | sample_meta$timepoint == when
+    permanova(rows, "arm", within_subject = FALSE) |>
+      mutate(term = "arm", window = when, arms = "both", .before = 1)
+  }) |>
+    list_rbind()
+)
+# The same test on the phenotype: the six size and strength traits at T1 and T2, scaled, time
+# within subject. Arm is not tested, because HR and LR were split on how much these traits changed.
+trait_sets <- phenotype_tables(trait_table)
+trait_rows <- filter(trait_sets$biopsy, if_all(all_of(trait_sets$traits), \(x) !is.na(x)))
+set.seed(1)
+trait_fit <- vegan::adonis2(
+  dist(scale(trait_rows[trait_sets$traits])) ~ timepoint,
+  data = trait_rows,
+  permutations = permute::how(blocks = factor(trait_rows$subject), nperm = 9999)
+)
+global_tests <- global_tests |>
+  mutate(data = "proteome", .before = 1) |>
+  add_row(
+    data = "phenotype", term = "time", window = "all", arms = "both",
+    n_samples = nrow(trait_rows), r2 = trait_fit$R2[1], f = trait_fit$F[1],
+    p = trait_fit$`Pr(>F)`[1]
+  )
+pca_figure <- ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm)) +
+  geom_point(size = 2) +
+  scale_colour_manual(values = c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")) +
+  labs(
+    title = "Samples on the complete, blood-corrected matrix",
+    subtitle = with(
+      filter(global_tests, data == "proteome", term == "time", window == "all", arms == "both"),
+      sprintf("PERMANOVA, time within subject: R2 %.3f, p = %.4f", r2, p)
+    ),
+    x = sprintf("PC1 (%.1f%%)", 100 * pca_variance$variance_explained[1]),
+    y = sprintf("PC2 (%.1f%%)", 100 * pca_variance$variance_explained[2]),
+    caption = "Proteins scaled to unit variance. Table: c_data/02_contrasts.xlsx, pca, permanova."
+  ) +
+  theme_minimal(base_size = 9) +
+  theme(plot.caption = element_text(hjust = 0))
+
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
-walk(list(p_histogram, volcano, ancova_figure), print)
+walk(list(p_histogram, volcano, ancova_figure, pca_figure), print)
 invisible(dev.off())
 
 write_workbook(
@@ -378,9 +503,13 @@ write_workbook(
       log2_fc = round(quantile(detectable, c(0.5, 0.9), na.rm = TRUE, names = FALSE), 3)
     ),
     fry_concordance = fry_concordance,
+    set_trajectory = set_trajectory,
     unadjusted = unadjusted,
     ancova = ancova_results,
-    leave_one_out = robustness
+    leave_one_out = robustness,
+    pca = pca_scores,
+    pca_variance = pca_variance,
+    permanova = global_tests
   ),
   c(
     "logFC, p, BH and Storey q per protein and contrast, with samples observed.",
@@ -388,10 +517,20 @@ write_workbook(
     "propTrueNull, median |t| and share of p below 0.2 per contrast.",
     "Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
-    "fry: one arm's responders tested in the other arm's contrast.",
+    paste(
+      "fry: one arm's responders tested in the other arm's contrast, and training sets on each",
+      "arm's acute contrast; with mixed p, mean log2 FC in both contrasts and sign kept."
+    ),
+    "Training p < 0.05 sets: mean change from each subject's T1 (and SE) per arm and time point.",
     "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
     "ANCOVA per protein and window: arm effect at equal starting value, t, p, BH FDR and Storey q.",
-    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
+    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test.",
+    "PC1 and PC2 per sample, from the complete blood-corrected matrix with proteins scaled.",
+    "Share of variance on the first four components.",
+    paste(
+      "PERMANOVA (9,999 permutations): proteome time per window and arm, arm per time point;",
+      "phenotype time."
+    )
   ),
   file.path(out, "02_contrasts.xlsx"),
   inputs, paths
