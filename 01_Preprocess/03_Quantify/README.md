@@ -46,5 +46,6 @@ One page: the detection probability curve.
 | Sheet | Holds |
 |---|---|
 | `curve` | DPC intercept and slope on the logit scale, and the share of values missing. |
-| `proteins` | Per protein: values observed, and the median standard error where observed and where missing. |
+| `proteins` | Per protein: values observed, mean log2 abundance where observed and over the complete matrix, and the median standard error where observed and where missing. |
 | `blood` | Per sample: blood index and its centred value. |
+| `sample_correlation` | Pearson correlation between samples on the blood-corrected matrix, each protein centred on its mean so the correlation reflects how samples differ rather than the abundance order they share. |

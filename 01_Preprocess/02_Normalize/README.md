@@ -30,3 +30,4 @@ One page: PCA of the samples after normalisation, gaps median-filled for display
 | `components` | Variance explained by the first four principal components. |
 | `pca_scores` | Each sample's PC1 and PC2 score. |
 | `eta_squared` | Share of each protein's variance explained by the six group cells. |
+| `intensity_quantiles` | Each sample's log2 intensity quantiles (5, 25, 50, 75, 95%) before and after cyclic loess. |

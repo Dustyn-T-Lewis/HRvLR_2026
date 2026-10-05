@@ -33,6 +33,8 @@ write_qc_report(dal,
   color_column = "group", output_dir = reports,
   filename = "qc_pre.pdf", overwrite = TRUE
 )
+# normalize_data() logs the raw intensities, so the "before" values are logged here to match.
+before <- log2(as.matrix(dal$data))
 dal <- normalize_data(dal, norm_method = "cycloess")
 write_qc_report(dal,
   color_column = "group", output_dir = reports,
@@ -70,6 +72,16 @@ saveRDS(dal, file.path(out, "DAList_normalized.rds"), compress = "xz")
 pdf(file.path(reports, "02_normalize_figures.pdf"), width = 11, height = 8.5)
 print(pca_figure)
 invisible(dev.off())
+# Each sample's log2 intensity quantiles before and after cyclic loess, for the QC figure.
+intensity_quantiles <- function(values, stage) {
+  probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
+  qs <- apply(values, 2, quantile, probs = probs, na.rm = TRUE)
+  tibble(
+    stage = stage, sample_id = colnames(values),
+    q05 = qs[1, ], q25 = qs[2, ], q50 = qs[3, ], q75 = qs[4, ], q95 = qs[5, ]
+  )
+}
+stopifnot(identical(colnames(before), colnames(dal$data)))
 sheets <- list(
   normalized = bind_cols(
     as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
@@ -77,12 +89,17 @@ sheets <- list(
   ),
   components = components,
   pca_scores = select(pca_scores, sample_id, subject, arm, timepoint, PC1, PC2),
-  eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2))
+  eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2)),
+  intensity_quantiles = bind_rows(
+    intensity_quantiles(before, "before"), intensity_quantiles(as.matrix(dal$data), "after")
+  ) |>
+    left_join(select(dal$metadata, sample_id, arm, timepoint), by = "sample_id")
 )
 holds <- c(
   "Cyclic-loess log2 abundance, one row per protein.",
   "Variance explained by the first four principal components.",
   "Each sample's PC1 and PC2 score.",
-  "Share of each protein's variance explained by the six group cells."
+  "Share of each protein's variance explained by the six group cells.",
+  "Each sample's log2 intensity quantiles (5, 25, 50, 75, 95%) before and after cyclic loess."
 )
 write_workbook(sheets, holds, file.path(out, "02_normalize.xlsx"), inputs, paths)

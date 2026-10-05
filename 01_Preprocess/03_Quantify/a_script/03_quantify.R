@@ -70,18 +70,26 @@ write_workbook(
     proteins = tibble(
       uniprot_id = rownames(values), gene = dal$annotation$gene,
       n_observed = rowSums(observed), prop_observed = rowMeans(observed),
+      mean_observed = rowMeans(values, na.rm = TRUE), mean_complete = rowMeans(proteins$E),
       median_se_observed = apply(
         ifelse(observed, standard_error, NA), 1, median,
         na.rm = TRUE
       ),
       median_se_missing = apply(ifelse(observed, NA, standard_error), 1, median, na.rm = TRUE)
     ),
-    blood = select(meta, sample_id, subject, group, blood_rel, blood)
+    blood = select(meta, sample_id, subject, group, blood_rel, blood),
+    # Pearson correlation between samples after centring each protein on its mean, so it reflects
+    # how samples differ rather than the abundance order every sample shares.
+    sample_correlation = as_tibble(cor(corrected - rowMeans(corrected)), rownames = "sample_id")
   ),
   c(
     "DPC intercept and slope on the logit scale, and the share of values missing.",
-    "Per protein: values observed, and the median standard error where observed and where missing.",
-    "Per sample: blood index (HBB and HBA1 against the sample median) and its centred value."
+    paste(
+      "Per protein: values observed, mean log2 abundance where observed and over the complete",
+      "matrix, and the median standard error where observed and where missing."
+    ),
+    "Per sample: blood index (HBB and HBA1 against the sample median) and its centred value.",
+    "Pearson correlation between samples, each protein centred, on the blood-corrected matrix."
   ),
   file.path(out, "03_quantify.xlsx"),
   inputs, paths
