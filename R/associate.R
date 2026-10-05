@@ -16,6 +16,7 @@
 associate_step <- function(stage, inputs, paths, values, meta, feature_label, feature_noun,
                            feature_unit, value_label, row_groups, row_order,
                            collection_of = NULL, panel_name = \(label, collection) label,
+                           observed_share = NULL,
                            all_arm_rows = FALSE, save_change_score = FALSE) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
@@ -26,7 +27,9 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   labelled_heat <- \(...) heat(..., labels = feature_label)
   labelled <- function(d) {
     if (length(by_collection)) d <- mutate(d, collection = collection_of[feature], .after = feature)
-    mutate(d, label = feature_label[feature], .after = all_of(c("feature", by_collection)))
+    d <- mutate(d, label = feature_label[feature], .after = all_of(c("feature", by_collection)))
+    if (is.null(observed_share)) return(d)
+    mutate(d, observed_share = observed_share[feature], .after = label)
   }
   corrected <- function(d, ...) {
     mutate(d, fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(..., all_of(by_collection)))

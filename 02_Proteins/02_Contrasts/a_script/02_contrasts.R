@@ -307,10 +307,9 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-# ANCOVA, like the rank tests, reads the blood-corrected matrix where a value was observed.
+# ANCOVA, like the rank tests, reads limpa's complete blood-corrected matrix.
 corrected <- readRDS(paths[["corrected"]])
-observed_values <- replace(corrected$data, !corrected$observed, NA)
-ancova_results <- ancova(observed_values, as_tibble(meta)) |>
+ancova_results <- ancova(corrected$data, as_tibble(meta)) |>
   mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
 # Leave one subject out on the tests that feed the candidate tables: the four HR-against-LR
 # contrasts and both ANCOVA windows. A hit that stays at p < 0.05 in every rerun does not rest on

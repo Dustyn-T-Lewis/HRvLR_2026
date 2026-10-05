@@ -22,9 +22,8 @@ inputs <- c(
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
-# Rank tests and correlations take no covariate, so they read the blood-corrected matrix, and
-# only where a value was observed: limpa's estimates for missing values carry wide errors that
-# these tests cannot weigh.
+# Rank tests and correlations take no covariate, so they read limpa's complete blood-corrected
+# matrix; observed_share marks how much of each protein was measured rather than estimated.
 dal <- readRDS(paths[["corrected"]])
 # Every protein carries one distinct gene symbol.
 feature_label <- with(dal$annotation, set_names(gene, uniprot_id))
@@ -34,7 +33,7 @@ complete <- readRDS(paths[["limpa"]])$data
 
 associate_step(
   stage = here("02_Proteins", "04_Associate"), inputs = inputs, paths = paths,
-  values = replace(dal$data, !dal$observed, NA), meta = as_tibble(dal$metadata),
+  values = dal$data, observed_share = rowMeans(dal$observed), meta = as_tibble(dal$metadata),
   feature_label = feature_label, feature_noun = "proteins", feature_unit = "protein",
   value_label = "log2 abundance",
   row_groups = list(

@@ -89,9 +89,9 @@ eigengenes <- t(as.matrix(eigengenes$eigengenes))
 dimnames(eigengenes) <- list(sub("^ME", "", rownames(eigengenes)), colnames(label_free))
 matrices <- list(
   modules = views(eigengenes),
-  proteins = views(replace(label_free, !dal$observed, NA))
+  proteins = views(label_free)
 ) |>
-  map_depth(2, \(m) t(m[rowSums(is.na(m)) == 0, , drop = FALSE]))
+  map_depth(2, t)
 
 panels <- expand_grid(features = names(matrices), input = names(matrices$modules)) |>
   mutate(result = map2(features, input, \(features, input) {

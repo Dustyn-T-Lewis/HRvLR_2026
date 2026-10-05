@@ -39,7 +39,6 @@ cores <- min(8, parallel::detectCores())
 
 quantified <- readRDS(paths[["proteins"]])
 proteins <- quantified$proteins
-observed <- proteins$other$n.observations > 0
 d <- readRDS(paths[["design"]])
 contrast_matrix <- d$dal$design$contrast_matrix
 key_contrasts <- c(hr_lr_contrasts, "Baseline_HRvLR")
@@ -83,7 +82,7 @@ evidence_for <- function(responses) {
   arm_of <- set_names(responses$arm, responses$subject)
   corrected <- blood_corrected(proteins$E, meta$blood, model.matrix(~ 0 + group, meta))
   levels <- list(
-    proteins = replace(corrected, !observed, NA), sets = set_scores, modules = modules$eigengenes
+    proteins = corrected, sets = set_scores, modules = modules$eigengenes
   )
 
   protein_fit <- fit_limpa(proteins, design, contrast_matrix[, key_contrasts], meta$subject)
