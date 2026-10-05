@@ -34,6 +34,8 @@ time_colours <- c(
   T3 = contrast_palette$line[contrast_palette$family == "Acute"]
 )
 arm_shapes <- c(HR = 16, LR = 17)
+# HR dark and LR light grey, as the two figures in the design panel.
+arm_colours <- c(HR = "#4D4D4D", LR = "#A6A6A6")
 direction_colours <- c(Up = "#4D9221", Down = "#C51B7D")
 
 figure_theme <- ggplot2::theme_minimal(base_size = 7) +

@@ -13,7 +13,8 @@ stages <- c(
   "04_Modules/04_Associate", "04_Modules/05_Characterise", "04_Modules/06_Preserve",
   "05_Integration/01_Chance_Line", "05_Integration/02_Candidates", "05_Integration/03_Panel",
   "05_Integration/04_Continuous", "05_Integration/05_Clustering",
-  "06_Figures/F01_Overview", "06_Figures/S01_Volcano", "06_Figures/S02_NES_Scatter",
+  "06_Figures/F01_Overview", "06_Figures/F02_Groups", "06_Figures/F03_Continuum",
+  "06_Figures/S01_Volcano", "06_Figures/S02_NES_Scatter",
   "06_Figures/S03_Signatures", "06_Figures/S04_QC"
 )
 only <- commandArgs(trailingOnly = TRUE)

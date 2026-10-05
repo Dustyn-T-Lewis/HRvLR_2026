@@ -7,6 +7,8 @@ its plotted numbers against the source tables before it writes.
 | Figure | Draws |
 |---|---|
 | [`F01_Overview`](F01_Overview/README.md) | design, proteins per contrast, proteome and phenotype PCA, shared pathways, training and acute signature ranks |
+| [`F02_Groups`](F02_Groups/README.md) | interaction pathways, OXPHOS catch-up and acute response, sarcomere-strength slope by arm, classification null |
+| [`F03_Continuum`](F03_Continuum/README.md) | screens against chance, sarcomere growth x strength interaction, its drivers and pathways, baseline strength proteins, clustering |
 | [`S01_Volcano`](S01_Volcano/README.md) | protein volcano inside a ring of enriched sets, per contrast |
 | [`S02_NES_Scatter`](S02_NES_Scatter/README.md) | NES of one contrast against another |
 | [`S03_Signatures`](S03_Signatures/README.md) | signature ranks with the Π sets; training sets followed through the bout |
