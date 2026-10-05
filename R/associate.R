@@ -430,7 +430,9 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   }
 
   # Points as one Dingbats glyph each rather than four curves: the PDF shrinks by about 60%.
-  pdf(file.path(figures, paste0(step, "_figures.pdf")), width = 11, height = 8.5, useDingbats = TRUE)
+  pdf(file.path(figures, paste0(step, "_figures.pdf")),
+    width = 11, height = 8.5, useDingbats = TRUE
+  )
   walk(overviews, \(page) page$draw())
   walk(c(model_pages, change_pages, slope_pages), print)
   invisible(dev.off())

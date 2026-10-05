@@ -270,17 +270,20 @@ overviews <- imap(row_groups, \(rows, group) {
   m <- sample_values[rows, columns$sample_id, drop = FALSE]
   m <- m
   limit <- cap(m)
-  biopsy_map <- heat(m, "biopsies", c(-limit, 0, limit), "eigengene",
+  labelled_heat <- \(...) heat(..., labels = feature_label)
+  biopsy_map <- labelled_heat(m, "biopsies", c(-limit, 0, limit), "eigengene",
     row_names = TRUE, column_title = character(0), top_annotation = sample_annotation,
     column_split = columns$group, cluster_column_slices = FALSE,
     column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
   )
   contrast_grid <- \(value) as_grid(contrast_results, rows, contrast_names, "contrast", value)
-  contrast_maps <- heat(
+  contrast_maps <- labelled_heat(
     contrast_grid(\(d) d$effect), "eigengene log2 fold change",
     c(-effect_limit, 0, effect_limit), "eigengene log2 FC"
   ) +
-    heat(contrast_grid(\(d) status_of(d$p, d$fdr)), "moderated t p and BH q", row_names = TRUE)
+    labelled_heat(contrast_grid(\(d) status_of(d$p, d$fdr)), "moderated t p and BH q",
+      row_names = TRUE
+    )
   n_rows <- format(length(rows), big.mark = ",")
   list(
     heatmap_page(biopsy_map, sprintf("Biopsy overview: %s", group), paste(

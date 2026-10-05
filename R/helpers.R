@@ -199,61 +199,25 @@ classify_row <- function(spec, id) {
   )
 }
 
-# cor.test(exact = FALSE)'s p, step for step: S statistic, rho back from S, then the t tail.
-spearman_p <- function(rho, n) {
-  s <- (n^3 - n) * (1 - rho) / 6
-  r <- 1 - s / ((n * (n^2 - 1)) / 6)
-  t <- r / sqrt((1 - r^2) / (n - 2))
-  pmin(2 * if_else(s > (n^3 - n) / 6, pt(t, n - 2), pt(t, n - 2, lower.tail = FALSE)), 1)
-}
-# A feature is tested only when two thirds of the window's subjects saw it. exact = TRUE swaps in
-# the exact p, for within-arm tests at nine subjects or fewer.
+# Spearman rho and p per row from cor.test. exact = TRUE gives the exact permutation p, which
+# cor.test computes for nine subjects or fewer (the within-arm tests); with ties it falls back to
+# the normal approximation.
 spearman_by_row <- function(x, outcome, exact = FALSE) {
   usable <- !is.na(outcome)
   x <- x[, usable, drop = FALSE]
-  n <- rowSums(!is.na(x))
-  rho <- suppressWarnings(
-    cor(t(x), outcome[usable], method = "spearman", use = "pairwise.complete.obs")[, 1]
+  tests <- map(seq_len(nrow(x)), \(i) {
+    suppressWarnings(cor.test(x[i, ], outcome[usable], method = "spearman", exact = exact))
+  })
+  tibble(
+    feature = rownames(x), n_subjects = unname(rowSums(!is.na(x))),
+    rho = map_dbl(tests, \(r) unname(r$estimate)), p = map_dbl(tests, "p.value")
   )
-  rho[n < ceiling(2 * sum(usable) / 3)] <- NA
-  p <- spearman_p(rho, n)
-  if (exact) {
-    tested <- which(!is.na(rho))
-    p[tested] <- map_dbl(tested, \(i) exact_spearman_p(x[i, ], outcome[usable]))
-  }
-  tibble(feature = rownames(x), n_subjects = unname(n), rho = unname(rho), p = unname(p))
-}
-# Exact p from every ordering of one variable against the other's ranks, ties kept; without ties
-# it equals cor.test(exact = TRUE). Only used within arms, at 9 subjects or fewer.
-orderings <- function(n) {
-  if (n == 1) {
-    return(matrix(1L))
-  }
-  shorter <- orderings(n - 1)
-  do.call(rbind, map(seq_len(n), \(first) cbind(first, shorter + (shorter >= first))))
-}
-null_rho <- new.env()
-exact_spearman_p <- function(x, y) {
-  ok <- !is.na(x) & !is.na(y)
-  rx <- rank(x[ok])
-  ry <- rank(y[ok])
-  stopifnot(length(rx) <= 9)
-  key <- paste(paste(sort(rx), collapse = ","), paste(sort(ry), collapse = ","))
-  if (is.null(null_rho[[key]])) {
-    shuffled <- matrix(rx[orderings(length(rx))], ncol = length(rx))
-    centred <- ry - mean(ry)
-    rho <- (shuffled - mean(rx)) %*% centred / sqrt(sum((rx - mean(rx))^2) * sum(centred^2))
-    null_rho[[key]] <- sort(abs(rho[, 1]))
-  }
-  null <- null_rho[[key]]
-  (length(null) - findInterval(abs(cor(rx, ry)) - 1e-9, null)) / length(null)
 }
 
-# limma on one value per subject, with the two-thirds floor: the chosen terms' effect, t and p.
+# limma on one value per subject: the chosen terms' effect, t and p.
 subject_fit <- function(x, predictors, formula, terms) {
   ok <- complete.cases(predictors)
   x <- x[, ok, drop = FALSE]
-  x <- x[rowSums(!is.na(x)) >= ceiling(2 * ncol(x) / 3), , drop = FALSE]
   fit <- lmFit(x, model.matrix(formula, predictors[ok, , drop = FALSE])) |>
     eBayes(robust = TRUE)
   map(terms, \(term) {
@@ -288,11 +252,10 @@ as_grid <- function(d, rows, cols, col, value) {
   m[cbind(d$feature, d[[col]])] <- value(d)
   m
 }
-# An effect map on a diverging scale when breaks are given, otherwise a status map. Row labels
-# come from the calling script's feature_label.
+# An effect map on a diverging scale when breaks are given, otherwise a status map; labels name
+# the rows.
 heat <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
-                 column_title = title, column_names_gp = gpar(fontsize = 7),
-                 labels = feature_label, ...) {
+                 column_title = title, column_names_gp = gpar(fontsize = 7), labels, ...) {
   rows <- rownames(m)
   Heatmap(m,
     name = title, na_col = "grey80",
