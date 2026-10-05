@@ -10,8 +10,8 @@ Scores how well each protein separates the groups on eight tasks.
 
 ## Method
 
-Eight tasks on blood-corrected log2 abundance, where a value was observed (limpa's estimates for
-missing values carry errors these tests cannot weigh). Within-arm tasks (training and the acute bout, in each arm) pair each
+Eight tasks on limpa's complete blood-corrected log2 abundance; `observed_share` marks how much of
+each protein was measured rather than estimated. Within-arm tasks (training and the acute bout, in each arm) pair each
 subject's two biopsies: the Wilcoxon signed-rank test gives p and the effect is the median paired
 change. HR-vs-LR tasks (T1 level, T2 level, training change, acute change) use the rank-sum test,
 and AUC = W / (n1 x n2), above 0.5 when higher in HR. A feature needs three observations per side.

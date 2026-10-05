@@ -1,8 +1,12 @@
-# Exploratory multi-feature panels: can an elastic-net model tell HR from LR in subjects it did not
-# train on? Five inputs (T1, T2 and T3 levels, training and acute change) by two feature sets
-# (module eigengenes, and proteins observed in every subject of the input). Each panel is scored
-# by repeated stratified 5-fold CV and judged against 1,000 label permutations of the whole
-# pipeline. Nothing here is validated outside this cohort.
+# Exploratory multi-feature panels: can a model tell HR from LR in subjects it did not train on?
+# Elastic net: five inputs (T1, T2 and T3 levels, training and acute change) by two feature sets
+# (module eigengenes and every protein, limpa's complete matrix), repeated stratified 5-fold CV,
+# 1,000 label permutations of the whole pipeline. DIABLO (mixOmics block.splsda): the same inputs
+# with the modules and proteins as blocks, alone and with a phenotype block (T1: baseline trait
+# levels; training: % trait change, composite and volume, including fibre-area change, the label's
+# own ingredient, so those AUCs sit near 1 by construction; T2: post-training levels); keepX fixed
+# at 5 per block so nothing is tuned on the answer; 5 repeats of stratified 5-fold CV; 200 label
+# permutations. Nothing here is validated outside this cohort.
 
 suppressPackageStartupMessages({
   library(here)
@@ -21,7 +25,8 @@ figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   limpa = "01_Preprocess/03_Quantify/c_data/DAList_limpa.rds",
-  modules = "04_Modules/01_Build/c_data/modules.rds"
+  modules = "04_Modules/01_Build/c_data/modules.rds",
+  phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -78,10 +83,9 @@ views <- function(values) {
   )
 }
 # The blood correction here sees time point only, never arm, so the labels cannot inform it. The
-# eigengenes are rescored on that matrix with the module assignments from 01_Build. glmnet
-# takes no missing value; keeping only proteins observed in every subject of the input avoids
-# imputing outside the folds. The modules were built on all 16 subjects, a leak the protein
-# panels do not share.
+# eigengenes are rescored on that matrix with the module assignments from 01_Build. limpa's matrix
+# is complete, so nothing is imputed inside the folds. The modules were built on all 16 subjects,
+# a leak the protein panels do not share.
 label_free <- blood_corrected(dal$data, meta$blood, model.matrix(~ 0 + timepoint, meta))
 colours <- set_names(modules$membership$module, modules$membership$uniprot_id)[rownames(label_free)]
 eigengenes <- WGCNA::moduleEigengenes(t(label_free), colors = colours, excludeGrey = TRUE)
@@ -131,6 +135,90 @@ selection <- panels |>
   mutate(label = feature_label[feature], .after = feature) |>
   arrange(features, input, desc(frequency))
 
+# DIABLO.
+pairings <- phenotype_tables(readr::read_csv(paths[["phenotype"]], show_col_types = FALSE))$pairings
+phenotype_blocks <- list(
+  T1 = pairings$baseline_level, training = pairings$training,
+  T2 = pairings$post_level
+)
+stratified_folds <- function(y, k = 5) {
+  fold <- integer(length(y))
+  for (level in levels(y)) fold[y == level] <- sample(rep_len(seq_len(k), sum(y == level)))
+  split(seq_along(y), fold)
+}
+diablo_fit <- function(train, y, test) {
+  design <- matrix(0.1, length(train), length(train)) + diag(0.9, length(train))
+  fit <- mixOmics::block.splsda(train, y,
+    ncomp = 1, design = design,
+    keepX = map(train, \(b) min(5, ncol(b)))
+  ) |>
+    suppressMessages()
+  list(
+    score = predict(fit, test)$AveragedPredict[, "HR", 1],
+    kept = unlist(map(mixOmics::selectVar(fit, comp = 1)[names(train)], "name"))
+  )
+}
+diablo_cv <- function(blocks, y, seed, repeats = 5) {
+  map(seq_len(repeats), \(r) {
+    set.seed(seed + r)
+    score <- numeric(length(y))
+    kept <- list()
+    for (test in stratified_folds(y)) {
+      res <- diablo_fit(
+        map(blocks, \(b) b[-test, , drop = FALSE]), y[-test],
+        map(blocks, \(b) b[test, , drop = FALSE])
+      )
+      score[test] <- res$score
+      kept <- c(kept, list(res$kept))
+    }
+    roc <- pROC::roc(y, score, levels = c("LR", "HR"), direction = "<", quiet = TRUE)
+    list(auc = as.numeric(pROC::auc(roc)), kept = kept)
+  })
+}
+diablo_models <- expand_grid(input = names(matrices$modules), phenotype = c(FALSE, TRUE)) |>
+  filter(!phenotype | input %in% names(phenotype_blocks))
+diablo <- diablo_models |>
+  mutate(result = map2(input, phenotype, \(input, with_phenotype) {
+    blocks <- map(matrices, \(m) m[[input]])
+    subjects <- rownames(blocks$modules)
+    if (with_phenotype) {
+      ph <- phenotype_blocks[[input]]
+      ph <- as.matrix(column_to_rownames(ph, "subject"))
+      subjects <- intersect(subjects, rownames(ph)[complete.cases(ph)])
+      blocks$phenotype <- ph[subjects, , drop = FALSE]
+    }
+    blocks <- map(blocks, \(b) {
+      b <- b[subjects, , drop = FALSE]
+      b[, apply(b, 2, sd) > 0, drop = FALSE]
+    })
+    y <- factor(arm_of[subjects], c("LR", "HR"))
+    observed <- diablo_cv(blocks, y, seed = 1)
+    null <- parallel::mclapply(seq_len(200), \(i) {
+      set.seed(1e4 + i)
+      mean(map_dbl(diablo_cv(blocks, sample(y), seed = 1000 * i), "auc"))
+    }, mc.cores = cores) |>
+      unlist()
+    list(
+      y = y, auc = map_dbl(observed, "auc"), null = null,
+      kept = table(unlist(map(observed, "kept"))) / 25
+    )
+  }))
+diablo_table <- diablo |>
+  transmute(input, phenotype,
+    n_hr = map_int(result, \(r) sum(r$y == "HR")),
+    n_lr = map_int(result, \(r) sum(r$y == "LR")), auc_mean = map_dbl(result, \(r) mean(r$auc)),
+    null_median = map_dbl(result, \(r) median(r$null)),
+    null_95 = map_dbl(result, \(r) unname(quantile(r$null, 0.95))),
+    permutation_p = map_dbl(result, \(r) permutation_p(mean(r$auc), r$null)),
+    interpretable = !(phenotype & input == "training")
+  )
+diablo_selection <- diablo |>
+  mutate(kept = map(result, \(r) enframe(c(r$kept), "feature", "frequency"))) |>
+  select(input, phenotype, kept) |>
+  unnest(kept) |>
+  mutate(label = coalesce(unname(feature_label[feature]), feature), .after = feature) |>
+  arrange(input, phenotype, desc(frequency))
+
 null_page <- panels |>
   transmute(features, input, null = map(result, "null")) |>
   unnest(null) |>
@@ -179,16 +267,33 @@ selection_page <- selection |>
 pdf(file.path(figures, "03_panel_figures.pdf"), width = 11, height = 8.5)
 print(null_page)
 if (nrow(selection) > 0) print(selection_page)
+print(plot_chance(
+  mutate(diablo_table, screen = paste(input, if_else(phenotype, "+ phenotype", ""))),
+  "auc_mean", "DIABLO: cross-validated AUC against 200 label permutations",
+  paste(
+    "Blocks: modules and proteins, with the phenotype block where marked. The training model",
+    "with the phenotype block includes fibre-area change, which built the label, so its AUC is not",
+    "a result. Table: c_data/03_panel.xlsx, diablo."
+  )
+))
 invisible(dev.off())
 
 write_workbook(
-  list(panels = summary_table, selection = selection),
+  list(
+    panels = summary_table, selection = selection, diablo = diablo_table,
+    diablo_selection = diablo_selection
+  ),
   c(
     paste(
       "Per panel: subjects, features, mean and range of the 10 repeat AUCs, share of models that",
       "kept no feature, permutation null median and 95th percentile, permutation p."
     ),
-    "Per panel and feature: share of the 50 repeat-by-fold models that kept it."
+    "Per panel and feature: share of the 50 repeat-by-fold models that kept it.",
+    paste(
+      "Per DIABLO model: input, phenotype block, arm sizes, mean CV AUC, permutation null and",
+      "p; interpretable is FALSE where the phenotype block holds the label's own ingredients."
+    ),
+    "Per DIABLO model and feature: share of the 25 CV fits that kept it."
   ),
   file.path(out, "03_panel.xlsx"),
   inputs, paths

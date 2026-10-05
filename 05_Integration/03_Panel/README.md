@@ -1,21 +1,21 @@
 # 03_Panel
 
-Asks whether an elastic-net model can tell HR from LR in subjects it did not train on. Exploratory:
-nothing here is validated outside this cohort.
+Asks whether a multi-feature model can tell HR from LR in subjects it did not train on: an elastic
+net and DIABLO. Exploratory: nothing here is validated outside this cohort.
 
 | | |
 |---|---|
-| Reads | `01_Preprocess/03_Quantify/c_data/DAList_limpa.rds`, `04_Modules/01_Build/c_data/modules.rds` |
+| Reads | `01_Preprocess/03_Quantify/c_data/DAList_limpa.rds`, `04_Modules/01_Build/c_data/modules.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/03_panel.xlsx`, `b_reports/03_panel_figures.pdf` |
 | Run | `Rscript 05_Integration/03_Panel/a_script/03_panel.R` (about an hour on eight cores) |
 
 ## Method
 
 Ten panels: five inputs (T1, T2 and T3 levels, training change, acute change) by two feature sets
-(the module eigengenes, and the proteins observed in every subject of that input, so nothing is
-filled in outside a fold). The input is limpa's matrix with the blood slope removed against time
+(the module eigengenes, and every protein of limpa's complete matrix, so nothing is filled in
+inside a fold). The input is limpa's matrix with the blood slope removed against time
 point only, never arm, so the labels cannot inform the correction; the eigengenes are rescored on
-that matrix with the modules from `01_Build`. `panel_cv()` in `R/helpers.R` wraps `nestedcv::nestcv.glmnet()`:
+that matrix with the modules from `01_Build`. `panel_cv()` wraps `nestedcv::nestcv.glmnet()`:
 
 | Setting | Value | Source |
 |---|---|---|
@@ -39,10 +39,19 @@ The module panels carry a leak: WGCNA built the modules on all 16 subjects, incl
 held-out ones. The protein panels do not share it. Report against TRIPOD+AI (Collins et al. 2024):
 internal validation only, no external cohort.
 
+DIABLO (`mixOmics::block.splsda`) asks the same question with blocks that must agree: modules and
+proteins, alone and with a phenotype block where the input has one (T1: baseline trait levels;
+training: % trait change, composite and volume; T2: post-training levels). keepX is fixed at 5 per
+block, one component, so nothing is tuned on the answer; 5 repeats of stratified 5-fold CV and 200
+label permutations of the whole procedure. The training phenotype block holds fibre-area change,
+the label's own ingredient, so that model's AUC sits near 1 by construction and is marked not
+interpretable; what it shows is which modules and proteins the model keeps beside fibre change.
+
 ## Figures
 
-Page one: each panel's permutation null with the observed mean AUC and its p. Page two: up to 15
-features per panel by how often the model kept them.
+Page one: each elastic-net panel's permutation null with the observed mean AUC and its p. Page two:
+up to 15 features per panel by how often the model kept them. Page three: each DIABLO model's AUC
+against its null.
 
 ## Workbook
 
@@ -50,3 +59,5 @@ features per panel by how often the model kept them.
 |---|---|
 | `panels` | Per panel: subjects, features, mean and range of the 10 repeat AUCs, share of models that kept no feature, permutation null median and 95th percentile, permutation p. |
 | `selection` | Per panel and feature: share of the 50 repeat-by-fold models that kept it. |
+| `diablo` | Per DIABLO model: input, phenotype block, arm sizes, mean CV AUC, permutation null and p, whether the AUC is interpretable. |
+| `diablo_selection` | Per DIABLO model and feature: share of the 25 CV fits that kept it. |

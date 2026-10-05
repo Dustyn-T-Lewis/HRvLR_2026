@@ -1,4 +1,4 @@
-# 03 · Pathway Enrichment
+# 03 · Pathways
 
 The pathway level. Tests every gene set on the nine contrasts, scores every sample on every set, and
 puts the scores through the protein level's classification and association.
@@ -6,12 +6,12 @@ puts the scores through the protein level's classification and association.
 | Step | Runs | Writes |
 |---|---|---|
 | [`01_Gene_Sets`](01_Gene_Sets/README.md) | frozen MSigDB snapshot, GO Slim sets, protein-to-gene map, size filter | `gene_sets.rds` |
-| [`01_Scores`](01_Scores/README.md) | singscore per set and sample | `singscore.rds` |
-| [`02_Contrasts`](02_Contrasts/README.md) | fgsea and fry per contrast, `collapsePathways()`, ANCOVA on singscore | `set_tests.rds` |
-| [`03_Classify`](03_Classify/README.md) | Wilcoxon p, AUC and median paired change on eight tasks | workbook, PDF |
-| [`04_Associate`](04_Associate/README.md) | sample-level limma model per trait, change-score Spearman, arm slope difference, two-predictor model | workbook, PDF |
-| [`S01_Volcano`](S01_Volcano/README.md) | protein volcanoes with pathway rings | workbook, PDF |
-| [`S02_NES_Scatter`](S02_NES_Scatter/README.md) | HR NES against LR NES, training and acute | workbook, PDF |
+| [`02_Scores`](02_Scores/README.md) | singscore per set and sample | `singscore.rds` |
+| [`03_Contrasts`](03_Contrasts/README.md) | fgsea, cameraPR and fry per contrast, `collapsePathways()`, ANCOVA on singscore | `set_tests.rds` |
+| [`04_Classify`](04_Classify/README.md) | Wilcoxon p, AUC and median paired change on eight tasks | workbook, PDF |
+| [`05_Associate`](05_Associate/README.md) | sample model, continuous change scores with their chance line, within-arm, arm slope, two-predictor, interaction, flips | workbook, PDF |
+
+The volcano and NES-scatter pages moved to `06_Figures`.
 
 Every collection (Hallmark, KEGG_Legacy, Reactome, GOBP, GO_Slim) is its own screen: BH runs within
 collection for classification and association. Set contrasts pool the five collections within each

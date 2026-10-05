@@ -341,6 +341,24 @@ page_theme <- ggplot2::theme_minimal(base_size = 9) +
     plot.title = ggplot2::element_text(face = "bold"),
     plot.caption = ggplot2::element_text(hjust = 0), legend.position = "top"
   )
+# A screen's observed value against its shuffle null: grey bar to the 95th percentile, tick at the
+# median, red point the real data. d needs screen, null_median, null_95 and the value column.
+plot_chance <- function(d, value, title, caption, facet = NULL) {
+  d <- mutate(d, screen = forcats::fct_reorder(screen, .data[[value]]))
+  plot <- ggplot2::ggplot(d, ggplot2::aes(y = screen)) +
+    ggplot2::geom_linerange(ggplot2::aes(xmin = 0, xmax = null_95),
+      colour = "grey80",
+      linewidth = 2.5
+    ) +
+    ggplot2::geom_point(ggplot2::aes(x = null_median), shape = "|", size = 3, colour = "grey40") +
+    ggplot2::geom_point(ggplot2::aes(x = .data[[value]]), colour = "firebrick", size = 1.8) +
+    ggplot2::labs(
+      x = value, y = NULL, title = title,
+      caption = stringr::str_wrap(caption, 160)
+    ) +
+    page_theme
+  if (is.null(facet)) plot else plot + ggplot2::facet_wrap(facet, scales = "free")
+}
 counts_line <- \(info, noun, hits) {
   sprintf(
     "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.", info$n_nominal, info$n_tested,

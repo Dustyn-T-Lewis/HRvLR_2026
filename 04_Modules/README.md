@@ -1,4 +1,4 @@
-# 04 · Network
+# 04 · Modules
 
 The module level. Finds proteins that move together, runs the protein level's contrasts,
 classification and association on the module eigengenes, then names the modules and asks whether the
@@ -9,7 +9,7 @@ two arms share them.
 | [`01_Build`](01_Build/README.md) | WGCNA on subject-centred abundance | `modules.rds` |
 | [`02_Contrasts`](02_Contrasts/README.md) | nine contrasts on eigengenes and with fry, ANCOVA, membership against protein results | workbook, PDF |
 | [`03_Classify`](03_Classify/README.md) | Wilcoxon p, AUC and median paired change on eight tasks | workbook, PDF |
-| [`04_Associate`](04_Associate/README.md) | sample-level limma model per trait, change-score Spearman, arm slope difference, two-predictor model | workbook, PDF |
+| [`04_Associate`](04_Associate/README.md) | sample model, continuous change scores with their chance line, within-arm, arm slope, two-predictor, interaction, flips | workbook, PDF |
 | [`05_Characterise`](05_Characterise/README.md) | ORA against the stage 03 sets, hubs, STRING enrichment | workbook, PDF |
 | [`06_Preserve`](06_Preserve/README.md) | modules built in each arm, preservation in the other | workbook, PDF |
 
