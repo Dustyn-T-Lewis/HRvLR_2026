@@ -45,36 +45,15 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     mutate(d, fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(..., all_of(by_collection)))
   }
 
-  # One row per subject and biopsy, pre as T1 and post as T2. Size and strength traits only; the
-  # MyoVision fibre counts stay out.
-  traits <- c("fcsa_mixed", "fcsa_type1", "fcsa_type2", "mcsa", "leg_press_1rm", "leg_ext_1rm")
   phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
-  biopsy <- phenotype |>
-    select(subject, arm, matches("_(pre|post)_")) |>
-    pivot_longer(-c(subject, arm),
-      names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*"
-    ) |>
-    pivot_wider(names_from = trait) |>
-    mutate(timepoint = if_else(when == "pre", "T1", "T2")) |>
-    select(subject, arm, timepoint, all_of(traits))
-  per_subject <- biopsy |>
-    pivot_longer(all_of(traits), names_to = "trait") |>
-    pivot_wider(names_from = timepoint) |>
-    transmute(subject, trait, pct = 100 * (T2 - T1) / T1) |>
-    pivot_wider(names_from = trait, values_from = pct, names_prefix = "pct_") |>
-    left_join(select(phenotype, subject, comp_hypertrophy, volume_load_total_kg), by = "subject")
-  outcomes <- c("comp_hypertrophy", "volume_load_total_kg", paste0("pct_", traits))
+  phenotype_list <- phenotype_tables(phenotype)
+  traits <- phenotype_list$traits
+  biopsy <- phenotype_list$biopsy
+  outcomes <- phenotype_list$outcomes
+  pairing_tables <- phenotype_list$pairings
   arm_of <- set_names(phenotype$arm, phenotype$subject)
-  level_table <- \(tp) filter(biopsy, timepoint == tp) |> select(subject, all_of(traits))
-  pairing_tables <- list(
-    training = per_subject, baseline = per_subject, acute = per_subject,
-    baseline_level = level_table("T1"), post_level = level_table("T2")
-  )
   pairing_outcomes <- map(pairing_tables, \(tt) setdiff(names(tt), "subject"))
-  outcome_in <- \(tables, window, name, subjects) {
-    set_names(tables[[window]][[name]], tables[[window]]$subject)[subjects]
-  }
-  outcome_of <- \(name, subjects) outcome_in(pairing_tables, "training", name, subjects)
+  outcome_of <- \(name, subjects) pairing_value(pairing_tables, "training", name, subjects)
 
   samples <- meta |>
     filter(timepoint %in% c("T1", "T2")) |>
@@ -130,7 +109,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   }
   change_score <- imap(windows, \(x, window) {
     map(set_names(pairing_outcomes[[window]]), \(name) {
-      continuous(x, outcome_in(pairing_tables, window, name, colnames(x)))
+      continuous(x, pairing_value(pairing_tables, window, name, colnames(x)))
     }) |>
       list_rbind(names_to = "outcome") |>
       mutate(window = window, .before = 1)
@@ -154,16 +133,11 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
 
   # Chance line per screen: whole phenotype rows shuffled across subjects, so traits keep their
   # correlations and only the link to the proteome breaks.
-  shuffled_tables <- function(i) {
-    set.seed(i)
-    donor <- sample(phenotype$subject)
-    map(pairing_tables, \(tt) mutate(tt[match(donor, tt$subject), ], subject = phenotype$subject))
-  }
   null_screens <- parallel::mclapply(1:200, \(i) {
-    tables <- shuffled_tables(i)
+    shuffled <- shuffle_pairings(pairing_tables, i)
     imap(windows, \(x, window) {
       map(set_names(pairing_outcomes[[window]]), \(name) {
-        d <- linear(x, outcome_in(tables, window, name, colnames(x)))
+        d <- linear(x, pairing_value(shuffled, window, name, colnames(x)))
         if (length(by_collection)) d <- mutate(d, collection = collection_of[feature])
         summarise(d, nominal = sum(p < 0.05), min_p = min(p), .by = any_of("collection"))
       }) |>
@@ -269,7 +243,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   # windows and the T1 and T2 levels; each arm needs five subjects with the trait measured.
   flips <- imap(windows[c("training", "acute", "baseline_level", "post_level")], \(x, window) {
     map(setdiff(pairing_outcomes[[window]], "comp_hypertrophy"), \(name) {
-      outcome <- outcome_in(pairing_tables, window, name, colnames(x))
+      outcome <- pairing_value(pairing_tables, window, name, colnames(x))
       ok <- !is.na(outcome)
       arm <- factor(arm_of[colnames(x)][ok], c("HR", "LR"))
       if (min(table(arm)) < 5) {
@@ -520,7 +494,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       cross_join(tibble(subject = colnames(windows[[w]]))) |>
       mutate(
         value = windows[[w]][cbind(feature, subject)],
-        outcome_value = map2_dbl(outcome, subject, \(o, s) outcome_in(pairing_tables, w, o, s)),
+        outcome_value = map2_dbl(outcome, subject, \(o, s) pairing_value(pairing_tables, w, o, s)),
         arm = arm_of[subject], caption = coalesce(caption, ""),
         panel = factor(panel, slots(hits$panel))
       ) |>

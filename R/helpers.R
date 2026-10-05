@@ -199,6 +199,48 @@ classify_row <- function(spec, id) {
   )
 }
 
+# The phenotype as the association steps use it, one row per subject per table. Size and strength
+# traits only (the MyoVision fibre counts stay out). pairings maps each window to the table it is
+# tested against: % change, composite and volume for the change windows and for the T1 level
+# ("baseline"), the trait levels at the same biopsy for baseline_level and post_level.
+phenotype_tables <- function(phenotype) {
+  traits <- c("fcsa_mixed", "fcsa_type1", "fcsa_type2", "mcsa", "leg_press_1rm", "leg_ext_1rm")
+  biopsy <- phenotype |>
+    select(subject, arm, matches("_(pre|post)_")) |>
+    tidyr::pivot_longer(-c(subject, arm),
+      names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*"
+    ) |>
+    tidyr::pivot_wider(names_from = trait) |>
+    mutate(timepoint = if_else(when == "pre", "T1", "T2")) |>
+    select(subject, arm, timepoint, all_of(traits))
+  change <- biopsy |>
+    tidyr::pivot_longer(all_of(traits), names_to = "trait") |>
+    tidyr::pivot_wider(names_from = timepoint) |>
+    transmute(subject, trait, pct = 100 * (T2 - T1) / T1) |>
+    tidyr::pivot_wider(names_from = trait, values_from = pct, names_prefix = "pct_") |>
+    left_join(select(phenotype, subject, comp_hypertrophy, volume_load_total_kg), by = "subject")
+  level <- \(tp) filter(biopsy, timepoint == tp) |> select(subject, all_of(traits))
+  list(
+    traits = traits, biopsy = biopsy,
+    outcomes = c("comp_hypertrophy", "volume_load_total_kg", paste0("pct_", traits)),
+    pairings = list(
+      training = change, baseline = change, acute = change,
+      baseline_level = level("T1"), post_level = level("T2")
+    )
+  )
+}
+# Whole phenotype rows handed to other subjects, so traits keep their correlations and only the
+# link to the proteome breaks.
+shuffle_pairings <- function(pairings, seed) {
+  set.seed(seed)
+  subjects <- pairings$training$subject
+  donor <- sample(subjects)
+  map(pairings, \(tt) mutate(tt[match(donor, tt$subject), ], subject = subjects))
+}
+pairing_value <- \(pairings, window, name, subjects) {
+  set_names(pairings[[window]][[name]], pairings[[window]]$subject)[subjects]
+}
+
 # Spearman rho and p per row from cor.test. exact = TRUE gives the exact permutation p, which
 # cor.test computes for nine subjects or fewer (the within-arm tests); with ties it falls back to
 # the normal approximation.
