@@ -19,6 +19,8 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
                            all_arm_rows = FALSE, save_change_score = FALSE) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
+  step <- tolower(basename(stage))
+  workbook <- paste0(step, ".xlsx")
   for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
   by_collection <- if (is.null(collection_of)) character(0) else "collection"
   labelled_heat <- \(...) heat(..., labels = feature_label)
@@ -209,7 +211,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
       "Moderated t of the within and between terms, abundance ~ timepoint + between + within,",
       sprintf("subject blocked. Colours stop at the 99th percentile of |t|, %.2g.", t_limit),
-      row_order, "Grey: not tested. Table: c_data/04_associate.xlsx, model."
+      row_order, paste0("Grey: not tested. Table: c_data/", workbook, ", model.")
     ))
     window_pages <- map(names(windows), \(w) {
       d <- filter(change_score, window == w)
@@ -226,7 +228,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         sprintf(
           "Spearman rho between the %s (%s) and each outcome.", value_label, window_axis[[w]]
         ),
-        row_order, "Grey: not tested. Table: c_data/04_associate.xlsx, change_score."
+        row_order, paste0("Grey: not tested. Table: c_data/", workbook, ", change_score.")
       ))
     })
     c(list(model_page), window_pages)
@@ -285,7 +287,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
           "term reads their slopes, the between term the spread of subjects. Header: effect per",
           "trait unit, p, BH q within", model_scope,
           "and the biopsies and subjects where the feature was observed.",
-          "Table: c_data/04_associate.xlsx, model."
+          paste0("Table: c_data/", workbook, ", model.")
         ))
       ) +
       page_theme
@@ -312,21 +314,21 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       "BH q within window, outcome%s, and the subjects used.",
       "Corner: each arm's rho and exact p. Arm is the median split of",
       "comp_hypertrophy, so pooled correlations with it and with fibre area change partly",
-      "carry the group split. Table: c_data/04_associate.xlsx, change_score and",
+      paste0("carry the group split. Table: c_data/", workbook, ", change_score and"),
       "change_score_by_arm."
     ),
     "arm difference" = paste(
       "One point per subject. Lines are a least-squares fit per arm. Header: HR's slope minus",
       "LR's per outcome unit from limma, feature ~ arm * outcome, with p, BH q within window,",
       "outcome%s, and the subjects used. Corner: each arm's Spearman rho and exact p.",
-      "Table: c_data/04_associate.xlsx, arm_difference."
+      paste0("Table: c_data/", workbook, ", arm_difference.")
     ),
     "two predictor" = paste(
       "One point per subject. Header: the growth or strength coefficient from limma, feature ~",
       "comp_hypertrophy + strength gain, each adjusted for the other, with p, BH q within",
       "window, strength test, term%s, and the subjects used. The x axis shows the term's own",
       "outcome; the drawing does not hold the other predictor fixed. Corner: each arm's",
-      "Spearman rho and exact p. Table: c_data/04_associate.xlsx, two_predictor."
+      paste0("Spearman rho and exact p. Table: c_data/", workbook, ", two_predictor.")
     )
   )
   page_captions[] <- sprintf(page_captions, bh_scope)
@@ -428,7 +430,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   }
 
   # Points as one Dingbats glyph each rather than four curves: the PDF shrinks by about 60%.
-  pdf(file.path(figures, "04_associate_figures.pdf"), width = 11, height = 8.5, useDingbats = TRUE)
+  pdf(file.path(figures, paste0(step, "_figures.pdf")), width = 11, height = 8.5, useDingbats = TRUE)
   walk(overviews, \(page) page$draw())
   walk(c(model_pages, change_pages, slope_pages), print)
   invisible(dev.off())
@@ -467,7 +469,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       ),
       "PDF page of each overview, and page and panel position of every p < 0.05 row."
     ),
-    file.path(out, "04_associate.xlsx"),
+    file.path(out, workbook),
     inputs, paths
   )
 }

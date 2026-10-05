@@ -4,13 +4,13 @@ Study data. No code.
 
 | File | One row is | Read by |
 |---|---|---|
-| `HRvLR_raw.xlsx` | one protein, 48 MS runs as columns | `01_Preprocess/01_Filtering` |
-| `metadata.csv` | one MS sample, 48 rows | `01_Preprocess/01_Filtering` |
+| `HRvLR_raw.xlsx` | one protein, 48 MS runs as columns | `01_Preprocess/01_Filter` |
+| `metadata.csv` | one MS sample, 48 rows | `01_Preprocess/01_Filter` |
 | `phenotype.csv` | one subject, 16 rows | every `04_Associate` step |
-| `blood_contaminants.csv` | one curated blood protein, 95 rows | `01_Preprocess/01_Filtering` |
-| `HPA_annotations_full.tsv` | one Human Protein Atlas gene, 20,162 rows | `01_Preprocess/01_Filtering` |
-| `RBC_proteome_reference.tsv` | one red-cell protein, 7,012 rows | `01_Preprocess/01_Filtering` |
-| `downloads/` | STRING v12 human links at score ≥ 700, aliases and protein info | `04_Network/05_Characterise` |
+| `blood_contaminants.csv` | one curated blood protein, 95 rows | `01_Preprocess/01_Filter` |
+| `HPA_annotations_full.tsv` | one Human Protein Atlas gene, 20,162 rows | `01_Preprocess/01_Filter` |
+| `RBC_proteome_reference.tsv` | one red-cell protein, 7,012 rows | `01_Preprocess/01_Filter` |
+| `downloads/` | STRING v12 human links at score ≥ 700, aliases and protein info | `04_Modules/05_Characterise` |
 
 ## STRING files are downloaded, not committed
 
@@ -56,7 +56,7 @@ FBXO7, LXN, ARF1, ANP32E, SEPTIN6, RAN, DNAJB4 and FLOT1.
 
 `RBC_proteome_reference.tsv` is the union of five red-cell proteomes. `sources` names the ones that
 list each protein and `n_sources` counts them. A red-cell proteome shares about two thirds of a
-muscle proteome, so `01_Filtering` reports membership as `in_rbc` and removes nothing on it.
+muscle proteome, so `01_Filter` reports membership as `in_rbc` and removes nothing on it.
 
 | Source | Contributes |
 |---|---|

@@ -15,10 +15,10 @@ separate the groups, and which track the phenotype measured on each biopsy.
 |---|---|---|
 | [`00_Input/`](00_Input/README.md) | study data, no code | |
 | [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, limpa quantification | `proteins.rds`, `DAList_limpa.rds`, `DAList_corrected.rds` |
-| [`02_Differential_Expression/`](02_Differential_Expression/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
-| [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
-| [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
-| [`05_Summary/`](05_Summary/README.md) | permutation chance line, candidate tables across the three levels, exploratory panels | `01_permutation.xlsx`, `02_candidates.xlsx`, `03_panel.xlsx` |
+| [`02_Proteins/`](02_Proteins/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
+| [`03_Pathways/`](03_Pathways/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
+| [`04_Modules/`](04_Modules/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
+| [`05_Integration/`](05_Integration/README.md) | permutation chance line, candidate tables across the three levels, exploratory panels | `01_permutation.xlsx`, `02_candidates.xlsx`, `03_panel.xlsx` |
 
 Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts and a
 baseline-adjusted ANCOVA, `03_Classify` scores eight classification tasks by AUC, and
@@ -30,7 +30,7 @@ panel, and every table reports the tested, p < 0.05 and BH < 0.05 counts.
 
 Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
 `c_data/` (one workbook, plus the `.rds` a later step reads) and a README. `01_Design` and
-`02_Candidates` draw nothing, and `02_Normalization` adds proteoDA's three QC reports. Every
+`02_Candidates` draw nothing, and `02_Normalize` adds proteoDA's three QC reports. Every
 workbook opens on a `read_me` sheet and ends with `input_manifest` and `package_versions`. Data
 passes through disk, so any sub-stage re-runs on its own once its inputs exist.
 
@@ -45,37 +45,37 @@ script reads its own matrix and labels and calls them.
 ```sh
 Rscript -e 'renv::restore()'
 
-for s in 01_Filtering/a_script/01_filter 02_Normalization/a_script/02_normalize \
-         03_Quantification/a_script/03_quantify; do
+for s in 01_Filter/a_script/01_filter 02_Normalize/a_script/02_normalize \
+         03_Quantify/a_script/03_quantify; do
   Rscript 01_Preprocess/$s.R
 done
 
 for s in 01_Design/a_script/01_design 02_Contrasts/a_script/02_contrasts \
          03_Classify/a_script/03_classify 04_Associate/a_script/04_associate; do
-  Rscript 02_Differential_Expression/$s.R
+  Rscript 02_Proteins/$s.R
 done
 
-for s in 00_Gene_Sets/a_script/00_gene_sets 01_Scores/a_script/01_scores \
+for s in 01_Gene_Sets/a_script/00_gene_sets 01_Scores/a_script/01_scores \
          02_Contrasts/a_script/02_contrasts 03_Classify/a_script/03_classify \
-         04_Associate/a_script/04_associate 05_Volcano/a_script/05_volcano \
-         06_NES_Scatter/a_script/06_nes_scatter; do
-  Rscript 03_Pathway_Enrichment/$s.R
+         04_Associate/a_script/04_associate S01_Volcano/a_script/05_volcano \
+         S02_NES_Scatter/a_script/06_nes_scatter; do
+  Rscript 03_Pathways/$s.R
 done
 
-for s in 01_Build_Modules/a_script/01_build_modules 02_Contrasts/a_script/02_contrasts \
+for s in 01_Build/a_script/01_build_modules 02_Contrasts/a_script/02_contrasts \
          03_Classify/a_script/03_classify 04_Associate/a_script/04_associate \
          05_Characterise/a_script/05_characterise 06_Preserve/a_script/06_preserve; do
-  Rscript 04_Network/$s.R
+  Rscript 04_Modules/$s.R
 done
 
-for s in 01_Permutation/a_script/01_permutation 02_Candidates/a_script/02_candidates \
+for s in 01_Chance_Line/a_script/01_permutation 02_Candidates/a_script/02_candidates \
          03_Panel/a_script/03_panel; do
-  Rscript 05_Summary/$s.R
+  Rscript 05_Integration/$s.R
 done
 ```
 
 The run takes about 75 minutes on eight cores, most of it the panel, the preservation calibration
-and the candidate permutation. `04_Network/05_Characterise` needs the STRING files; `00_Input/README.md` has the
+and the candidate permutation. `04_Modules/05_Characterise` needs the STRING files; `00_Input/README.md` has the
 download command.
 
 ## limpa models the missing values; blood is a covariate; BH never pools across screens

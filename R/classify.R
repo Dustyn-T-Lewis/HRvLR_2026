@@ -10,6 +10,8 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
                           collection_of = NULL, panel_name = \(label, collection) label) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
+  step <- tolower(basename(stage))
+  workbook <- paste0(step, ".xlsx")
   for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
   by_collection <- if (is.null(collection_of)) character(0) else "collection"
   labelled_heat <- \(...) heat(..., labels = feature_label)
@@ -104,7 +106,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
       sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
       row_order,
       sprintf("Median change colours stop at the 99th percentile of |change|, %.2g.", change_limit),
-      "Grey: not tested. Table: c_data/03_classify.xlsx, auc."
+      paste0("Grey: not tested. Table: c_data/", workbook, ", auc.")
     ))
   })
 
@@ -162,7 +164,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
           "Wilcoxon signed-rank test on up to %d pairs; smallest attainable p %.2g. Header: median",
           "paired change, p, BH q within", bh_scope,
           "and the feature's complete pairs.",
-          "Table: c_data/03_classify.xlsx, auc."
+          paste0("Table: c_data/", workbook, ", auc.")
         ), info$n_positive, info$min_p))
     } else {
       curves <- map(hits$feature, \(id) {
@@ -183,7 +185,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
           "p, none at AUC 0 or 1, where DeLong's variance is zero; at this n it runs narrow.",
           "BH q within", bh_scope,
           "and the feature's n.",
-          "Table: c_data/03_classify.xlsx, auc."
+          paste0("Table: c_data/", workbook, ", auc.")
         ), info$n_positive, info$n_negative, info$min_p))
     }
     plot +
@@ -206,7 +208,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
   )
 
 
-  pdf(file.path(figures, "03_classify_figures.pdf"), width = 11, height = 8.5)
+  pdf(file.path(figures, paste0(step, "_figures.pdf")), width = 11, height = 8.5)
   walk(overviews, \(page) page$draw())
   walk(pages, print)
   invisible(dev.off())
@@ -227,7 +229,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
       ),
       "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row."
     ),
-    file.path(out, "03_classify.xlsx"),
+    file.path(out, workbook),
     inputs, paths
   )
 }
