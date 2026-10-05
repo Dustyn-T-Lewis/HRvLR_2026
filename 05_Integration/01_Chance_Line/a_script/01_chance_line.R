@@ -137,7 +137,8 @@ evidence_for <- function(responses) {
       outcome_of <- \(name) set_names(responses[[name]], responses$subject)[colnames(x)]
       arm <- arm_of[colnames(x)]
       pooled <- map(outcomes, \(name) {
-        spearman_by_row(x, outcome_of(name)) |> mutate(test = paste("pooled", name))
+        subject_fit(x, data.frame(trait = outcome_of(name)), ~trait, "trait") |>
+          mutate(test = paste("pooled", name))
       })
       within <- map(c("HR", "LR"), \(a) {
         map(outcomes, \(name) {

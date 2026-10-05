@@ -41,7 +41,7 @@ sheet <- \(input, name) suppressMessages(read_excel(paths[[input]], name))
 associations <- function(input) {
   bind_rows(
     sheet(input, "change_score") |>
-      transmute(feature, window, test = paste("pooled rho", outcome), effect = rho, p, fdr, qvalue),
+      transmute(feature, window, test = paste("pooled", outcome), effect = rho, p, fdr, qvalue),
     sheet(input, "change_score_by_arm") |>
       transmute(feature, window, test = paste(arm, "rho", outcome), effect = rho, p),
     sheet(input, "arm_difference") |>
