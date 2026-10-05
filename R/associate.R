@@ -16,7 +16,8 @@
 # 200 shuffles of whole phenotype rows (sheet chance), with the empirical FDR = shuffle median /
 # observed count. Within-arm Spearman p is exact.
 #
-# Interaction: feature change ~ growth x strength gain, with the leave-one-out maximum p.
+# Interaction: feature change ~ growth x strength gain, with the leave-one-out maximum p and the
+# person whose removal gives it.
 # Flips: DGCA's Fisher z difference between HR and LR correlations, p from 200 arm-label
 # permutations.
 #
@@ -225,10 +226,11 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
           x[, keep, drop = FALSE], predictors[keep, ], ~ growth * strength,
           "growth:strength"
         ) |>
-          select(feature, p)
+          transmute(feature, p, left_out = s)
       }) |>
         list_rbind() |>
-        summarise(loo_max_p = max(p), .by = feature)
+        # The person whose removal weakens the result most is the one it leans on.
+        summarise(loo_max_p = max(p), loo_worst_subject = left_out[which.max(p)], .by = feature)
       left_join(fit, loo, by = "feature")
     }) |>
       list_rbind(names_to = "strength_test") |>
@@ -630,8 +632,8 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         feature_unit
       ),
       sprintf(paste(
-        "Interaction, feature ~ growth x strength gain: effect, t, p, BH, Storey q and the",
-        "leave-one-out maximum p, per %s, window and strength test."
+        "Interaction, feature ~ growth x strength gain: effect, t, p, BH, Storey q, the",
+        "leave-one-out maximum p and the person left out to give it, per %s, window and test."
       ), feature_unit),
       sprintf(paste(
         "Flips, DGCA: HR and LR Spearman rho, Fisher z difference (blank where one arm's rho is",
