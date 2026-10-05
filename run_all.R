@@ -14,7 +14,7 @@ stages <- c(
   "05_Integration/01_Chance_Line", "05_Integration/02_Candidates", "05_Integration/03_Panel",
   "05_Integration/04_Continuous", "05_Integration/05_Clustering",
   "06_Figures/F01_Overview", "06_Figures/S01_Volcano", "06_Figures/S02_NES_Scatter",
-  "06_Figures/S03_Signatures"
+  "06_Figures/S03_Signatures", "06_Figures/S04_QC"
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]

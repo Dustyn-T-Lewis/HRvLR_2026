@@ -10,6 +10,7 @@ its plotted numbers against the source tables before it writes.
 | [`S01_Volcano`](S01_Volcano/README.md) | protein volcano inside a ring of enriched sets, per contrast |
 | [`S02_NES_Scatter`](S02_NES_Scatter/README.md) | NES of one contrast against another |
 | [`S03_Signatures`](S03_Signatures/README.md) | signature ranks with the Π sets; training sets followed through the bout |
+| [`S04_QC`](S04_QC/README.md) | filtering, detection, intensity, dynamic range, missingness, sample correlation, blood, p-value calibration and power |
 
 Main figures are `F0n`, supplementary `S0n`. Two shared files serve every figure:
 `R/figure_theme.R` holds the contrast palette (sampled from the F01 design panel), the time and
