@@ -7,112 +7,72 @@ hypertrophy score, eight each. 48 MS runs; three are dropped as outliers, leavin
 
 The primary comparison is the training interaction: whether the proteome changed differently over
 training in HR than in LR. The study also asks which proteins, pathways and co-expression modules
-separate the groups, and which track the phenotype measured on each biopsy.
+separate the groups, and which track the size and strength phenotypes as continuous traits.
 
-## Every level runs contrasts, classify and associate
+## Stages
 
-| Stage | Runs | Writes |
+| Stage | Substages | Writes for later stages |
 |---|---|---|
 | [`00_Input/`](00_Input/README.md) | study data, no code | |
-| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, limpa quantification | `proteins.rds`, `DAList_limpa.rds`, `DAList_corrected.rds` |
-| [`02_Proteins/`](02_Proteins/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
-| [`03_Pathways/`](03_Pathways/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
-| [`04_Modules/`](04_Modules/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
-| [`05_Integration/`](05_Integration/README.md) | permutation chance line, candidate tables across the three levels, exploratory panels | `01_permutation.xlsx`, `02_candidates.xlsx`, `03_panel.xlsx` |
+| [`01_Preprocess/`](01_Preprocess/README.md) | `01_Filter`, `02_Normalize`, `03_Quantify` (limpa) | `proteins.rds`, `DAList_limpa.rds`, `DAList_corrected.rds` |
+| [`02_Proteins/`](02_Proteins/README.md) | `01_Design`, `02_Contrasts`, `03_Classify`, `04_Associate` | `design.rds`, `fit.rds`, `associate.rds` |
+| [`03_Pathways/`](03_Pathways/README.md) | `01_Gene_Sets`, `02_Scores`, `03_Contrasts`, `04_Classify`, `05_Associate` | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
+| [`04_Modules/`](04_Modules/README.md) | `01_Build`, `02_Contrasts`, `03_Classify`, `04_Associate`, `05_Characterise`, `06_Preserve` | `modules.rds` |
+| [`05_Integration/`](05_Integration/README.md) | `01_Chance_Line`, `02_Candidates`, `03_Panel`, `04_Continuous`, `05_Clustering` | `shuffled_t.rds` |
+| [`06_Figures/`](06_Figures/README.md) | figures built from saved outputs only | |
 
-Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts and a
-baseline-adjusted ANCOVA, `03_Classify` scores eight classification tasks by AUC, and
-`04_Associate` ties each feature to phenotype by a sample-level limma model, by change-score
-correlation pooled and within each arm, by a test of whether that slope differs between arms, and
-by a model with growth and strength side by side. Each level adds its own steps around them.
-Each step's PDF opens with overview heatmaps of every feature, then gives every nominal result a
-panel, and every table reports the tested, p < 0.05 and BH < 0.05 counts.
+Proteins, pathways and modules run the same three steps: `Contrasts` (the nine contrasts and a
+baseline-adjusted ANCOVA), `Classify` (eight single-feature classification tasks) and `Associate`
+(phenotype, in groups and as continuous traits). `05_Integration` works across the three levels.
 
-Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
-`c_data/` (one workbook, plus the `.rds` a later step reads) and a README. `01_Design` and
-`02_Candidates` draw nothing, and `02_Normalize` adds proteoDA's three QC reports. Every
-workbook opens on a `read_me` sheet and ends with `input_manifest` and `package_versions`. Data
-passes through disk, so any sub-stage re-runs on its own once its inputs exist.
+Every substage holds `a_script/` (one script), `b_reports/` (`<step>_figures.pdf`, 11 x 8.5 in),
+`c_data/` (one workbook, plus any `.rds` a later step reads) and a README naming what it reads and
+writes. Every workbook opens on `read_me` and ends with `input_manifest` (inputs with md5) and
+`package_versions`. Data passes through disk, so a substage reruns alone once its inputs exist.
 
-Every script sources `R/helpers.R`, which holds the statistics written for this study (blood
-adjustment, ANCOVA, the Wilcoxon and AUC row, the Spearman p-values, the per-subject limma fit,
-leave one subject out, Storey's q) and the heatmap, page and workbook plumbing the steps share.
-`R/classify.R` and `R/associate.R` hold the `03_Classify` and `04_Associate` steps; each level's
-script reads its own matrix and labels and calls them.
+Shared code lives in `R/`: `helpers.R` (blood correction, limpa and limma fits, ANCOVA, Spearman via
+`cor.test`, Storey's q, phenotype tables and their shuffle, heatmap and workbook plumbing),
+`classify.R` and `associate.R` (the `Classify` and `Associate` steps, called by each level),
+`figure_theme.R` (colours and theme for every figure) and `figure_panels.R` (panel builders the
+figures share).
 
-## One command per step, in order
+## Run
 
 ```sh
 Rscript -e 'renv::restore()'
-
-for s in 01_Filter/a_script/01_filter 02_Normalize/a_script/02_normalize \
-         03_Quantify/a_script/03_quantify; do
-  Rscript 01_Preprocess/$s.R
-done
-
-for s in 01_Design/a_script/01_design 02_Contrasts/a_script/02_contrasts \
-         03_Classify/a_script/03_classify 04_Associate/a_script/04_associate; do
-  Rscript 02_Proteins/$s.R
-done
-
-for s in 01_Gene_Sets/a_script/00_gene_sets 01_Scores/a_script/01_scores \
-         02_Contrasts/a_script/02_contrasts 03_Classify/a_script/03_classify \
-         04_Associate/a_script/04_associate S01_Volcano/a_script/05_volcano \
-         S02_NES_Scatter/a_script/06_nes_scatter; do
-  Rscript 03_Pathways/$s.R
-done
-
-for s in 01_Build/a_script/01_build_modules 02_Contrasts/a_script/02_contrasts \
-         03_Classify/a_script/03_classify 04_Associate/a_script/04_associate \
-         05_Characterise/a_script/05_characterise 06_Preserve/a_script/06_preserve; do
-  Rscript 04_Modules/$s.R
-done
-
-for s in 01_Chance_Line/a_script/01_permutation 02_Candidates/a_script/02_candidates \
-         03_Panel/a_script/03_panel; do
-  Rscript 05_Integration/$s.R
-done
+Rscript run_all.R            # every substage in order; logs in .runlogs/
+Rscript run_all.R 05         # one stage
 ```
 
-The run takes about 75 minutes on eight cores, most of it the panel, the preservation calibration
-and the candidate permutation. `04_Modules/05_Characterise` needs the STRING files; `00_Input/README.md` has the
-download command.
+`00_Input/README.md` has the download command for the STRING files `04_Modules/05_Characterise`
+and `05_Integration` read.
 
-## limpa models the missing values; blood is a covariate; BH never pools across screens
+## Statistical conventions
 
-Filtering and normalisation use proteoDA (`DAList`, `zero_to_missing`, `filter_proteins_by_group`,
-`filter_samples`, `normalize_data("cycloess")`). A missing value here says the protein was probably
-faint, so limpa (Li, Cobbold & Smyth 2025) fits a detection probability curve and gives every
-protein a value in every sample with a standard error (`dpcQuantByRow`, the vignette's route for
-protein-level input). The protein fit is limpa's `dpcDE`: precision weights from those errors,
-six cell means plus the blood index, subject blocked, robust moderation. Without precursor data
-the gain over other methods is smaller than in a precursor pipeline such as BFR_limpa.
+- Missing values: limpa (Li, Cobbold & Smyth 2025) fits a detection probability curve and gives
+  every protein a value in every sample (`dpcQuantByRow`). The protein contrasts use `dpcDE` with
+  the standard errors as precision weights. Every other test reads that complete matrix; each
+  protein row carries `observed_share`, the share of its values measured rather than estimated.
+- Blood: an index (mean log2 HBB and HBA1 against the sample median) enters every limma model as a
+  covariate. Tests that take no covariate read a copy with each protein's blood slope removed
+  (`limma::removeBatchEffect`).
+- Subjects: HR and LR are different people, so subject is a random block in sample-level models;
+  change scores carry one value per subject.
+- Multiple testing: BH within each screen (contrast, task, window and outcome, trait and term), with
+  Storey's q beside it. Nothing is gated on either; tables report every nominal result.
+- Chance: shuffling whole phenotype rows across subjects keeps the traits' correlations and breaks
+  only their link to the proteome. Each continuous screen reports its count and strongest hit
+  against 200 shuffles and an empirical FDR (shuffle median over observed count); candidate counts,
+  panels, pathway rankings and clusterings carry their own shuffle nulls.
+- Identifiers: proteins by `uniprot_id`, gene sets by `set_id`, modules by colour; every result
+  table carries them as `feature`, with a readable `label`.
 
-Blood enters every limma model as a covariate (index: mean log2 HBB and HBA1 against the sample
-median). The rank tests, correlations, ANCOVA, singscore and WGCNA cannot carry a covariate, so they
-read a copy with each protein's blood slope removed (`limma::removeBatchEffect`); the tests among
-them use observed values only.
+## Dependencies
 
-BH runs within each contrast, task, trait and term, or window and outcome. Storey's q sits beside
-every BH column as a second exploratory correction over the same screen (`storey_q()` in
-`R/helpers.R`: bootstrap pi0, equal to BH in screens under 100 tests). Both rank and flag nominal
-results; neither gates them. Set tests pool the five
-collections within a contrast; set classification and association split by collection.
-
-## renv.lock pins every package
-
-Stages 01 and 02: `proteoDA`, `limma`, `limpa`, `lme4`, `here`, `dplyr`, `tidyr`, `tibble`,
-`purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`, `patchwork`, `pROC`, `qvalue`,
-`ComplexHeatmap`, `circlize`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`,
-`msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds
-`WGCNA`, `clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`. Stage 05
-adds `nestedcv`, which brings `glmnet` and `caret`.
-
-`enrichVolcano` is pinned to GitHub commit `d3fed631f4` (version 0.3.0.9000), the build that
-reproduces the project's set labels and still exports the three functions the code calls:
-`volcano_ring()`, `volcano_ring_theme()` and `ev_clean_label()`. Earlier commits word some labels
-differently, the next commit changes `volcano_ring()`'s arguments, and 2.2.0 drops all three, so
-updating it means rewriting stage 03's labels, volcano and NES pages.
+`renv.lock` pins every package. Three come from outside CRAN and Bioconductor's current releases:
+`enrichVolcano` (GitHub commit `d3fed631f4`, the build that reproduces the project's set labels and
+still exports `volcano_ring()`, `volcano_ring_theme()` and `ev_clean_label()`), `DGCA` (GitHub,
+`andymckenzie/DGCA`, archived from CRAN) and `biclust` 2.0.3 (CRAN archive).
 
 ## Version 1 is the tag legacy-v1
 
