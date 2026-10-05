@@ -164,7 +164,6 @@ panel_correlation <- ggplot(cells, aes(a, b, fill = r)) +
     palette = "RdBu", limits = c(-0.6, 0.6), breaks = c(-0.5, 0, 0.5), name = "r",
     oob = scales::squish, na.value = "white"
   ) +
-  coord_fixed() +
   labs(
     x = NULL, y = NULL, title = "Sample correlation",
     subtitle = sprintf(
@@ -232,13 +231,16 @@ panel_p <- ggplot(p_values, aes(p, fill = family)) +
   ) +
   facet_wrap(~contrast, ncol = 3, labeller = as_labeller(contrast_names)) +
   scale_fill_manual(values = contrast_tone("fill"), guide = "none") +
-  scale_x_continuous(breaks = c(0, 0.5, 1)) +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c("0", "0.5", "1")) +
   labs(
     x = "p", y = "proteins", title = "p-value calibration",
     subtitle = "dashed: flat null; median |t| is 0.67 under the null"
   ) +
   figure_theme +
-  theme(strip.text = element_text(size = 5), panel.grid.minor = element_blank())
+  theme(
+    strip.text = element_text(size = 5), panel.grid.minor = element_blank(),
+    panel.spacing.x = unit(2.5, "mm")
+  )
 
 # j: observed effects in the primary contrast against the effect it can detect at 80% power.
 detectable <- read_sheet("contrasts", "detectable_effect")
@@ -262,7 +264,7 @@ panel_power <- ggplot(observed, aes(effect)) +
     )
   ) +
   figure_theme +
-  theme(legend.position = "bottom", legend.direction = "vertical")
+  theme(legend.position = "bottom", legend.title.position = "top")
 
 # Every plotted number traces to its source table before anything is written.
 stopifnot(
@@ -276,7 +278,7 @@ stopifnot(
 figure <- wrap_plots(
   panel_filter, panel_detection, panel_intensity, panel_range, panel_missing,
   panel_correlation, panel_blood, panel_blood_fit, panel_p, panel_power,
-  nrow = 2, widths = c(1, 1.1, 1.1, 1, 1)
+  nrow = 2
 ) +
   plot_annotation(tag_levels = "a") &
   figure_tags &

@@ -131,7 +131,7 @@ stopifnot(
 
 figure <- wrap_plots(
   barcodes$Training$plot, barcodes$Acute$plot, panel_trajectory,
-  nrow = 1, widths = c(1, 1, 1.25)
+  nrow = 1
 ) +
   plot_annotation(tag_levels = "a") &
   figure_tags
