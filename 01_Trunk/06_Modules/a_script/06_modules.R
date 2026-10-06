@@ -32,7 +32,10 @@ for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings
 inputs <- c(corrected = "01_Trunk/03_Quantify/c_data/DAList_corrected.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
-  stop("Run 01_Trunk/03_Quantify first. Missing: ", paste(inputs[!file.exists(paths)], collapse = ", "))
+  stop(
+    "Run 01_Trunk/03_Quantify first. Missing: ",
+    paste(inputs[!file.exists(paths)], collapse = ", ")
+  )
 }
 corrected <- readRDS(paths[["corrected"]])
 
