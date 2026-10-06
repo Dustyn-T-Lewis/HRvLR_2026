@@ -10,7 +10,7 @@ The gap statistic selects K = 1; K = 2 is imposed, with the reason in `01_Cluste
 | [`02_Design`](02_Design/README.md) | `02_HRvLR_groups/01_Design` |
 | [`03_DEP`](03_DEP/README.md) | `02_HRvLR_groups/02_DEP` |
 | [`04_Pathways`](04_Pathways/README.md) | `02_HRvLR_groups/03_Pathways` |
-| [`05_Modules`](05_Modules/README.md) | `02_HRvLR_groups/04_Modules` |
+| [`05_Modules`](05_Modules/README.md) | `02_HRvLR_groups/04_Modules/01_Contrasts` |
 | [`06_Classify/01_Proteins`](06_Classify/01_Proteins/README.md) | `02_HRvLR_groups/05_Classify/01_Proteins` |
 | [`06_Classify/02_Sets`](06_Classify/02_Sets/README.md) | `02_HRvLR_groups/05_Classify/02_Sets` |
 | [`06_Classify/03_Modules`](06_Classify/03_Modules/README.md) | `02_HRvLR_groups/05_Classify/03_Modules` |

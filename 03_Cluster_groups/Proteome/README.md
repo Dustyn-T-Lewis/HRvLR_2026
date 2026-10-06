@@ -24,12 +24,12 @@ Validity says how far a comparison can be trusted when the groups were built fro
 | Substage | Asks | Copy of |
 |---|---|---|
 | [`01_Cluster`](01_Cluster/README.md) | how people split at each input | new: K diagnostics, assignments, relabelled inputs per input |
-| `02_Design` | which comparisons | `02_HRvLR_groups/01_Design` |
-| `03_DEP` | which proteins differ | `02_HRvLR_groups/02_DEP` |
-| `04_Pathways` | which gene sets differ | `02_HRvLR_groups/03_Pathways` |
-| `05_Modules` | which modules differ | `02_HRvLR_groups/04_Modules/01_Contrasts` |
-| `06_Classify/01_Proteins`, `02_Sets`, `03_Modules` | does one feature separate the clusters | `02_HRvLR_groups/05_Classify` |
-| `07_Associate` | does a phenotype link differ by cluster | `02_HRvLR_groups/06_Associate` |
+| [`02_Design`](02_Design/README.md) | which comparisons | `02_HRvLR_groups/01_Design` |
+| [`03_DEP`](03_DEP/README.md) | which proteins differ | `02_HRvLR_groups/02_DEP` |
+| [`04_Pathways`](04_Pathways/README.md) | which gene sets differ | `02_HRvLR_groups/03_Pathways` |
+| [`05_Modules`](05_Modules/README.md) | which modules differ | `02_HRvLR_groups/04_Modules/01_Contrasts` |
+| [`06_Classify/01_Proteins`](06_Classify/01_Proteins/README.md), [`02_Sets`](06_Classify/02_Sets/README.md), [`03_Modules`](06_Classify/03_Modules/README.md) | does one feature separate the clusters | `02_HRvLR_groups/05_Classify` |
+| [`07_Associate`](07_Associate/README.md) | does a phenotype link differ by cluster | `02_HRvLR_groups/06_Associate` |
 | [`08_Phenotype`](08_Phenotype/README.md) | do the clusters differ in size or strength | new: phenotype played no part in the clustering, so these are tests |
 
 The methods, figures and sheets of each copy are described in the template's README.
