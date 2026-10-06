@@ -1,5 +1,7 @@
 # 02 · HRvLR groups
 
+![HR/LR groups: who, how they are grouped, what we ask](../docs/concepts/hrvlr_groups.png)
+
 The study's own split: High and Low Responders, the median split of the composite hypertrophy
 score, eight subjects each. The composite tracks fibre-area change (Spearman 0.90) far more than
 strength gain (0.11), so a fibre-area difference between the groups is built in.

@@ -1,5 +1,7 @@
 # HRvLR Proteomics
 
+![The study question, the shared trunk and the three arcs](docs/concepts/overview.png)
+
 DIA mass-spectrometry proteomics of skeletal muscle from a resistance training study. Sixteen
 subjects were biopsied at baseline (T1), after the training programme (T2) and after an acute bout
 at the end of it (T3). 48 MS runs; three fail on depth (44 to 68% missing) and are dropped,

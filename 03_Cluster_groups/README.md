@@ -1,5 +1,7 @@
 # 03 · Cluster groups
 
+![Cluster groups: who, how they are grouped, what we ask](../docs/concepts/cluster_groups.png)
+
 Groups found by clustering people, three ways, each a self-contained sub-pipeline.
 
 | Sub-pipeline | Clustered on | Then |

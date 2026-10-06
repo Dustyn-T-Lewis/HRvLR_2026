@@ -1,5 +1,7 @@
 # 04 · Continuous, no group
 
+![Continuous, no groups: who, how they are grouped, what we ask](../docs/concepts/continuous.png)
+
 Every subject pooled and each trait kept as a number, so nothing is lost to a split.
 
 | Substage | Asks | Method |
