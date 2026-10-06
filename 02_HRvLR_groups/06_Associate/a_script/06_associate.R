@@ -94,6 +94,10 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
   }) |>
     list_rbind()
 
+  no_fits <- tibble(
+    feature = character(), coefficient = character(), n_subjects = double(),
+    effect = double(), t = double(), p = double(), outcome = character()
+  )
   group_difference <- imap(screens, \(by_outcome, window) {
     by_outcome[setdiff(names(by_outcome), defining_outcomes)] |>
       keep(\(s) enough(colnames(s$x), s$outcome)) |>
@@ -105,7 +109,8 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
         subject_fit(s$x, predictors, ~ group * outcome, term) |>
           mutate(outcome = name)
       }) |>
-      list_rbind() |>
+      # A split too uneven for five per group in any trait leaves nothing to fit.
+      list_rbind(ptype = no_fits) |>
       mutate(window = window)
   }) |>
     list_rbind() |>
