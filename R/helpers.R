@@ -261,8 +261,13 @@ heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
 
 # Twelve panels to a page; blank slots keep a short last page at the same panel size.
 slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
+# Report PDFs draw at most hit_cap hits per page group (rows arrive sorted by p); the workbooks
+# keep every row.
+hit_cap <- 24
+capped_count <- \(d, by) sum(pmin(count(d, across(all_of(by)))$n, hit_cap))
 paginate <- function(hits, by) {
   hits |>
+    filter(row_number() <= hit_cap, .by = all_of(by)) |>
     mutate(
       page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
       position = (row_number() - 1) %% 12 + 1, .by = all_of(by)

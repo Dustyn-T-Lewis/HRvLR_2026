@@ -216,7 +216,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
     )
   )
   stopifnot(
-    nrow(hits) == sum(auc$p < 0.05, na.rm = TRUE),
+    nrow(hits) == capped_count(filter(auc, p < 0.05), "task"),
     !anyDuplicated(select(filter(plot_index, !is.na(feature)), -label, -pdf_page, -position)),
     max(plot_index$pdf_page) == length(overviews) + length(pages)
   )

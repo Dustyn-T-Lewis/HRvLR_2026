@@ -389,10 +389,10 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     )
   )
   stopifnot(
-    nrow(model_hits) == sum(model$p < 0.05, na.rm = TRUE),
-    nrow(change_hits) == sum(change_score$p < 0.05),
+    nrow(model_hits) == capped_count(filter(model, p < 0.05), c("trait", "term")),
+    nrow(change_hits) == capped_count(filter(change_score, p < 0.05), "window"),
     !anyDuplicated(select(filter(plot_index, !is.na(feature)), -label, -pdf_page, -position)),
-    nrow(slope_hits) == sum(two_predictor$p < 0.05),
+    nrow(slope_hits) == capped_count(filter(two_predictor, p < 0.05), "window"),
     max(plot_index$pdf_page) ==
       length(overviews) + length(model_pages) + length(change_pages) + length(slope_pages)
   )
