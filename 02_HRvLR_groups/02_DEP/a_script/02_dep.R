@@ -1,6 +1,6 @@
 # The nine contrasts on limpa's quantification: limma with precision weights from limpa's standard
-# errors, subject blocked, blood as a covariate; BH within each contrast, null checks, treat() at
-# 1.15-fold, and fry on one arm's responders in the other arm.
+# errors, subject blocked, blood as a covariate; each logFC with its 95% confidence interval, BH
+# within each contrast, null checks, and fry on one arm's responders in the other arm.
 
 suppressPackageStartupMessages({
   library(here)
@@ -61,9 +61,9 @@ stopifnot(identical(rownames(eb$coefficients), annotation$uniprot_id))
 # limpa gives every protein a value in every sample, so every contrast tests every protein.
 # pi_score (Xiao et al. 2014, inverted) only selects sets for the fry check below.
 results <- map(set_names(contrast_names), \(contrast) {
-  topTable(eb, coef = contrast, number = Inf, sort.by = "none") |>
+  topTable(eb, coef = contrast, number = Inf, sort.by = "none", confint = TRUE) |>
     as_tibble() |>
-    select(logFC, AveExpr, t, P.Value, adj.P.Val) |>
+    select(logFC, ci_lower = CI.L, ci_upper = CI.R, AveExpr, t, P.Value, adj.P.Val) |>
     bind_cols(annotation, x = _)
 }) |>
   list_rbind(names_to = "contrast") |>
@@ -99,12 +99,6 @@ null_calibration <- results |>
     median_abs_t = round(median(abs(t)), 3),
     p_below_0.2 = round(mean(p < 0.2), 3), .by = contrast
   )
-
-ft <- treat(eb, lfc = log2(1.15), robust = TRUE)
-treat_counts <- tibble(
-  contrast = contrast_names,
-  n_fdr_05 = colSums(decideTests(ft, p.value = 0.05) != 0, na.rm = TRUE)[contrast_names]
-)
 
 # fry on one arm's responders, tested in another contrast: the other arm's same window, and each
 # arm's acute bout for the training sets. Only the other-arm pairs share no cell mean; a training
@@ -329,10 +323,7 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-# ANCOVA, like the rank tests, reads limpa's complete blood-corrected matrix.
 corrected <- readRDS(paths[["corrected"]])
-ancova_results <- ancova(corrected$data, as_tibble(meta)) |>
-  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
 sample_meta <- as_tibble(meta)
 
 # The path of each arm's p < 0.05 training sets through T1, T2 and T3, in each arm: every
@@ -358,34 +349,6 @@ set_trajectory <- results |>
       mutate(set_from = set_from, set = set, n_proteins = length(members), .before = 1)
   }) |>
   list_rbind()
-
-ancova_figure <- ancova_results |>
-  mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
-  ggplot(aes(effect, -log10(p), colour = call)) +
-  geom_point(size = 0.8, alpha = 0.7) +
-  geom_hline(yintercept = -log10(0.05), linetype = 2, colour = "grey50") +
-  facet_wrap(~window) +
-  scale_colour_manual(
-    values = c(`BH < 0.05` = "#B2182B", `p < 0.05` = "#2166AC", `not nominal` = "grey75"),
-    name = NULL
-  ) +
-  labs(
-    title = "ANCOVA: HR minus LR at the later time point, at equal starting value",
-    subtitle = sprintf(
-      "Training: %d of %d proteins at p < 0.05. Acute: %d of %d.",
-      sum(ancova_results$p[ancova_results$window == "training"] < 0.05),
-      sum(ancova_results$window == "training"),
-      sum(ancova_results$p[ancova_results$window == "acute"] < 0.05),
-      sum(ancova_results$window == "acute")
-    ),
-    x = "log2 abundance, HR minus LR", y = "-log10 p",
-    caption = paste(
-      "lm(later ~ earlier + arm) per protein; training is T2 on T1, acute T3 on T2. Dashed line:",
-      "p = 0.05. BH within window. Table: c_data/02_contrasts.xlsx, ancova."
-    )
-  ) +
-  theme_minimal(base_size = 9) +
-  theme(legend.position = "top", plot.caption = element_text(hjust = 0))
 
 # Whole-proteome structure: PCA of the complete corrected matrix (proteins scaled), and PERMANOVA on
 # its Euclidean distances. Time is tested within subject (permutations stay inside each person);
@@ -467,21 +430,20 @@ pca_figure <- ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm))
 
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
-walk(list(p_histogram, volcano, ancova_figure, pca_figure), print)
+walk(list(p_histogram, volcano, pca_figure), print)
 invisible(dev.off())
 
 write_workbook(
   list(
     DEP_matrix = results |>
       mutate(n_obs = n_obs[uniprot_id]) |>
-      select(uniprot_id, gene, n_obs, contrast, logFC, p, fdr, qvalue) |>
+      select(uniprot_id, gene, n_obs, contrast, logFC, ci_lower, ci_upper, p, fdr, qvalue) |>
       pivot_wider(
-        names_from = contrast, values_from = c(logFC, p, fdr, qvalue),
+        names_from = contrast, values_from = c(logFC, ci_lower, ci_upper, p, fdr, qvalue),
         names_glue = "{contrast}_{.value}"
       ),
     contrast_summary = contrast_summary,
     null_calibration = null_calibration,
-    treat = treat_counts,
     detectable_effect = tibble(
       contrast = "Training_Interaction", quantile = c(0.5, 0.9),
       log2_fc = round(quantile(detectable, c(0.5, 0.9), na.rm = TRUE, names = FALSE), 3)
@@ -489,16 +451,14 @@ write_workbook(
     fry_concordance = fry_concordance,
     set_trajectory = set_trajectory,
     unadjusted = unadjusted,
-    ancova = ancova_results,
     pca = pca_scores,
     pca_variance = pca_variance,
     permanova = global_tests
   ),
   c(
-    "logFC, p, BH and Storey q per protein and contrast, with samples observed.",
+    "logFC with its 95% CI, p, BH and Storey q per protein and contrast, with samples observed.",
     "Tested, p < 0.05 and BH counts per contrast, with its role.",
     "propTrueNull, median |t| and share of p below 0.2 per contrast.",
-    "Proteins at BH < 0.05 under treat() with a 1.15-fold floor, per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
     paste(
       "fry: one arm's responders tested in the other arm's contrast, and training sets on each",
@@ -506,7 +466,6 @@ write_workbook(
     ),
     "Training p < 0.05 sets: mean change from each subject's T1 (and SE) per arm and time point.",
     "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
-    "ANCOVA per protein and window: arm effect at equal starting value, t, p, BH FDR and Storey q.",
     "PC1 and PC2 per sample, from the complete blood-corrected matrix with proteins scaled.",
     "Share of variance on the first four components.",
     paste(

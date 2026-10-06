@@ -7,7 +7,7 @@ Every subject pooled and each trait kept as a number, so nothing is lost to a sp
 | Substage | Asks | Method |
 |---|---|---|
 | [`01_Associate`](01_Associate) | which proteins, set scores and modules track each trait | limma on one value per subject, Spearman and bicor beside it; the sample model; growth + strength and growth x strength |
-| [`02_Pathways`](02_Pathways/README.md) | which gene sets lead each trait's protein ranking | fgsea and cameraPR on the limma t |
+| [`02_Pathways`](02_Pathways/README.md) | which gene sets lead each trait's protein ranking | fgsea on the limma t |
 | [`04_Profile_Clusters`](04_Profile_Clusters/README.md) | which proteins share a pattern of trait links | hierarchical clustering of association profiles; ORA per group |
 
 Pairings: training change, T1 level and acute change against the % trait changes; T1 and T2

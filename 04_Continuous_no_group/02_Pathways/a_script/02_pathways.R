@@ -1,11 +1,10 @@
 # Pathways from each trait's protein ranking, every subject pooled. Proteins are ranked by the limma
-# t that 01_Associate/01_Proteins saved for each pairing and trait; fgsea and cameraPR run on that
-# ranking. fgsea's p and BH are its own; cameraPR is reported beside it, with camera_agrees marking
-# sets fgsea calls at FDR < 0.05 that cameraPR reaches at p < 0.05 in the same direction.
+# t that 01_Associate/01_Proteins saved for each pairing and trait, and fgsea tests every set on
+# that ranking with its own p and BH. fgsea treats proteins as independent, so a large set of
+# co-moving proteins can look stronger than the number of people behind it supports.
 
 suppressPackageStartupMessages({
   library(here)
-  library(limma)
   library(dplyr)
   library(tidyr)
   library(purrr)
@@ -39,14 +38,7 @@ rank_tests <- function(d) {
   fg <- fgsea::fgsea(gs$sets, stats, minSize = 15, maxSize = 500) |>
     as_tibble() |>
     transmute(set_id = pathway, size, nes = NES, p = pval, fdr = padj, leading_edge = leadingEdge)
-  index <- map(gs$sets, \(genes) which(names(stats) %in% genes))
-  camera <- cameraPR(stats, index[lengths(index) >= 15]) |>
-    as_tibble(rownames = "set_id") |>
-    transmute(set_id, camera_direction = Direction, p_camera = PValue)
-  left_join(fg, camera, by = "set_id") |>
-    mutate(camera_agrees = fdr < 0.05 & p_camera < 0.05 & sign(nes) == if_else(
-      camera_direction == "Up", 1, -1
-    ))
+  fg
 }
 pathways <- protein_t |>
   nest(.by = c(window, outcome)) |>
@@ -61,7 +53,6 @@ counts <- pathways |>
     n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05, na.rm = TRUE),
     n_up = sum(fdr < 0.05 & nes > 0, na.rm = TRUE),
     n_down = sum(fdr < 0.05 & nes < 0, na.rm = TRUE),
-    n_camera_agrees = sum(camera_agrees, na.rm = TRUE),
     .by = c(window, outcome)
   )
 
@@ -107,8 +98,8 @@ invisible(dev.off())
 write_workbook(
   list(counts = counts, pathways = select(pathways, -leading_edge)),
   c(
-    "Per window and trait: sets tested, at p < 0.05, at FDR < 0.05 (up, down), cameraPR agreeing.",
-    "Per window, trait and set: fgsea NES, p, BH; cameraPR direction and p; camera_agrees."
+    "Per window and trait: sets tested, at p < 0.05 and at FDR < 0.05 (up, down).",
+    "Per window, trait and set: fgsea NES, p and BH."
   ),
   file.path(out, "02_pathways.xlsx"), inputs, paths
 )

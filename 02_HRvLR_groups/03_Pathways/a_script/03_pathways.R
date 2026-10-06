@@ -98,21 +98,6 @@ message("within-subject correlation on limpa's matrix: ", round(correlation, 3))
 set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
 
-# cameraPR ranks the same moderated t as fgsea. With no sample data it uses limma's preset
-# inter-gene correlation (0.01), so it sits close to fgsea; it adds no hit of its own.
-camera_rows <- map(contrast_names, \(contrast) {
-  stats <- ranked[[contrast]]
-  index <- map(sets, \(genes) which(names(stats) %in% genes))
-  index <- index[between(lengths(index), 15, 500)]
-  cameraPR(stats, index, sort = FALSE) |>
-    rownames_to_column("set_id") |>
-    transmute(
-      set_id, contrast,
-      method = "cameraPR", n_proteins = NGenes,
-      direction = Direction, nes = NA_real_, p = PValue, fdr = FDR, leading_edge = list(NULL)
-    )
-})
-
 # Each package returns its own BH column over the list it was given, kept here as fdr. None is
 # recomputed.
 set_tests <- bind_rows(
@@ -135,22 +120,9 @@ set_tests <- bind_rows(
         direction = Direction, nes = NA_real_, p = PValue, fdr = FDR,
         leading_edge = list(NULL)
       )
-  }),
-  camera_rows
+  })
 ) |>
   mutate(qvalue = storey_q(p), .by = c(contrast, method))
-# A set fgsea calls at FDR < 0.05 is corroborated when cameraPR reaches p < 0.05 the same way.
-camera_check <- set_tests |>
-  filter(method == "cameraPR") |>
-  transmute(contrast, set_id, camera_p = p, camera_direction = direction)
-set_tests <- set_tests |>
-  left_join(camera_check, by = c("contrast", "set_id")) |>
-  mutate(
-    camera_agrees = method == "fgsea" & fdr < 0.05 & camera_p < 0.05 &
-      direction == camera_direction,
-    camera_p = NULL, camera_direction = NULL
-  )
-
 # Five collections overlap, so glycolysis is tested in Hallmark, KEGG, Reactome and GO.
 # collapsePathways re-runs each significant set conditioned on a more significant one's leading
 # edge and keeps it only if it stays significant. It prunes after testing rather than
@@ -183,8 +155,6 @@ set_summary <- set_tests |>
     n_fdr_fgsea = sum(method == "fgsea" & fdr < 0.05),
     n_collapsed = sum(method == "fgsea" & fdr < 0.05 & main),
     n_fdr_fry = sum(method == "fry" & fdr < 0.05),
-    n_fdr_camera = sum(method == "cameraPR" & fdr < 0.05),
-    n_fgsea_corroborated = sum(camera_agrees, na.rm = TRUE),
     .by = contrast
   ) |>
   arrange(contrast != d$floor)
@@ -339,40 +309,9 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-ancova_results <- ancova(sample_values, as_tibble(column_meta)) |>
-  mutate(collection = catalog$collection[match(feature, catalog$set_id)], .after = feature) |>
-  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(window, collection))
-ancova_figure <- ancova_results |>
-  mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
-  ggplot(aes(effect, -log10(p), colour = call)) +
-  geom_point(size = 0.8, alpha = 0.7) +
-  geom_hline(yintercept = -log10(0.05), linetype = 2, colour = "grey50") +
-  facet_wrap(~window) +
-  scale_colour_manual(
-    values = c(`BH < 0.05` = "#B2182B", `p < 0.05` = "#2166AC", `not nominal` = "grey75"),
-    name = NULL
-  ) +
-  labs(
-    title = "ANCOVA: HR minus LR at the later time point, at equal starting value",
-    subtitle = sprintf(
-      "Training: %d of %d sets at p < 0.05. Acute: %d of %d.",
-      sum(ancova_results$p[ancova_results$window == "training"] < 0.05),
-      sum(ancova_results$window == "training"),
-      sum(ancova_results$p[ancova_results$window == "acute"] < 0.05),
-      sum(ancova_results$window == "acute")
-    ),
-    x = "singscore, HR minus LR", y = "-log10 p",
-    caption = paste(
-      "lm(later ~ earlier + arm) per set; training is T2 on T1, acute T3 on T2. Dashed line:",
-      "p = 0.05. BH within window and collection. Table: c_data/03_contrasts.xlsx, ancova."
-    )
-  ) +
-  theme_minimal(base_size = 9) +
-  theme(legend.position = "top", plot.caption = element_text(hjust = 0))
-
 pdf(file.path(figures, "03_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
-walk(c(pages, list(ancova_figure)), print)
+walk(pages, print)
 invisible(dev.off())
 
 saveRDS(
@@ -387,21 +326,13 @@ write_workbook(
       filter(fdr < 0.05) |>
       mutate(leading_edge = map_chr(leading_edge, paste, collapse = ";")),
     protein_summary = protein_summary,
-    fry_correlation = tibble(matrix = "limpa", correlation = correlation),
-    ancova = ancova_results
+    fry_correlation = tibble(matrix = "limpa", correlation = correlation)
   ),
   c(
-    paste(
-      "Sets tested and called per contrast by method, fgsea collapse survivors, and fgsea hits",
-      "cameraPR corroborates."
-    ),
-    paste(
-      "Every set at FDR < 0.05, any method; camera_agrees marks fgsea hits cameraPR corroborates.",
-      "The full table is set_tests in set_tests.rds."
-    ),
+    "Sets tested and called per contrast by method, and fgsea collapse survivors.",
+    "Every set at FDR < 0.05, either method. The full table is set_tests in set_tests.rds.",
     "Proteins tested and at BH < 0.05 per contrast.",
-    "Within-subject correlation fry used, estimated on limpa's matrix.",
-    "ANCOVA per set and window on singscore: arm effect at equal start, t, p, BH, Storey q."
+    "Within-subject correlation fry used, estimated on limpa's matrix."
   ),
   file.path(out, "03_contrasts.xlsx"),
   inputs, paths

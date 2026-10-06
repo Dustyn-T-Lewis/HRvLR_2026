@@ -284,41 +284,11 @@ overviews <- imap(row_groups, \(rows, group) {
   list_flatten()
 stopifnot(length(overviews) == 2 * length(row_groups))
 
-ancova_results <- ancova(me, as_tibble(d$dal$metadata)) |>
-  mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
-ancova_figure <- ancova_results |>
-  mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
-  ggplot(aes(effect, -log10(p), colour = call)) +
-  geom_point(size = 0.8, alpha = 0.7) +
-  geom_hline(yintercept = -log10(0.05), linetype = 2, colour = "grey50") +
-  facet_wrap(~window) +
-  scale_colour_manual(
-    values = c(`BH < 0.05` = "#B2182B", `p < 0.05` = "#2166AC", `not nominal` = "grey75"),
-    name = NULL
-  ) +
-  labs(
-    title = "ANCOVA: Hi minus Lo at the later time point, at equal starting value",
-    subtitle = sprintf(
-      "Training: %d of %d modules at p < 0.05. Acute: %d of %d.",
-      sum(ancova_results$p[ancova_results$window == "training"] < 0.05),
-      sum(ancova_results$window == "training"),
-      sum(ancova_results$p[ancova_results$window == "acute"] < 0.05),
-      sum(ancova_results$window == "acute")
-    ),
-    x = "eigengene, Hi minus Lo", y = "-log10 p",
-    caption = paste(
-      "lm(later ~ earlier + arm) per module; training is T2 on T1, acute T3 on T2. Dashed line:",
-      "p = 0.05. BH within window. Table: c_data/02_contrasts.xlsx, ancova."
-    )
-  ) +
-  theme_minimal(base_size = 9) +
-  theme(legend.position = "top", plot.caption = element_text(hjust = 0))
-
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
 walk(list(
   eigengene_figure, fry_figure, membership_contrast_figure,
-  primary_figure, ancova_figure
+  primary_figure
 ), print)
 invisible(dev.off())
 
@@ -328,15 +298,13 @@ write_workbook(
     membership_contrast = membership_contrast,
     correlation = tibble(
       matrix = c("eigengenes", "limpa"), correlation = c(me_correlation, fry_correlation)
-    ),
-    ancova = ancova_results
+    )
   ),
   c(
     "limma on module eigengenes: logFC, moderated t, p, BH and Storey q per contrast.",
     "fry on each module as a protein set: direction, p and FDR per contrast.",
     "Spearman rho between member kME and protein moderated t, per module and contrast.",
-    "Within-subject correlation on the eigengenes and on limpa's matrix.",
-    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH, Storey q."
+    "Within-subject correlation on the eigengenes and on limpa's matrix."
   ),
   file.path(out, "02_contrasts.xlsx"),
   inputs, paths

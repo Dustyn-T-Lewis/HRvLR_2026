@@ -4,11 +4,11 @@
 # (Langfelder et al. 2011); medianRank ranks modules against each other and does not depend on
 # module size.
 #
-# Each arm has 7 or 8 subjects, so these networks rest on 20 to 24 samples, where even one
-# population split in two scores modestly. The calibration splits all 16 subjects into random
-# halves of 8, ignoring arm, and runs the same test: the Zsummary two halves of one population
-# reach at this size. The full-cohort modules from 01 are mapped to each arm module by overlap so
-# the two sets of names can be read together.
+# Each arm has 7 or 8 subjects, so these networks rest on 20 to 24 samples and the test has little
+# power to show that a module is missing in the other arm: a Zsummary above 2 says a module is
+# found again, not that the two networks are the same. The full-cohort modules are mapped to each
+# arm module by overlap so the two sets of names can be read together. Supplementary to the
+# module contrasts.
 
 suppressPackageStartupMessages({
   library(here)
@@ -21,7 +21,7 @@ suppressPackageStartupMessages({
 })
 source(here("R", "helpers.R"))
 
-stage <- here("02_HRvLR_groups", "07_Preserve")
+stage <- here("02_HRvLR_groups", "04_Modules", "02_Preserve")
 out <- file.path(stage, "c_data")
 figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
@@ -125,28 +125,6 @@ preservation_table <- map(c(HR = "LR", LR = "HR"), \(test) {
   ))
 print(as.data.frame(preservation_table), digits = 3)
 
-# Calibration: random halves of 8 subjects each, arm ignored, modules built in one half and tested
-# in the other with the same settings.
-splits <- 50L
-subjects <- unique(meta$subject)
-calibration <- parallel::mclapply(seq_len(splits), \(i) {
-  set.seed(i)
-  half <- sample(subjects, length(subjects) / 2)
-  halves <- list(A = centred(half), B = centred(setdiff(subjects, half)))
-  built <- build_arm(halves$A)
-  test <- modulePreservation(
-    multiData = map(halves, \(data) list(data = data)),
-    multiColor = list(A = built$colours), referenceNetworks = 1, networkType = "signed",
-    corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'",
-    nPermutations = 50, randomSeed = 42, savePermutedStatistics = FALSE, verbose = 0
-  )
-  z <- test$preservation$Z[[1]][[2]]
-  tibble(split = i, module = rownames(z), n_proteins = z$moduleSize, z_summary = z$Zsummary.pres) |>
-    filter(!module %in% c("grey", "gold"))
-}, mc.cores = min(8, parallel::detectCores())) |>
-  list_rbind()
-stopifnot(n_distinct(calibration$split) == splits)
-
 plot_data <- preservation_table |>
   mutate(direction = paste(reference, "modules tested in", test)) |>
   select(
@@ -181,34 +159,8 @@ preservation_figure <- ggplot(plot_data, aes(n_proteins, value)) +
   ) +
   theme_minimal(base_size = 10) +
   theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
-calibration_figure <- bind_rows(
-  transmute(calibration, source = "random halves of all subjects", z_summary),
-  transmute(preservation_table, source = paste(reference, "modules tested in", test), z_summary)
-) |>
-  ggplot(aes(z_summary, source)) +
-  geom_vline(xintercept = c(2, 10), linetype = "dashed", colour = "grey55") +
-  geom_boxplot(outlier.shape = NA, width = 0.5, colour = "grey40") +
-  geom_point(
-    position = position_jitter(height = 0.12, width = 0, seed = 1), size = 1, alpha = 0.5
-  ) +
-  scale_x_log10() +
-  labs(
-    x = "Zsummary (log scale)", y = NULL,
-    title = "Preservation between arms against one population split in two",
-    caption = stringr::str_wrap(width = 160, paste(
-      sprintf("Top row: %d random splits of the 16 subjects into halves of 8,", splits),
-      "arm ignored, modules built in one half and tested in the other (50 permutations each).",
-      "Lower rows: the arm modules. Arm modules inside the random-halves range are as preserved",
-      "as one population is with itself at this size. Table: c_data/06_preserve.xlsx,",
-      "calibration."
-    ))
-  ) +
-  theme_minimal(base_size = 10) +
-  theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
-
 pdf(file.path(figure_dir, "06_preserve_figures.pdf"), width = 11, height = 8.5)
 print(preservation_figure)
-print(calibration_figure)
 invisible(dev.off())
 
 sheets <- list(
@@ -218,7 +170,6 @@ sheets <- list(
     power = map_int(arm_modules, "power"),
     n_modules = map_int(arm_modules, \(x) n_distinct(setdiff(x$colours, "grey")))
   ),
-  calibration = calibration,
   arm_membership = imap(arm_modules, \(x, arm) {
     tibble(arm = arm, uniprot_id = names(x$colours), module = x$colours)
   }) |>
@@ -227,8 +178,7 @@ sheets <- list(
 holds <- c(
   "Zsummary and median rank of each arm's modules tested in the other arm.",
   "Samples, soft power and module count of each arm's network.",
-  "Zsummary of each module across random halves of all subjects, the reference at this size.",
   "Every protein's module in each arm's network."
 )
 write_workbook(sheets, holds, file.path(out, "06_preserve.xlsx"), inputs, paths)
-message("wrote 06_preserve.xlsx and 2 figures")
+message("wrote 06_preserve.xlsx and its figure")

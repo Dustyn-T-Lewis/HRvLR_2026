@@ -11,10 +11,7 @@ Which gene sets lead each trait's protein ranking, every subject pooled.
 ## Method
 
 Per pairing and trait, proteins are ranked by the limma t from `01_Associate/01_Proteins`. fgsea
-(seeded) tests every set on that ranking; its p and BH are its own. cameraPR runs beside it, and
-`camera_agrees` marks sets fgsea calls at FDR < 0.05 that cameraPR reaches at p < 0.05 in the same
-direction. cameraPR uses limma's preset inter-gene correlation (0.01), so it is close to fgsea, not
-an independent check.
+(seeded) tests every set on that ranking; its p and BH are its own.
 
 fgsea permutes proteins, and proteins in one set move together, so set counts here run high on
 any ranking. Read the leading sets, not the counts.
@@ -23,5 +20,5 @@ any ranking. Read the leading sets, not the counts.
 
 | Sheet | Holds |
 |---|---|
-| `counts` | Per window and trait: sets tested, at p < 0.05, at FDR < 0.05 (up, down), cameraPR agreeing. |
-| `pathways` | Per window, trait and set: NES, p, BH; cameraPR direction and p; `camera_agrees`. |
+| `counts` | Per window and trait: sets tested, at p < 0.05, at FDR < 0.05 (up, down). |
+| `pathways` | Per window, trait and set: fgsea NES, p and BH. |

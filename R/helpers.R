@@ -57,53 +57,6 @@ subject_change <- function(values, meta, from, to) {
   after[, both, drop = FALSE] - before[, both, drop = FALSE]
 }
 
-# ANCOVA per feature and window: the later value on the earlier one plus group, over subjects with
-# both biopsies and at least three per group. meta$arm holds the two groups; the group term is the
-# first (alphabetically: HR, Hi) minus the second at equal starting value.
-# Residual variances are moderated across features within each window (limma::squeezeVar), as
-# limma moderates its own fits, so a feature that looks quiet by chance does not earn a large t.
-ancova <- function(values, meta) {
-  groups <- sort(unique(as.character(meta$arm)))
-  stopifnot(length(groups) == 2)
-  n_cols <- paste0("n_", groups)
-  windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
-  imap(windows, \(timepoints, window) {
-    before <- subject_values(values, meta, timepoints[1])
-    after <- subject_values(values, meta, timepoints[2])
-    both <- intersect(colnames(before), colnames(after))
-    arm <- factor(meta$arm[match(both, meta$subject)], rev(groups))
-    map(rownames(values), \(feature) {
-      x <- before[feature, both]
-      y <- after[feature, both]
-      ok <- !is.na(x) & !is.na(y)
-      n <- table(arm[ok])
-      if (min(n) < 3) {
-        return(NULL)
-      }
-      fit <- summary(lm(y[ok] ~ x[ok] + arm[ok]))
-      tibble(
-        feature, window,
-        !!n_cols[1] := n[[groups[1]]], !!n_cols[2] := n[[groups[2]]],
-        effect = fit$coefficients[3, 1],
-        unscaled = fit$coefficients[3, 2] / fit$sigma, s2 = fit$sigma^2, df = fit$df[2]
-      )
-    }) |>
-      list_rbind()
-  }) |>
-    list_rbind() |>
-    split(~window) |>
-    map(\(rows) {
-      squeezed <- squeezeVar(rows$s2, rows$df)
-      # As eBayes does, total df never exceed the pooled residual df.
-      df_total <- pmin(rows$df + squeezed$df.prior, sum(rows$df))
-      mutate(rows,
-        t = effect / (unscaled * sqrt(squeezed$var.post)), p = 2 * pt(-abs(t), df_total)
-      )
-    }) |>
-    list_rbind() |>
-    select(feature, window, all_of(n_cols), effect, t, p)
-}
-
 # Permutation p that is never zero: (b + 1) / (m + 1) (Phipson & Smyth 2010).
 permutation_p <- function(observed, null) (sum(null >= observed) + 1) / (length(null) + 1)
 
