@@ -193,4 +193,5 @@ run_input <- function(input) {
   )
 }
 purrr::walk(inputs_used, run_input)
-stack_inputs(here("03_Cluster_groups", "Proteome", "07_Associate"))
+# within_group over five inputs passes xlsx's row limit; each input's workbook keeps it.
+stack_inputs(here("03_Cluster_groups", "Proteome", "07_Associate"), leave_out = "within_group")
