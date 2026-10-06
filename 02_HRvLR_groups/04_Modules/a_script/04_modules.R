@@ -7,10 +7,9 @@
 # estimated on that matrix, as 03_Pathways does for gene sets.
 #
 # Membership against significance (WGCNA's MM against GS): within each module, Spearman between a
-# member's kME and its protein-level moderated t per contrast, and its Spearman rho with each
-# phenotype over the training window. For a contrast, a positive value means the module's most
-# central proteins moved up most; for a phenotype, that they track it most positively. Members
-# share a module, so these correlations are descriptive, not tests.
+# member's kME and its protein-level moderated t per contrast. A positive value means the module's
+# most central proteins moved up most. Members share a module, so these correlations are
+# descriptive, not tests. Membership against phenotype belongs to the continuous arc.
 
 suppressPackageStartupMessages({
   library(here)
@@ -34,7 +33,6 @@ inputs <- c(
   modules = "01_Trunk/06_Modules/c_data/modules.rds",
   design = "02_HRvLR_groups/01_Design/c_data/design.rds",
   fit = "02_HRvLR_groups/02_DEP/c_data/fit.rds",
-  associate = "04_Continuous_no_group/01_Associate/01_Proteins/c_data/associate.rds",
   limpa = "01_Trunk/03_Quantify/c_data/DAList_limpa.rds",
   phenotype = "00_Input/phenotype.csv"
 )
@@ -43,7 +41,6 @@ stopifnot(file.exists(paths))
 modules <- readRDS(paths[["modules"]])
 d <- readRDS(paths[["design"]])
 fit <- readRDS(paths[["fit"]])
-phenotype <- readRDS(paths[["associate"]])$change_score |> rename(uniprot_id = feature)
 complete <- readRDS(paths[["limpa"]])
 
 me <- modules$eigengenes
@@ -54,7 +51,6 @@ subject <- d$dal$metadata$subject
 abundance <- complete$data
 members <- filter(modules$membership, module != "grey")
 module_order <- modules$module_summary$module
-outcomes <- unique(phenotype$outcome)
 stopifnot(
   identical(colnames(me), rownames(design)),
   identical(colnames(abundance), rownames(design)),
@@ -106,12 +102,6 @@ member_rho <- function(data, value) {
 membership_contrast <- members |>
   inner_join(protein_t, by = "uniprot_id", relationship = "one-to-many") |>
   member_rho("t")
-membership_phenotype <- members |>
-  inner_join(
-    filter(phenotype, window == "training") |> select(uniprot_id, outcome, association = rho),
-    by = "uniprot_id", relationship = "one-to-many"
-  ) |>
-  member_rho("association")
 
 figure_theme <- theme_minimal(base_size = 10) +
   theme(
@@ -178,16 +168,6 @@ membership_contrast_figure <- module_tiles(
     "a module, so the p describes rather than tests."
   )
 )
-membership_phenotype_figure <- module_tiles(
-  rename(membership_phenotype, column = outcome, effect = rho) |> mutate(fdr = NA_real_),
-  outcomes, "Spearman\nrho", c(-1, 1),
-  "Module membership against phenotype association",
-  "Spearman between each member's kME and its protein rho with the phenotype over training",
-  paste(
-    "Fill: rho; positive when central proteins track the phenotype most positively.",
-    "Descriptive, as above."
-  )
-)
 
 primary <- members |>
   inner_join(filter(protein_t, contrast == "Training_Interaction"), by = "uniprot_id") |>
@@ -224,7 +204,7 @@ feature_noun <- "modules"
 contrast_results <- transmute(eigengene_tests, feature = module, contrast, effect = logFC, p, fdr)
 row_groups <- list(modules = module_order)
 
-# Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
+# Overviews: every feature across the 48 biopsies, then across the nine contrasts. Biopsy traits
 # sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
 arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
@@ -306,23 +286,6 @@ stopifnot(length(overviews) == 2 * length(row_groups))
 
 ancova_results <- ancova(me, as_tibble(d$dal$metadata)) |>
   mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
-# Leave one subject out on the tests that feed the candidate tables: eigengene limma and fry on
-# the four HR-against-LR contrasts, and ANCOVA on eigengenes. A hit that stays at p < 0.05 in
-# every rerun does not rest on one person.
-sample_meta <- as_tibble(d$dal$metadata)
-key_contrasts <- contrast_matrix[, hr_lr_contrasts]
-robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
-  kept <- sample_meta$subject %in% keep
-  ids <- sample_meta$sample_id[kept]
-  bind_rows(
-    fit_contrasts(me[, ids], design[ids, ], key_contrasts, subject[kept]) |>
-      contrast_rows("eigengene "),
-    fry_rows(abundance[, ids], module_rows, design[ids, ], key_contrasts, subject[kept]),
-    ancova(me[, ids], sample_meta[kept, ]) |>
-      transmute(feature, test = paste("ANCOVA", window), p)
-  ) |>
-    select(feature, test, p)
-})
 ancova_figure <- ancova_results |>
   mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
   ggplot(aes(effect, -log10(p), colour = call)) +
@@ -354,7 +317,7 @@ ancova_figure <- ancova_results |>
 pdf(file.path(figures, "02_contrasts_figures.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())
 walk(list(
-  eigengene_figure, fry_figure, membership_contrast_figure, membership_phenotype_figure,
+  eigengene_figure, fry_figure, membership_contrast_figure,
   primary_figure, ancova_figure
 ), print)
 invisible(dev.off())
@@ -362,21 +325,18 @@ invisible(dev.off())
 write_workbook(
   list(
     eigengene_tests = eigengene_tests, fry_tests = fry_tests,
-    membership_contrast = membership_contrast, membership_phenotype = membership_phenotype,
+    membership_contrast = membership_contrast,
     correlation = tibble(
       matrix = c("eigengenes", "limpa"), correlation = c(me_correlation, fry_correlation)
     ),
-    ancova = ancova_results,
-    leave_one_out = robustness
+    ancova = ancova_results
   ),
   c(
     "limma on module eigengenes: logFC, moderated t, p, BH and Storey q per contrast.",
     "fry on each module as a protein set: direction, p and FDR per contrast.",
     "Spearman rho between member kME and protein moderated t, per module and contrast.",
-    "Spearman rho between member kME and protein rho with each phenotype over training.",
     "Within-subject correlation on the eigengenes and on limpa's matrix.",
-    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH, Storey q.",
-    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
+    "ANCOVA per module and window on eigengenes: arm effect at equal start, t, p, BH, Storey q."
   ),
   file.path(out, "02_contrasts.xlsx"),
   inputs, paths

@@ -333,9 +333,6 @@ stopifnot(length(overviews) == 2 * length(row_groups))
 corrected <- readRDS(paths[["corrected"]])
 ancova_results <- ancova(corrected$data, as_tibble(meta)) |>
   mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = window)
-# Leave one subject out on the tests that feed the candidate tables: the four HR-against-LR
-# contrasts and both ANCOVA windows. A hit that stays at p < 0.05 in every rerun does not rest on
-# one person.
 sample_meta <- as_tibble(meta)
 
 # The path of each arm's p < 0.05 training sets through T1, T2 and T3, in each arm: every
@@ -362,19 +359,6 @@ set_trajectory <- results |>
   }) |>
   list_rbind()
 
-robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
-  kept <- sample_meta$subject %in% keep
-  bind_rows(
-    fit_limpa(
-      proteins[, kept], design[kept, ], contrast_matrix[, hr_lr_contrasts],
-      sample_meta$subject[kept]
-    ) |>
-      contrast_rows(),
-    ancova(corrected$data[, kept], sample_meta[kept, ]) |>
-      transmute(feature, test = paste("ANCOVA", window), p)
-  ) |>
-    select(feature, test, p)
-})
 ancova_figure <- ancova_results |>
   mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
   ggplot(aes(effect, -log10(p), colour = call)) +
@@ -506,7 +490,6 @@ write_workbook(
     set_trajectory = set_trajectory,
     unadjusted = unadjusted,
     ancova = ancova_results,
-    leave_one_out = robustness,
     pca = pca_scores,
     pca_variance = pca_variance,
     permanova = global_tests
@@ -524,7 +507,6 @@ write_workbook(
     "Training p < 0.05 sets: mean change from each subject's T1 (and SE) per arm and time point.",
     "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
     "ANCOVA per protein and window: arm effect at equal starting value, t, p, BH FDR and Storey q.",
-    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test.",
     "PC1 and PC2 per sample, from the complete blood-corrected matrix with proteins scaled.",
     "Share of variance on the first four components.",
     paste(

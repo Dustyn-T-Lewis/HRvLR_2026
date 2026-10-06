@@ -98,8 +98,8 @@ message("within-subject correlation on limpa's matrix: ", round(correlation, 3))
 set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
 
-# cameraPR ranks the same moderated t as fgsea but widens each set's error by the correlation among
-# its members (Wu & Smyth 2012). It corroborates fgsea and adds no hit of its own.
+# cameraPR ranks the same moderated t as fgsea. With no sample data it uses limma's preset
+# inter-gene correlation (0.01), so it sits close to fgsea; it adds no hit of its own.
 camera_rows <- map(contrast_names, \(contrast) {
   stats <- ranked[[contrast]]
   index <- map(sets, \(genes) which(names(stats) %in% genes))
@@ -342,33 +342,6 @@ stopifnot(length(overviews) == 2 * length(row_groups))
 ancova_results <- ancova(sample_values, as_tibble(column_meta)) |>
   mutate(collection = catalog$collection[match(feature, catalog$set_id)], .after = feature) |>
   mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(window, collection))
-# Leave one subject out on the tests that feed the candidate tables: fgsea and fry on the four
-# HR-against-LR contrasts, and ANCOVA on singscore. A hit that stays at p < 0.05 in every rerun
-# does not rest on one person.
-sample_meta <- as_tibble(fit$metadata)
-key_contrasts <- fit$design$contrast_matrix[, hr_lr_contrasts]
-selected <- filter(protein_map, selected)
-robustness <- leave_one_out(unique(sample_meta$subject), \(keep) {
-  kept <- sample_meta$subject %in% keep
-  ids <- sample_meta$sample_id[kept]
-  protein_fit <- fit_limpa(
-    fit$proteins[, ids], design[ids, ], key_contrasts, sample_meta$subject[kept]
-  )
-  fgsea_rows <- map(hr_lr_contrasts, \(contrast) {
-    stats <- set_names(protein_fit$t[selected$uniprot_id, contrast], selected$gene)
-    set.seed(1)
-    fgsea::fgsea(sets, stats[!is.na(stats)], minSize = 15, maxSize = 500) |>
-      as_tibble() |>
-      transmute(feature = pathway, test = paste("fgsea", contrast), p = pval)
-  }) |>
-    list_rbind()
-  bind_rows(
-    fgsea_rows,
-    fry_rows(abundance[, ids], set_rows, design[ids, ], key_contrasts, sample_meta$subject[kept]),
-    ancova(sample_values[, ids], filter(sample_meta, sample_id %in% ids)) |>
-      transmute(feature, test = paste("ANCOVA", window), p)
-  )
-})
 ancova_figure <- ancova_results |>
   mutate(call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")) |>
   ggplot(aes(effect, -log10(p), colour = call)) +
@@ -415,8 +388,7 @@ write_workbook(
       mutate(leading_edge = map_chr(leading_edge, paste, collapse = ";")),
     protein_summary = protein_summary,
     fry_correlation = tibble(matrix = "limpa", correlation = correlation),
-    ancova = ancova_results,
-    leave_one_out = robustness
+    ancova = ancova_results
   ),
   c(
     paste(
@@ -429,8 +401,7 @@ write_workbook(
     ),
     "Proteins tested and at BH < 0.05 per contrast.",
     "Within-subject correlation fry used, estimated on limpa's matrix.",
-    "ANCOVA per set and window on singscore: arm effect at equal start, t, p, BH, Storey q.",
-    "Leave one subject out: reruns, reruns at p < 0.05, largest p and its subject, per test."
+    "ANCOVA per set and window on singscore: arm effect at equal start, t, p, BH, Storey q."
   ),
   file.path(out, "03_contrasts.xlsx"),
   inputs, paths

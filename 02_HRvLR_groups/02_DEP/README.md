@@ -28,18 +28,15 @@ value, so an arm that starts low and catches up does not read as a different res
 variances are moderated across proteins (`limma::squeezeVar`), as limma moderates its own fits. BH
 within window.
 
-Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
-through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not
-rest on one person.
-
 The whole proteome is tested once, beside the per-protein fits. PCA runs on the complete
 blood-corrected matrix with proteins scaled, and PERMANOVA (`vegan::adonis2`, 9,999 permutations)
 on its Euclidean distances. Time is tested within subject, so permutations never move a sample to
 another person; arm is tested on one mean profile per subject, and at each time point. Time
-explains 6.1% of variance (p = 0.0018), most of it after the bout (acute 5.3%, p = 0.0007;
-training 4.2%, p = 0.054). Arm explains none beyond chance (subject means p = 0.29; T3 p = 0.061). The same test on the six size and strength
-traits at T1 and T2 (time within subject) gives R² 3.6%, p = 0.037; arm is not tested there,
-because HR and LR were split on how much those traits changed.
+explains 6.3% of variance (p = 0.0009), most of it after the bout (acute 5.6%, p = 0.0005;
+training 4.2%, p = 0.052). Arm explains none beyond chance (subject means p = 0.42; T3
+p = 0.21). The same test on the six size and strength traits at T1 and T2 (time within subject)
+gives R² 3.6%, p = 0.037; arm is not tested there, because HR and LR were split on how much
+those traits changed.
 
 ## Figures
 
@@ -61,7 +58,6 @@ beside a status map. Then the p-value histogram, a volcano per contrast, the ANC
 | `set_trajectory` | Each arm's p < 0.05 training sets: mean change from each subject's own T1, with SE, per arm and time point (blood-corrected complete matrix). |
 | `unadjusted` | logFC and p per protein and contrast before blood adjustment, for sensitivity. |
 | `ancova` | ANCOVA per protein and window: arm effect at equal starting value, t, p, BH FDR and Storey q. |
-| `leave_one_out` | Per protein and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |
 | `pca` | PC1 and PC2 per sample, from the complete blood-corrected matrix with proteins scaled. |
 | `pca_variance` | Share of variance on the first four components. |
 | `permanova` | PERMANOVA: proteome time within subject per window and arm, arm on subject means and per time point; phenotype time within subject. |

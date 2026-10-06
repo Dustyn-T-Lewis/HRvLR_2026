@@ -10,21 +10,18 @@ Tests every set on every contrast with fgsea and fry, and marks non-redundant fg
 
 ## Method
 
-Three methods run on every set. fgsea leads, as the exploratory test; cameraPR corroborates it;
-fry is the strict, people-level test.
+Three methods run on every set. fgsea and cameraPR are competitive tests on the protein ranking:
+does a set rank above or below the other proteins? fry is self-contained: did the set move away
+from zero across these biopsies? They can disagree when the whole proteome shifts.
 
 **fgsea** ranks proteins by moderated t from the protein fit and asks whether a set's members sit
 near one end of that list (seeded). It treats each protein as an independent draw, so a large,
 tightly co-regulated set can look more significant than the number of people behind it supports.
 
-**cameraPR** (limma; Wu & Smyth 2012) ranks the same moderated t but estimates how correlated each
-set's members are and widens the set's error to match. A set that fgsea calls at FDR < 0.05 and
-cameraPR reaches at p < 0.05 in the same direction is flagged `camera_agrees`. cameraPR adds no
-hit of its own to the candidate tables. Before this step existed, a read-only check found cameraPR
-kept 92% or more of fgsea's hits nominal, always in the same direction (rank correlation 0.94 to
-0.97): it trims fgsea's counts without washing out its signal. It also finds sets on
-`Baseline_HRvLR`, so that contrast is a comparison (the arms may differ before training), not a
-clean null.
+**cameraPR** (limma; Wu & Smyth 2012) ranks the same moderated t. Without the sample data it
+cannot estimate each set's inter-protein correlation, so it uses limma's preset value (0.01) and
+stays close to fgsea; its agreement is not independent confirmation. A set that fgsea calls at
+FDR < 0.05 and cameraPR reaches at p < 0.05 in the same direction is flagged `camera_agrees`.
 
 **fry** (limma's fast rotation test) asks whether the set's proteins moved together, in one
 direction, more than the model's own noise produces across these biopsies. It works on limpa's
@@ -41,10 +38,6 @@ per set, contrast and method) and `protein_results`.
 ANCOVA on singscore sits beside the interactions: per set and window, `lm(later ~ earlier + arm)`
 over subjects with both biopsies, T2 on T1 for training and T3 on T2 for the acute bout, variances
 moderated across sets (`squeezeVar`). BH within window and collection.
-
-Leave one subject out reruns the tests that feed the candidate tables once per subject dropped,
-through `leave_one_out()` in `R/helpers.R`. A hit that stays at p < 0.05 in every rerun does not
-rest on one person.
 
 ## Figures
 
@@ -64,4 +57,3 @@ sets to a page. Then the ANCOVA volcano for both windows.
 | `protein_summary` | Proteins tested and at BH < 0.05 per contrast. |
 | `fry_correlation` | Within-subject correlation fry used, estimated on limpa's matrix. |
 | `ancova` | ANCOVA per set and window on singscore: arm effect at equal starting value, t, p, BH FDR, Storey q. |
-| `leave_one_out` | Per set and HR-against-LR test: reruns with one subject left out, reruns still at p < 0.05, the largest p and the subject whose removal gave it. |

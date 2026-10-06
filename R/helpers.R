@@ -31,25 +31,6 @@ storey_q <- function(p) {
   q
 }
 
-# The four contrasts that compare HR with LR in the candidate tables.
-hr_lr_contrasts <- c("Training_Interaction", "Trained_HRvLR", "Acute_Interaction", "Acute_HRvLR")
-
-# limma on a complete matrix (module eigengenes) with subject blocked and robust moderation.
-fit_contrasts <- function(values, design, contrasts, subject) {
-  correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
-  lmFit(values, design, block = subject, correlation = correlation) |>
-    contrasts.fit(contrasts) |>
-    eBayes(robust = TRUE)
-}
-# One row per feature and contrast from a contrasts fit: logFC, t and p.
-contrast_rows <- function(fit, prefix = "") {
-  tibble(
-    feature = rep(rownames(fit$coefficients), ncol(fit$coefficients)),
-    test = rep(paste0(prefix, colnames(fit$coefficients)), each = nrow(fit$coefficients)),
-    effect = c(fit$coefficients), t = c(fit$t), p = c(fit$p.value)
-  )
-}
-
 # fry per contrast on a complete matrix, sets given as row indices: one row per set and contrast.
 fry_rows <- function(values, index, design, contrasts, subject) {
   correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
@@ -61,19 +42,6 @@ fry_rows <- function(values, index, design, contrasts, subject) {
       transmute(feature, test = paste("fry", contrast), p = PValue)
   }) |>
     list_rbind()
-}
-
-# Reruns test() once per subject left out; test(keep) returns feature, test and p for the kept
-# subjects. Per feature and test: reruns made, reruns still at p < 0.05, the largest p, and the
-# subject whose removal gave it.
-leave_one_out <- function(subjects, test) {
-  map(set_names(subjects), \(dropped) test(setdiff(subjects, dropped))) |>
-    list_rbind(names_to = "dropped") |>
-    filter(!is.na(p)) |>
-    summarise(
-      n_reruns = n(), n_nominal = sum(p < 0.05), max_p = max(p), worst = dropped[which.max(p)],
-      .by = c(feature, test)
-    )
 }
 
 # One column per subject at a time point, and the change between two time points over the
@@ -89,46 +57,21 @@ subject_change <- function(values, meta, from, to) {
   after[, both, drop = FALSE] - before[, both, drop = FALSE]
 }
 
-# Which tests feed which candidate list (docs/decisions.md, 2026-09-29); Acute_Interaction feeds
-# both. The baseline list applies the same rules at T1, before training.
-candidate_lists <- list(
-  training = list(
-    contrasts = c("Training_Interaction", "Trained_HRvLR", "Acute_Interaction"),
-    ancova = "training", tasks = c("Training_change_HRvLR", "Trained_HRvLR"), window = "training"
-  ),
-  acute = list(
-    contrasts = c("Acute_Interaction", "Acute_HRvLR"),
-    ancova = "acute", tasks = "Acute_change_HRvLR", window = "acute"
-  ),
-  baseline = list(
-    contrasts = "Baseline_HRvLR", ancova = character(0), tasks = "Baseline_HRvLR",
-    window = "baseline"
-  )
-)
-# The rows of a long evidence table (columns contrast, task, window) that fall on each list.
-on_lists <- function(evidence) {
-  imap(candidate_lists, \(rule, name) {
-    evidence |>
-      filter(
-        contrast %in% rule$contrasts | window %in% c(paste0("ancova_", rule$ancova), rule$window) |
-          task %in% rule$tasks
-      ) |>
-      mutate(list = name)
-  }) |>
-    list_rbind()
-}
-
-# ANCOVA per feature and window: the later value on the earlier one plus arm, over subjects with
-# both biopsies and at least three per arm. The arm term is HR minus LR at equal starting value.
+# ANCOVA per feature and window: the later value on the earlier one plus group, over subjects with
+# both biopsies and at least three per group. meta$arm holds the two groups; the group term is the
+# first (alphabetically: HR, Hi) minus the second at equal starting value.
 # Residual variances are moderated across features within each window (limma::squeezeVar), as
 # limma moderates its own fits, so a feature that looks quiet by chance does not earn a large t.
 ancova <- function(values, meta) {
+  groups <- sort(unique(as.character(meta$arm)))
+  stopifnot(length(groups) == 2)
+  n_cols <- paste0("n_", groups)
   windows <- list(training = c("T1", "T2"), acute = c("T2", "T3"))
   imap(windows, \(timepoints, window) {
     before <- subject_values(values, meta, timepoints[1])
     after <- subject_values(values, meta, timepoints[2])
     both <- intersect(colnames(before), colnames(after))
-    arm <- factor(meta$arm[match(both, meta$subject)], c("LR", "HR"))
+    arm <- factor(meta$arm[match(both, meta$subject)], rev(groups))
     map(rownames(values), \(feature) {
       x <- before[feature, both]
       y <- after[feature, both]
@@ -140,7 +83,8 @@ ancova <- function(values, meta) {
       fit <- summary(lm(y[ok] ~ x[ok] + arm[ok]))
       tibble(
         feature, window,
-        n_HR = n[["HR"]], n_LR = n[["LR"]], effect = fit$coefficients[3, 1],
+        !!n_cols[1] := n[[groups[1]]], !!n_cols[2] := n[[groups[2]]],
+        effect = fit$coefficients[3, 1],
         unscaled = fit$coefficients[3, 2] / fit$sigma, s2 = fit$sigma^2, df = fit$df[2]
       )
     }) |>
@@ -157,7 +101,7 @@ ancova <- function(values, meta) {
       )
     }) |>
     list_rbind() |>
-    select(feature, window, n_HR, n_LR, effect, t, p)
+    select(feature, window, all_of(n_cols), effect, t, p)
 }
 
 # Permutation p that is never zero: (b + 1) / (m + 1) (Phipson & Smyth 2010).
@@ -225,17 +169,9 @@ phenotype_tables <- function(phenotype) {
     outcomes = c("comp_hypertrophy", "volume_load_total_kg", paste0("pct_", traits)),
     pairings = list(
       training = change, baseline = change, acute = change,
-      baseline_level = level("T1"), post_level = level("T2")
+      baseline_level = level("T1"), post_level = level("T2"), post_bout_level = level("T2")
     )
   )
-}
-# Whole phenotype rows handed to other subjects, so traits keep their correlations and only the
-# link to the proteome breaks.
-shuffle_pairings <- function(pairings, seed) {
-  set.seed(seed)
-  subjects <- pairings$training$subject
-  donor <- sample(subjects)
-  map(pairings, \(tt) mutate(tt[match(donor, tt$subject), ], subject = subjects))
 }
 pairing_value <- \(pairings, window, name, subjects) {
   set_names(pairings[[window]][[name]], pairings[[window]]$subject)[subjects]
@@ -272,7 +208,6 @@ subject_fit <- function(x, predictors, formula, terms) {
     list_rbind() |>
     filter(!is.na(p))
 }
-
 
 # Display only: row order, colour limits and centring touch no test.
 ComplexHeatmap::ht_opt(message = FALSE)
@@ -324,7 +259,6 @@ heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
   })
 }
 
-
 # Twelve panels to a page; blank slots keep a short last page at the same panel size.
 slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
 paginate <- function(hits, by) {
@@ -341,24 +275,6 @@ page_theme <- ggplot2::theme_minimal(base_size = 9) +
     plot.title = ggplot2::element_text(face = "bold"),
     plot.caption = ggplot2::element_text(hjust = 0), legend.position = "top"
   )
-# A screen's observed value against its shuffle null: grey bar to the 95th percentile, tick at the
-# median, red point the real data. d needs screen, null_median, null_95 and the value column.
-plot_chance <- function(d, value, title, caption, facet = NULL) {
-  d <- mutate(d, screen = forcats::fct_reorder(screen, .data[[value]]))
-  plot <- ggplot2::ggplot(d, ggplot2::aes(y = screen)) +
-    ggplot2::geom_linerange(ggplot2::aes(xmin = 0, xmax = null_95),
-      colour = "grey80",
-      linewidth = 2.5
-    ) +
-    ggplot2::geom_point(ggplot2::aes(x = null_median), shape = "|", size = 3, colour = "grey40") +
-    ggplot2::geom_point(ggplot2::aes(x = .data[[value]]), colour = "firebrick", size = 1.8) +
-    ggplot2::labs(
-      x = value, y = NULL, title = title,
-      caption = stringr::str_wrap(caption, 160)
-    ) +
-    page_theme
-  if (is.null(facet)) plot else plot + ggplot2::facet_wrap(facet, scales = "free")
-}
 counts_line <- \(info, noun, hits) {
   sprintf(
     "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.", info$n_nominal, info$n_tested,
@@ -366,8 +282,6 @@ counts_line <- \(info, noun, hits) {
   )
 }
 
-
-# Every workbook opens on read_me and ends with the files read and the packages loaded.
 # Every workbook opens on read_me and ends with the inputs' md5 and the loaded packages; note, when
 # given, is one more read_me row.
 write_workbook <- function(sheets, holds, file, inputs, paths, note = NULL) {

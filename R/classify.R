@@ -1,14 +1,16 @@
 # The 03_Classify step, shared by the protein, set and module levels. How well each feature
-# separates the study's groups, on eight tasks that mirror the contrasts. Within-arm tasks pair
-# each subject's two biopsies: p is the Wilcoxon signed-rank test and the effect is the median
-# paired change. Between-arm tasks compare HR with LR subjects on a level or on their own change: p
-# is the rank-sum test and AUC is W / (n1 * n2), above 0.5 when higher in HR. The auc column is
-# filled for every task; for paired tasks it ignores the pairing and is not drawn. Between-arm AUCs
-# carry a DeLong 95% interval. BH within task, and within collection when collection_of is given.
+# separates the study's groups, on eight tasks that mirror the contrasts. `groups` names the two
+# groups, the first being the one AUC looks for. Within-group tasks pair each subject's two
+# biopsies: p is the Wilcoxon signed-rank test and the effect is the median paired change.
+# Between-group tasks compare the first group with the second on a level or on their own change:
+# p is the rank-sum test and AUC is W / (n1 * n2), above 0.5 when higher in the first. The auc
+# column is filled for every task; for paired tasks it ignores the pairing and is not drawn.
+# Between-group AUCs carry a DeLong 95% interval. BH within task, and within collection when
+# collection_of is given.
 classify_step <- function(stage, inputs, paths, values, meta, feature_label, feature_noun,
                           feature_unit, value_label, row_groups, row_order,
                           collection_of = NULL, panel_name = \(label, collection) label,
-                          observed_share = NULL) {
+                          observed_share = NULL, groups = c("HR", "LR")) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
   step <- tolower(basename(stage))
@@ -20,15 +22,17 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
   labelled <- function(d) {
     if (length(by_collection)) d <- mutate(d, collection = collection_of[feature], .after = feature)
     d <- mutate(d, label = feature_label[feature], .after = all_of(c("feature", by_collection)))
-    if (is.null(observed_share)) return(d)
+    if (is.null(observed_share)) {
+      return(d)
+    }
     mutate(d, observed_share = observed_share[feature], .after = label)
   }
 
-  by_subject <- function(timepoint, arm = c("HR", "LR")) {
+  by_subject <- function(timepoint, arm = groups) {
     rows <- filter(meta, timepoint == .env$timepoint, arm %in% .env$arm)
     set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
   }
-  paired <- function(from, to, arm = c("HR", "LR")) {
+  paired <- function(from, to, arm = groups) {
     a <- by_subject(from, arm)
     b <- by_subject(to, arm)
     both <- intersect(colnames(a), colnames(b))
@@ -43,22 +47,30 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
     )
   }
   between_arm <- function(level, label) {
-    hr <- arm_of[colnames(level)] == "HR"
+    first <- arm_of[colnames(level)] == groups[1]
     list(
-      positive = level[, hr, drop = FALSE], negative = level[, !hr, drop = FALSE],
+      positive = level[, first, drop = FALSE], negative = level[, !first, drop = FALSE],
       paired = FALSE, label = label
     )
   }
   change <- \(from, to) with(paired(from, to), after - before)
-  tasks <- list(
-    Training_HR = within_arm("T1", "T2", "HR", "Training, HR (T1 to T2)"),
-    Training_LR = within_arm("T1", "T2", "LR", "Training, LR (T1 to T2)"),
-    Acute_HR = within_arm("T2", "T3", "HR", "Acute bout, HR (T2 to T3)"),
-    Acute_LR = within_arm("T2", "T3", "LR", "Acute bout, LR (T2 to T3)"),
-    Baseline_HRvLR = between_arm(by_subject("T1"), "HR vs LR at T1"),
-    Trained_HRvLR = between_arm(by_subject("T2"), "HR vs LR at T2"),
-    Training_change_HRvLR = between_arm(change("T1", "T2"), "HR vs LR, training change"),
-    Acute_change_HRvLR = between_arm(change("T2", "T3"), "HR vs LR, acute change")
+  versus <- paste(groups, collapse = "v")
+  label_versus <- paste(groups, collapse = " vs ")
+  tasks <- c(
+    map(set_names(groups, paste0("Training_", groups)), \(g) {
+      within_arm("T1", "T2", g, sprintf("Training, %s (T1 to T2)", g))
+    }),
+    map(set_names(groups, paste0("Acute_", groups)), \(g) {
+      within_arm("T2", "T3", g, sprintf("Acute bout, %s (T2 to T3)", g))
+    }),
+    set_names(list(
+      between_arm(by_subject("T1"), paste(label_versus, "at T1")),
+      between_arm(by_subject("T2"), paste(label_versus, "at T2")),
+      between_arm(change("T1", "T2"), paste0(label_versus, ", training change")),
+      between_arm(change("T2", "T3"), paste0(label_versus, ", acute change"))
+    ), paste0(
+      c("Baseline_", "Trained_", "Training_change_", "Acute_change_"), versus
+    ))
   )
 
   auc <- imap(tasks, \(spec, name) {
@@ -85,7 +97,6 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
       min_p = if_else(paired, 2 / 2^n_positive, 2 / choose(n_positive + n_negative, n_positive)),
       .after = n_negative
     )
-
 
 
   # Overview: every feature by task, median paired change and AUC each on its own scale.
@@ -183,13 +194,13 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
         facet_wrap(~ factor(name, levels = panels), nrow = 3, ncol = 4, drop = FALSE) +
         coord_equal() +
         labs(x = "1 - specificity", y = "sensitivity", caption = sprintf(paste(
-          "HR (up to %d) against LR (up to %d); AUC above 0.5 means higher in HR. Wilcoxon",
+          "%s (up to %d) against %s (up to %d); AUC above 0.5 means higher in %s. Wilcoxon",
           "rank-sum test; smallest attainable p %.2g. Header: AUC with its DeLong 95%% interval,",
           "p, none at AUC 0 or 1, where DeLong's variance is zero; at this n it runs narrow.",
           "BH q within", bh_scope,
           "and the feature's n.",
           paste0("Table: c_data/", workbook, ", auc.")
-        ), info$n_positive, info$n_negative, info$min_p))
+        ), groups[1], info$n_positive, groups[2], info$n_negative, groups[1], info$min_p))
     }
     plot +
       labs(title = info$task_label, subtitle = counts_line(info, feature_noun, hits)) +
