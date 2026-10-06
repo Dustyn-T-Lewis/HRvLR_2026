@@ -1,6 +1,6 @@
 # Put HR and LR on one pair of axes, once for training and once for the acute bout. fgsea scores
 # each set once per contrast, so one arm's NES against the other's compares the arms set by set.
-# No new test; it reshapes 02_Contrasts output.
+# No new test; it reshapes 03_Pathways output.
 
 suppressPackageStartupMessages({
   library(here)
@@ -21,7 +21,7 @@ walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
-  stop("Run 02_Contrasts first. Missing: ", inputs[["set_tests"]])
+  stop("Run 03_Pathways first. Missing: ", inputs[["set_tests"]])
 }
 fg <- readRDS(paths[["set_tests"]])
 

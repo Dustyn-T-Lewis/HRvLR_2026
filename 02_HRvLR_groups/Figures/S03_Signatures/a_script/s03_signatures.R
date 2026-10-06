@@ -39,7 +39,7 @@ barcodes <- map(
   \(window) signature_barcode(proteins, fry_rows, window, set_level = "pi")
 )
 
-# Panel c: mean change from each person's T1 (02_Contrasts, set_trajectory). In the arm that chose
+# Panel c: mean change from each person's T1 (02_DEP, set_trajectory). In the arm that chose
 # a set, the training window is where it was selected, so it carries no test, and the bout window
 # shares T2 with the selection: a protein high at T2 by chance reads as up, then down. Those cells
 # are faded and the bout result marked with a dagger. Each window reports the share of proteins
@@ -150,4 +150,4 @@ holds <- c(
   "Panel c: per cell and window, share of proteins moving as in training and fry FDR."
 )
 write_workbook(sheets, holds, file.path(out, "s03_signatures.xlsx"), inputs, paths)
-message("wrote s03_signatures.pdf, s03_signatures.png and s03_signatures.xlsx")
+message("wrote s03_signatures.pdf and s03_signatures.xlsx")

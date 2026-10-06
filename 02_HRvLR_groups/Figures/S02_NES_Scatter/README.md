@@ -4,7 +4,7 @@ Plots each set's HR NES against its LR NES, for training and for the acute bout.
 
 | | |
 |---|---|
-| Reads | `02_Contrasts/c_data/set_tests.rds` |
+| Reads | `02_HRvLR_groups/03_Pathways/c_data/set_tests.rds` |
 | Writes | `c_data/s02_nes_scatter.xlsx`, `b_reports/s02_nes_scatter_figures.pdf` |
 | Run | `Rscript 02_HRvLR_groups/Figures/S02_NES_Scatter/a_script/s02_nes_scatter.R` |
 

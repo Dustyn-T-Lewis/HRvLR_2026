@@ -6,7 +6,7 @@ through the bout.
 | | |
 |---|---|
 | Reads | `02_HRvLR_groups/02_DEP/c_data/02_contrasts.xlsx` (`fry_concordance`, `set_trajectory`), `02_HRvLR_groups/03_Pathways/c_data/set_tests.rds` |
-| Writes | `b_reports/s03_signatures.pdf`, `b_reports/s03_signatures.png` (300 x 110 mm, 600 dpi), `c_data/s03_signatures.xlsx` |
+| Writes | `b_reports/s03_signatures.pdf` (300 x 110 mm), `c_data/s03_signatures.xlsx` |
 | Run | `Rscript 02_HRvLR_groups/Figures/S03_Signatures/a_script/s03_signatures.R` |
 
 ## Panels

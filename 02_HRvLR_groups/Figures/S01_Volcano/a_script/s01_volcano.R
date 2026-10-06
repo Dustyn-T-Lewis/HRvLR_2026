@@ -1,7 +1,7 @@
 # Draw the protein volcanoes with the surviving fgsea pathways ringed. Computes nothing.
 # Two separate claims share a panel: point colour and the count badges read protein-level BH
 # FDR, the ring reads set-level fgsea FDR. Only sets that survived collapsePathways are ringed.
-# The floor contrast is not drawn; 02_Contrasts reports what it returns.
+# The floor contrast is not drawn; 03_Pathways reports what it returns.
 
 suppressPackageStartupMessages({
   library(here)
@@ -21,7 +21,7 @@ inputs <- c(set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
-    "Run 02_Contrasts first. Missing: ",
+    "Run 03_Pathways first. Missing: ",
     paste(inputs[!file.exists(paths)], collapse = ", ")
   )
 }
