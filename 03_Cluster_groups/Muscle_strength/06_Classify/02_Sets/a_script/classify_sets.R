@@ -1,5 +1,5 @@
-# How well each gene set's singscore separates the study's groups, on the eight tasks in
-# R/classify.R. Each collection is its own screen, so BH runs within task and collection.
+# How well each gene set's singscore separates the groups, on the five between-group tasks of
+# classify_step(). Each collection is its own screen, so BH runs within task and collection.
 
 suppressPackageStartupMessages({
   library(here)

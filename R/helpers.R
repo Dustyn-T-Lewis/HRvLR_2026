@@ -65,22 +65,19 @@ permutation_p <- function(observed, null) (sum(null >= observed) + 1) / (length(
 sides <- function(spec, id) {
   pos <- spec$positive[id, ]
   neg <- spec$negative[id, ]
-  if (spec$paired) {
-    kept <- !is.na(pos) & !is.na(neg)
-    return(list(pos = pos[kept], neg = neg[kept]))
-  }
   list(pos = pos[!is.na(pos)], neg = neg[!is.na(neg)])
 }
 classify_row <- function(spec, id) {
   s <- sides(spec, id)
   n <- c(n_positive = length(s$pos), n_negative = length(s$neg))
   if (min(n) < 3) {
-    return(c(auc = NA, auc_lower = NA, auc_upper = NA, median_change = NA, p = NA, n))
+    return(c(auc = NA, auc_lower = NA, auc_upper = NA, p = NA, n))
   }
   w <- suppressWarnings(wilcox.test(s$pos, s$neg)$statistic)
-  # direction = "<" pins HR as the higher side; pROC otherwise flips any AUC below 0.5. At perfect
-  # separation DeLong's variance is zero and the interval collapses to a point, so none is given.
-  interval <- if (spec$paired || w %in% c(0, prod(n))) {
+  # direction = "<" pins the first group as the higher side; pROC otherwise flips any AUC below
+  # 0.5. At perfect separation DeLong's variance is zero and the interval collapses, so none is
+  # given.
+  interval <- if (w %in% c(0, prod(n))) {
     c(NA, NA)
   } else {
     pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE) |>
@@ -90,9 +87,7 @@ classify_row <- function(spec, id) {
   }
   c(
     auc = unname(w) / prod(n), auc_lower = interval[1], auc_upper = interval[2],
-    median_change = if (spec$paired) median(s$pos - s$neg) else NA,
-    p = suppressWarnings(wilcox.test(s$pos, s$neg, paired = spec$paired)$p.value),
-    n
+    p = suppressWarnings(wilcox.test(s$pos, s$neg)$p.value), n
   )
 }
 

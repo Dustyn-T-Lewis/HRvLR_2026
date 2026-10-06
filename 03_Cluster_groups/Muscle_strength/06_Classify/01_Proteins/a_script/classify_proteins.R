@@ -1,4 +1,4 @@
-# How well each protein separates the study's groups, on the eight tasks in R/classify.R.
+# How well each protein separates the groups, on the five between-group tasks of classify_step().
 
 suppressPackageStartupMessages({
   library(here)

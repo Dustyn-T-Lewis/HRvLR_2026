@@ -1,16 +1,15 @@
-# The 03_Classify step, shared by the protein, set and module levels. How well each feature
-# separates the study's groups, on eight tasks that mirror the contrasts. `groups` names the two
-# groups, the first being the one AUC looks for. Within-group tasks pair each subject's two
-# biopsies: p is the Wilcoxon signed-rank test and the effect is the median paired change.
-# Between-group tasks compare the first group with the second on a level or on their own change:
-# p is the rank-sum test and AUC is W / (n1 * n2), above 0.5 when higher in the first. The auc
-# column is filled for every task; for paired tasks it ignores the pairing and is not drawn.
-# Between-group AUCs carry a DeLong 95% interval. BH within task, and within collection when
-# collection_of is given.
+# Single-feature discrimination between two groups, shared by the protein, set and module levels.
+# Nothing is fitted: each feature's AUC is the Mann-Whitney statistic W / (n1 * n2), above 0.5 when
+# the feature is higher in the first group, with the Wilcoxon rank-sum p, BH and Storey q within
+# task (and collection when collection_of is given). Five tasks compare the groups: the T1, T2 and
+# T3 levels, and the training (T2 - T1) and acute (T3 - T2) changes. Every AUC carries DeLong's
+# 95% interval, which runs narrow at this n; the features drawn in the report also carry pROC's
+# stratified bootstrap interval. The share of features at p < 0.05 is a multiple-testing summary,
+# not a measure of how well the groups separate.
 classify_step <- function(stage, inputs, paths, values, meta, feature_label, feature_noun,
                           feature_unit, value_label, row_groups, row_order,
                           collection_of = NULL, panel_name = \(label, collection) label,
-                          observed_share = NULL, groups = c("HR", "LR")) {
+                          observed_share = NULL, groups = c("HR", "LR"), boot_n = 2000) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
   step <- tolower(basename(stage))
@@ -28,182 +27,126 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
     mutate(d, observed_share = observed_share[feature], .after = label)
   }
 
-  by_subject <- function(timepoint, arm = groups) {
-    rows <- filter(meta, timepoint == .env$timepoint, arm %in% .env$arm)
+  arm_of <- set_names(as.character(meta$arm), meta$subject)
+  by_subject <- function(timepoint) {
+    rows <- filter(meta, timepoint == .env$timepoint, arm %in% groups)
     set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
   }
-  paired <- function(from, to, arm = groups) {
-    a <- by_subject(from, arm)
-    b <- by_subject(to, arm)
-    both <- intersect(colnames(a), colnames(b))
-    list(before = a[, both, drop = FALSE], after = b[, both, drop = FALSE])
+  change <- function(from, to) {
+    before <- by_subject(from)
+    after <- by_subject(to)
+    both <- intersect(colnames(before), colnames(after))
+    after[, both, drop = FALSE] - before[, both, drop = FALSE]
   }
-  arm_of <- set_names(as.character(meta$arm), meta$subject)
-  within_arm <- function(from, to, arm, label) {
-    p <- paired(from, to, arm)
-    list(
-      positive = p$after, negative = p$before, paired = TRUE, label = label,
-      levels = c(from, to)
-    )
-  }
-  between_arm <- function(level, label) {
+  split_groups <- function(level, label) {
     first <- arm_of[colnames(level)] == groups[1]
     list(
       positive = level[, first, drop = FALSE], negative = level[, !first, drop = FALSE],
-      paired = FALSE, label = label
+      label = label
     )
   }
-  change <- \(from, to) with(paired(from, to), after - before)
   versus <- paste(groups, collapse = "v")
   label_versus <- paste(groups, collapse = " vs ")
-  tasks <- c(
-    map(set_names(groups, paste0("Training_", groups)), \(g) {
-      within_arm("T1", "T2", g, sprintf("Training, %s (T1 to T2)", g))
-    }),
-    map(set_names(groups, paste0("Acute_", groups)), \(g) {
-      within_arm("T2", "T3", g, sprintf("Acute bout, %s (T2 to T3)", g))
-    }),
-    set_names(list(
-      between_arm(by_subject("T1"), paste(label_versus, "at T1")),
-      between_arm(by_subject("T2"), paste(label_versus, "at T2")),
-      between_arm(change("T1", "T2"), paste0(label_versus, ", training change")),
-      between_arm(change("T2", "T3"), paste0(label_versus, ", acute change"))
-    ), paste0(
-      c("Baseline_", "Trained_", "Training_change_", "Acute_change_"), versus
-    ))
-  )
+  tasks <- set_names(list(
+    split_groups(by_subject("T1"), paste(label_versus, "at T1")),
+    split_groups(by_subject("T2"), paste(label_versus, "at T2")),
+    split_groups(by_subject("T3"), paste(label_versus, "at T3")),
+    split_groups(change("T1", "T2"), paste0(label_versus, ", training change")),
+    split_groups(change("T2", "T3"), paste0(label_versus, ", acute change"))
+  ), paste0(c("Baseline_", "Trained_", "Acute_", "Training_change_", "Acute_change_"), versus))
 
   auc <- imap(tasks, \(spec, name) {
-    fits <- vapply(rownames(values), \(id) classify_row(spec, id), numeric(7))
-    tibble(
-      task = name, task_label = spec$label, paired = spec$paired, feature = rownames(values),
-      !!!as_tibble(t(fits))
-    )
+    fits <- vapply(rownames(values), \(id) classify_row(spec, id), numeric(6))
+    tibble(task = name, task_label = spec$label, feature = rownames(values), !!!as_tibble(t(fits)))
   }) |>
     list_rbind() |>
     labelled() |>
     mutate(fdr = p.adjust(p, "BH"), qvalue = storey_q(p), .by = c(task, all_of(by_collection)))
 
-  # The smallest p a task can reach: signed-rank on n pairs gives 2 / 2^n, rank-sum on n1 and n2
-  # gives 2 / choose(n1 + n2, n1). HR has 6 training and 7 acute pairs, LR 8 of each.
+  # The smallest p the rank-sum test can reach with n1 and n2 subjects: 2 / choose(n1 + n2, n1).
   counts <- auc |>
     filter(!is.na(p)) |>
     summarise(
-      paired = first(paired), n_positive = max(n_positive), n_negative = max(n_negative),
+      n_positive = max(n_positive), n_negative = max(n_negative),
       n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
       .by = c(task, task_label, all_of(by_collection))
     ) |>
-    mutate(
-      min_p = if_else(paired, 2 / 2^n_positive, 2 / choose(n_positive + n_negative, n_positive)),
-      .after = n_negative
-    )
+    mutate(min_p = 2 / choose(n_positive + n_negative, n_positive), .after = n_negative)
 
-
-  # Overview: every feature by task, median paired change and AUC each on its own scale.
-  paired_tasks <- names(tasks)[map_lgl(tasks, "paired")]
   task_labels <- map_chr(tasks, "label")
-  change_limit <- cap(auc$median_change)
   overviews <- imap(row_groups, \(rows, group) {
-    task_grid <- \(cols, value) as_grid(auc, rows, cols, "task", value)
-    between <- setdiff(names(tasks), paired_tasks)
-    maps <- labelled_heat(task_grid(paired_tasks, \(d) d$median_change), "Median paired change",
-      c(-change_limit, 0, change_limit), paste("median change,", value_label),
-      column_labels = task_labels[paired_tasks]
+    task_grid <- \(value) as_grid(auc, rows, names(tasks), "task", value)
+    maps <- labelled_heat(
+      task_grid(\(d) d$auc), sprintf("AUC, %s", label_versus), c(0, 0.5, 1), "AUC",
+      column_labels = task_labels
     ) +
-      labelled_heat(task_grid(between, \(d) d$auc), "AUC, HR against LR", c(0, 0.5, 1), "AUC",
-        column_labels = task_labels[between]
-      ) +
-      labelled_heat(task_grid(names(tasks), \(d) status_of(d$p, d$fdr)), "Wilcoxon p and BH q",
+      labelled_heat(task_grid(\(d) status_of(d$p, d$fdr)), "Wilcoxon p and BH q",
         row_names = TRUE, column_labels = task_labels
       )
-    heatmap_page(maps, sprintf("Classification overview: %s", group), paste(
+    heatmap_page(maps, sprintf("Discrimination overview: %s", group), paste(
       sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
-      row_order,
-      sprintf("Median change colours stop at the 99th percentile of |change|, %.2g.", change_limit),
-      paste0("Grey: not tested. Table: c_data/", workbook, ", auc.")
+      row_order, paste0("Grey: not tested. Table: c_data/", workbook, ", auc.")
     ))
   })
 
-  # Grids: every p < 0.05 hit, strongest first (p, then the larger effect, then feature ID).
-  # Within-arm tasks join each subject's two biopsies; HR-vs-LR tasks draw an ROC curve.
-  task_counts <- counts |>
-    summarise(
-      across(c(task_label, paired, n_positive, n_negative, min_p), first),
-      across(c(n_tested, n_nominal, n_fdr_05), sum),
-      .by = task
-    )
+  # The report's hits: the strongest p < 0.05 features per task, each with a bootstrap interval.
   hits <- auc |>
     filter(p < 0.05) |>
-    mutate(
-      task = factor(task, names(tasks)),
-      name = panel_name(label, pick(everything())[["collection"]]),
-      panel = if_else(paired,
-        sprintf(
-          "%s\nmedian change %+.2f  p %.2g  q %.2g\nn pairs %d", name, median_change, p, fdr,
-          n_positive
-        ),
-        sprintf(
-          "%s\nAUC %.2f %s  p %.2g  q %.2g\nHR %d, LR %d", name, auc,
-          if_else(is.na(auc_lower), "[no CI]", sprintf("[%.2f, %.2f]", auc_lower, auc_upper)),
-          p, fdr, n_positive, n_negative
-        )
-      )
-    ) |>
-    arrange(task, p, desc(abs(if_else(paired, median_change, auc - 0.5))), feature) |>
+    mutate(task = factor(task, names(tasks))) |>
+    arrange(task, p, desc(abs(auc - 0.5)), feature) |>
     paginate("task")
-  task_page <- function(hits) {
-    spec <- tasks[[as.character(hits$task[1])]]
-    info <- filter(task_counts, task == as.character(hits$task[1]))
-    panels <- slots(hits$panel)
-    if (spec$paired) {
-      points <- map2(hits$feature, hits$panel, \(id, panel) {
-        tibble(
-          panel,
-          subject = colnames(spec$positive),
-          before = spec$negative[id, ], after = spec$positive[id, ]
-        )
-      }) |>
-        list_rbind() |>
-        filter(!is.na(before), !is.na(after)) |>
-        pivot_longer(c(before, after), names_to = "biopsy") |>
-        mutate(
-          biopsy = factor(spec$levels[match(biopsy, c("before", "after"))], spec$levels),
-          panel = factor(panel, panels)
-        )
-      plot <- ggplot(points, aes(biopsy, value, group = subject)) +
-        geom_line(colour = "grey55") +
-        geom_point(size = 1.4) +
-        facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free_y", drop = FALSE) +
-        labs(x = NULL, y = value_label, caption = sprintf(paste(
-          "Wilcoxon signed-rank test on up to %d pairs; smallest attainable p %.2g. Header: median",
-          "paired change, p, BH q within", bh_scope,
-          "and the feature's complete pairs.",
+  set.seed(1)
+  boot <- pmap(list(as.character(hits$task), hits$feature), \(task, id) {
+    s <- sides(tasks[[task]], id)
+    pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE) |>
+      pROC::ci.auc(
+        method = "bootstrap", boot.n = boot_n, boot.stratified = TRUE, progress = "none"
+      ) |>
+      as.numeric()
+  })
+  hits <- hits |>
+    mutate(
+      boot_lower = map_dbl(boot, 1), boot_upper = map_dbl(boot, 3),
+      name = panel_name(label, pick(everything())[["collection"]]),
+      panel = sprintf(
+        "%s\nAUC %.2f [%.2f, %.2f]  p %.2g  q %.2g\n%s %d, %s %d", name, auc, boot_lower,
+        boot_upper, p, fdr, groups[1], n_positive, groups[2], n_negative
+      )
+    )
+  auc <- left_join(
+    auc, select(hits, task, feature, boot_lower, boot_upper) |> mutate(task = as.character(task)),
+    by = c("task", "feature")
+  )
+  task_page <- function(page_hits) {
+    spec <- tasks[[as.character(page_hits$task[1])]]
+    info <- filter(counts, task == as.character(page_hits$task[1])) |>
+      summarise(across(c(task_label, n_positive, n_negative, min_p), first),
+        across(c(n_tested, n_nominal, n_fdr_05), sum),
+        .by = task
+      )
+    curves <- map(page_hits$feature, \(id) {
+      s <- sides(spec, id)
+      pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE)
+    }) |>
+      set_names(page_hits$panel)
+    pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "black") +
+      geom_abline(
+        aes(intercept = 0, slope = 1),
+        data = tibble(name = page_hits$panel), linetype = 2, colour = "grey60"
+      ) +
+      facet_wrap(~ factor(name, levels = slots(page_hits$panel)),
+        nrow = 3, ncol = 4, drop = FALSE
+      ) +
+      coord_equal() +
+      labs(
+        title = info$task_label, subtitle = counts_line(info, feature_noun, page_hits),
+        x = "1 - specificity", y = "sensitivity", caption = sprintf(paste(
+          "%s (up to %d) against %s (up to %d); AUC above 0.5 means higher in %s. Header: AUC with",
+          "its stratified bootstrap 95%% interval (%d resamples), Wilcoxon rank-sum p (smallest",
+          "attainable %.2g), BH q within", bh_scope, "and the feature's n.",
           paste0("Table: c_data/", workbook, ", auc.")
-        ), info$n_positive, info$min_p))
-    } else {
-      curves <- map(hits$feature, \(id) {
-        s <- sides(spec, id)
-        pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE)
-      }) |>
-        set_names(hits$panel)
-      plot <- pROC::ggroc(curves, aes = "group", legacy.axes = TRUE, colour = "black") +
-        geom_abline(
-          aes(intercept = 0, slope = 1),
-          data = tibble(name = hits$panel), linetype = 2, colour = "grey60"
-        ) +
-        facet_wrap(~ factor(name, levels = panels), nrow = 3, ncol = 4, drop = FALSE) +
-        coord_equal() +
-        labs(x = "1 - specificity", y = "sensitivity", caption = sprintf(paste(
-          "%s (up to %d) against %s (up to %d); AUC above 0.5 means higher in %s. Wilcoxon",
-          "rank-sum test; smallest attainable p %.2g. Header: AUC with its DeLong 95%% interval,",
-          "p, none at AUC 0 or 1, where DeLong's variance is zero; at this n it runs narrow.",
-          "BH q within", bh_scope,
-          "and the feature's n.",
-          paste0("Table: c_data/", workbook, ", auc.")
-        ), groups[1], info$n_positive, groups[2], info$n_negative, groups[1], info$min_p))
-    }
-    plot +
-      labs(title = info$task_label, subtitle = counts_line(info, feature_noun, hits)) +
+        ), groups[1], info$n_positive, groups[2], info$n_negative, groups[1], boot_n, info$min_p)
+      ) +
       page_theme
   }
   pages <- map(split(hits, hits$pdf_page), task_page)
@@ -221,7 +164,6 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
     max(plot_index$pdf_page) == length(overviews) + length(pages)
   )
 
-
   pdf(file.path(figures, paste0(step, "_figures.pdf")), width = 11, height = 8.5)
   walk(overviews, \(page) page$draw())
   walk(pages, print)
@@ -233,15 +175,12 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
       plot_index = plot_index
     ),
     c(
-      paste(
-        "Per task: pairing, n per side, smallest attainable p, tested, p < 0.05 and BH < 0.05",
-        "counts."
-      ),
-      sprintf(
-        "Per %s and task: AUC, median paired change (paired tasks), Wilcoxon p, BH and Storey q.",
-        feature_unit
-      ),
-      "PDF page of each overview, and page and panel position (1 to 12) of every p < 0.05 row."
+      "Per task: n per group, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts.",
+      sprintf(paste(
+        "Per %s and task: AUC with DeLong 95%% interval, Wilcoxon p, BH and Storey q; bootstrap",
+        "95%% interval for the features drawn in the report."
+      ), feature_unit),
+      "PDF page of each overview, and page and panel position (1 to 12) of every drawn row."
     ),
     file.path(out, workbook),
     inputs, paths

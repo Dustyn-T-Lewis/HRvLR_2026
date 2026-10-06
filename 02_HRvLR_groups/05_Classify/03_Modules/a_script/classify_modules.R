@@ -1,5 +1,5 @@
-# How well each module eigengene separates the study's groups, on the eight tasks that
-# R/classify.R defines.
+# How well each module eigengene separates the groups, on the five between-group tasks of
+# classify_step().
 
 suppressPackageStartupMessages({
   library(here)
