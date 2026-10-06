@@ -32,7 +32,7 @@ Three objects come out:
 |---|---|---|
 | `proteins.rds` | limpa's EList (values, standard errors, observation counts) with the sample sheet | the protein fit (`dpcDE`), the leave-one-out reruns, the permutation |
 | `DAList_limpa.rds` | the complete matrix | fry, the overview row order, the panel |
-| `DAList_corrected.rds` | the complete matrix with each protein's blood slope removed (`limma::removeBatchEffect`, design = the six group cells) and the observed mask | singscore, WGCNA, the rank tests, correlations and ANCOVA (all on the complete matrix), and `observed_share` |
+| `DAList_corrected.rds` | the complete matrix with each protein's blood slope removed (`limma::removeBatchEffect`, design = time point only, so no group label enters) and the observed mask | singscore, WGCNA, the rank tests, correlations and ANCOVA (all on the complete matrix), and `observed_share` |
 
 Blood is centred here: `blood` is the 01_Filter index (mean log2 HBB and HBA1 against the
 sample median) minus its mean.

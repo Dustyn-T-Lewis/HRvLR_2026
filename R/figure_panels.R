@@ -1,6 +1,6 @@
-# Panel builders shared by the figures in every arc's Figures folder. Each takes its data as arguments and returns
-# a ggplot (or a list holding one and the numbers it plots); colours and theme come from
-# figure_theme.R, which must be sourced first.
+# Panel builders shared by the figures in every arc's Figures folder. Each takes its data as
+# arguments and returns a ggplot (or a list holding one and the numbers it plots); colours and
+# theme come from figure_theme.R, which must be sourced first.
 
 # PCA scores with a shaded 95% t-ellipse per time point and a test summary in the top-left corner.
 pca_panel <- function(scores, variance, title, subtitle, stats) {
@@ -160,14 +160,10 @@ pathway_label <- function(pathway, width = 44) {
   stringr::str_trunc(label, width)
 }
 
-# PDF (cairo, which embeds fonts and carries the Pi glyph the base device drops) and 600 dpi PNG.
+# PDF only, through cairo, which embeds fonts and carries the Pi glyph the base device drops.
 save_figure <- function(plot, dir, stem, width, height) {
   ggplot2::ggsave(
     file.path(dir, paste0(stem, ".pdf")), plot,
     width = width, height = height, units = "mm", device = grDevices::cairo_pdf
-  )
-  ggplot2::ggsave(
-    file.path(dir, paste0(stem, ".png")), plot,
-    width = width, height = height, units = "mm", dpi = 600, bg = "white"
   )
 }

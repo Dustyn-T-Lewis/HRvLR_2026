@@ -1,6 +1,7 @@
-# Protein report to a filtered, unnormalised DAList. Contaminants go by identity, outlier samples
-# by a four-method consensus, then proteins by detection on the samples that remain. No threshold
-# reads a contrast, phenotype or group label.
+# Protein report to a filtered, unnormalised DAList. Contaminants go by identity and proteins by
+# detection. Outlier samples are flagged by a four-method consensus and kept: the protein fits
+# down-weight them with limma's sample weights. No threshold reads a contrast, phenotype or group
+# label.
 
 suppressPackageStartupMessages({
   library(here)
@@ -222,7 +223,7 @@ dal <- zero_to_missing(DAList(data = int_df, annotation = annot_df, metadata = m
 
 # Four methods flag a sample: missingness (Tukey fence on its share and on its spread within
 # subject), PCA Mahalanobis distance, median intensity (Hampel) and median inter-sample
-# correlation. Three of four remove it.
+# correlation. Three of four mark it as a consensus outlier; the flag is reported, never acted on.
 lg <- log2(dal$data + 1)
 complete <- dal$data[rowSums(is.na(dal$data)) == 0, ]
 pcs <- prcomp(t(log2(complete + 1)), center = TRUE, scale. = TRUE)$x[, 1:3]
@@ -244,9 +245,8 @@ outlier_diag <- dal$metadata |>
   )
 stopifnot(identical(rownames(pcs), outlier_diag$sample_id))
 outlier_ids <- outlier_diag$sample_id[outlier_diag$consensus_outlier]
-dal <- filter_samples(dal, !(sample_id %in% outlier_ids))
+dal$metadata$consensus_outlier <- dal$metadata$sample_id %in% outlier_ids
 
-# Detection runs last, so no discarded sample counts toward a protein's detections.
 n_before <- nrow(dal$data)
 dal <- filter_proteins_by_group(dal,
   min_reps = cfg$miss_min_reps, min_groups = cfg$miss_min_groups,
@@ -254,13 +254,13 @@ dal <- filter_proteins_by_group(dal,
 )
 removed <- count(filter(protein_calls, contaminant), verdict, name = "n_removed")
 filter_log <- tibble(
-  step = c("raw input", "duplicate accession", removed$verdict, "outlier samples", "detection"),
-  n_removed = c(NA, n_raw - n_dedup, removed$n_removed, 0L, n_before - nrow(dal$data))
+  step = c("raw input", "duplicate accession", removed$verdict, "detection"),
+  n_removed = c(NA, n_raw - n_dedup, removed$n_removed, n_before - nrow(dal$data))
 ) |>
   mutate(
     n_after = n_raw - cumsum(coalesce(n_removed, 0L)),
     pct_of_raw = round(100 * n_after / n_raw, 1),
-    n_samples = c(rep(nrow(metadata), nrow(removed) + 2), rep(ncol(dal$data), 2))
+    n_samples = ncol(dal$data)
   )
 
 set.seed(42) # the jittered points only
@@ -307,7 +307,7 @@ consensus <- ggplot(flags, aes(method, sample_id, fill = flagged)) +
   labs(
     title = "Outlier flags, flagged samples only",
     subtitle = sprintf(
-      "%d of %d samples flagged; %d met the %d-of-4 consensus",
+      "%d of %d samples flagged; %d met the %d-of-4 consensus and are kept, flagged",
       n_distinct(flags$sample_id), nrow(metadata), length(outlier_ids), cfg$outlier_k
     ),
     x = NULL, y = NULL
