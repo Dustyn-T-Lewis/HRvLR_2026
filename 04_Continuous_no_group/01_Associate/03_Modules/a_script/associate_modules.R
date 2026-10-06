@@ -28,10 +28,10 @@ meta <- as_tibble(modules$meta)
 stopifnot(identical(colnames(values), meta$sample_id))
 
 associate_step(
-  stage = here("04_Continuous_no_group", "01_Associate", "03_Modules"), inputs = inputs, paths = paths,
+  stage = here("04_Continuous_no_group", "01_Associate", "03_Modules"),
+  inputs = inputs, paths = paths,
   values = values, meta = meta, feature_label = set_names(rownames(values)),
   feature_noun = "modules", feature_unit = "module", value_label = "eigengene",
   row_groups = list(modules = modules$module_summary$module),
-  row_order = "Rows follow module size.",
-  all_arm_rows = TRUE
+  row_order = "Rows follow module size."
 )

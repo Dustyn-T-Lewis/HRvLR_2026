@@ -1,32 +1,28 @@
-# The 04_Associate step, shared by the protein, set and module levels. Each level's script reads its
-# own matrix and labels and passes them here.
+# The continuous arc's association step, shared by the protein, set and module levels. Each level's
+# script reads its own matrix and labels and passes them here. No group label enters: every subject
+# is pooled and each trait is a number.
 #
 # Sample model: every T1 and T2 biopsy carries its own trait values. Per trait, limma fits
 # abundance ~ timepoint + between + within with subject blocked, where between is the subject's
 # mean trait and within the biopsy's deviation from it. within asks whether a feature rises in the
 # biopsies where that person's trait rose; between asks whether people with more of the trait
-# carry more of the feature. Arm stays out: it was defined from one of these traits.
+# carry more of the feature.
 #
-# Change score: one value per subject and pairing, every subject pooled, each trait continuous.
-# Pairings: training change, T1 level and acute change against the % trait changes, composite and
-# volume ("baseline" is the T1 level against later change), and T1 and T2 levels against the trait
-# levels at the same biopsy. Per feature: limma on one value per subject (p, the primary test),
-# Spearman (p_rank), biweight midcorrelation (bicor), and the largest limma p over leave-one-out
-# refits; robust = all four below 0.05. Each screen's count and strongest hit are judged against
-# 200 shuffles of whole phenotype rows (sheet chance), with the empirical FDR = shuffle median /
-# observed count. Within-arm Spearman p is exact.
+# Change score: one value per subject and pairing. Pairings: training change, T1 level and acute
+# change against the % trait changes, composite and volume ("baseline" is the T1 level against
+# later change); T1 and T2 levels against the trait levels at the same biopsy; and the T3 level
+# against the T2 trait levels, since T3 follows the same training (it also carries the bout's
+# acute effect). Per feature: limma on one value per subject (p), Spearman (p_rank) and biweight
+# midcorrelation (bicor).
 #
-# Interaction: feature change ~ growth x strength gain, with the leave-one-out maximum p and the
-# person whose removal gives it.
-# Flips: DGCA's Fisher z difference between HR and LR correlations, p from 200 arm-label
-# permutations.
+# Two predictor: feature ~ growth + strength gain. Interaction: feature ~ growth x strength gain,
+# the continuous form of asking whether the strength link depends on growth.
 #
 # collection_of, when given, makes each collection its own screen: BH runs within collection.
 associate_step <- function(stage, inputs, paths, values, meta, feature_label, feature_noun,
                            feature_unit, value_label, row_groups, row_order,
                            collection_of = NULL, panel_name = \(label, collection) label,
-                           observed_share = NULL,
-                           all_arm_rows = FALSE, save_change_score = FALSE) {
+                           observed_share = NULL, save_change_score = FALSE) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
   step <- tolower(basename(stage))
@@ -52,7 +48,6 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   biopsy <- phenotype_list$biopsy
   outcomes <- phenotype_list$outcomes
   pairing_tables <- phenotype_list$pairings
-  arm_of <- set_names(phenotype$arm, phenotype$subject)
   pairing_outcomes <- map(pairing_tables, \(tt) setdiff(names(tt), "subject"))
   outcome_of <- \(name, subjects) pairing_value(pairing_tables, "training", name, subjects)
 
@@ -88,7 +83,8 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     baseline = subject_values(values, meta, "T1"),
     acute = subject_change(values, meta, "T2", "T3"),
     baseline_level = subject_values(values, meta, "T1"),
-    post_level = subject_values(values, meta, "T2")
+    post_level = subject_values(values, meta, "T2"),
+    post_bout_level = subject_values(values, meta, "T3")
   )
   change_windows <- c("training", "baseline", "acute")
   linear <- \(x, outcome) subject_fit(x, data.frame(trait = outcome), ~trait, "trait")
@@ -96,17 +92,9 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     fit <- linear(x, outcome) |> select(feature, n_subjects, effect, t, p)
     ok <- !is.na(outcome)
     bc <- WGCNA::bicorAndPvalue(t(x[fit$feature, ok, drop = FALSE]), outcome[ok])
-    loo <- map(colnames(x)[ok], \(s) {
-      keep <- colnames(x) != s
-      linear(x[, keep, drop = FALSE], outcome[keep]) |> select(feature, p)
-    }) |>
-      list_rbind() |>
-      summarise(loo_max_p = max(p), .by = feature)
     fit |>
       left_join(select(spearman_by_row(x, outcome), feature, rho, p_rank = p), by = "feature") |>
-      mutate(bicor = bc$bicor[feature, 1], p_bicor = bc$p[feature, 1]) |>
-      left_join(loo, by = "feature") |>
-      mutate(robust = p < 0.05 & p_rank < 0.05 & p_bicor < 0.05 & loo_max_p < 0.05)
+      mutate(bicor = bc$bicor[feature, 1], p_bicor = bc$p[feature, 1])
   }
   change_score <- imap(windows, \(x, window) {
     map(set_names(pairing_outcomes[[window]]), \(name) {
@@ -116,79 +104,6 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       mutate(window = window, .before = 1)
   }) |>
     list_rbind() |>
-    labelled() |>
-    corrected(window, outcome)
-  by_arm <- map(set_names(c("HR", "LR")), \(arm) {
-    imap(windows[change_windows], \(x, window) {
-      kept <- x[, arm_of[colnames(x)] == arm, drop = FALSE]
-      map(set_names(outcomes), \(name) {
-        spearman_by_row(kept, outcome_of(name, colnames(kept)), exact = TRUE)
-      }) |>
-        list_rbind(names_to = "outcome") |>
-        mutate(window = window, .before = 1)
-    }) |>
-      list_rbind()
-  }) |>
-    list_rbind(names_to = "arm") |>
-    filter(!is.na(rho))
-
-  # Chance line per screen: whole phenotype rows shuffled across subjects, so traits keep their
-  # correlations and only the link to the proteome breaks.
-  null_screens <- parallel::mclapply(1:200, \(i) {
-    shuffled <- shuffle_pairings(pairing_tables, i)
-    imap(windows, \(x, window) {
-      map(set_names(pairing_outcomes[[window]]), \(name) {
-        d <- linear(x, pairing_value(shuffled, window, name, colnames(x)))
-        if (length(by_collection)) d <- mutate(d, collection = collection_of[feature])
-        summarise(d, nominal = sum(p < 0.05), min_p = min(p), .by = any_of("collection"))
-      }) |>
-        list_rbind(names_to = "outcome") |>
-        mutate(window = window)
-    }) |>
-      list_rbind()
-  }, mc.cores = 8) |>
-    list_rbind()
-  chance <- change_score |>
-    summarise(
-      tested = n(), nominal = sum(p < 0.05), bh_05 = sum(fdr < 0.05),
-      robust = sum(robust, na.rm = TRUE), min_p = min(p),
-      .by = c(window, outcome, all_of(by_collection))
-    ) |>
-    left_join(
-      summarise(null_screens,
-        null_median = median(nominal),
-        null_95 = quantile(nominal, 0.95), null_counts = list(nominal), null_min = list(min_p),
-        .by = c(window, outcome, all_of(by_collection))
-      ),
-      by = c("window", "outcome", by_collection)
-    ) |>
-    mutate(
-      empirical_fdr = pmin(1, null_median / nominal),
-      perm_p_count = map2_dbl(null_counts, nominal, \(v, o) (sum(v >= o) + 1) / (length(v) + 1)),
-      perm_p_strongest = map2_dbl(null_min, min_p, \(v, o) (sum(v <= o) + 1) / (length(v) + 1))
-    ) |>
-    select(-null_counts, -null_min)
-
-  # comp_hypertrophy defines the arms, so a slope difference on it re-measures the split; it
-  # stays in the pooled correlation and the two-predictor model. Each arm's slope needs five
-  # subjects with both the feature and the outcome observed.
-  arm_difference <- imap(windows[change_windows], \(x, window) {
-    map(set_names(setdiff(outcomes, "comp_hypertrophy")), \(name) {
-      predictors <- data.frame(
-        arm = factor(arm_of[colnames(x)], c("LR", "HR")), outcome = outcome_of(name, colnames(x))
-      )
-      seen <- !is.na(x) & rep(!is.na(predictors$outcome), each = nrow(x))
-      per_arm <- sapply(c("HR", "LR"), \(a) rowSums(seen[, predictors$arm %in% a, drop = FALSE]))
-      subject_fit(
-        x[apply(per_arm, 1, min) >= 5, , drop = FALSE], predictors, ~ arm * outcome,
-        "armHR:outcome"
-      )
-    }) |>
-      list_rbind(names_to = "outcome") |>
-      mutate(window = window, .before = 1)
-  }) |>
-    list_rbind() |>
-    select(-coefficient) |>
     labelled() |>
     corrected(window, outcome)
   strength_tests <- c("pct_leg_press_1rm", "pct_leg_ext_1rm")
@@ -218,20 +133,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         growth = outcome_of("comp_hypertrophy", colnames(x)),
         strength = outcome_of(test, colnames(x))
       )
-      fit <- subject_fit(x, predictors, ~ growth * strength, "growth:strength")
-      ok <- complete.cases(predictors)
-      loo <- map(colnames(x)[ok], \(s) {
-        keep <- colnames(x) != s
-        subject_fit(
-          x[, keep, drop = FALSE], predictors[keep, ], ~ growth * strength,
-          "growth:strength"
-        ) |>
-          transmute(feature, p, left_out = s)
-      }) |>
-        list_rbind() |>
-        # The person whose removal weakens the result most is the one it leans on.
-        summarise(loo_max_p = max(p), loo_worst_subject = left_out[which.max(p)], .by = feature)
-      left_join(fit, loo, by = "feature")
+      subject_fit(x, predictors, ~ growth * strength, "growth:strength")
     }) |>
       list_rbind(names_to = "strength_test") |>
       mutate(window = window, .before = 1)
@@ -240,51 +142,6 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     select(-coefficient) |>
     labelled() |>
     corrected(window, strength_test)
-
-  # Flips: does a feature's correlation with a trait differ between HR and LR? DGCA on the change
-  # windows and the T1 and T2 levels; each arm needs five subjects with the trait measured.
-  flips <- imap(windows[c("training", "acute", "baseline_level", "post_level")], \(x, window) {
-    map(setdiff(pairing_outcomes[[window]], "comp_hypertrophy"), \(name) {
-      outcome <- pairing_value(pairing_tables, window, name, colnames(x))
-      ok <- !is.na(outcome)
-      arm <- factor(arm_of[colnames(x)][ok], c("HR", "LR"))
-      if (min(table(arm)) < 5) {
-        return(NULL)
-      }
-      trait_row <- matrix(outcome[ok], nrow = 1, dimnames = list(name, NULL))
-      design <- DGCA::makeDesign(arm)
-      arm_data <- x[, ok, drop = FALSE]
-      observed <- DGCA::ddcorAll(arm_data, design, c("HR", "LR"),
-        inputMatB = trait_row, corrType = "spearman", adjust = "none", sigThresh = 1,
-        nPairs = "all"
-      ) |>
-        suppressMessages()
-      set.seed(1)
-      null <- DGCA::getDCorPerm(arm_data, design, c("HR", "LR"),
-        inputMatB = trait_row, nPerms = 200, corrType = "spearman"
-      ) |>
-        suppressMessages() |>
-        as.vector() |>
-        abs()
-      null <- sort(null[!is.na(null)])
-      # Pooled over features as DGCA does; left.open counts an infinite z (a perfect correlation
-      # in a small arm) only against null values that are also infinite.
-      empirical <- \(z) {
-        (1 + length(null) - findInterval(abs(z), null, left.open = TRUE)) / (1 + length(null))
-      }
-      as_tibble(observed) |>
-        transmute(
-          feature = as.character(Gene1), outcome = name, hr_rho = HR_cor,
-          lr_rho = LR_cor, z_diff = if_else(is.finite(zScoreDiff), zScoreDiff, NA_real_),
-          p = empirical(zScoreDiff), class = Classes
-        )
-    }) |>
-      list_rbind() |>
-      mutate(window = window, .before = 1)
-  }) |>
-    list_rbind() |>
-    labelled() |>
-    corrected(window, outcome)
 
   tally <- function(d, ...) {
     summarise(d,
@@ -303,11 +160,6 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         analysis = paste("change score:", window), comparison = outcome,
         pick(all_of(by_collection)), n_tested, n_nominal, n_fdr_05
       ),
-    tally(arm_difference, window, outcome) |>
-      transmute(
-        analysis = paste("arm difference:", window), comparison = outcome,
-        pick(all_of(by_collection)), n_tested, n_nominal, n_fdr_05
-      ),
     tally(two_predictor, window, strength_test, coefficient) |>
       transmute(
         analysis = paste("two predictor:", window),
@@ -318,11 +170,6 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       transmute(
         analysis = paste("interaction:", window), comparison = strength_test,
         pick(all_of(by_collection)), n_tested, n_nominal, n_fdr_05
-      ),
-    tally(flips, window, outcome) |>
-      transmute(
-        analysis = paste("flips:", window), comparison = outcome, pick(all_of(by_collection)),
-        n_tested, n_nominal, n_fdr_05
       )
   )
 
@@ -335,9 +182,8 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   )
   window_axis <- c(
     training = "change, T1 to T2", baseline = "T1 level", acute = "change, T2 to T3",
-    baseline_level = "T1 level", post_level = "T2 level"
+    baseline_level = "T1 level", post_level = "T2 level", post_bout_level = "T3 level"
   )
-  arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
   bh_scope <- if (length(by_collection)) " and collection" else ""
   name_of <- \(d) panel_name(d$label, d[["collection"]])
 
@@ -417,18 +263,17 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       select(feature, panel) |>
       cross_join(select(samples, sample_id, subject, timepoint, trait_value = all_of(trait))) |>
       mutate(
-        value = values[cbind(feature, sample_id)], arm = arm_of[subject],
+        value = values[cbind(feature, sample_id)],
         panel = factor(panel, slots(hits$panel))
       ) |>
       filter(!is.na(value), !is.na(trait_value))
-    ggplot(points, aes(trait_value, value, colour = arm)) +
+    ggplot(points, aes(trait_value, value)) +
       geom_line(
         aes(group = subject),
-        data = \(d) filter(d, n() == 2, .by = c(panel, subject)), alpha = 0.6
+        data = \(d) filter(d, n() == 2, .by = c(panel, subject)), alpha = 0.6, colour = "grey40"
       ) +
       geom_point(aes(shape = timepoint), size = 1.5) +
       facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free", drop = FALSE) +
-      scale_colour_manual(values = arm_colours, name = NULL) +
       scale_shape_manual(values = c(T1 = 1, T2 = 16), name = NULL) +
       labs(
         title = sprintf("%s, %s-person term", trait, term),
@@ -446,9 +291,6 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       page_theme
   }
 
-  arm_text <- by_arm |>
-    mutate(text = sprintf("%-3s n=%d rho=%+.2f p=%.3f", arm, n_subjects, rho, p)) |>
-    summarise(caption = paste(text, collapse = "\n"), .by = c(window, outcome, feature))
   change_hits <- change_score |>
     filter(p < 0.05) |>
     mutate(
@@ -462,26 +304,16 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     paginate("window")
   page_captions <- c(
     "change score" = paste(
-      "One point per subject. Lines are a least-squares fit per arm, drawn as a guide. Header:",
-      "Spearman rho, and limma p and BH q pooled over both arms within window, outcome%s, with",
-      "the subjects used.",
-      "Corner: each arm's rho and exact p. Arm is the median split of",
-      "comp_hypertrophy, so pooled correlations with it and with fibre area change partly",
-      paste0("carry the group split. Table: c_data/", workbook, ", change_score and"),
-      "change_score_by_arm."
-    ),
-    "arm difference" = paste(
-      "One point per subject. Lines are a least-squares fit per arm. Header: HR's slope minus",
-      "LR's per outcome unit from limma, feature ~ arm * outcome, with p, BH q within window,",
-      "outcome%s, and the subjects used. Corner: each arm's Spearman rho and exact p.",
-      paste0("Table: c_data/", workbook, ", arm_difference.")
+      "One point per subject, every subject pooled. The line is a least-squares fit, drawn as a",
+      "guide. Header: Spearman rho, and limma p and BH q within window, outcome%s, with the",
+      paste0("subjects used. Table: c_data/", workbook, ", change_score.")
     ),
     "two predictor" = paste(
       "One point per subject. Header: the growth or strength coefficient from limma, feature ~",
       "comp_hypertrophy + strength gain, each adjusted for the other, with p, BH q within",
       "window, strength test, term%s, and the subjects used. The x axis shows the term's own",
-      "outcome; the drawing does not hold the other predictor fixed. Corner: each arm's",
-      paste0("Spearman rho and exact p. Table: c_data/", workbook, ", two_predictor.")
+      "outcome; the drawing does not hold the other predictor fixed.",
+      paste0("Table: c_data/", workbook, ", two_predictor.")
     )
   )
   page_captions[] <- sprintf(page_captions, bh_scope)
@@ -491,27 +323,21 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       filter(analysis == paste0(kind, ": ", w)) |>
       summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
     points <- hits |>
-      left_join(arm_text, by = c("window", "outcome", "feature")) |>
-      select(feature, outcome, panel, caption) |>
+      select(feature, outcome, panel) |>
       cross_join(tibble(subject = colnames(windows[[w]]))) |>
       mutate(
         value = windows[[w]][cbind(feature, subject)],
         outcome_value = map2_dbl(outcome, subject, \(o, s) pairing_value(pairing_tables, w, o, s)),
-        arm = arm_of[subject], caption = coalesce(caption, ""),
         panel = factor(panel, slots(hits$panel))
       ) |>
       filter(!is.na(value), !is.na(outcome_value))
-    ggplot(points, aes(value, outcome_value, colour = arm)) +
+    ggplot(points, aes(value, outcome_value)) +
       # A straight line needs two points, not the default 80.
-      geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.5, n = 2) +
-      geom_point(size = 1.3) +
-      geom_text(
-        data = distinct(points, panel, caption), aes(-Inf, Inf, label = caption),
-        inherit.aes = FALSE, hjust = -0.03, vjust = 1.1, size = 1.9, family = "mono"
+      geom_smooth(
+        method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.5, n = 2, colour = "grey40"
       ) +
+      geom_point(size = 1.3) +
       facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free", drop = FALSE) +
-      scale_colour_manual(values = arm_colours, name = NULL) +
-      scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
       labs(
         title = sprintf("%s, %s window", stringr::str_to_sentence(kind), w),
         subtitle = counts_line(info, "feature-outcome pairs", hits),
@@ -522,19 +348,14 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   }
   model_pages <- map(split(model_hits, model_hits$pdf_page), model_page)
   change_pages <- map(split(change_hits, change_hits$pdf_page), change_page)
-  slope_hits <- bind_rows(
-    arm_difference |>
-      filter(p < 0.05) |>
-      mutate(kind = "arm difference", header = sprintf("slope HR-LR %+.3g", effect)),
-    two_predictor |>
-      filter(p < 0.05) |>
-      mutate(
-        kind = "two predictor",
-        header = sprintf(
-          "%s term, %s model %+.3g", coefficient, sub("pct_", "", strength_test), effect
-        )
+  slope_hits <- two_predictor |>
+    filter(p < 0.05) |>
+    mutate(
+      kind = "two predictor",
+      header = sprintf(
+        "%s term, %s model %+.3g", coefficient, sub("pct_", "", strength_test), effect
       )
-  ) |>
+    ) |>
     mutate(
       name = name_of(pick(everything())),
       panel = sprintf(
@@ -542,10 +363,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         p, fdr, n_subjects
       )
     ) |>
-    arrange(
-      match(kind, c("arm difference", "two predictor")), match(window, names(windows)), p,
-      desc(abs(t)), feature, outcome
-    ) |>
+    arrange(match(window, names(windows)), p, desc(abs(t)), feature, outcome) |>
     paginate(c("kind", "window"))
   slope_pages <- map(split(slope_hits, slope_hits$pdf_page), \(hits) {
     change_page(hits, hits$kind[1])
@@ -574,7 +392,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     nrow(model_hits) == sum(model$p < 0.05, na.rm = TRUE),
     nrow(change_hits) == sum(change_score$p < 0.05),
     !anyDuplicated(select(filter(plot_index, !is.na(feature)), -label, -pdf_page, -position)),
-    nrow(slope_hits) == sum(arm_difference$p < 0.05) + sum(two_predictor$p < 0.05),
+    nrow(slope_hits) == sum(two_predictor$p < 0.05),
     max(plot_index$pdf_page) ==
       length(overviews) + length(model_pages) + length(change_pages) + length(slope_pages)
   )
@@ -595,12 +413,8 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     list(
       counts = counts, model = arrange(model, trait, term, p),
       change_score = arrange(change_score, window, outcome, p),
-      chance = chance,
-      change_score_by_arm = if (all_arm_rows) by_arm else filter(by_arm, p < 0.05),
-      arm_difference = arrange(arm_difference, window, outcome, p),
       two_predictor = arrange(two_predictor, window, strength_test, coefficient, p),
       interaction = arrange(interaction, window, strength_test, p),
-      flips = arrange(flips, window, outcome, p),
       plot_index = plot_index
     ),
     c(
@@ -611,33 +425,15 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       ),
       sprintf(paste(
         "Change score, every subject pooled: limma effect, t, p, BH, Storey q; Spearman rho and",
-        "p_rank; bicor; leave-one-out maximum p; robust; per %s, window and outcome."
+        "p_rank; bicor and its p; per %s, window and outcome."
       ), feature_unit),
-      paste(
-        "Per window and outcome: tested, p < 0.05, BH < 0.05, robust; the median and 95th",
-        "percentile over 200 phenotype shuffles, empirical FDR, and permutation p for the count",
-        "and for the strongest hit."
-      ),
-      if (all_arm_rows) {
-        sprintf("Change score within each arm, exact p, every %s.", feature_unit)
-      } else {
-        "Change score within each arm, exact p, rows with p < 0.05."
-      },
-      sprintf(
-        "Arm difference: HR minus LR slope, t, p, BH and Storey q per %s, window and outcome.",
-        feature_unit
-      ),
       sprintf(
         "Two predictor: growth and strength terms, t, p, BH and Storey q per %s, window and test.",
         feature_unit
       ),
       sprintf(paste(
-        "Interaction, feature ~ growth x strength gain: effect, t, p, BH, Storey q, the",
-        "leave-one-out maximum p and the person left out to give it, per %s, window and test."
-      ), feature_unit),
-      sprintf(paste(
-        "Flips, DGCA: HR and LR Spearman rho, Fisher z difference (blank where one arm's rho is",
-        "+1 or -1), p from 200 arm-label permutations, BH and Storey q per %s, window and outcome."
+        "Interaction, feature ~ growth x strength gain: effect, t, p, BH and Storey q per %s,",
+        "window and test."
       ), feature_unit),
       "PDF page of each overview, and page and panel position of every p < 0.05 row."
     ),

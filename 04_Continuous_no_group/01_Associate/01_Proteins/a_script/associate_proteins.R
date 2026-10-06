@@ -32,7 +32,8 @@ stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
 complete <- readRDS(paths[["limpa"]])$data
 
 associate_step(
-  stage = here("04_Continuous_no_group", "01_Associate", "01_Proteins"), inputs = inputs, paths = paths,
+  stage = here("04_Continuous_no_group", "01_Associate", "01_Proteins"),
+  inputs = inputs, paths = paths,
   values = dal$data, observed_share = rowMeans(dal$observed), meta = as_tibble(dal$metadata),
   feature_label = feature_label, feature_noun = "proteins", feature_unit = "protein",
   value_label = "log2 abundance",

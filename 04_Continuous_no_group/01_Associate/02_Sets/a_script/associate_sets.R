@@ -30,7 +30,8 @@ meta <- as_tibble(readRDS(paths[["proteins"]])$metadata)
 stopifnot(identical(colnames(values), meta$sample_id))
 
 associate_step(
-  stage = here("04_Continuous_no_group", "01_Associate", "02_Sets"), inputs = inputs, paths = paths,
+  stage = here("04_Continuous_no_group", "01_Associate", "02_Sets"),
+  inputs = inputs, paths = paths,
   values = values, meta = meta,
   feature_label = with(catalog, set_names(enrichVolcano::ev_clean_label(pathway), set_id)),
   feature_noun = "sets", feature_unit = "set", value_label = "singscore",
