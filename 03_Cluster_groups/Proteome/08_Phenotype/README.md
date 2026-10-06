@@ -1,4 +1,4 @@
-# 03_Phenotype
+# 08_Phenotype
 
 Do the proteome clusters differ in size or strength? Phenotype played no part in the clustering,
 so these are tests.
@@ -6,8 +6,8 @@ so these are tests.
 | | |
 |---|---|
 | Reads | `01_Cluster/c_data/01_cluster.xlsx`, `00_Input/phenotype.csv` |
-| Writes | `c_data/03_phenotype.xlsx`, `b_reports/03_phenotype_figures.pdf` |
-| Run | `Rscript 03_Cluster_groups/Proteome/03_Phenotype/a_script/03_phenotype.R` |
+| Writes | `c_data/08_phenotype.xlsx`, `b_reports/08_phenotype_figures.pdf` |
+| Run | `Rscript 03_Cluster_groups/Proteome/08_Phenotype/a_script/08_phenotype.R` |
 
 ## Method
 

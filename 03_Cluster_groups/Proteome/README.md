@@ -7,9 +7,29 @@ The gap statistic selects K = 1 at every input: the proteome does not split thes
 groups. K = 2 is imposed at every input for the exploratory comparisons, and most of those splits
 are unstable (bootstrap Jaccard 0.56 to 0.86). None tracks HR/LR.
 
-| Substage | Asks | Valid as |
+Every stage from `02_Design` to `07_Associate` is the HR/LR template run once per input on that
+input's clusters, C1 and C2. Each input writes to its own folder (`03_DEP/T1/`, `03_DEP/training/`,
+and so on), and `stack_inputs()` (`R/inputs.R`) joins the five workbooks of a stage into
+`c_data/all_inputs.xlsx`, with an `input` column on every row and a `validity` column wherever a row
+names its comparison.
+
+Validity says how far a comparison can be trusted when the groups were built from the proteome:
+
+| Tag | Rule | Read as |
 |---|---|---|
-| [`01_Cluster`](01_Cluster/README.md) | how people split at each input | K diagnostics |
-| [`02_Describe`](02_Describe/README.md) | what separates the two clusters | description: the clusters were built from these data |
-| [`03_Phenotype`](03_Phenotype/README.md) | do the clusters differ in size or strength | test: phenotype played no part |
-| [`04_Interactions`](04_Interactions/README.md) | do clusters respond differently later, or link differently to phenotype | test |
+| circular | the comparison uses exactly the clustering's time points | description: the clustering made the difference |
+| caution | it shares a time point with the clustering | regression to the mean can make a difference |
+| clean | it shares none | a test |
+
+| Substage | Asks | Copy of |
+|---|---|---|
+| [`01_Cluster`](01_Cluster/README.md) | how people split at each input | new: K diagnostics, assignments, relabelled inputs per input |
+| `02_Design` | which comparisons | `02_HRvLR_groups/01_Design` |
+| `03_DEP` | which proteins differ | `02_HRvLR_groups/02_DEP` |
+| `04_Pathways` | which gene sets differ | `02_HRvLR_groups/03_Pathways` |
+| `05_Modules` | which modules differ | `02_HRvLR_groups/04_Modules/01_Contrasts` |
+| `06_Classify/01_Proteins`, `02_Sets`, `03_Modules` | does one feature separate the clusters | `02_HRvLR_groups/05_Classify` |
+| `07_Associate` | does a phenotype link differ by cluster | `02_HRvLR_groups/06_Associate` |
+| [`08_Phenotype`](08_Phenotype/README.md) | do the clusters differ in size or strength | new: phenotype played no part in the clustering, so these are tests |
+
+The methods, figures and sheets of each copy are described in the template's README.

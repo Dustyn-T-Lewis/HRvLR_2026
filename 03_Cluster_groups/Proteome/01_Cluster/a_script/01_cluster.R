@@ -105,6 +105,45 @@ per_input <- imap(by_input, \(m, input) {
 })
 results <- map(set_names(names(per_input[[1]])), \(sheet) list_rbind(map(per_input, sheet)))
 
+# The trunk's inputs relabelled once per input, for the stages after this one: arm and group carry
+# the clusters as C1 and C2, and the samples of anyone not clustered at that input drop out.
+trunk <- \(path) readRDS(here("01_Trunk", path))
+proteins_all <- trunk("03_Quantify/c_data/proteins.rds")
+matrices <- map(set_names(c("DAList_corrected", "DAList_limpa")), \(name) {
+  trunk(file.path("03_Quantify/c_data", paste0(name, ".rds")))
+})
+scores_all <- trunk("05_Scores/c_data/singscore.rds")
+walk(inputs_used, \(input) {
+  used <- filter(results$assignments, input == .env$input)
+  group_of <- set_names(paste0("C", used$cluster), used$subject)
+  relabel <- function(meta) {
+    meta <- meta[meta$subject %in% names(group_of), , drop = FALSE]
+    meta$arm <- unname(group_of[meta$subject])
+    meta$group <- paste(meta$arm, meta$timepoint, sep = "_")
+    meta
+  }
+  dir <- file.path(out, "inputs", input)
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  proteins <- proteins_all
+  proteins$metadata <- relabel(proteins$metadata)
+  proteins$proteins <- proteins$proteins[, proteins$metadata$sample_id]
+  saveRDS(proteins, file.path(dir, "proteins.rds"), compress = "xz")
+  iwalk(matrices, \(d, name) {
+    d$metadata <- relabel(d$metadata)
+    d$data <- d$data[, d$metadata$sample_id]
+    d$observed <- d$observed[, d$metadata$sample_id]
+    saveRDS(d, file.path(dir, paste0(name, ".rds")), compress = "xz")
+  })
+  scores <- scores_all
+  scores$scores <- scores$scores[, proteins$metadata$sample_id]
+  saveRDS(scores, file.path(dir, "singscore.rds"), compress = "xz")
+  arc_modules <- modules
+  arc_modules$meta <- relabel(arc_modules$meta)
+  arc_modules$eigengenes <- arc_modules$eigengenes[, arc_modules$meta$sample_id]
+  saveRDS(arc_modules, file.path(dir, "modules.rds"), compress = "xz")
+  saveRDS(list(group_of = group_of, input = input), file.path(dir, "groups.rds"))
+})
+
 pdf(file.path(figures, "01_cluster_figures.pdf"), width = 11, height = 8.5)
 print(
   ggplot(results$gap, aes(k, gap)) +

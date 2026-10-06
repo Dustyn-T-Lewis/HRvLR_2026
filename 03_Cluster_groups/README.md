@@ -8,7 +8,7 @@ Groups found by clustering people, three ways, each a self-contained sub-pipelin
 |---|---|---|
 | [`Muscle_size`](Muscle_size) | % change in fibre area (mixed, type I, type II) and mCSA | the HR/LR template on the clusters |
 | [`Muscle_strength`](Muscle_strength) | % change in leg-press and leg-extension 1RM | the HR/LR template on the clusters |
-| [`Proteome`](Proteome) | module eigengenes at T1, T2, T3, training change and acute change | describe, phenotype, interactions |
+| [`Proteome`](Proteome) | module eigengenes at T1, T2, T3, training change and acute change | the HR/LR template once per input, each row tagged circular, caution or clean; phenotype tests |
 
 ## Choosing K
 
@@ -34,6 +34,7 @@ become groups `Hi` and `Lo` (by the mean of the family's first trait), and any u
 subject's samples drop out. The stages from `02_Design` on are copies of the HR/LR stages that read
 those inputs, with HR and LR renamed Hi and Lo. A fix to one copy has to be made in all three.
 
-In the proteome sub-pipeline the clusters were built from the proteome, so `02_Describe` reports
-what separates them as description only. `03_Phenotype` and `04_Interactions` test variables that
-played no part in the clustering.
+The proteome sub-pipeline runs the same template once per clustering input, on clusters C1 and C2,
+and tags every comparison by whether it reuses the time points the clustering was built from
+(`Proteome/README.md`). `08_Phenotype` tests size and strength, which played no part in the
+clustering.

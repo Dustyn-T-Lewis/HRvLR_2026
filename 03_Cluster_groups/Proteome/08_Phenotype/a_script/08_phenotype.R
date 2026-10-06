@@ -14,7 +14,7 @@ suppressPackageStartupMessages({
 })
 source(here("R", "helpers.R"))
 
-stage <- here("03_Cluster_groups", "Proteome", "03_Phenotype")
+stage <- here("03_Cluster_groups", "Proteome", "08_Phenotype")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
@@ -60,7 +60,7 @@ hr_lr <- assignments |>
     .by = input
   )
 
-pdf(file.path(figures, "03_phenotype_figures.pdf"), width = 11, height = 8.5)
+pdf(file.path(figures, "08_phenotype_figures.pdf"), width = 11, height = 8.5)
 print(
   assignments |>
     inner_join(filter(traits, kind == "change"), by = "subject", relationship = "many-to-many") |>
@@ -70,7 +70,7 @@ print(
     facet_grid(trait ~ input, scales = "free_y") +
     labs(
       title = "Training response by proteome cluster",
-      subtitle = "Wilcoxon p per panel in c_data/03_phenotype.xlsx, tests",
+      subtitle = "Wilcoxon p per panel in c_data/08_phenotype.xlsx, tests",
       x = "Cluster", y = "Value"
     ) +
     theme_bw(base_size = 7)
@@ -83,5 +83,5 @@ write_workbook(
     "Per input, trait kind and trait: n and median per cluster, Wilcoxon W and p, BH within input.",
     "Per input: HR and LR counts in each cluster, Fisher's exact p (description only)."
   ),
-  file.path(out, "03_phenotype.xlsx"), inputs, paths
+  file.path(out, "08_phenotype.xlsx"), inputs, paths
 )
