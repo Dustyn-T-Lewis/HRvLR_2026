@@ -1,5 +1,5 @@
 # Colours and theme shared by every figure in every arc. The contrast palette is sampled from the
-# design panel (02_HRvLR_groups/Figures/F01_Overview/assets/design.png), so a contrast family looks
+# design panel (02_HRvLR_groups/Figures/F1_Overview/assets/design.png), so a contrast family looks
 # the same in the schematic and in every plot.
 #
 # Each family has three tones: `line` is the panel's own colour, for marks; `fill` is the panel's
@@ -11,6 +11,7 @@ contrast_palette <- tibble::tribble(
   "Training", "#317EC2", "#B9DBF4", "#1F5A8F",
   "Acute", "#E7872B", "#F6BF93", "#A85A0E",
   "HR - LR", "#4F609C", "#E5EBFB", "#36447A",
+  "Between groups", "#4F609C", "#E5EBFB", "#36447A",
   "Interaction", "#E9C61D", "#F4E6AA", "#8A7208"
 )
 contrast_tone <- \(tone) tibble::deframe(contrast_palette[c("family", tone)])
@@ -102,44 +103,66 @@ evidence_level <- function(p, fdr) {
 evidence_shapes <- rlang::set_names(c(16, 1, 16), evidence_levels)
 evidence_alpha <- rlang::set_names(c(1, 1, 0.35), evidence_levels)
 
-# Contrast names from the design, as readable labels and with the family that sets their colour.
+# Contrast names from a design, for any pair of groups (HR/LR, Hi/Lo, C1/C2): a readable label, the
+# family that sets the colour, and the window that groups the rows. A between-group suffix reads
+# "HRvLR"; a within-group suffix is one group's name. The first group takes the darker shade.
+between <- "[A-Za-z0-9]+v[A-Za-z0-9]+$"
 contrast_label <- function(contrast) {
   contrast |>
-    sub(pattern = "HRvLR", replacement = "HR - LR") |>
+    sub(pattern = "([A-Za-z0-9]+)v([A-Za-z0-9]+)$", replacement = "\\1 - \\2") |>
     gsub(pattern = "_", replacement = " ")
 }
 contrast_family <- function(contrast) {
   dplyr::case_when(
     grepl("Interaction", contrast) ~ "Interaction",
-    grepl("HRvLR", contrast) ~ "HR - LR",
+    grepl(between, contrast) ~ "HR - LR",
     startsWith(contrast, "Training") ~ "Training",
     startsWith(contrast, "Acute") ~ "Acute"
   )
 }
-contrast_colour <- function(contrast) {
-  arm <- dplyr::case_when(
-    endsWith(contrast, "_HR") ~ "HR", endsWith(contrast, "_LR") ~ "LR",
-    .default = NA_character_
+contrast_window <- function(contrast) {
+  dplyr::case_when(
+    grepl(between, contrast) ~ "Between groups",
+    startsWith(contrast, "Training") ~ "Training",
+    startsWith(contrast, "Acute") ~ "Acute"
   )
+}
+contrast_colour <- function(contrast, groups = c("HR", "LR")) {
+  group <- sub(".*_", "", contrast)
   family <- contrast_family(contrast)
-  ifelse(is.na(arm), contrast_tone("line")[family], arm_shade(family, arm))
+  shade <- dplyr::case_when(group == groups[1] ~ "ink", group == groups[2] ~ "line")
+  ifelse(
+    is.na(shade), contrast_tone("line")[family],
+    purrr::map2_chr(family, shade, \(f, s) if (is.na(s)) NA else contrast_tone(s)[[f]])
+  )
 }
 
-# The YvO figure theme (theme_bw, Helvetica, 6 pt base), used from F02 on.
-paper_theme <- ggplot2::theme_bw(base_size = 6, base_family = "Helvetica") +
-  ggplot2::theme(
-    plot.title = ggplot2::element_text(face = "bold", size = 7, margin = ggplot2::margin(b = 1)),
-    plot.subtitle = ggplot2::element_text(
-      face = "bold.italic", size = 6, colour = "grey30", margin = ggplot2::margin(b = 2)
-    ),
-    plot.title.position = "plot",
-    plot.tag = ggplot2::element_text(face = "bold", size = 8),
-    strip.background = ggplot2::element_blank(),
-    strip.text = ggplot2::element_text(face = "bold", size = 5),
-    axis.title = ggplot2::element_text(face = "bold", size = 5),
-    axis.text = ggplot2::element_text(size = 5, colour = "grey15"),
-    legend.title = ggplot2::element_text(face = "bold", size = 5, colour = "grey20"),
-    legend.text = ggplot2::element_text(face = "bold", size = 6, colour = "grey15"),
-    legend.key.size = ggplot2::unit(2.5, "mm"),
-    panel.grid.minor = ggplot2::element_blank()
+# The strip a contrast sits under from F2 on, which names no group, and its short column label:
+# the group for a within-group window, the time point for a between-group level, the window for an
+# interaction.
+panel_families <- c("Training", "Acute", "Between groups", "Interaction")
+contrast_panel <- function(contrast) {
+  family <- dplyr::if_else(grepl("Interaction", contrast), "Interaction", contrast_window(contrast))
+  factor(family, panel_families)
+}
+contrast_short <- function(contrast) {
+  prefix <- sub("_.*", "", contrast)
+  dplyr::case_when(
+    grepl("Interaction", contrast) ~ prefix,
+    grepl(between, contrast) ~ c(Baseline = "T1", Trained = "T2", Acute = "T3")[prefix],
+    .default = sub(".*_", "", contrast)
   )
+}
+# The two groups of any arc in the design panel's HR (dark) and LR (light) greys.
+group_colours <- \(groups) rlang::set_names(unname(arm_colours), groups)
+
+# Trait column names as axis text: "pct_leg_press_1rm" reads "leg press 1RM (% change)".
+trait_label <- function(trait) {
+  base <- trait |>
+    sub(pattern = "^pct_", replacement = "") |>
+    gsub(pattern = "_", replacement = " ") |>
+    sub(pattern = "1rm", replacement = "1RM") |>
+    sub(pattern = "fcsa", replacement = "fCSA") |>
+    sub(pattern = "mcsa", replacement = "mCSA")
+  ifelse(startsWith(trait, "pct_"), paste(base, "(% change)"), base)
+}

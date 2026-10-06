@@ -1,6 +1,6 @@
 # Figure 1: the design and the whole-proteome picture before any single result. Reads saved
 # outputs only. The one computation is the phenotype PCA, a projection with no test; every
-# p-value plotted comes from 02_Contrasts or 03_Contrasts.
+# p-value plotted comes from 02_DEP or 03_Pathways.
 
 suppressPackageStartupMessages({
   library(here)
@@ -15,7 +15,7 @@ source(here("R", "helpers.R"))
 source(here("R", "figure_theme.R"))
 source(here("R", "figure_panels.R"))
 
-stage <- here("02_HRvLR_groups", "Figures", "F01_Overview")
+stage <- here("02_HRvLR_groups", "Figures", "F1_Overview")
 figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
@@ -25,7 +25,7 @@ inputs <- c(
   set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds",
   gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
   phenotype = "00_Input/phenotype.csv",
-  design = "02_HRvLR_groups/Figures/F01_Overview/assets/design.png"
+  design = "02_HRvLR_groups/Figures/F1_Overview/assets/design.png"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
@@ -122,7 +122,7 @@ panel_proteins <- ggplot(bars, aes(signed, contrast)) +
   ) +
   guides(fill = guide_legend(nrow = 2))
 
-# Panel c: proteome and phenotype PCA, each with its PERMANOVA (02_Contrasts). The phenotype is
+# Panel c: proteome and phenotype PCA, each with its PERMANOVA (02_DEP). The phenotype is
 # the six size and strength traits at T1 and T2, scaled; the one biopsy missing a leg-extension
 # value is left out rather than filled. Arm is not tested on the phenotype, because HR and LR were
 # split on how much these traits changed.
@@ -314,7 +314,7 @@ figure <- wrap_plots(rows, ncol = 1, heights = c(66, 98)) +
   # The phenotype PCA shares tag c with the proteome PCA.
   plot_annotation(tag_levels = list(c("a", "b", "c", "", "d", "e", "f"))) &
   figure_tags
-save_figure(figure, figure_dir, "f01_overview", width = 300, height = 175)
+save_figure(figure, figure_dir, "f1_overview", width = 300, height = 175)
 
 sheets <- list(
   protein_counts = select(protein_counts, group, label, contrast, direction, pi, nominal, fdr),
@@ -330,14 +330,14 @@ sheets <- list(
 )
 holds <- c(
   "Panel b: per contrast and direction, proteins at Pi < 0.05, at p < 0.05 or Pi, at FDR < 0.05.",
-  "Panel c, left: PC1 and PC2 per sample (02_Contrasts, pca).",
+  "Panel c, left: PC1 and PC2 per sample (02_DEP, pca).",
   "Panel c, right: PC1 and PC2 per biopsy from the six scaled size and strength traits.",
-  "Panel c: PERMANOVA for the proteome (time, arm) and the phenotype (time) (02_Contrasts).",
+  "Panel c: PERMANOVA for the proteome (time, arm) and the phenotype (time) (02_DEP).",
   "Panel d: each selected set in all nine contrasts, with NES and fgsea FDR.",
   "Panels e, f: each arm's p < 0.05 sets in the other arm's ranking: n, % same way, fry FDR."
 )
 write_workbook(
-  sheets, holds, file.path(out, "f01_overview.xlsx"), inputs, paths,
+  sheets, holds, file.path(out, "f1_overview.xlsx"), inputs, paths,
   note = "Panel a is the BioRender design panel (assets/design.png); it reads no data."
 )
-message("wrote f01_overview.pdf, f01_overview.png and f01_overview.xlsx")
+message("wrote f1_overview.pdf and f1_overview.xlsx")

@@ -1,12 +1,12 @@
-# F01_Overview
+# F1_Overview
 
 Figure 1: the design and the whole-proteome picture, before any single result.
 
 | | |
 |---|---|
 | Reads | `02_HRvLR_groups/02_DEP/c_data/02_contrasts.xlsx` (`contrast_summary`, `pca`, `pca_variance`, `permanova`, `fry_concordance`), `02_HRvLR_groups/03_Pathways/c_data/set_tests.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/phenotype.csv`, `assets/design.png` |
-| Writes | `b_reports/f01_overview.pdf`, `b_reports/f01_overview.png` (300 x 175 mm, 600 dpi), `c_data/f01_overview.xlsx` |
-| Run | `Rscript 02_HRvLR_groups/Figures/F01_Overview/a_script/f01_overview.R` |
+| Writes | `b_reports/f1_overview.pdf` (300 x 175 mm), `c_data/f1_overview.xlsx` |
+| Run | `Rscript 02_HRvLR_groups/Figures/F1_Overview/a_script/f1_overview.R` |
 
 The script reads saved outputs only. Its one computation is the phenotype PCA, a projection with
 no test. Before writing anything it checks the plotted numbers against their sources: FDR counts
@@ -19,9 +19,9 @@ against `fry_concordance`.
 |---|---|---|
 | a | Design, the measurements at each time point and the four contrast families, drawn in BioRender. | `assets/design.png` |
 | b | Proteins per contrast, down left and up right. The light bar counts p < 0.05; the dark bar, drawn over it from zero, counts the Π < 0.05 subset. No protein reaches FDR < 0.05. | `set_tests.rds`, `protein_results` |
-| c | Proteome PCA (left) and PCA of the six size and strength traits at T1 and T2 (right), each with a shaded 95% ellipse per time point and its PERMANOVA. The phenotype gets no arm test, because HR and LR were split on how much these traits changed. | `02_Contrasts`: `pca`, `pca_variance`, `permanova`; `phenotype.csv` |
+| c | Proteome PCA (left) and PCA of the six size and strength traits at T1 and T2 (right), each with a shaded 95% ellipse per time point and its PERMANOVA. The phenotype gets no arm test, because HR and LR were split on how much these traits changed. | `02_DEP`: `pca`, `pca_variance`, `permanova`; `phenotype.csv` |
 | d | Pathways at fgsea FDR < 0.05 in both arms of a window (HR - LR: two of the three time points; Interaction: either interaction, strongest five) from Hallmark, Reactome, KEGG and GO BP, each shown in all nine contrasts. The square beside each name marks its database. | `set_tests.rds`, `set_tests` |
-| e, f | Each arm's p < 0.05 sets for one window (e: training, f: acute) placed in the other arm's ranking for that window, drawn as limma's barcode (Wu & Smyth 2012) as in YvO F4F. Ticks mark members, the up set above the axis and the down set below; the curve is a tricube moving average of membership along the rank. | ranks from `set_tests.rds`; `02_Contrasts`: `fry_concordance` |
+| e, f | Each arm's p < 0.05 sets for one window (e: training, f: acute) placed in the other arm's ranking for that window, drawn as limma's barcode (Wu & Smyth 2012) as in YvO F4F. Ticks mark members, the up set above the axis and the down set below; the curve is a tricube moving average of membership along the rank. | ranks from `set_tests.rds`; `02_DEP`: `fry_concordance` |
 
 Π is Xiao et al. (2014, Bioinformatics 30:801): p^|log2 FC|. It ranks a protein on p and fold
 change together and is the nominal threshold, since no protein reaches FDR < 0.05.
@@ -32,7 +32,7 @@ dropped. `*` marks a set whose sign differs among the contrasts where it is sign
 whose significant leading edges are at least half proteasome subunits (PSM*) is labelled
 "Proteasome:", because several Reactome signalling sets carry only that signal. Dot size is fgsea
 FDR; fry, which rotates samples and so keeps the correlation between proteins, gives none of these
-sets FDR < 0.05 (`03_Contrasts`, `set_summary`). fgsea calls 64 training and 206 acute interaction
+sets FDR < 0.05 (`03_Pathways`, `set_summary`). fgsea calls 64 training and 206 acute interaction
 sets, so the Interaction group is capped at five.
 
 In e and f, the two arms are different people, so no comparison shares a group mean. Each lane
