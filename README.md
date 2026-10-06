@@ -31,8 +31,8 @@ plus any `.rds` a later substage reads) and a README naming what it reads and wr
 workbook opens on `read_me` and ends with `input_manifest` (inputs with md5) and
 `package_versions`.
 
-Shared code lives in `R/`: `helpers.R` (blood correction, limpa and limma fits, ANCOVA, Spearman
-via `cor.test`, Storey's q, phenotype tables, heatmap and workbook plumbing), `classify.R` and
+Shared code lives in `R/`: `helpers.R` (blood correction, limpa and limma fits, Spearman via
+`cor.test`, Storey's q, phenotype tables, heatmap and workbook plumbing), `classify.R` and
 `associate.R` (single-feature classification for the group arcs, and the continuous association
 step), `figure_theme.R` and `figure_panels.R` (figures).
 
@@ -74,9 +74,8 @@ reads.
 
 ## Dependencies
 
-`renv.lock` pins every package. Two come from outside CRAN and Bioconductor's current releases:
-`enrichVolcano` (GitHub commit `d3fed631f4`, which the HR/LR volcano supplement uses) and `DGCA`
-(GitHub, `andymckenzie/DGCA`, archived from CRAN).
+`renv.lock` pins every package. One comes from outside CRAN and Bioconductor's current releases:
+`enrichVolcano` (GitHub commit `d3fed631f4`, which the HR/LR volcano supplement uses).
 
 ## Version 1 is the tag legacy-v1
 

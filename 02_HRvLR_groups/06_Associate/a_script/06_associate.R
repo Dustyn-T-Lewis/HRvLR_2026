@@ -3,11 +3,12 @@
 # only what the grouping adds.
 #
 # Within group: Spearman between each feature and each outcome, exact p (cor.test), in each group.
-# Group difference: limma on feature ~ group * outcome, the second group's slope minus the first's.
-# Flips: DGCA's Fisher z difference between the groups' Spearman correlations, with DGCA's own p
-# for that difference (pValDiff).
-# The outcomes that define the grouping stay out of the group difference and flips: they re-measure
-# the split. Each group needs five subjects with the outcome measured.
+# Descriptive: each group holds 6 to 8 subjects, and a group split on a trait restricts that
+# trait's range inside each group.
+# Group difference: limma on feature ~ group * outcome, the first group's slope minus the second's,
+# the one test of whether a link differs between the groups.
+# The outcomes that define the grouping stay out of the group difference: they re-measure the
+# split. Each group needs five subjects with the outcome measured.
 
 suppressPackageStartupMessages({
   library(here)
@@ -108,34 +109,7 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
       mutate(window = window)
   }) |>
     list_rbind() |>
-    select(-coefficient)
-
-  flips <- imap(screens, \(by_outcome, window) {
-    by_outcome[setdiff(names(by_outcome), defining_outcomes)] |>
-      keep(\(s) enough(colnames(s$x), s$outcome)) |>
-      imap(\(s, name) {
-        ok <- !is.na(s$outcome)
-        group <- factor(group_of[colnames(s$x)][ok], rev(group_levels))
-        trait_row <- matrix(s$outcome[ok], nrow = 1, dimnames = list(name, NULL))
-        design <- DGCA::makeDesign(group)
-        observed <- DGCA::ddcorAll(s$x[, ok, drop = FALSE], design, levels(group),
-          inputMatB = trait_row, corrType = "spearman", adjust = "none", nPerms = 0,
-          sigThresh = 1, nPairs = "all"
-        ) |>
-          suppressMessages()
-        as_tibble(observed) |>
-          transmute(
-            feature = as.character(Gene1), outcome = name,
-            rho_first = .data[[paste0(levels(group)[1], "_cor")]],
-            rho_second = .data[[paste0(levels(group)[2], "_cor")]],
-            z_diff = if_else(is.finite(zScoreDiff), zScoreDiff, NA_real_),
-            p = pValDiff, class = Classes
-          )
-      }) |>
-      list_rbind() |>
-      mutate(window = window)
-  }) |>
-    list_rbind()
+    select(-any_of("coefficient"))
 
   tidy <- \(d) {
     d |>
@@ -155,13 +129,10 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
   }
   list(
     within_group = tidy(filter(within_group, !is.na(rho))),
-    group_difference = tidy(group_difference),
-    flips = tidy(flips)
+    group_difference = tidy(group_difference)
   )
 })
 results <- map(set_names(names(per_level[[1]])), \(sheet) list_rbind(map(per_level, sheet)))
-names(results$flips)[names(results$flips) == "rho_first"] <- paste0("rho_", group_levels[2])
-names(results$flips)[names(results$flips) == "rho_second"] <- paste0("rho_", group_levels[1])
 
 counts <- imap(results, \(d, test) {
   summarise(d,
@@ -204,8 +175,7 @@ write_workbook(
     sprintf(
       "limma, feature ~ group * outcome: %s slope minus %s slope, t, p, BH and Storey q.",
       group_levels[2], group_levels[1]
-    ),
-    "DGCA: each group's Spearman rho, Fisher z difference, its DGCA p, BH, Storey q."
+    )
   ),
   file.path(out, "06_associate.xlsx"), inputs, paths
 )

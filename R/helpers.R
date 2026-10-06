@@ -19,29 +19,21 @@ fit_limpa <- function(proteins, design, contrasts, subject) {
 
 # Storey's q-value within one screen, beside BH as an exploratory correction: BH scaled by the
 # estimated share of true nulls (pi0, bootstrap estimate, which copes with discrete p-values). A
-# screen of fewer than 100 tests cannot estimate pi0, so there pi0 is 1 and q equals BH.
+# screen of fewer than 100 tests cannot estimate pi0, so there pi0 is 1 and q equals BH; so is a
+# screen whose p-values qvalue cannot fit (it stops on some heavily tied distributions).
 storey_q <- function(p) {
   q <- rep(NA_real_, length(p))
   tested <- !is.na(p)
+  bh <- p.adjust(p[tested], "BH")
   q[tested] <- if (sum(tested) < 100) {
-    p.adjust(p[tested], "BH")
+    bh
   } else {
-    qvalue::qvalue(p[tested], pi0.method = "bootstrap")$qvalues
+    tryCatch(
+      qvalue::qvalue(p[tested], pi0.method = "bootstrap")$qvalues,
+      error = \(e) bh
+    )
   }
   q
-}
-
-# fry per contrast on a complete matrix, sets given as row indices: one row per set and contrast.
-fry_rows <- function(values, index, design, contrasts, subject) {
-  correlation <- duplicateCorrelation(values, design, block = subject)$consensus.correlation
-  map(colnames(contrasts), \(contrast) {
-    fry(values, index, design, contrasts[, contrast],
-      block = subject, correlation = correlation, sort = "none"
-    ) |>
-      rownames_to_column("feature") |>
-      transmute(feature, test = paste("fry", contrast), p = PValue)
-  }) |>
-    list_rbind()
 }
 
 # One column per subject at a time point, and the change between two time points over the

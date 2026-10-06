@@ -13,22 +13,25 @@ eigengenes. The pooled, label-free associations are in `04_Continuous_no_group/0
 
 Pairings as in the continuous arc, including the T3 level against the T2 trait levels.
 
-- Within group: Spearman between each feature and each outcome in HR and in LR, exact p from
-  `cor.test`.
-- Group difference: limma on `feature ~ group * outcome`, HR's slope minus LR's.
-- Flips: DGCA's Fisher z difference between the HR and LR Spearman correlations, with DGCA's own
-  p for that difference (`pValDiff`). DGCA's permutation option was dropped: its q-value step fails
-  on the 15-module screen.
+- Within group: Spearman between each feature and each trait in HR and in LR, exact p from
+  `cor.test`. Descriptive: each group holds six to eight people, and a group split on a trait
+  restricts that trait's range inside it.
+- Group difference: limma on `feature ~ group * trait`, HR's slope minus LR's. This is the one test
+  of whether a link differs between the groups; a link significant in one group and not the other
+  is not, on that basis, a difference.
 
-`comp_hypertrophy` stays out of the group difference and flips, since the groups are its split.
-Each group needs five subjects with the outcome measured. BH within level, window, outcome and
-collection.
+`comp_hypertrophy` stays out of the group difference, since the groups are its split. Each group
+needs five people with the trait measured. BH within level, window, trait, group and collection.
+
+## Figures
+
+One page: the share of features at p < 0.05 per test, window and trait, against the 5% expected by
+chance.
 
 ## Workbook
 
 | Sheet | Holds |
 |---|---|
-| `counts` | Tested, p < 0.05 and BH < 0.05 per test, level, window, outcome and group. |
-| `within_group` | Spearman rho and exact p in each group, every feature and outcome. |
-| `group_difference` | HR minus LR slope, t, p, BH, Storey q. |
-| `flips` | Each group's rho, Fisher z difference, DGCA's p, BH, Storey q, class. |
+| `counts` | Tested, p < 0.05 and BH < 0.05 per test, level, window, trait and group. |
+| `within_group` | Spearman rho and exact p in each group, every feature and trait. |
+| `group_difference` | HR minus LR slope, t, p, BH and Storey q. |
