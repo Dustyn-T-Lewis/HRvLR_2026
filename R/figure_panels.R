@@ -1,4 +1,4 @@
-# Panel builders shared by the figures in 06_Figures. Each takes its data as arguments and returns
+# Panel builders shared by the figures in every arc's Figures folder. Each takes its data as arguments and returns
 # a ggplot (or a list holding one and the numbers it plots); colours and theme come from
 # figure_theme.R, which must be sourced first.
 

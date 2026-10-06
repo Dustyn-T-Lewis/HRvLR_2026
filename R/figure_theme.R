@@ -1,6 +1,6 @@
-# Colours and theme shared by every figure in 06_Figures. The contrast palette is sampled from the
-# design panel (06_Figures/F01_Overview/assets/design.png), so a contrast family looks the same in
-# the schematic and in every plot.
+# Colours and theme shared by every figure in every arc. The contrast palette is sampled from the
+# design panel (02_HRvLR_groups/Figures/F01_Overview/assets/design.png), so a contrast family looks
+# the same in the schematic and in every plot.
 #
 # Each family has three tones: `line` is the panel's own colour, for marks; `fill` is the panel's
 # box tint, behind strip labels; `ink` is a darker shade of the same hue for text, because the

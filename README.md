@@ -44,7 +44,7 @@ Rscript run_all.R            # every substage in order; logs in .runlogs/
 Rscript run_all.R 05         # one stage
 ```
 
-`00_Input/README.md` has the download command for the STRING files `04_Modules/05_Characterise`
+`00_Input/README.md` has the download command for the STRING files `01_Trunk/07_Characterise`
 and `05_Integration` read.
 
 ## Statistical conventions
