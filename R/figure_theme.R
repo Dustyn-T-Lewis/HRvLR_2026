@@ -80,3 +80,66 @@ contrast_strips <- function(x = NULL, y = NULL) {
 
 # Axis labels coloured one by one, rendered with ggtext::element_markdown().
 in_colour <- \(text, colour) sprintf("<span style='color:%s'>%s</span>", colour, text)
+
+# The two thresholds every figure from F02 on uses, and one way of printing p and FDR.
+alpha_nominal <- 0.05
+alpha_fdr <- 0.05
+label_p <- scales::label_pvalue(accuracy = 0.001, prefix = c("p < ", "p = ", "p > "))
+label_fdr <- scales::label_pvalue(accuracy = 0.001, prefix = c("FDR < ", "FDR = ", "FDR > "))
+
+# One evidence code for every marker: filled at FDR, open when only nominal, grey otherwise.
+evidence_levels <- c(
+  sprintf("FDR < %s", alpha_fdr), sprintf("p < %s only", alpha_nominal), "not significant"
+)
+evidence_level <- function(p, fdr) {
+  level <- dplyr::case_when(
+    fdr < alpha_fdr ~ evidence_levels[1],
+    p < alpha_nominal ~ evidence_levels[2],
+    .default = evidence_levels[3]
+  )
+  factor(level, evidence_levels)
+}
+evidence_shapes <- rlang::set_names(c(16, 1, 16), evidence_levels)
+evidence_alpha <- rlang::set_names(c(1, 1, 0.35), evidence_levels)
+
+# Contrast names from the design, as readable labels and with the family that sets their colour.
+contrast_label <- function(contrast) {
+  contrast |>
+    sub(pattern = "HRvLR", replacement = "HR - LR") |>
+    gsub(pattern = "_", replacement = " ")
+}
+contrast_family <- function(contrast) {
+  dplyr::case_when(
+    grepl("Interaction", contrast) ~ "Interaction",
+    grepl("HRvLR", contrast) ~ "HR - LR",
+    startsWith(contrast, "Training") ~ "Training",
+    startsWith(contrast, "Acute") ~ "Acute"
+  )
+}
+contrast_colour <- function(contrast) {
+  arm <- dplyr::case_when(
+    endsWith(contrast, "_HR") ~ "HR", endsWith(contrast, "_LR") ~ "LR",
+    .default = NA_character_
+  )
+  family <- contrast_family(contrast)
+  ifelse(is.na(arm), contrast_tone("line")[family], arm_shade(family, arm))
+}
+
+# The YvO figure theme (theme_bw, Helvetica, 6 pt base), used from F02 on.
+paper_theme <- ggplot2::theme_bw(base_size = 6, base_family = "Helvetica") +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(face = "bold", size = 7, margin = ggplot2::margin(b = 1)),
+    plot.subtitle = ggplot2::element_text(
+      face = "bold.italic", size = 6, colour = "grey30", margin = ggplot2::margin(b = 2)
+    ),
+    plot.title.position = "plot",
+    plot.tag = ggplot2::element_text(face = "bold", size = 8),
+    strip.background = ggplot2::element_blank(),
+    strip.text = ggplot2::element_text(face = "bold", size = 5),
+    axis.title = ggplot2::element_text(face = "bold", size = 5),
+    axis.text = ggplot2::element_text(size = 5, colour = "grey15"),
+    legend.title = ggplot2::element_text(face = "bold", size = 5, colour = "grey20"),
+    legend.text = ggplot2::element_text(face = "bold", size = 6, colour = "grey15"),
+    legend.key.size = ggplot2::unit(2.5, "mm"),
+    panel.grid.minor = ggplot2::element_blank()
+  )
