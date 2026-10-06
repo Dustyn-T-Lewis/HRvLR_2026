@@ -1,0 +1,34 @@
+# How well each module eigengene separates the study's groups, on the eight tasks that
+# R/classify.R defines.
+
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
+  library(tidyr)
+  library(purrr)
+  library(tibble)
+  library(ggplot2)
+  library(grid)
+  library(ComplexHeatmap)
+  library(writexl)
+})
+source(here("R", "helpers.R"))
+source(here("R", "classify.R"))
+
+inputs <- c(modules = "03_Cluster_groups/Muscle_size/01_Cluster/c_data/inputs/modules.rds")
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+modules <- readRDS(paths[["modules"]])
+values <- modules$eigengenes
+meta <- modules$meta
+stopifnot(identical(colnames(values), meta$sample_id))
+
+classify_step(
+  stage = here("03_Cluster_groups", "Muscle_size", "06_Classify", "03_Modules"),
+  inputs = inputs, paths = paths,
+  values = values, meta = meta, feature_label = set_names(rownames(values)),
+  feature_noun = "modules", feature_unit = "module", value_label = "eigengene",
+  row_groups = list(modules = modules$module_summary$module),
+  row_order = "Rows follow module size.",
+  groups = c("Hi", "Lo")
+)
