@@ -42,7 +42,11 @@ stages <- c(
   "04_Continuous_no_group/01_Associate/01_Proteins",
   "04_Continuous_no_group/01_Associate/02_Sets",
   "04_Continuous_no_group/01_Associate/03_Modules",
-  "04_Continuous_no_group/02_Pathways", "04_Continuous_no_group/04_Profile_Clusters"
+  "04_Continuous_no_group/02_Pathways", "04_Continuous_no_group/04_Profile_Clusters",
+  # Figures last: F3 reads the continuous arc.
+  "02_HRvLR_groups/Figures/F1_Overview", "02_HRvLR_groups/Figures/F2_Programmes",
+  "02_HRvLR_groups/Figures/F3_People", "02_HRvLR_groups/Figures/S01_Volcano",
+  "02_HRvLR_groups/Figures/S02_NES_Scatter", "02_HRvLR_groups/Figures/S03_Signatures"
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]
