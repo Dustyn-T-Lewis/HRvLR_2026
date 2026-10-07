@@ -21,7 +21,7 @@ found by clustering, and with no groups at all.
 | [`03_Cluster_groups`](03_Cluster_groups/README.md) | the same steps on groups found by clustering size, strength or the proteome |
 | [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
 | [`R`](R/README.md) | shared functions the step scripts call |
-| [`docs`](docs/README.md) | decisions log, concept images and the script that draws `pipeline.png` |
+| [`docs`](docs/README.md) | decisions log, concept images, and the scripts that write the step READMEs and `pipeline.png` |
 
 The three analysis folders read `01_Processing` and never each other, except the parked HR/LR
 Figure 3, which also reads `04_Continuous_no_group`.
@@ -44,10 +44,13 @@ Every workbook opens with `read_me` (one line per sheet) and `columns` (every co
 
 ```sh
 Rscript -e 'renv::restore()'
-Rscript run_all.R            # every step in order; logs in .runlogs/
+Rscript run_all.R            # every step in order, then the step READMEs and pipeline.png
 Rscript run_all.R 01 02      # only the folders starting 01 or 02
-Rscript docs/pipeline.R      # redraw pipeline.png from the current outputs
 ```
+
+A full run rewrites each step README's files, key result and sheets from that step's outputs
+(`docs/readmes.R`), so the numbers in them follow the latest run. Edit a step's question, method
+or cautions in `docs/readme_text.R`; edit folder and figure READMEs directly.
 
 Every input, including the STRING, MSigDB and GO Slim files, is in `00_Input`; no step downloads
 anything. Random steps are seeded.

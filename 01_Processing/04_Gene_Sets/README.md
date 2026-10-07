@@ -1,6 +1,6 @@
 # 04_Gene_Sets
 
-Which groups of proteins count as one biological process, decided once for every arc?
+Which groups of proteins count as one biological process, decided once for every analysis?
 
 | | |
 |---|---|

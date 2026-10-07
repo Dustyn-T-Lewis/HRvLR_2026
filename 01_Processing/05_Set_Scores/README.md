@@ -20,7 +20,7 @@ How strongly is each gene set expressed in each biopsy?
 
 ## Read with care
 
-- Scores follow the person more than the time point (`subject_share`), which is why the arcs block on subject and use within-person change.
+- Scores follow the person more than the time point (`subject_share`), which is why the analyses block on subject and use within-person change.
 
 ## Sheets
 

@@ -1,4 +1,5 @@
-# Runs every substage in order, each in its own R session, and stops at the first failure.
+# Runs every step in order, each in its own R session, and stops at the first failure. A full run
+# then rewrites the step READMEs and pipeline.png.
 #   Rscript run_all.R               all stages
 #   Rscript run_all.R 01 04         only the folders starting 01 or 04
 # Logs go to .runlogs/, one per step.
@@ -69,12 +70,20 @@ stages <- c(
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]
 dir.create(".runlogs", showWarnings = FALSE)
+run <- function(script, name) {
+  log <- file.path(".runlogs", paste0(gsub("/", "_", name), ".log"))
+  started <- Sys.time()
+  status <- system2("Rscript", script, stdout = log, stderr = log)
+  message(sprintf("%-32s %6.1f min", name, as.numeric(Sys.time() - started, units = "mins")))
+  if (status != 0) stop(name, " failed; see ", log)
+}
 for (stage in stages) {
   script <- list.files(file.path(stage, "a_script"), pattern = "\\.R$", full.names = TRUE)
   stopifnot(length(script) == 1)
-  log <- file.path(".runlogs", paste0(gsub("/", "_", stage), ".log"))
-  started <- Sys.time()
-  status <- system2("Rscript", script, stdout = log, stderr = log)
-  message(sprintf("%-32s %6.1f min", stage, as.numeric(Sys.time() - started, units = "mins")))
-  if (status != 0) stop(stage, " failed; see ", log)
+  run(script, stage)
+}
+# After a full run, the step READMEs and pipeline.png are redrawn from the new outputs.
+if (!length(only)) {
+  run("docs/readmes.R", "docs/readmes")
+  run("docs/pipeline.R", "docs/pipeline")
 }
