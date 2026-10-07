@@ -171,16 +171,31 @@ print(
 )
 invisible(dev.off())
 
+# Each person on the first two components of the scaled traits: the space the clusters were found
+# in, for the arc's Figure 1.
+space <- as_tibble(pcs$x[, 1:2], rownames = "subject") |>
+  left_join(select(assignments, subject, cluster), by = "subject") |>
+  mutate(
+    arm = set_names(phenotype$arm, phenotype$subject)[subject],
+    group = if (k_used == 2) unname(group_of[subject]) else NA_character_,
+    .after = subject
+  )
+space_variance <- tibble(
+  component = c("PC1", "PC2"), variance_explained = summary(pcs)$importance[2, 1:2]
+)
+
 write_workbook(
   list(
     choice = choice, diagnostics = diagnostics, stability = stability,
-    assignments = assignments
+    assignments = assignments, space = space, space_variance = space_variance
   ),
   c(
     "K selected by the gap statistic, any imposed K and its reason, and the K used downstream.",
     "Per K: gap, SE, mean silhouette, group sizes, bootstrap Jaccard per cluster.",
     "Per K and cluster: mean bootstrap Jaccard (fpc::clusterboot, PAM).",
-    "Per subject: the traits, the K = 2 and K = 3 clusters, and the cluster used downstream."
+    "Per subject: the traits, the K = 2 and K = 3 clusters, and the cluster used downstream.",
+    "Per subject: HR/LR arm, group, cluster, and PC1 and PC2 of the scaled traits.",
+    "Share of variance on PC1 and PC2 of the scaled traits."
   ),
   file.path(out, "clustering.xlsx"), inputs, paths
 )

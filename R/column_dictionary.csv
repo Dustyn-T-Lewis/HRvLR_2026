@@ -260,3 +260,39 @@ input_manifest,path,Path of the file read.
 ,source,Where the package came from.
 ,^S[0-9]+_T[123]$,"Value in that biopsy (subject_timepoint): log2 abundance, set score or eigengene as the sheet's read_me says."
 ,^(Training|Acute|Baseline|Trained)_[A-Za-z0-9]+_(logFC|p)$,logFC or p of the contrast named before the suffix.
+,source_id,Identifier of the set in its source database.
+,^pct_[a-z0-9_]+$,Percent change in that trait over training (T1 to T2).
+,^rho_[A-Za-z0-9]+$,Spearman rho within that group.
+detection,kept,TRUE when the sample is kept after the outlier check.
+dynamic_range,rank,"Rank of the protein by mean abundance, most abundant first."
+correlation_summary,same,TRUE for pairs of samples from the same person.
+,r,Pearson correlation.
+,n_points,Points the correlation is computed on.
+,pi,Proteins at Pi < 0.05 (Xiao et al. 2014: p raised to |log2 FC|).
+,nominal,Proteins at p < 0.05 or Pi < 0.05.
+,selected_in,Window the set was selected in.
+,column,Column of the panel the value is drawn in.
+,ranked_in,Group whose ranking the set is placed in.
+,n,"Count for the row (proteins in the set, or sets called), as the sheet's read_me says."
+panel_sources,shows,What the panel shows.
+panel_sources,file,File the panel reads.
+panel_sources,sheet,Sheet or object the panel reads.
+panel_sources,rule,Rule that picks the panel's rows.
+,p_fry,fry p-value.
+,fdr_fry,fry FDR.
+,call,Gene set call counted: method and threshold.
+,row,Row label in the panel.
+,value,"Plotted value, as the sheet's read_me says (an eigengene, or a protein's change in log2)."
+,^(t|p|fdr)_(group|continuous)$,"t, p or FDR of the group-by-trait difference (group) or of the continuous growth-by-strength interaction (continuous)."
+,hit,"Evidence level of the group difference: FDR < 0.05, p < 0.05 only, or not significant."
+,rank_by,What the labelled rows are ranked on: FDR or Pi.
+,pair,The two contrasts compared.
+,population,"Which sets the concordance counts: all, collapse survivors, or Hallmark and GO Slim."
+,n_significant,Sets at FDR < 0.05 in either contrast.
+,n_discordant,Significant sets whose NES changes sign between the two contrasts.
+,same_sign,Share of significant sets moving the same way in both contrasts.
+,^(x|y)_contrast$,Contrast on that axis.
+,^(nes|fdr)_(x|y)$,fgsea NES or FDR in the contrast on that axis.
+,significance,In which contrast the set reaches FDR < 0.05.
+,discordant,TRUE when the NES changes sign between the contrasts.
+,survivor,TRUE when collapsePathways keeps the set in either contrast.

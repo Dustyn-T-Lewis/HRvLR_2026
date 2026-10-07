@@ -100,7 +100,17 @@ per_input <- imap(by_input, \(m, input) {
       k2 = solutions[["2"]]$clustering, k3 = solutions[["3"]]$clustering,
       cluster = if (k_used > 1) solutions[[as.character(k_used)]]$clustering else 1L
     ),
-    gap = mutate(gap_table, input = input, k_gap = k_gap)
+    gap = mutate(gap_table, input = input, k_gap = k_gap),
+    space = tibble(
+      input,
+      subject = rownames(x), arm = unname(arm_of[rownames(x)]),
+      cluster = if (k_used > 1) solutions[[as.character(k_used)]]$clustering else 1L,
+      PC1 = prcomp(x)$x[, 1], PC2 = prcomp(x)$x[, 2]
+    ),
+    space_variance = tibble(
+      input,
+      component = c("PC1", "PC2"), variance_explained = summary(prcomp(x))$importance[2, 1:2]
+    )
   )
 })
 results <- map(set_names(names(per_input[[1]])), \(sheet) list_rbind(map(per_input, sheet)))
@@ -165,12 +175,14 @@ print(
 invisible(dev.off())
 
 write_workbook(
-  results[c("choice", "diagnostics", "stability", "assignments")],
+  results[c("choice", "diagnostics", "stability", "assignments", "space", "space_variance")],
   c(
     "Per input: subjects, features, K selected by the gap statistic, any imposed K and reason.",
     "Per input and K: gap, SE, mean silhouette, sizes, HR/LR adjusted Rand index, Jaccard.",
     "Per input, K and cluster: mean bootstrap Jaccard (fpc::clusterboot, PAM).",
-    "Per input and subject: HR/LR (for description), the K = 2 and K = 3 clusters, cluster used."
+    "Per input and subject: HR/LR (for description), the K = 2 and K = 3 clusters, cluster used.",
+    "Per input and subject: HR/LR, cluster, and PC1 and PC2 of the z-scored eigengenes.",
+    "Per input: share of variance on PC1 and PC2 of the z-scored eigengenes."
   ),
   file.path(out, "clustering.xlsx"), inputs, paths
 )
