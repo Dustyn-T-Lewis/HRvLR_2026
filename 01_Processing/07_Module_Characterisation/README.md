@@ -36,7 +36,7 @@ important ones.
 |---|---|---|
 | ORA | `clusterProfiler::compareCluster(fun = "enricher")` | Each module's member genes (grey excluded) against the qualifying sets, universe `gene_universe`, `minGSSize = 15`, `maxGSSize = 500`, no p or q cut-off, so every tested set is kept. BH within module. |
 | Hubs | `dplyr::slice_max(kme, n = 10)` | The ten highest-kME members of each module. |
-| STRING map | `STRINGdb$new(version = "12.0", species = 9606, score_threshold = 700)`, `$map()` | Reads the local files in `00_Input/downloads`. Every module protein, grey included, is mapped by UniProt accession; unmapped proteins drop out. `$set_background()` sets the mapped proteins as background. |
+| STRING map | `STRINGdb$new(version = "12.0", species = 9606, score_threshold = 700)`, `$map()` | Reads the files in `00_Input/STRING`. Every module protein, grey included, is mapped by UniProt accession; unmapped proteins drop out. `$set_background()` sets the mapped proteins as background. |
 | STRING enrichment | `$get_ppi_enrichment()` | Per module: observed edges, expected edges (`lambda`), their ratio and a p; BH across modules. |
 | Labels | `dplyr::slice_min(p)` | Per module: the set with the lowest ORA p, the GO Slim term with the lowest p, the hubs and the STRING ratio. |
 | Hub networks | `$get_interactions()`, `tidygraph`, `ggraph` | Each module's 25 highest-kME members and the STRING edges among them at score 700 or more. Force-directed layout, seeded. |
@@ -60,12 +60,10 @@ important ones.
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/downloads/9606.protein.links.v12.0.min700.txt.gz`, `00_Input/downloads/9606.protein.aliases.v12.0.txt.gz`, `00_Input/downloads/9606.protein.info.v12.0.txt.gz` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/STRING/9606.protein.links.v12.0.min700.txt.gz`, `00_Input/STRING/9606.protein.aliases.v12.0.txt.gz`, `00_Input/STRING/9606.protein.info.v12.0.txt.gz` |
 | Writes | `c_data/module_characterisation.xlsx` (read by `02_HRvLR_groups/Figures/F2_Programmes`), `b_reports/module_characterisation_report.pdf` |
 | Run | `Rscript 01_Processing/07_Module_Characterisation/a_script/module_characterisation.R` |
 
-The STRING files are not in git. `00_Input/README.md` has the download command; the script stops
-and names the missing files if they are absent.
 
 ```
 07_Module_Characterisation/

@@ -21,8 +21,8 @@ The sets come from MSigDB, which collects them from several sources:
 
 Three choices are made here so that no later step makes them differently:
 
-1. One release. Set membership changes between MSigDB releases, so release 2026.1.Hs is frozen in
-   `c_data/cache/` with an md5 checksum. The GO Slim file is frozen the same way.
+1. One release. Set membership changes between MSigDB releases, so release 2026.1.Hs is read from
+   a saved snapshot in `00_Input/`, as is the GO Slim file.
 2. One protein per gene. Sets list gene symbols; the matrix holds proteins. A protein with no
    symbol or several is left out. Where several proteins share a symbol, the one observed in the
    most samples represents it (ties go to more peptide sequences, then to the accession). This is
@@ -40,11 +40,9 @@ was measured rather than with the whole genome.
 
 | Step | Function | Detail |
 |---|---|---|
-| Fetch (first run only) | `msigdbr::msigdbr()` | Hallmark (`H`), Reactome (`C2`, `CP:REACTOME`), KEGG_Legacy (`C2`, `CP:KEGG_LEGACY`), GOBP (`C5`, `GO:BP`). Stops if msigdbr returns a release other than 2026.1.Hs. Writes the snapshot and its `.md5`. |
-| Verify | `tools::md5sum()` | Every run checks the snapshot and the GO Slim file against their `.md5`; a mismatch stops the run. Later runs need no network. |
 | Map | `dplyr::distinct()` | `protein_map`: each protein's symbol, mapping status and the representative per symbol; `label` adds the accession where two proteins share a symbol. |
 | Size filter | `lengths()` | Source and measured size per set; `qualifies` marks the sets kept. |
-| GO Slim | `GSEABase::getOBOCollection()`, `GO.db::GOBPOFFSPRING` | Each slim term gathers the measured genes annotated to it or any GO:BP term beneath it, from the full frozen GOBP membership, so a gene is not lost when its own GOBP set fails the size filter. |
+| GO Slim | `GSEABase::getOBOCollection()`, `GO.db::GOBPOFFSPRING` | Each slim term gathers the measured genes annotated to it or any GO:BP term beneath it, from the full GOBP membership, so a gene is not lost when its own GOBP set fails the size filter. |
 
 ## How to read the outputs
 
@@ -62,8 +60,8 @@ was measured rather than with the whole genome.
 
 | | |
 |---|---|
-| Reads | `01_Processing/02_Normalisation/c_data/DAList_normalized.rds`, `c_data/cache/goslim_generic.obo` (with `.md5`), `c_data/cache/msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds` (with `.md5`) |
-| Writes | `c_data/gene_sets.rds`, `c_data/gene_sets.xlsx`; the MSigDB snapshot on the first run |
+| Reads | `01_Processing/02_Normalisation/c_data/DAList_normalized.rds`, `00_Input/msigdb_2026.1.Hs.rds`, `00_Input/goslim_generic.obo` |
+| Writes | `c_data/gene_sets.rds`, `c_data/gene_sets.xlsx` |
 | Run | `Rscript 01_Processing/04_Gene_Sets/a_script/gene_sets.R` |
 
 `gene_sets.rds` holds `sets` (the qualifying sets as gene vectors, named by `set_id`),
@@ -75,24 +73,11 @@ and every set-level step in the three arcs read it.
 ├── a_script/gene_sets.R
 └── c_data/
     ├── gene_sets.xlsx
-    ├── gene_sets.rds
-    └── cache/
-        ├── goslim_generic.obo
-        ├── goslim_generic.obo.md5
-        ├── msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds
-        └── msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds.md5
+    └── gene_sets.rds
 ```
 
 `set_id` is `collection|name`, for example `Hallmark|HALLMARK_MYOGENESIS`. A GO Slim name is the
 term name in capitals with each run of other characters replaced by an underscore.
-
-## Restoring or refreshing the GO Slim file
-
-The cached `goslim_generic.obo` is GO release 2026-07-26 (its `data-version` line). To refresh it,
-download it into `c_data/cache/` from
-<https://current.geneontology.org/ontology/subsets/goslim_generic.obo>, then run
-`md5 -q goslim_generic.obo > goslim_generic.obo.md5` and record the new release here. Deleting the
-MSigDB snapshot and its `.md5` makes the next run fetch it again.
 
 ## Workbook: `gene_sets.xlsx`
 

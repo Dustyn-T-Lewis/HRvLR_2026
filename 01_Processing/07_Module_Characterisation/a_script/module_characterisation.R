@@ -7,7 +7,7 @@
 #
 # The STRING check is STRINGdb's PPI enrichment at combined score >= 700, with the background set
 # to the measured proteins STRING can map. Its expected edge count accounts for each member's
-# degree. STRINGdb reads the local v12 files in 00_Input/downloads; at this threshold it takes
+# degree. STRINGdb reads the v12 files in 00_Input/STRING; at this threshold it takes
 # the min700 links file.
 #
 # The hub drawings show each module's 25 highest-kME members and the STRING edges among them.
@@ -33,14 +33,14 @@ for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings
 inputs <- c(
   modules = "01_Processing/06_Module_Building/c_data/modules.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  string_links = "00_Input/downloads/9606.protein.links.v12.0.min700.txt.gz",
-  string_aliases = "00_Input/downloads/9606.protein.aliases.v12.0.txt.gz",
-  string_info = "00_Input/downloads/9606.protein.info.v12.0.txt.gz"
+  string_links = "00_Input/STRING/9606.protein.links.v12.0.min700.txt.gz",
+  string_aliases = "00_Input/STRING/9606.protein.aliases.v12.0.txt.gz",
+  string_info = "00_Input/STRING/9606.protein.info.v12.0.txt.gz"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
-    "Run 06_Module_Building and 04_Gene_Sets, and fetch STRING (00_Input/README.md). ",
+    "Run 06_Module_Building and 04_Gene_Sets first. ",
     "Missing: ", paste(inputs[!file.exists(paths)], collapse = ", ")
   )
 }
@@ -68,7 +68,7 @@ hubs <- members |>
 
 string_db <- STRINGdb$new(
   version = "12.0", species = 9606, score_threshold = string_min_score,
-  network_type = "full", input_directory = here("00_Input", "downloads")
+  network_type = "full", input_directory = here("00_Input", "STRING")
 )
 mapped <- string_db$map(
   as.data.frame(modules$membership), "uniprot_id",

@@ -1,7 +1,7 @@
 # 00_Input
 
-The study data and the reference tables 01_Processing reads. No code lives here, and no script writes
-here.
+The study data and the reference files the pipeline reads. No code lives here, no script writes
+here, and no script downloads anything.
 
 ## The files
 
@@ -13,7 +13,9 @@ here.
 | `blood_contaminants.csv` | a curated blood protein (95 rows) with its `class` and `reason` | `01_Processing/01_Protein_Filtering` |
 | `HPA_annotations_full.tsv` | a Human Protein Atlas gene (20,162 rows) | `01_Processing/01_Protein_Filtering` |
 | `RBC_proteome_reference.tsv` | a red-cell protein (7,012 rows): `acc`, `gene`, `sources`, `n_sources` | `01_Processing/01_Protein_Filtering` |
-| `downloads/` | STRING v12 human files: links at combined score 700 or more, aliases, protein info | `01_Processing/07_Module_Characterisation` |
+| `msigdb_2026.1.Hs.rds` | a gene in a gene set: MSigDB 2026.1.Hs Hallmark, Reactome, KEGG Legacy and GO:BP | `01_Processing/04_Gene_Sets` |
+| `goslim_generic.obo` | a GO Slim term (GO Consortium generic slim, GO release 2026-07-26) | `01_Processing/04_Gene_Sets` |
+| `STRING/` | STRING v12 human: links at combined score 700 or more, aliases, protein info | `01_Processing/07_Module_Characterisation` |
 
 Sixteen people gave a biopsy at T1 (baseline), T2 (after the training programme) and T3 (after an
 acute bout at the end of it): 48 MS runs, one per biopsy. `sample_id` names the run (`S03_T1`),
@@ -21,21 +23,13 @@ acute bout at the end of it): 48 MS runs, one per biopsy. `sample_id` names the 
 cells of eight runs. Three runs fail on depth in `01_Protein_Filtering`, so 45 biopsies go
 forward.
 
-## STRING files are downloaded, not committed
+## Where the reference files came from
 
-They are too large for git. From the repo root:
-
-```sh
-mkdir -p 00_Input/downloads && cd 00_Input/downloads
-curl -LO https://stringdb-downloads.org/download/stream/protein.links.v12.0/9606.protein.links.v12.0.min700.txt.gz
-for f in aliases info; do
-  curl -LO https://stringdb-downloads.org/download/protein.$f.v12.0/9606.protein.$f.v12.0.txt.gz
-done
-```
-
-`07_Module_Characterisation` asks `STRINGdb` for edges at score 700 or more, and at that threshold
-STRINGdb reads the `min700` links file. No script reads a full `9606.protein.links.v12.0.txt.gz`,
-if one sits in `downloads/`.
+| File | Source |
+|---|---|
+| `msigdb_2026.1.Hs.rds` | `msigdbr::msigdbr(db_species = "HS", collection, subcollection)` with msigdbr 26.1.0, saved 2026-09-23. Membership changes between releases, so the release is fixed here rather than read from the installed package. |
+| `goslim_generic.obo` | <https://current.geneontology.org/ontology/subsets/goslim_generic.obo> |
+| `STRING/` | <https://string-db.org/cgi/download?species_text=Homo+sapiens>, version 12.0: `protein.links` (the `min700` file), `protein.aliases`, `protein.info`. At score 700 STRINGdb reads only the `min700` links file. |
 
 ## HR and LR are the median split of the composite
 

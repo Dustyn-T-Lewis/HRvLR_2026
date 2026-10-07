@@ -122,5 +122,3 @@ none), and in `c_data/` one workbook plus any `.rds` a later step reads. Every w
 Rscript run_all.R 01                                             # 01_Processing only
 Rscript 01_Processing/03_Quantification/a_script/quantification.R     # one stage
 ```
-
-`07_Module_Characterisation` needs the STRING files; `00_Input/README.md` has the download.

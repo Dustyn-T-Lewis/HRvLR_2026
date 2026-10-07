@@ -99,8 +99,7 @@ Rscript run_all.R            # every stage in order, figures last; logs in .runl
 Rscript run_all.R 01 02      # only the arcs whose folder starts with 01 or 02
 ```
 
-`00_Input/README.md` has the download command for the STRING files
-`01_Processing/07_Module_Characterisation` reads.
+Every input and reference file is in `00_Input/`; no step downloads anything.
 
 ## Shared code in `R/`
 
