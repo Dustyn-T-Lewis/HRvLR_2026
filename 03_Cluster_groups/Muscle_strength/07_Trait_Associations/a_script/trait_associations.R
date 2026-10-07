@@ -30,7 +30,7 @@ walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   corrected = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/DAList_corrected.rds",
   singscore = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/singscore.rds",
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   modules = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/modules.rds",
   phenotype = "00_Input/phenotype.csv",
   groups = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/groups.rds"

@@ -6,7 +6,7 @@ proteins move most?
 ## The idea
 
 A module is a group of proteins whose abundances rise and fall together across biopsies. The
-modules come from WGCNA in `01_Trunk/06_Module_Building`, built without any group label or trait
+modules come from WGCNA in `01_Processing/06_Module_Building`, built without any group label or trait
 and named by colour; grey holds the proteins that join no module and is left out here. Modules
 were defined on subject-centred abundance (each person's own mean removed), so they capture
 proteins that move together within people rather than proteins that differ between people.
@@ -54,14 +54,14 @@ test.
   interval, not only p.
 - Membership rho near zero with a significant eigengene means the module moved as a whole without
   its centre leading. A large rho in a module that did not move says little.
-- kME was computed on subject-centred data in the trunk; the protein t comes from the full model.
+- kME was computed on subject-centred data in 01_Processing; the protein t comes from the full model.
   The two are on different footings by design.
 
 ## Files
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds` (eigengenes, membership, kME, sample metadata), `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds` (protein moderated t), `01_Trunk/03_Quantification/c_data/DAList_limpa.rds` (complete matrix), `00_Input/phenotype.csv` (heatmap tracks) |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds` (eigengenes, membership, kME, sample metadata), `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds` (protein moderated t), `01_Processing/03_Quantification/c_data/DAList_limpa.rds` (complete matrix), `00_Input/phenotype.csv` (heatmap tracks) |
 | Writes | `c_data/module_contrasts.xlsx` (read by `Figures/F2_Programmes`), `b_reports/module_contrasts_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/04_Module_Contrasts/a_script/module_contrasts.R` |
 

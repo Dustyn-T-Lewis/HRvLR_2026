@@ -4,13 +4,13 @@
 # Logs go to .runlogs/<arc>_<substage>.log.
 
 stages <- c(
-  "01_Trunk/01_Protein_Filtering",
-  "01_Trunk/02_Normalisation",
-  "01_Trunk/03_Quantification",
-  "01_Trunk/04_Gene_Sets",
-  "01_Trunk/05_Set_Scores",
-  "01_Trunk/06_Module_Building",
-  "01_Trunk/07_Module_Characterisation",
+  "01_Processing/01_Protein_Filtering",
+  "01_Processing/02_Normalisation",
+  "01_Processing/03_Quantification",
+  "01_Processing/04_Gene_Sets",
+  "01_Processing/05_Set_Scores",
+  "01_Processing/06_Module_Building",
+  "01_Processing/07_Module_Characterisation",
   "02_HRvLR_groups/01_Design_Contrasts",
   "02_HRvLR_groups/02_Protein_Contrasts",
   "02_HRvLR_groups/03_Set_Contrasts",
@@ -64,7 +64,7 @@ stages <- c(
   "02_HRvLR_groups/Figures/S01_Volcano",
   "02_HRvLR_groups/Figures/S02_NES_Scatter",
   "02_HRvLR_groups/Figures/S03_Signatures",
-  "01_Trunk/Figures/S01_QC"
+  "01_Processing/Figures/S01_QC"
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]

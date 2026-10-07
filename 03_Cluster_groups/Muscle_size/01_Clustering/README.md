@@ -22,7 +22,7 @@ why. Both the selected and the imposed K are written to the workbook. The gap st
 K = 1 here; K = 2 is imposed because it reproduces the HR/LR split exactly, so the arc repeats
 that comparison under a size-cluster label.
 
-When the K used is 2, the script writes the trunk's inputs again with the clusters as the groups.
+When the K used is 2, the script writes the 01_Processing inputs again with the clusters as the groups.
 The later stages read these copies, so they run the HR/LR code unchanged.
 
 ## What the code does
@@ -36,7 +36,7 @@ The later stages read these copies, so they run the HR/LR code unchanged.
 | Stability | `fpc::clusterboot(clustermethod = fpc::claraCBI, usepam = TRUE, B = 500, seed = 1)` | Mean Jaccard per cluster over 500 bootstrap resamples of people, for K = 2 and 3. |
 | Choice | `coalesce(imposed_k, k_gap)` | The K used downstream: the imposed K, or the gap statistic's if none is imposed. |
 | Labels | mean `pct_fcsa_mixed` per cluster | The cluster with the higher mean is `Hi`, the other `Lo`. |
-| Relabelled inputs | `relabel()` in the script | Only when K used is 2. Rewrites `arm` as Hi/Lo and `group` as `Hi_T1` and so on in the trunk's protein, matrix, singscore and module objects, and drops the samples of anyone without a cluster. |
+| Relabelled inputs | `relabel()` in the script | Only when K used is 2. Rewrites `arm` as Hi/Lo and `group` as `Hi_T1` and so on in the 01_Processing protein, matrix, singscore and module objects, and drops the samples of anyone without a cluster. |
 | Space | `prcomp()` on the scaled traits | PC1 and PC2 per person, for Figure 1 panel a. A projection, no test. |
 
 ## How to read the outputs
@@ -55,11 +55,11 @@ The later stages read these copies, so they run the HR/LR code unchanged.
 
 | | |
 |---|---|
-| Reads | `00_Input/phenotype.csv`; for the relabelled inputs, `01_Trunk/03_Quantification/c_data/proteins.rds`, `DAList_corrected.rds`, `DAList_limpa.rds`, `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/06_Module_Building/c_data/modules.rds` |
+| Reads | `00_Input/phenotype.csv`; for the relabelled inputs, `01_Processing/03_Quantification/c_data/proteins.rds`, `DAList_corrected.rds`, `DAList_limpa.rds`, `01_Processing/05_Set_Scores/c_data/singscore.rds`, `01_Processing/06_Module_Building/c_data/modules.rds` |
 | Writes | `c_data/clustering.xlsx`, `c_data/inputs/` (read by stages 02 to 07 and the F1 script), `b_reports/clustering_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/01_Clustering/a_script/clustering.R` |
 
-`input_manifest` lists `phenotype.csv` only; the trunk files are read for relabelling, not for
+`input_manifest` lists `phenotype.csv` only; 01_Processing files are read for relabelling, not for
 the clustering.
 
 ```

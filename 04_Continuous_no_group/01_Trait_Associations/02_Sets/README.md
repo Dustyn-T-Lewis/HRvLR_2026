@@ -5,7 +5,7 @@ Which gene-set scores track each size and strength trait, with every person pool
 ## The idea
 
 A gene set is a published list of genes that share a pathway or process (Hallmark, Reactome,
-KEGG_Legacy, GO BP, or a GO Slim term). `01_Trunk/05_Set_Scores` gives each set one number per
+KEGG_Legacy, GO BP, or a GO Slim term). `01_Processing/05_Set_Scores` gives each set one number per
 biopsy with singscore: the proteins of that biopsy are ranked by abundance, and the set's score is
 where its members sit in that ranking, high when they sit near the top. The score rests on ranks
 within one biopsy, so it needs no covariate and does not move when other biopsies change.
@@ -14,7 +14,7 @@ Each score then meets each trait through the shared association step, `associate
 `R/associate.R`: the sample model, the change score in six windows, and the growth + strength
 and growth x strength models. `../README.md` explains each from the ground up.
 
-Only sets that qualify in `01_Trunk/04_Gene_Sets` enter: 15 to 500 members, and at least 15 of
+Only sets that qualify in `01_Processing/04_Gene_Sets` enter: 15 to 500 members, and at least 15 of
 them measured here. Each collection is its own screen, so BH and Storey's q run within collection
 as well as within trait and term, or window and trait. A small collection is not corrected
 against a large one.
@@ -48,7 +48,7 @@ the test asks whether that value follows the trait across people, as for a singl
 
 | | |
 |---|---|
-| Reads | `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (catalogue and names), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (sample sheet only), `00_Input/phenotype.csv` |
+| Reads | `01_Processing/05_Set_Scores/c_data/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (catalogue and names), `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (sample sheet only), `00_Input/phenotype.csv` |
 | Writes | `c_data/set_trait_associations.xlsx`, `b_reports/set_trait_associations_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/02_Sets/a_script/set_trait_associations.R` |
 

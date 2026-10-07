@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
 })
 source(here("R", "helpers.R"))
 
-inputs <- c(proteins = "01_Trunk/03_Quantification/c_data/proteins.rds")
+inputs <- c(proteins = "01_Processing/03_Quantification/c_data/proteins.rds")
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
 quantified <- readRDS(paths[["proteins"]])

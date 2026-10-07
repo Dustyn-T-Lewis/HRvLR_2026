@@ -79,7 +79,7 @@ FDR (BH) and Storey's q run within level, window, trait and group, and within co
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (proteins, metadata), `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (qualifying sets, collections), `01_Trunk/06_Module_Building/c_data/modules.rds` (eigengenes), `00_Input/phenotype.csv` (traits and group) |
+| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (proteins, metadata), `01_Processing/05_Set_Scores/c_data/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (qualifying sets, collections), `01_Processing/06_Module_Building/c_data/modules.rds` (eigengenes), `00_Input/phenotype.csv` (traits and group) |
 | Writes | `c_data/trait_associations.xlsx` (read by `Figures/F3_People`), `b_reports/trait_associations_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/07_Trait_Associations/a_script/trait_associations.R` |
 

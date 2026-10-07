@@ -14,7 +14,7 @@ suppressPackageStartupMessages({
 source(here("R", "helpers.R"))
 source(here("R", "classify.R"))
 
-inputs <- c(modules = "01_Trunk/06_Module_Building/c_data/modules.rds")
+inputs <- c(modules = "01_Processing/06_Module_Building/c_data/modules.rds")
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 modules <- readRDS(paths[["modules"]])

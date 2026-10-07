@@ -38,7 +38,7 @@ BH and Storey's q run within task, over all proteins.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (values, metadata, `observed`), `01_Trunk/03_Quantification/c_data/DAList_limpa.rds` (overview row order) |
+| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (values, metadata, `observed`), `01_Processing/03_Quantification/c_data/DAList_limpa.rds` (overview row order) |
 | Writes | `c_data/protein_classification.xlsx` (read by `Figures/F3_People`), `b_reports/protein_classification_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/06_Classification/01_Proteins/a_script/protein_classification.R` |
 

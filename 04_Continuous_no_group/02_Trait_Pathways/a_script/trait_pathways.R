@@ -19,7 +19,7 @@ figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   associate = "04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/associate.rds",
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds"
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

@@ -33,7 +33,7 @@ inputs <- c(
     "04_Continuous_no_group/01_Trait_Associations/01_Proteins",
     "c_data/protein_trait_associations.xlsx"
   ),
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

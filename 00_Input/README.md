@@ -1,19 +1,19 @@
 # 00_Input
 
-The study data and the reference tables the trunk reads. No code lives here, and no script writes
+The study data and the reference tables 01_Processing reads. No code lives here, and no script writes
 here.
 
 ## The files
 
 | File | One row is | Read by |
 |---|---|---|
-| `HRvLR_raw.xlsx` | a protein: `uniprot_id`, `protein`, `gene`, `description`, `n_seq`, then one intensity column per MS run (48 runs) | `01_Trunk/01_Protein_Filtering` |
-| `metadata.csv` | an MS run (48 rows): `sample_id`, `subject`, `arm`, `timepoint`, `group` | `01_Trunk/01_Protein_Filtering` |
-| `phenotype.csv` | a subject (16 rows): fibre area, fibre counts, muscle area and strength before and after training, the composite and the training volume | the arcs (contrasts, trait associations, clustering, figures); never the trunk |
-| `blood_contaminants.csv` | a curated blood protein (95 rows) with its `class` and `reason` | `01_Trunk/01_Protein_Filtering` |
-| `HPA_annotations_full.tsv` | a Human Protein Atlas gene (20,162 rows) | `01_Trunk/01_Protein_Filtering` |
-| `RBC_proteome_reference.tsv` | a red-cell protein (7,012 rows): `acc`, `gene`, `sources`, `n_sources` | `01_Trunk/01_Protein_Filtering` |
-| `downloads/` | STRING v12 human files: links at combined score 700 or more, aliases, protein info | `01_Trunk/07_Module_Characterisation` |
+| `HRvLR_raw.xlsx` | a protein: `uniprot_id`, `protein`, `gene`, `description`, `n_seq`, then one intensity column per MS run (48 runs) | `01_Processing/01_Protein_Filtering` |
+| `metadata.csv` | an MS run (48 rows): `sample_id`, `subject`, `arm`, `timepoint`, `group` | `01_Processing/01_Protein_Filtering` |
+| `phenotype.csv` | a subject (16 rows): fibre area, fibre counts, muscle area and strength before and after training, the composite and the training volume | the arcs (contrasts, trait associations, clustering, figures); never 01_Processing |
+| `blood_contaminants.csv` | a curated blood protein (95 rows) with its `class` and `reason` | `01_Processing/01_Protein_Filtering` |
+| `HPA_annotations_full.tsv` | a Human Protein Atlas gene (20,162 rows) | `01_Processing/01_Protein_Filtering` |
+| `RBC_proteome_reference.tsv` | a red-cell protein (7,012 rows): `acc`, `gene`, `sources`, `n_sources` | `01_Processing/01_Protein_Filtering` |
+| `downloads/` | STRING v12 human files: links at combined score 700 or more, aliases, protein info | `01_Processing/07_Module_Characterisation` |
 
 Sixteen people gave a biopsy at T1 (baseline), T2 (after the training programme) and T3 (after an
 acute bout at the end of it): 48 MS runs, one per biopsy. `sample_id` names the run (`S03_T1`),

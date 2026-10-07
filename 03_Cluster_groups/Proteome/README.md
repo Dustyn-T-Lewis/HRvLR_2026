@@ -4,7 +4,7 @@ If people are grouped by their proteome alone, what else differs between the gro
 
 ## What was clustered
 
-The trunk's module eigengenes (`01_Trunk/06_Module_Building`), with no phenotype or group label,
+The 01_Processing module eigengenes (`01_Processing/06_Module_Building`), with no phenotype or group label,
 five times over:
 
 | Input | Each person's values |
@@ -119,7 +119,7 @@ Proteome/
 │   ├── b_reports/clustering_report.pdf
 │   └── c_data/
 │       ├── clustering.xlsx
-│       └── inputs/<input>/       trunk inputs relabelled C1/C2, one folder per input
+│       └── inputs/<input>/       01_Processing inputs relabelled C1/C2, one folder per input
 ├── 02_Design_Contrasts/
 │   ├── a_script/design_contrasts.R
 │   ├── T1/c_data/  T2/c_data/  T3/c_data/  training/c_data/  acute/c_data/

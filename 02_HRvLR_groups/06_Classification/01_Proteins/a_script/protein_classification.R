@@ -14,8 +14,8 @@ source(here("R", "helpers.R"))
 source(here("R", "classify.R"))
 
 inputs <- c(
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
-  limpa = "01_Trunk/03_Quantification/c_data/DAList_limpa.rds"
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+  limpa = "01_Processing/03_Quantification/c_data/DAList_limpa.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

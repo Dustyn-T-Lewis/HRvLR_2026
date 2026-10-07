@@ -8,7 +8,7 @@ The method, the five tasks, the AUC and its two intervals are explained in
 [`06_Classification`](../README.md). This substage runs them on every module eigengene.
 
 A module is a group of proteins that rise and fall together across biopsies (WGCNA, in
-`01_Trunk/06_Module_Building`). Its eigengene is the first principal component of its members:
+`01_Processing/06_Module_Building`). Its eigengene is the first principal component of its members:
 one number per biopsy that summarises the module, signed to follow the members' average. The
 eigengenes are scored on blood-corrected abundance, so they carry differences between people;
 grey, the proteins in no module, has none.
@@ -36,7 +36,7 @@ There are few modules, so BH has few tests to adjust over and Storey's q equals 
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds` |
 | Writes | `c_data/module_classification.xlsx` (read by `Figures/F3_People`), `b_reports/module_classification_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/06_Classification/03_Modules/a_script/module_classification.R` |
 

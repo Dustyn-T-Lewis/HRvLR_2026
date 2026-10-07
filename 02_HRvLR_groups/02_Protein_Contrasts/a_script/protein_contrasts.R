@@ -21,8 +21,8 @@ figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   design = "02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds",
-  proteins = "01_Trunk/03_Quantification/c_data/proteins.rds",
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
+  proteins = "01_Processing/03_Quantification/c_data/proteins.rds",
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

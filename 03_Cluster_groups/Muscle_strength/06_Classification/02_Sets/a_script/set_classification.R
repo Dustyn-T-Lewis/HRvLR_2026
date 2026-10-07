@@ -16,7 +16,7 @@ source(here("R", "classify.R"))
 
 inputs <- c(
   singscore = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/singscore.rds",
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   proteins = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/DAList_corrected.rds"
 )
 paths <- map_chr(inputs, here)

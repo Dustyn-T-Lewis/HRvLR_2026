@@ -43,7 +43,7 @@ The method (PAM, gap statistic, silhouette, bootstrap Jaccard) is explained in
 | [`07_Trait_Associations`](07_Trait_Associations/README.md) | does a feature's link to a trait differ by group | `02_HRvLR_groups/07_Trait_Associations` |
 | [`Figures/F1_Overview`](Figures/F1_Overview/README.md) | the arc on a page | `02_HRvLR_groups/Figures/F1_Overview` |
 
-Stages 02 to 07 read `01_Clustering/c_data/inputs/` in place of the trunk's files. `run_all.R`
+Stages 02 to 07 read `01_Clustering/c_data/inputs/` in place of the 01_Processing files. `run_all.R`
 runs 01 to 07 in order, then the F1 script.
 
 ## Files
@@ -55,7 +55,7 @@ Muscle_size/
 │   ├── b_reports/clustering_report.pdf
 │   └── c_data/
 │       ├── clustering.xlsx
-│       └── inputs/              trunk inputs relabelled Hi/Lo, read by 02 to 07
+│       └── inputs/              01_Processing inputs relabelled Hi/Lo, read by 02 to 07
 ├── 02_Design_Contrasts/
 ├── 03_Protein_Contrasts/
 ├── 04_Set_Contrasts/

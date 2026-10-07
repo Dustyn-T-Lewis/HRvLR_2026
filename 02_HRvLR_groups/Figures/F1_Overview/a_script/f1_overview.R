@@ -20,7 +20,7 @@ source(here("R", "figure_overview.R"))
 inputs <- c(
   contrasts = "02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx",
   set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds",
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   phenotype = "00_Input/phenotype.csv",
   design = "02_HRvLR_groups/Figures/F1_Overview/assets/design.png"
 )

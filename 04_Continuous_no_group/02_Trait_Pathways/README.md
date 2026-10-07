@@ -54,7 +54,7 @@ tested against the other proteins in one ranking.
 
 | | |
 |---|---|
-| Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/associate.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (sets, catalogue, protein-to-gene map) |
+| Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/associate.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (sets, catalogue, protein-to-gene map) |
 | Writes | `c_data/trait_pathways.xlsx`, `c_data/pathways.rds` (the `pathways` table with `leading_edge`), `b_reports/trait_pathways_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/02_Trait_Pathways/a_script/trait_pathways.R` |
 

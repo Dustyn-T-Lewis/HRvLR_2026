@@ -41,7 +41,7 @@ one feature, that panel d has one row per selected set and trait, and that no sh
 
 | | |
 |---|---|
-| Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx`, `04_Continuous_no_group/01_Trait_Associations/02_Sets/c_data/set_trait_associations.xlsx`, `04_Continuous_no_group/01_Trait_Associations/03_Modules/c_data/module_trait_associations.xlsx` (each `counts`), `04_Continuous_no_group/02_Trait_Pathways/c_data/trait_pathways.xlsx` (`pathways`), `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (set members for pruning), `04_Continuous_no_group/03_Profile_Clusters/c_data/profile_clusters.xlsx` (`profile_means`, `profile_groups`), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx`, `04_Continuous_no_group/01_Trait_Associations/02_Sets/c_data/set_trait_associations.xlsx`, `04_Continuous_no_group/01_Trait_Associations/03_Modules/c_data/module_trait_associations.xlsx` (each `counts`), `04_Continuous_no_group/02_Trait_Pathways/c_data/trait_pathways.xlsx` (`pathways`), `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set members for pruning), `04_Continuous_no_group/03_Profile_Clusters/c_data/profile_clusters.xlsx` (`profile_means`, `profile_groups`), `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
 | Writes | `b_reports/f1_overview.pdf` (300 x 175 mm, `cairo_pdf` through `save_figure()`), `c_data/f1_overview.xlsx` |
 | Run | `Rscript 04_Continuous_no_group/Figures/F1_Overview/a_script/f1_overview.R`, after every stage of the arc. `run_all.R` does not list it. |
 

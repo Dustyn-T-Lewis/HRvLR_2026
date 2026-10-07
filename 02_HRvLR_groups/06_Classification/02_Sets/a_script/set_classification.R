@@ -15,9 +15,9 @@ source(here("R", "helpers.R"))
 source(here("R", "classify.R"))
 
 inputs <- c(
-  singscore = "01_Trunk/05_Set_Scores/c_data/singscore.rds",
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
-  proteins = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds"
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  proteins = "01_Processing/03_Quantification/c_data/DAList_corrected.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

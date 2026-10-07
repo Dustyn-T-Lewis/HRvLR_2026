@@ -6,7 +6,7 @@ Which gene sets shift in each of the nine contrasts, judged two ways?
 
 A gene set is a published list of genes that share a function or pathway: oxidative
 phosphorylation, the ribosome, muscle contraction. The sets come from five collections (Hallmark,
-Reactome, KEGG_Legacy, GOBP, GO_Slim) and are mapped to proteins in `01_Trunk/04_Gene_Sets`, one
+Reactome, KEGG_Legacy, GOBP, GO_Slim) and are mapped to proteins in `01_Processing/04_Gene_Sets`, one
 representative protein per gene symbol. A set is tested when 15 to 500 of its proteins were
 measured. Testing a set rather than a protein asks whether a function moved, and pools many small
 protein changes into one question.
@@ -56,7 +56,7 @@ Storey's q does the same with an estimate of how many sets have no effect.
 | fry | `limma::fry(block = subject, correlation = ...)` | On limpa's complete matrix (fry takes no missing value) with the design from `design.rds`. The within-subject correlation is re-estimated on that matrix with `limma::duplicateCorrelation()`. Gene sets are mapped back to matrix rows through the representative protein. |
 | Storey q | `storey_q()` in `R/helpers.R` | Within contrast and method. |
 | Redundancy | `fgsea::collapsePathways(pval.threshold = 0.05)` | On the fgsea sets at FDR < 0.05; sets the `main` flag. |
-| Overview scores | singscore from `01_Trunk/05_Set_Scores` | For the biopsy heatmap only. singscore places a set within each biopsy's own ranking of proteins, so every biopsy gets one score per set. |
+| Overview scores | singscore from `01_Processing/05_Set_Scores` | For the biopsy heatmap only. singscore places a set within each biopsy's own ranking of proteins, so every biopsy gets one score per set. |
 
 ## How to read the outputs
 
@@ -75,7 +75,7 @@ Storey's q does the same with an estimate of how many sets have no effect.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Trunk/03_Quantification/c_data/DAList_limpa.rds` (complete matrix), `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds` (complete matrix), `01_Processing/05_Set_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/set_tests.rds` (read by every figure in `Figures/`), `c_data/set_contrasts.xlsx`, `b_reports/set_contrasts_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/03_Set_Contrasts/a_script/set_contrasts.R` |
 

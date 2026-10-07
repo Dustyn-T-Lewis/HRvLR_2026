@@ -6,7 +6,7 @@ The HR/LR stage [`02_HRvLR_groups/06_Classification/02_Sets`](../../../../02_HRv
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/DAList_corrected.rds` |
+| Reads | `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/DAList_corrected.rds` |
 | Writes | `c_data/set_classification.xlsx`, `b_reports/set_classification_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/06_Classification/02_Sets/a_script/set_classification.R` |
 

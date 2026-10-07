@@ -44,7 +44,7 @@ Gene symbols label the rows; the script stops if any protein lacks one or two sh
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (values, annotation, sample sheet, observed mask), `01_Trunk/03_Quantification/c_data/DAList_limpa.rds` (overview row order), `00_Input/phenotype.csv` |
+| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (values, annotation, sample sheet, observed mask), `01_Processing/03_Quantification/c_data/DAList_limpa.rds` (overview row order), `00_Input/phenotype.csv` |
 | Writes | `c_data/protein_trait_associations.xlsx`, `c_data/associate.rds`, `b_reports/protein_trait_associations_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/01_Proteins/a_script/protein_trait_associations.R` |
 

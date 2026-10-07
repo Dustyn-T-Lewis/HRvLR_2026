@@ -22,7 +22,7 @@ out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   fit = "03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/fit.rds",
   design = "03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds",
   limpa = "03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/DAList_limpa.rds",

@@ -23,7 +23,7 @@ every selected pathway in all nine contrasts, and eight barcode lanes whose FDR 
 | a | Each clustered person on PC1 and PC2 of the scaled strength changes, coloured Hi or Lo, with HR/LR as the point shape. The subtitle gives what was clustered, the K the gap statistic selects, the K used, and each group's size and bootstrap Jaccard. | `panel_clustering()` | `01_Clustering/c_data/clustering.xlsx`: `space`, `space_variance`, `choice`, `stability` |
 | b | Proteins per contrast, down left and up right. The light bar counts p < 0.05 or Π < 0.05; the dark bar, drawn over it from zero, counts the Π < 0.05 subset. The subtitle gives the number tested and at FDR < 0.05. | `panel_protein_counts()` | `04_Set_Contrasts/c_data/set_tests.rds`, `protein_results` |
 | c | Proteome PCA (left) and PCA of the six size and strength traits at T1 and T2 (right), each with its PERMANOVA: time and group for the proteome, time only for the phenotype. People are relabelled Hi/Lo and anyone without a group leaves the phenotype PCA. | `panel_pca_pair()` | `03_Protein_Contrasts/c_data/protein_contrasts.xlsx`: `pca`, `pca_variance`, `permanova`; `phenotype.csv`; `groups.rds` |
-| d | Pathways at fgsea FDR < 0.05 in both groups of a window (Hi - Lo: two of the three time points; Interaction: either interaction, strongest five) from Hallmark, Reactome, KEGG and GO BP, each shown in all nine contrasts. | `panel_pathway_grid()` | `set_tests.rds`, `set_tests`; `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` |
+| d | Pathways at fgsea FDR < 0.05 in both groups of a window (Hi - Lo: two of the three time points; Interaction: either interaction, strongest five) from Hallmark, Reactome, KEGG and GO BP, each shown in all nine contrasts. | `panel_pathway_grid()` | `set_tests.rds`, `set_tests`; `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` |
 | e, f | Each group's p < 0.05 sets for one window (e: training, f: acute) placed in the other group's ranking, drawn as limma's barcode. | `signature_barcode()` | `set_tests.rds`; `protein_contrasts.xlsx`, `fry_concordance` |
 
 Π is Xiao et al. (2014): p^|log2 FC|, which ranks a protein on p and fold change together.
@@ -46,7 +46,7 @@ every selected pathway in all nine contrasts, and eight barcode lanes whose FDR 
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Muscle_strength/03_Protein_Contrasts/c_data/protein_contrasts.xlsx`, `03_Cluster_groups/Muscle_strength/04_Set_Contrasts/c_data/set_tests.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/clustering.xlsx`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/groups.rds` |
+| Reads | `03_Cluster_groups/Muscle_strength/03_Protein_Contrasts/c_data/protein_contrasts.xlsx`, `03_Cluster_groups/Muscle_strength/04_Set_Contrasts/c_data/set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/clustering.xlsx`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/groups.rds` |
 | Writes | `b_reports/f1_overview.pdf` (300 x 175 mm, cairo PDF), `c_data/f1_overview.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Muscle_strength/Figures/F1_Overview/a_script/f1_overview.R`, or `run_all.R` after the arc's last stage |
 

@@ -64,14 +64,14 @@ Jaccard: a contrast between two unstable clusters compares groups that a resampl
 
 ## How the copies reuse the HR/LR template
 
-`01_Clustering` in each arc writes relabelled copies of the trunk's inputs to
+`01_Clustering` in each arc writes relabelled copies of the 01_Processing inputs to
 `01_Clustering/c_data/inputs/` (one folder per input for `Proteome`): `proteins.rds`,
 `DAList_corrected.rds`, `DAList_limpa.rds`, `singscore.rds`, `modules.rds` and `groups.rds`. In
 each copy `arm` holds the cluster and `group` the cluster and time point (`Hi_T1`, `C2_T3`), and
 the samples of anyone without a cluster are dropped.
 
 The stages from `02_Design_Contrasts` on are copies of the HR/LR stages that read those files
-instead of the trunk's, with HR and LR renamed. The contrasts keep their shape: `Training_Hi`,
+instead of 01_Processing's, with HR and LR renamed. The contrasts keep their shape: `Training_Hi`,
 `Baseline_HivLo`, `Training_Interaction` and so on.
 
 | Cluster stage | Copy of |

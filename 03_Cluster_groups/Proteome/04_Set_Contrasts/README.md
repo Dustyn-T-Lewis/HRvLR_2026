@@ -6,7 +6,7 @@ The HR/LR stage [`02_HRvLR_groups/03_Set_Contrasts`](../../../02_HRvLR_groups/03
 
 | | |
 |---|---|
-| Reads | `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Proteome/03_Protein_Contrasts/<input>/c_data/fit.rds`, `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/DAList_limpa.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/singscore.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Proteome/03_Protein_Contrasts/<input>/c_data/fit.rds`, `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/DAList_limpa.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/singscore.rds`, `00_Input/phenotype.csv` |
 | Writes | `<input>/c_data/set_contrasts.xlsx`, `<input>/c_data/set_tests.rds`, `<input>/b_reports/set_contrasts_report.pdf`, `c_data/set_contrasts_all_inputs.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/04_Set_Contrasts/a_script/set_contrasts.R` |
 

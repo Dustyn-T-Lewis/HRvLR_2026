@@ -28,9 +28,9 @@ inputs <- c(
   sets = level_file("02_Sets", "set_trait_associations.xlsx"),
   modules = level_file("03_Modules", "module_trait_associations.xlsx"),
   pathways = file.path(arc, "02_Trait_Pathways/c_data/trait_pathways.xlsx"),
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   profiles = file.path(arc, "03_Profile_Clusters/c_data/profile_clusters.xlsx"),
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

@@ -5,7 +5,7 @@ Which co-expression modules track each size and strength trait, with every perso
 ## The idea
 
 A module is a group of proteins whose abundances rise and fall together across biopsies.
-`01_Trunk/06_Module_Building` finds them with WGCNA, using no label or trait, and summarises each
+`01_Processing/06_Module_Building` finds them with WGCNA, using no label or trait, and summarises each
 module as an eigengene: one number per biopsy, the first principal component of the module's
 proteins, signed to follow their average abundance. Proteins left unassigned (the grey module) get
 no eigengene.
@@ -35,13 +35,13 @@ co-moving block does, which a list of single proteins cannot show directly.
 - Modules were defined on subject-centred abundance, which removes each person's own level, and
   scored on raw abundance. The between-person term therefore reads differences between people
   along an axis found within people.
-- Module identity (top set, hub proteins) is in `01_Trunk/07_Module_Characterisation`.
+- Module identity (top set, hub proteins) is in `01_Processing/07_Module_Characterisation`.
 
 ## Files
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/module_trait_associations.xlsx`, `b_reports/module_trait_associations_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/03_Modules/a_script/module_trait_associations.R` |
 

@@ -24,7 +24,7 @@ same way into groups of 8 or more. This splits one trait's hit list into blocks 
 together in the same people.
 
 Each group is then described: its size, mean t, the share of members with positive t, the module
-most members belong to (`01_Trunk/06_Module_Building`), its top members by |t|, and the gene set
+most members belong to (`01_Processing/06_Module_Building`), its top members by |t|, and the gene set
 most over-represented among its members.
 
 The groups are built from the same t values they summarise. Their mean t and their enrichment
@@ -62,7 +62,7 @@ than to the next; near 0, the groups blur together.
 
 | | |
 |---|---|
-| Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/associate.rds` (t and p per protein, window and trait), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (per-person values and gene symbols), `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (sets and protein-to-gene map), `01_Trunk/06_Module_Building/c_data/modules.rds` (module membership) |
+| Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/associate.rds` (t and p per protein, window and trait), `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (per-person values and gene symbols), `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (sets and protein-to-gene map), `01_Processing/06_Module_Building/c_data/modules.rds` (module membership) |
 | Writes | `c_data/profile_clusters.xlsx`, `b_reports/profile_clusters_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/03_Profile_Clusters/a_script/profile_clusters.R` |
 

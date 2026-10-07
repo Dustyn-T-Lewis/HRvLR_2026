@@ -29,10 +29,10 @@ out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  modules = "01_Trunk/06_Module_Building/c_data/modules.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
   design = "02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds",
   fit = "02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds",
-  limpa = "01_Trunk/03_Quantification/c_data/DAList_limpa.rds",
+  limpa = "01_Processing/03_Quantification/c_data/DAList_limpa.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

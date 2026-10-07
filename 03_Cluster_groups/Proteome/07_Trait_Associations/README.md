@@ -6,7 +6,7 @@ The HR/LR stage [`02_HRvLR_groups/07_Trait_Associations`](../../../02_HRvLR_grou
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/DAList_corrected.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/modules.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/groups.rds` |
+| Reads | `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/DAList_corrected.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/modules.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/<input>/groups.rds` |
 | Writes | `<input>/c_data/trait_associations.xlsx`, `<input>/b_reports/trait_associations_report.pdf`, `c_data/trait_associations_all_inputs.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/07_Trait_Associations/a_script/trait_associations.R` |
 

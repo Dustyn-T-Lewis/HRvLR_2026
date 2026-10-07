@@ -20,7 +20,7 @@ arc <- "03_Cluster_groups/Muscle_size"
 inputs <- c(
   contrasts = file.path(arc, "03_Protein_Contrasts/c_data/protein_contrasts.xlsx"),
   set_tests = file.path(arc, "04_Set_Contrasts/c_data/set_tests.rds"),
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   phenotype = "00_Input/phenotype.csv",
   clustering = file.path(arc, "01_Clustering/c_data/clustering.xlsx"),
   groups = file.path(arc, "01_Clustering/c_data/inputs/groups.rds")

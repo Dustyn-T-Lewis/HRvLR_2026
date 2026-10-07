@@ -16,7 +16,7 @@ source(here("R", "helpers.R"))
 source(here("R", "associate.R"))
 
 inputs <- c(
-  modules = "01_Trunk/06_Module_Building/c_data/modules.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

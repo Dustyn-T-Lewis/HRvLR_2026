@@ -6,7 +6,7 @@ The HR/LR stage [`02_HRvLR_groups/07_Trait_Associations`](../../../02_HRvLR_grou
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/DAList_corrected.rds`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/modules.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/groups.rds` |
+| Reads | `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/DAList_corrected.rds`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/modules.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/groups.rds` |
 | Writes | `c_data/trait_associations.xlsx`, `b_reports/trait_associations_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_strength/07_Trait_Associations/a_script/trait_associations.R` |
 

@@ -54,7 +54,7 @@ estimate of how many proteins have no effect.
 
 | | |
 |---|---|
-| Reads | `01_Design_Contrasts/c_data/design.rds` (design and contrasts), `01_Trunk/03_Quantification/c_data/proteins.rds` (limpa object), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (blood-corrected complete matrix), `00_Input/phenotype.csv` |
+| Reads | `01_Design_Contrasts/c_data/design.rds` (design and contrasts), `01_Processing/03_Quantification/c_data/proteins.rds` (limpa object), `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (blood-corrected complete matrix), `00_Input/phenotype.csv` |
 | Writes | `c_data/protein_contrasts.xlsx`, `c_data/fit.rds` (the fit, read by `03_Set_Contrasts` and `04_Module_Contrasts`), `b_reports/protein_contrasts_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/02_Protein_Contrasts/a_script/protein_contrasts.R` |
 

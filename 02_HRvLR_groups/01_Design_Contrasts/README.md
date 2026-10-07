@@ -42,7 +42,7 @@ are once the model is fitted), and limma uses it to weight the biopsies. Within-
 gain from the pairing; between-group contrasts still compare people.
 
 Blood enters as a covariate: each protein gets its own slope on the blood index (haemoglobin HBB
-and HBA1, set in `01_Trunk`), and every contrast is read at equal blood content.
+and HBA1, set in `01_Processing`), and every contrast is read at equal blood content.
 
 ## What the code does
 
@@ -68,7 +68,7 @@ and HBA1, set in `01_Trunk`), and every contrast is read at equal blood content.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantification/c_data/proteins.rds` (limpa object and metadata) |
+| Reads | `01_Processing/03_Quantification/c_data/proteins.rds` (limpa object and metadata) |
 | Writes | `c_data/design.rds` (read by `02_Protein_Contrasts`, `03_Set_Contrasts`, `04_Module_Contrasts`), `c_data/design_contrasts.xlsx` (read by `Figures/F2_Programmes`) |
 | Run | `Rscript 02_HRvLR_groups/01_Design_Contrasts/a_script/design_contrasts.R` |
 

@@ -24,7 +24,7 @@ in `R/helpers.R`:
 no phenotype. HR and LR are the median split of `comp_hypertrophy`, so this arc covers the ground
 the group arcs cut into halves.
 
-The arc reads three kinds of feature, all built in `01_Trunk` with no label or trait:
+The arc reads three kinds of feature, all built in `01_Processing` with no label or trait:
 
 | Level | Feature | Value per biopsy |
 |---|---|---|

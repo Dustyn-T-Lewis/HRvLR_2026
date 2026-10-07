@@ -26,8 +26,8 @@ inputs <- c(
   module_tests = "02_HRvLR_groups/04_Module_Contrasts/c_data/module_contrasts.xlsx",
   set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds",
   set_summary = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_contrasts.xlsx",
-  modules = "01_Trunk/06_Module_Building/c_data/modules.rds",
-  module_labels = "01_Trunk/07_Module_Characterisation/c_data/module_characterisation.xlsx"
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  module_labels = "01_Processing/07_Module_Characterisation/c_data/module_characterisation.xlsx"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

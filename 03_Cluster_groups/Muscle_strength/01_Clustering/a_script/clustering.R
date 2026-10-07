@@ -31,14 +31,14 @@ stage <- here("03_Cluster_groups", family, "01_Clustering")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
-quantified <- "01_Trunk/03_Quantification/c_data"
+quantified <- "01_Processing/03_Quantification/c_data"
 inputs <- c(
   phenotype = "00_Input/phenotype.csv",
   proteins = file.path(quantified, "proteins.rds"),
   DAList_corrected = file.path(quantified, "DAList_corrected.rds"),
   DAList_limpa = file.path(quantified, "DAList_limpa.rds"),
-  singscore = "01_Trunk/05_Set_Scores/c_data/singscore.rds",
-  modules = "01_Trunk/06_Module_Building/c_data/modules.rds"
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -102,9 +102,9 @@ assignments <- complete |>
   right_join(select(change, subject), by = "subject") |>
   arrange(cluster, subject)
 
-# The trunk's inputs, relabelled for this arc: arm and group carry the clusters, named Hi and Lo by
-# the mean of the family's first trait, and the samples of any unassigned subject drop out. The
-# arc's stages read these copies, so they run the same code as 02_HRvLR_groups on new labels.
+# The 01_Processing inputs, relabelled for this arc: arm and group carry the clusters, named Hi and
+# Lo by the mean of the family's first trait, and the samples of any unassigned subject drop out.
+# The arc's stages read these copies, so they run the same code as 02_HRvLR_groups on new labels.
 if (k_used == 2) {
   label_of <- assignments |>
     filter(!is.na(cluster)) |>

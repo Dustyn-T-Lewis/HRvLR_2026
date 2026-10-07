@@ -3,7 +3,7 @@
 DIA mass-spectrometry proteomics of skeletal muscle from a resistance-training study. Sixteen
 people were biopsied three times: at baseline (T1), after the training programme (T2), and after
 one acute bout at the end of it (T3). Of 48 runs, 45 enter the analysis;
-`01_Trunk/01_Protein_Filtering` records which three are dropped and why.
+`01_Processing/01_Protein_Filtering` records which three are dropped and why.
 
 The study labelled each person a High or Low Responder (HR, LR) by a median split of a composite
 hypertrophy score. That split is mostly a fibre-area split, so the repository asks its questions
@@ -15,7 +15,7 @@ three ways:
 | [`03_Cluster_groups`](03_Cluster_groups/README.md) | groups found by clustering people on size, on strength, or on their proteome | do groups defined another way differ? |
 | [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number | which proteins, sets and modules track size and strength? |
 
-All three read the same [`01_Trunk`](01_Trunk/README.md) and never each other. The trunk uses no
+All three read the same [`01_Processing`](01_Processing/README.md) and never each other. 01_Processing uses no
 group label in any value it produces, with one exception: the detection filter in
 `01_Protein_Filtering` keeps a protein when it is detected often enough within at least one of the
 six HR/LR-by-time cells.
@@ -25,7 +25,7 @@ six HR/LR-by-time cells.
 ```
 HRvLR_V2/
 ├── 00_Input/                        study data, no code
-├── 01_Trunk/                        shared steps every arc reads
+├── 01_Processing/                        shared steps every arc reads
 │   ├── 01_Protein_Filtering/        contaminants, outlier runs, detection filter
 │   ├── 02_Normalisation/            cyclic loess
 │   ├── 03_Quantification/           limpa: a value and a standard error for every protein in every biopsy
@@ -85,7 +85,7 @@ same screen.
 
 ## Reading order
 
-1. `01_Trunk/README.md`, then its stages in order: how a raw run becomes a protein value.
+1. `01_Processing/README.md`, then its stages in order: how a raw run becomes a protein value.
 2. `02_HRvLR_groups/README.md` and its `Figures/F1_Overview`: the study's own question.
 3. `02_HRvLR_groups/02_Protein_Contrasts/README.md`: the contrasts every later stage reuses.
 4. `04_Continuous_no_group`: the same data without the split.
@@ -100,7 +100,7 @@ Rscript run_all.R 01 02      # only the arcs whose folder starts with 01 or 02
 ```
 
 `00_Input/README.md` has the download command for the STRING files
-`01_Trunk/07_Module_Characterisation` reads.
+`01_Processing/07_Module_Characterisation` reads.
 
 ## Shared code in `R/`
 
@@ -130,7 +130,7 @@ Rscript run_all.R 01 02      # only the arcs whose folder starts with 01 or 02
   screen and the workbooks keep every row.
 - Identifiers: proteins by UniProt accession, gene sets by `collection|name`, modules by colour; every
   result table carries them as `feature` with a readable `label`. Module colours come from WGCNA and
-  change if the trunk is rebuilt.
+  change if 01_Processing is rebuilt.
 
 ## Limits stated rather than tested
 

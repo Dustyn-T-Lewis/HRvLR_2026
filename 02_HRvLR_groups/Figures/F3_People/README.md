@@ -56,7 +56,7 @@ two-category version of the continuous one; panel b shows how far they agree.
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/06_Classification/01_Proteins/c_data/protein_classification.xlsx`, `02_HRvLR_groups/06_Classification/02_Sets/c_data/set_classification.xlsx`, `02_HRvLR_groups/06_Classification/03_Modules/c_data/module_classification.xlsx` (each `auc`, `counts`), `02_HRvLR_groups/07_Trait_Associations/c_data/trait_associations.xlsx` (`group_difference`, `within_group`), `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx` (`interaction`), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `02_HRvLR_groups/06_Classification/01_Proteins/c_data/protein_classification.xlsx`, `02_HRvLR_groups/06_Classification/02_Sets/c_data/set_classification.xlsx`, `02_HRvLR_groups/06_Classification/03_Modules/c_data/module_classification.xlsx` (each `auc`, `counts`), `02_HRvLR_groups/07_Trait_Associations/c_data/trait_associations.xlsx` (`group_difference`, `within_group`), `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx` (`interaction`), `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
 | Writes | `b_reports/f3_people.pdf`, `c_data/f3_people.xlsx` |
 | Run | `Rscript 02_HRvLR_groups/Figures/F3_People/a_script/f3_people.R` |
 

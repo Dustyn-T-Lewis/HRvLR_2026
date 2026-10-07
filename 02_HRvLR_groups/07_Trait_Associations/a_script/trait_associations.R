@@ -28,10 +28,10 @@ figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
-  singscore = "01_Trunk/05_Set_Scores/c_data/singscore.rds",
-  gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
-  modules = "01_Trunk/06_Module_Building/c_data/modules.rds",
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

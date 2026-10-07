@@ -8,7 +8,7 @@ in them?
 ## The idea
 
 A programme here is a WGCNA module: proteins that rise and fall together across biopsies
-(`01_Trunk/06_Module_Building`). The figure says what each module is, how it behaves in the nine
+(`01_Processing/06_Module_Building`). The figure says what each module is, how it behaves in the nine
 contrasts, how the gene-set calls compare between fgsea and fry, and how one module looks person
 by person.
 
@@ -42,7 +42,7 @@ different questions and can disagree.
 - Panel d's module is chosen for having the smallest interaction p among all modules, so its
   difference is inflated by the choice. It shows how that one result spreads across people, not
   that it is real.
-- Panel a's subtitle states the module count as fixed text; it does not follow the trunk if the
+- Panel a's subtitle states the module count as fixed text; it does not follow 01_Processing if the
   module count changes.
 - A module's top set comes from over-representation among its members; it names the module, it
   does not test it.
@@ -51,7 +51,7 @@ different questions and can disagree.
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design_contrasts.xlsx` (`contrasts`, for column order), `02_HRvLR_groups/04_Module_Contrasts/c_data/module_contrasts.xlsx` (`eigengene_tests`, `fry_tests`), `02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds`, `02_HRvLR_groups/03_Set_Contrasts/c_data/set_contrasts.xlsx` (`set_summary`, for the check), `01_Trunk/06_Module_Building/c_data/modules.rds`, `01_Trunk/07_Module_Characterisation/c_data/module_characterisation.xlsx` (`labels`) |
+| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design_contrasts.xlsx` (`contrasts`, for column order), `02_HRvLR_groups/04_Module_Contrasts/c_data/module_contrasts.xlsx` (`eigengene_tests`, `fry_tests`), `02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds`, `02_HRvLR_groups/03_Set_Contrasts/c_data/set_contrasts.xlsx` (`set_summary`, for the check), `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/07_Module_Characterisation/c_data/module_characterisation.xlsx` (`labels`) |
 | Writes | `b_reports/f2_programmes.pdf`, `c_data/f2_programmes.xlsx` |
 | Run | `Rscript 02_HRvLR_groups/Figures/F2_Programmes/a_script/f2_programmes.R` |
 

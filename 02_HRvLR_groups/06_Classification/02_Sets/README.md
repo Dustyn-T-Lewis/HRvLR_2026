@@ -8,7 +8,7 @@ The method, the five tasks, the AUC and its two intervals are explained in
 [`06_Classification`](../README.md). This substage runs them on every gene set that qualifies
 for testing (15 to 500 measured proteins).
 
-The value is the set's singscore in each biopsy, from `01_Trunk/05_Set_Scores`. singscore ranks
+The value is the set's singscore in each biopsy, from `01_Processing/05_Set_Scores`. singscore ranks
 all proteins within one biopsy and scores a set by where its members sit in that ranking: high
 when they sit near the top, low near the bottom. It needs no other biopsy and no group label, so
 every biopsy gets one score per set, computed on the blood-corrected complete matrix.
@@ -39,7 +39,7 @@ and collection.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (set catalogue), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (biopsy metadata) |
+| Reads | `01_Processing/05_Set_Scores/c_data/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set catalogue), `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (biopsy metadata) |
 | Writes | `c_data/set_classification.xlsx` (read by `Figures/F3_People`), `b_reports/set_classification_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/06_Classification/02_Sets/a_script/set_classification.R` |
 

@@ -22,7 +22,7 @@ source(here("03_Cluster_groups", "Proteome", "R", "inputs.R"))
 run_input <- function(input) {
   inputs <- c(
     singscore = "03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/{input}/singscore.rds",
-    gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
+    gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
     proteins = "03_Cluster_groups/Proteome/01_Clustering/c_data/inputs/{input}/DAList_corrected.rds"
   )
   inputs <- sub("{input}", input, inputs, fixed = TRUE)

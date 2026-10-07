@@ -5,7 +5,7 @@ two groups are imposed, who is in each?
 
 ## The idea
 
-The features are the trunk's module eigengenes (`01_Trunk/06_Module_Building`): one summary value
+The features are the 01_Processing module eigengenes (`01_Processing/06_Module_Building`): one summary value
 per co-expression module per biopsy. The distance between two people then rests on the modules,
 not on every protein, so thousands of noisy single proteins do not set it.
 
@@ -30,7 +30,7 @@ and the workbook reports that as the result. K = 2 is imposed at every input (`i
 the recorded reason: so the exploratory arc can compare the two halves the proteome suggests; read
 each split with its bootstrap Jaccard.
 
-For each input the script then writes the trunk's inputs again with the clusters as groups `C1`
+For each input the script then writes the 01_Processing inputs again with the clusters as groups `C1`
 and `C2`, so the later stages run the HR/LR code on them.
 
 ## What the code does
@@ -65,7 +65,7 @@ and `C2`, so the later stages run the HR/LR code on them.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds` (features), `00_Input/phenotype.csv` (HR/LR, for description only); for the relabelled inputs, `01_Trunk/03_Quantification/c_data/proteins.rds`, `DAList_corrected.rds`, `DAList_limpa.rds`, `01_Trunk/05_Set_Scores/c_data/singscore.rds` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds` (features), `00_Input/phenotype.csv` (HR/LR, for description only); for the relabelled inputs, `01_Processing/03_Quantification/c_data/proteins.rds`, `DAList_corrected.rds`, `DAList_limpa.rds`, `01_Processing/05_Set_Scores/c_data/singscore.rds` |
 | Writes | `c_data/clustering.xlsx`, `c_data/inputs/<input>/` (read by stages 02 to 07 and the F1 script), `b_reports/clustering_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Proteome/01_Clustering/a_script/clustering.R` |
 

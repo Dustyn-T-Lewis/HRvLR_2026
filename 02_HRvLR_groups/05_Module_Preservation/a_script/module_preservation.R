@@ -27,8 +27,8 @@ figure_dir <- file.path(stage, "b_reports")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
-  modules = "01_Trunk/06_Module_Building/c_data/modules.rds"
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {

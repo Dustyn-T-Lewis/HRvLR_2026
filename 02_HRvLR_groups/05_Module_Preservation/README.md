@@ -4,7 +4,7 @@ Does each group's co-expression structure reappear in the other group?
 
 ## The idea
 
-The trunk builds one network from the whole cohort. This stage builds a network inside each group
+01_Processing builds one network from the whole cohort. This stage builds a network inside each group
 separately, with the same settings, and asks whether a module found in one group is still a
 module in the other. A module that is missing in one group would point to proteins that are
 coordinated in one kind of responder and not the other.
@@ -42,7 +42,7 @@ A Zsummary above 2 says a module is found again in the other group; a Zsummary b
 evidence that it is missing; neither shows the two networks are the same.
 
 Module colours are assigned afresh in each group's network, so HR's blue is not LR's blue and
-neither is the trunk's blue. Each group module is labelled with the full-cohort module it overlaps
+neither is the 01_Processing blue. Each group module is labelled with the full-cohort module it overlaps
 most, so the names can be read together.
 
 ## What the code does
@@ -51,7 +51,7 @@ most, so the names can be read together.
 |---|---|---|
 | Group data | `apply()`, `ave()` | Subject-centred abundance per group, from the blood-corrected complete matrix; people with one biopsy left out. |
 | Soft power | `WGCNA::pickSoftThreshold(powerVector = 1:20, networkType = "signed", corFnc = "bicor")` | Falls back to 18, 16, 14 or 12 by sample count when no power reaches the fit criterion. |
-| Modules | `WGCNA::blockwiseModules()` | Signed network and signed TOM, bicor (`maxPOutliers = 0.05`), `deepSplit = 2`, `minModuleSize = 30`, `mergeCutHeight = 0.15`, PAM stage on, one block, `randomSeed = 54321`: the trunk's settings. |
+| Modules | `WGCNA::blockwiseModules()` | Signed network and signed TOM, bicor (`maxPOutliers = 0.05`), `deepSplit = 2`, `minModuleSize = 30`, `mergeCutHeight = 0.15`, PAM stage on, one block, `randomSeed = 54321`: the 01_Processing settings. |
 | Preservation | `WGCNA::modulePreservation(referenceNetworks = 1:2, nPermutations = 200, randomSeed = 42)` | Both directions: HR modules tested in LR, LR modules tested in HR. grey (unassigned) and gold (WGCNA's random reference module) are dropped. |
 | Bands | `cut(z_summary, c(-Inf, 2, 10, Inf))` | none, weak to moderate, strong. |
 | Naming | `dplyr::count()`, `slice_max()` | Each group module's best-overlapping full-cohort module and the share of its proteins there. |
@@ -71,7 +71,7 @@ most, so the names can be read together.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (blood-corrected complete matrix), `01_Trunk/06_Module_Building/c_data/modules.rds` (sample metadata, full-cohort membership) |
+| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (blood-corrected complete matrix), `01_Processing/06_Module_Building/c_data/modules.rds` (sample metadata, full-cohort membership) |
 | Writes | `c_data/module_preservation.xlsx`, `b_reports/module_preservation_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/05_Module_Preservation/a_script/module_preservation.R` |
 

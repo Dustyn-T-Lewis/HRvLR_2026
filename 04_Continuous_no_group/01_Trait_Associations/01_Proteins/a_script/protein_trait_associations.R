@@ -15,8 +15,8 @@ source(here("R", "helpers.R"))
 source(here("R", "associate.R"))
 
 inputs <- c(
-  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
-  limpa = "01_Trunk/03_Quantification/c_data/DAList_limpa.rds",
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+  limpa = "01_Processing/03_Quantification/c_data/DAList_limpa.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
