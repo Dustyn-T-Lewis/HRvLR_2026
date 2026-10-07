@@ -5,7 +5,7 @@ in them?
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/01_Design/c_data/01_design.xlsx` (`contrasts`), `02_HRvLR_groups/04_Modules/01_Contrasts/c_data/02_contrasts.xlsx` (`eigengene_tests`, `fry_tests`), `02_HRvLR_groups/03_Pathways/c_data/set_tests.rds`, `02_HRvLR_groups/03_Pathways/c_data/03_contrasts.xlsx` (`set_summary`), `01_Trunk/06_Modules/c_data/modules.rds`, `01_Trunk/07_Characterise/c_data/05_characterise.xlsx` (`labels`) |
+| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design_contrasts.xlsx` (`contrasts`), `02_HRvLR_groups/04_Module_Contrasts/c_data/module_contrasts.xlsx` (`eigengene_tests`, `fry_tests`), `02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds`, `02_HRvLR_groups/03_Set_Contrasts/c_data/set_contrasts.xlsx` (`set_summary`), `01_Trunk/06_Module_Building/c_data/modules.rds`, `01_Trunk/07_Module_Characterisation/c_data/module_characterisation.xlsx` (`labels`) |
 | Writes | `b_reports/f2_programmes.pdf` (300 x 175 mm), `c_data/f2_programmes.xlsx` |
 | Run | `Rscript 02_HRvLR_groups/Figures/F2_Programmes/a_script/f2_programmes.R` |
 

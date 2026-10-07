@@ -4,9 +4,9 @@ Names each module by its enriched sets, hubs and STRING edges.
 
 | | |
 |---|---|
-| Reads | `01_Build/c_data/modules.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/downloads/9606.protein.links.v12.0.min700.txt.gz`, `9606.protein.aliases.v12.0.txt.gz`, `9606.protein.info.v12.0.txt.gz` |
+| Reads | `06_Module_Building/c_data/modules.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/downloads/9606.protein.links.v12.0.min700.txt.gz`, `9606.protein.aliases.v12.0.txt.gz`, `9606.protein.info.v12.0.txt.gz` |
 | Writes | `c_data/05_characterise.xlsx`, `b_reports/05_characterise_figures.pdf` |
-| Run | `Rscript 01_Trunk/07_Characterise/a_script/07_characterise.R` |
+| Run | `Rscript 01_Trunk/07_Module_Characterisation/a_script/07_characterise.R` |
 
 ## Method
 

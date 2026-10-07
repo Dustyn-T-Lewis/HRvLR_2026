@@ -1,13 +1,13 @@
-# 06_Associate
+# 07_Trait_Associations
 
 What the HR/LR grouping adds to the phenotype links, for proteins, set scores and module
-eigengenes. The pooled, label-free associations are in `04_Continuous_no_group/01_Associate`.
+eigengenes. The pooled, label-free associations are in `04_Continuous_no_group/01_Trait_Associations`.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `01_Trunk/05_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/06_Modules/c_data/modules.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/06_associate.xlsx`, `b_reports/06_associate_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/06_Associate/a_script/06_associate.R` |
+| Run | `Rscript 02_HRvLR_groups/07_Trait_Associations/a_script/06_associate.R` |
 
 ## Method
 

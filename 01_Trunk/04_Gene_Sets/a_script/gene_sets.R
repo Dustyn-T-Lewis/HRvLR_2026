@@ -15,13 +15,13 @@ cache_dir <- file.path(out, "cache")
 dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
-  proteins = "01_Trunk/02_Normalize/c_data/DAList_normalized.rds",
+  proteins = "01_Trunk/02_Normalisation/c_data/DAList_normalized.rds",
   goslim = "01_Trunk/04_Gene_Sets/c_data/cache/goslim_generic.obo"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
-    "Run 01_Trunk/02_Normalize first and restore the GO Slim cache (README). Missing: ",
+    "Run 01_Trunk/02_Normalisation first and restore the GO Slim cache (README). Missing: ",
     paste(inputs[!file.exists(paths)], collapse = ", ")
   )
 }
@@ -219,5 +219,5 @@ holds <- c(
   "Every protein, its gene symbol, and the representative chosen per symbol.",
   "Proteins per mapping status."
 )
-write_workbook(sheets, holds, file.path(out, "01_gene_sets.xlsx"), inputs, here(inputs))
-message("wrote gene_sets.rds and 01_gene_sets.xlsx")
+write_workbook(sheets, holds, file.path(out, "gene_sets.xlsx"), inputs, here(inputs))
+message("wrote gene_sets.rds and gene_sets.xlsx")

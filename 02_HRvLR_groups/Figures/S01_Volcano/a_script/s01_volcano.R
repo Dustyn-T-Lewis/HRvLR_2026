@@ -1,7 +1,7 @@
 # Draw the protein volcanoes with the surviving fgsea pathways ringed. Computes nothing.
 # Two separate claims share a panel: point colour and the count badges read protein-level BH
 # FDR, the ring reads set-level fgsea FDR. Only sets that survived collapsePathways are ringed.
-# The floor contrast is not drawn; 03_Pathways reports what it returns.
+# The floor contrast is not drawn; 03_Set_Contrasts reports what it returns.
 
 suppressPackageStartupMessages({
   library(here)
@@ -17,11 +17,11 @@ figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
 for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
 
-inputs <- c(set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds")
+inputs <- c(set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
-    "Run 03_Pathways first. Missing: ",
+    "Run 03_Set_Contrasts first. Missing: ",
     paste(inputs[!file.exists(paths)], collapse = ", ")
   )
 }
@@ -148,7 +148,7 @@ volcanoes <- c(
   map(plot_order, make_volcano),
   map(c("Training_HR", "Training_LR"), make_volcano, rank_by = "pi")
 )
-pdf(file.path(figure_dir, "s01_volcano_figures.pdf"), width = 11, height = 8.5)
+pdf(file.path(figure_dir, "s01_volcano.pdf"), width = 11, height = 8.5)
 walk(volcanoes, \(v) print(v$figure))
 invisible(dev.off())
 

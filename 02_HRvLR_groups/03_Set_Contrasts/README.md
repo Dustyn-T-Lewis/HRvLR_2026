@@ -1,12 +1,12 @@
-# 03_Pathways
+# 03_Set_Contrasts
 
 Tests every set on every contrast with fgsea and fry, and marks non-redundant fgsea hits.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/05_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv`, `02_HRvLR_groups/02_DEP/c_data/fit.rds`, `02_HRvLR_groups/01_Design/c_data/design.rds`, `01_Trunk/03_Quantify/c_data/DAList_limpa.rds` |
+| Reads | `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Trunk/03_Quantification/c_data/DAList_limpa.rds` |
 | Writes | `c_data/set_tests.rds`, `c_data/03_contrasts.xlsx`, `b_reports/03_contrasts_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/03_Pathways/a_script/03_pathways.R` |
+| Run | `Rscript 02_HRvLR_groups/03_Set_Contrasts/a_script/03_pathways.R` |
 
 ## Method
 

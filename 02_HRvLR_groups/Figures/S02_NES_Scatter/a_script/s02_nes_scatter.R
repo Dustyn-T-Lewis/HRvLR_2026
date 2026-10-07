@@ -1,6 +1,6 @@
 # Put HR and LR on one pair of axes, once for training and once for the acute bout. fgsea scores
 # each set once per contrast, so one arm's NES against the other's compares the arms set by set.
-# No new test; it reshapes 03_Pathways output.
+# No new test; it reshapes 03_Set_Contrasts output.
 
 suppressPackageStartupMessages({
   library(here)
@@ -18,10 +18,10 @@ figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
 
-inputs <- c(set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds")
+inputs <- c(set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
-  stop("Run 03_Pathways first. Missing: ", inputs[["set_tests"]])
+  stop("Run 03_Set_Contrasts first. Missing: ", inputs[["set_tests"]])
 }
 fg <- readRDS(paths[["set_tests"]])
 
@@ -211,7 +211,7 @@ summary_table <- list_rbind(map(pairs, "summary"))
 export <- list_rbind(map(pairs, "export"))
 print(as.data.frame(summary_table))
 
-pdf(file.path(figure_dir, "s02_nes_scatter_figures.pdf"), width = 11, height = 8.5)
+pdf(file.path(figure_dir, "s02_nes_scatter.pdf"), width = 11, height = 8.5)
 walk(list_flatten(map(pairs, "figures")), print)
 invisible(dev.off())
 sheets <- list(

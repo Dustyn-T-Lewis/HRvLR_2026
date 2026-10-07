@@ -6,14 +6,13 @@
 # 95% interval, which runs narrow at this n; the features drawn in the report also carry pROC's
 # stratified bootstrap interval. The share of features at p < 0.05 is a multiple-testing summary,
 # not a measure of how well the groups separate.
-classify_step <- function(stage, inputs, paths, values, meta, feature_label, feature_noun,
+classify_step <- function(stage, name, inputs, paths, values, meta, feature_label, feature_noun,
                           feature_unit, value_label, row_groups, row_order,
                           collection_of = NULL, panel_name = \(label, collection) label,
                           observed_share = NULL, groups = c("HR", "LR"), boot_n = 2000) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
-  step <- tolower(basename(stage))
-  workbook <- paste0(step, ".xlsx")
+  workbook <- paste0(name, ".xlsx")
   for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
   by_collection <- if (is.null(collection_of)) character(0) else "collection"
   labelled_heat <- \(...) heat(..., labels = feature_label)
@@ -164,7 +163,7 @@ classify_step <- function(stage, inputs, paths, values, meta, feature_label, fea
     max(plot_index$pdf_page) == length(overviews) + length(pages)
   )
 
-  pdf(file.path(figures, paste0(step, "_figures.pdf")), width = 11, height = 8.5)
+  pdf(file.path(figures, paste0(name, "_report.pdf")), width = 11, height = 8.5)
   walk(overviews, \(page) page$draw())
   walk(pages, print)
   invisible(dev.off())

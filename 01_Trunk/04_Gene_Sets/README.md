@@ -4,7 +4,7 @@ Freezes the gene sets, maps proteins to genes and applies the size filter.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/02_Normalize/c_data/DAList_normalized.rds`, `c_data/cache/goslim_generic.obo` and `c_data/cache/msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds`, each with its `.md5` |
+| Reads | `01_Trunk/02_Normalisation/c_data/DAList_normalized.rds`, `c_data/cache/goslim_generic.obo` and `c_data/cache/msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds`, each with its `.md5` |
 | Writes | `c_data/gene_sets.rds`, `c_data/01_gene_sets.xlsx`; the MSigDB cache on the first run |
 | Run | `Rscript 01_Trunk/04_Gene_Sets/a_script/04_gene_sets.R` |
 

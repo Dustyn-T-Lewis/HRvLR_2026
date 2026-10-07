@@ -1,19 +1,19 @@
-# 05_Classify/01_Proteins
+# 06_Classification/01_Proteins
 
 Scores how well each protein separates HR from LR on five between-group tasks.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `01_Trunk/03_Quantify/c_data/DAList_limpa.rds` (overview row order) |
+| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `01_Trunk/03_Quantification/c_data/DAList_limpa.rds` (overview row order) |
 | Writes | `c_data/01_proteins.xlsx`, `b_reports/01_proteins_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/05_Classify/01_Proteins/a_script/classify_proteins.R` |
+| Run | `Rscript 02_HRvLR_groups/06_Classification/01_Proteins/a_script/classify_proteins.R` |
 
 ## Method
 
 `classify_step()` in `R/classify.R`, on limpa's complete blood-corrected log2 abundance; `observed_share` marks how much of each protein was
 measured rather than estimated. The five tasks compare the groups: the T1, T2
 and T3 levels, and the training (T2 - T1) and acute (T3 - T2) changes. Within-group change is the
-subject of `02_DEP`, so no task here pairs a person with themselves.
+subject of `02_Protein_Contrasts`, so no task here pairs a person with themselves.
 
 Nothing is fitted. Each protein's AUC is the Mann-Whitney statistic W / (n1 x n2), above 0.5
 when higher in HR, with the Wilcoxon rank-sum p, BH and Storey q within task. Every AUC

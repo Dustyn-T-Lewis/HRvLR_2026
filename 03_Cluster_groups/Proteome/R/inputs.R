@@ -33,7 +33,8 @@ validity <- function(input, name) {
   })
 }
 
-# One workbook from the five per-input workbooks of a stage: every result sheet stacked with an
+# One workbook, <content>_all_inputs.xlsx, from the five per-input workbooks of a stage: every
+# result sheet stacked with an
 # input column, and a validity column wherever a contrast, task or window names the comparison.
 # Sheets are read as text and typed after stacking, since an empty sheet reads as logical. Sheets in
 # `leave_out` stay in the per-input workbooks only (xlsx caps a sheet at 1,048,576 rows).
@@ -65,7 +66,7 @@ stack_inputs <- function(stage, leave_out = character()) {
       "Sheet", names(stacked), "from every clustering input, stacked; validity is circular,",
       "caution or clean against that input."
     ),
-    file.path(stage, "c_data", "all_inputs.xlsx"),
+    file.path(stage, "c_data", sub("[.]xlsx$", "_all_inputs.xlsx", basename(files[1]))),
     rlang::set_names(sub(paste0(here::here(), "/"), "", files), inputs_used), files,
     note = if (length(leave_out)) {
       paste("Not stacked:", paste(leave_out, collapse = ", "), "- see each input's own workbook.")

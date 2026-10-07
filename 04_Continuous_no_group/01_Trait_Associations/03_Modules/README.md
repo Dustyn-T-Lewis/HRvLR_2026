@@ -1,13 +1,13 @@
-# 01_Associate / 03_Modules
+# 01_Trait_Associations / 03_Modules
 
 Ties each module eigengene to phenotype, every subject pooled, no group label. The code is the shared
 `associate_step()` in `R/associate.R`, which the protein, set and module levels all call.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Modules/c_data/modules.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/03_modules.xlsx`, `b_reports/03_modules_figures.pdf` |
-| Run | `Rscript 04_Continuous_no_group/01_Associate/03_Modules/a_script/associate_modules.R` |
+| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/03_Modules/a_script/associate_modules.R` |
 
 ## Method
 

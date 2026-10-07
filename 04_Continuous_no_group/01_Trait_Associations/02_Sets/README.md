@@ -1,13 +1,13 @@
-# 01_Associate / 02_Sets
+# 01_Trait_Associations / 02_Sets
 
 Ties each gene set's singscore to phenotype, every subject pooled, no group label. The code is the shared
 `associate_step()` in `R/associate.R`, which the protein, set and module levels all call.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/05_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantify/c_data/DAList_corrected.rds` (sample sheet), `00_Input/phenotype.csv` |
+| Reads | `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (sample sheet), `00_Input/phenotype.csv` |
 | Writes | `c_data/02_sets.xlsx`, `b_reports/02_sets_figures.pdf` |
-| Run | `Rscript 04_Continuous_no_group/01_Associate/02_Sets/a_script/associate_sets.R` |
+| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/02_Sets/a_script/associate_sets.R` |
 
 ## Method
 

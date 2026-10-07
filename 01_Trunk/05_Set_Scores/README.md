@@ -4,9 +4,9 @@ Scores every sample on every set with singscore.
 
 | | |
 |---|---|
-| Reads | `01_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantify/c_data/DAList_corrected.rds` |
+| Reads | `01_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` |
 | Writes | `c_data/singscore.rds`, `c_data/02_scores.xlsx`, `b_reports/02_scores_figures.pdf` |
-| Run | `Rscript 01_Trunk/05_Scores/a_script/05_scores.R` |
+| Run | `Rscript 01_Trunk/05_Set_Scores/a_script/05_scores.R` |
 
 ## Method
 

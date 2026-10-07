@@ -1,12 +1,12 @@
-# 02_Normalize
+# 02_Normalisation
 
 Compares proteoDA's normalisation methods and applies cyclic loess.
 
 | | |
 |---|---|
-| Reads | `01_Filter/c_data/DAList_filtered.rds` |
+| Reads | `01_Protein_Filtering/c_data/DAList_filtered.rds` |
 | Writes | `c_data/DAList_normalized.rds`, `c_data/02_normalize.xlsx`, `b_reports/02_normalize_figures.pdf`, and proteoDA's `norm_comparison.pdf`, `qc_pre.pdf`, `qc_post.pdf` in `b_reports/` |
-| Run | `Rscript 01_Trunk/02_Normalize/a_script/02_normalize.R` |
+| Run | `Rscript 01_Trunk/02_Normalisation/a_script/02_normalize.R` |
 
 ## Method
 
@@ -16,7 +16,7 @@ changes the protein count. proteoDA writes its method comparison and QC reports 
 its log warnings concern those plots, not the normalised matrix.
 
 Run medians vary little (SD 0.23 log2) and cyclic loess scores best of proteoDA's comparison, so
-the choice barely moves results. Missing values stay missing; `03_Quantify` models them.
+the choice barely moves results. Missing values stay missing; `03_Quantification` models them.
 
 ## Figures
 

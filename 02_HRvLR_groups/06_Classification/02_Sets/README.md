@@ -1,18 +1,18 @@
-# 05_Classify/02_Sets
+# 06_Classification/02_Sets
 
 Scores how well each gene set's singscore separates HR from LR on five between-group tasks.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/05_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantify/c_data/DAList_corrected.rds` (sample sheet) |
+| Reads | `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (sample sheet) |
 | Writes | `c_data/02_sets.xlsx`, `b_reports/02_sets_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/05_Classify/02_Sets/a_script/classify_sets.R` |
+| Run | `Rscript 02_HRvLR_groups/06_Classification/02_Sets/a_script/classify_sets.R` |
 
 ## Method
 
 `classify_step()` in `R/classify.R`, on singscore. The five tasks compare the groups: the T1, T2
 and T3 levels, and the training (T2 - T1) and acute (T3 - T2) changes. Within-group change is the
-subject of `02_DEP`, so no task here pairs a person with themselves.
+subject of `02_Protein_Contrasts`, so no task here pairs a person with themselves.
 
 Nothing is fitted. Each set's AUC is the Mann-Whitney statistic W / (n1 x n2), above 0.5
 when higher in HR, with the Wilcoxon rank-sum p, BH and Storey q within task and collection. Every AUC

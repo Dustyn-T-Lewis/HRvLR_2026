@@ -4,7 +4,7 @@ Supplement to Figure 1: whether the samples held up, and whether the analysis be
 
 | | |
 |---|---|
-| Reads | `01_Trunk/01_Filter/c_data/01_filter.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_arm`), `01_Trunk/02_Normalize/c_data/02_normalize.xlsx` (`intensity_quantiles`), `01_Trunk/03_Quantify/c_data/03_quantify.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `02_HRvLR_groups/02_DEP/c_data/02_contrasts.xlsx` (`DEP_matrix`, `unadjusted`, `null_calibration`, `detectable_effect`) |
+| Reads | `01_Trunk/01_Protein_Filtering/c_data/protein_filtering.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_arm`), `01_Trunk/02_Normalisation/c_data/normalisation.xlsx` (`intensity_quantiles`), `01_Trunk/03_Quantification/c_data/quantification.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`DEP_matrix`, `unadjusted`, `null_calibration`, `detectable_effect`) |
 | Writes | `b_reports/s04_qc.pdf`, `b_reports/s04_qc.png` (300 x 190 mm, 600 dpi), `c_data/s04_qc.xlsx` |
 | Run | `Rscript 01_Trunk/Figures/S01_QC/a_script/s01_qc.R` |
 

@@ -1,12 +1,12 @@
-# 01_Build
+# 06_Module_Building
 
 Builds WGCNA modules and scores their eigengenes.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantify/c_data/DAList_corrected.rds` |
+| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` |
 | Writes | `c_data/modules.rds`, `c_data/01_build.xlsx`, `b_reports/01_build_figures.pdf` |
-| Run | `Rscript 01_Trunk/06_Modules/a_script/06_modules.R` |
+| Run | `Rscript 01_Trunk/06_Module_Building/a_script/06_modules.R` |
 
 ## Method
 

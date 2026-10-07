@@ -1,4 +1,4 @@
-# 01_Filter
+# 01_Protein_Filtering
 
 Removes contaminant proteins by identity, drops outlier samples, then filters on detection.
 
@@ -6,7 +6,7 @@ Removes contaminant proteins by identity, drops outlier samples, then filters on
 |---|---|
 | Reads | `00_Input/HRvLR_raw.xlsx`, `metadata.csv`, `blood_contaminants.csv`, `HPA_annotations_full.tsv`, `RBC_proteome_reference.tsv` |
 | Writes | `c_data/DAList_filtered.rds`, `c_data/01_filter.xlsx`, `b_reports/01_filter_figures.pdf` |
-| Run | `Rscript 01_Trunk/01_Filter/a_script/01_filter.R` |
+| Run | `Rscript 01_Trunk/01_Protein_Filtering/a_script/01_filter.R` |
 
 ## Method
 

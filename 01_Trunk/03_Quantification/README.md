@@ -1,13 +1,13 @@
-# 03_Quantify
+# 03_Quantification
 
 Models the missing values with limpa, so every protein has a value in every sample with a standard
 error, and writes the matrices the later steps read.
 
 | | |
 |---|---|
-| Reads | `02_Normalize/c_data/DAList_normalized.rds` |
+| Reads | `02_Normalisation/c_data/DAList_normalized.rds` |
 | Writes | `c_data/proteins.rds`, `c_data/DAList_limpa.rds`, `c_data/DAList_corrected.rds`, `c_data/03_quantify.xlsx`, `b_reports/03_quantify_figures.pdf` |
-| Run | `Rscript 01_Trunk/03_Quantify/a_script/03_quantify.R` |
+| Run | `Rscript 01_Trunk/03_Quantification/a_script/03_quantify.R` |
 
 ## Method
 
@@ -34,7 +34,7 @@ Three objects come out:
 | `DAList_limpa.rds` | the complete matrix | fry, the overview row order, the panel |
 | `DAList_corrected.rds` | the complete matrix with each protein's blood slope removed (`limma::removeBatchEffect`, design = time point only, so no group label enters) and the observed mask | singscore, WGCNA, the rank tests and correlations (all on the complete matrix), and `observed_share` |
 
-Blood is centred here: `blood` is the 01_Filter index (mean log2 HBB and HBA1 against the
+Blood is centred here: `blood` is the 01_Protein_Filtering index (mean log2 HBB and HBA1 against the
 sample median) minus its mean.
 
 ## Figures

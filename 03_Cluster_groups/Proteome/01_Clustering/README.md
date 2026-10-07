@@ -1,10 +1,10 @@
-# 01_Cluster
+# 01_Clustering
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Modules/c_data/modules.rds`, `00_Input/phenotype.csv` (HR/LR, for description only) |
+| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` (HR/LR, for description only) |
 | Writes | `c_data/01_cluster.xlsx`, `c_data/inputs/<input>/` (relabelled trunk inputs), `b_reports/01_cluster_figures.pdf` |
-| Run | `Rscript 03_Cluster_groups/Proteome/01_Cluster/a_script/01_cluster.R` |
+| Run | `Rscript 03_Cluster_groups/Proteome/01_Clustering/a_script/01_cluster.R` |
 
 ## Method
 

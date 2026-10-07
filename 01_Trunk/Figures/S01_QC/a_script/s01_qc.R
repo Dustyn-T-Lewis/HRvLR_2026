@@ -23,10 +23,10 @@ out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
-  filter = "01_Trunk/01_Filter/c_data/01_filter.xlsx",
-  normalize = "01_Trunk/02_Normalize/c_data/02_normalize.xlsx",
-  quantify = "01_Trunk/03_Quantify/c_data/03_quantify.xlsx",
-  contrasts = "02_HRvLR_groups/02_DEP/c_data/02_contrasts.xlsx"
+  filter = "01_Trunk/01_Protein_Filtering/c_data/protein_filtering.xlsx",
+  normalize = "01_Trunk/02_Normalisation/c_data/normalisation.xlsx",
+  quantify = "01_Trunk/03_Quantification/c_data/quantification.xlsx",
+  contrasts = "02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
@@ -60,7 +60,7 @@ panel_filter <- ggplot(filter_log, aes(n_after, step)) +
   theme(panel.grid.major.y = element_blank())
 
 # b: share of proteins missing in each of the 48 runs. The three runs not carried forward are the
-# ones absent from the 45-sample blood table that 03_Quantify writes.
+# ones absent from the 45-sample blood table that 03_Quantification writes.
 kept_samples <- read_sheet("quantify", "blood")$sample_id
 detection <- read_sheet("filter", "outlier_diagnostics") |>
   mutate(

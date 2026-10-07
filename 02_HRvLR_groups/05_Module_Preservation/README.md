@@ -1,12 +1,12 @@
-# 04_Modules/02_Preserve
+# 05_Module_Preservation
 
 Builds modules inside each arm and tests their preservation in the other arm.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `01_Trunk/06_Modules/c_data/modules.rds` |
-| Writes | `c_data/06_preserve.xlsx`, `b_reports/06_preserve_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/04_Modules/02_Preserve/a_script/02_preserve.R` |
+| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `01_Trunk/06_Module_Building/c_data/modules.rds` |
+| Writes | `c_data/module_preservation.xlsx`, `b_reports/06_preserve_figures.pdf` |
+| Run | `Rscript 02_HRvLR_groups/05_Module_Preservation/a_script/02_preserve.R` |
 
 ## Method
 

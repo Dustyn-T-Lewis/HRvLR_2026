@@ -4,7 +4,7 @@ Draws the protein volcanoes with up to eight collapse-surviving fgsea sets ringe
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/03_Pathways/c_data/set_tests.rds` |
+| Reads | `02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds` |
 | Writes | `c_data/s01_volcano.xlsx`, `b_reports/s01_volcano_figures.pdf` |
 | Run | `Rscript 02_HRvLR_groups/Figures/S01_Volcano/a_script/s01_volcano.R` |
 

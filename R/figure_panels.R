@@ -31,7 +31,7 @@ pca_panel <- function(scores, variance, title, subtitle, stats) {
 # the other arm's ranking for the same window, drawn as limma's barcode (Wu & Smyth 2012).
 # Members are ticks, the up-set above the axis and the down-set below, with a tricube moving
 # average of membership along the rank. The two arms are different people, so the comparison
-# shares no group mean and fry's result (02_DEP, fry_concordance) is a clean test.
+# shares no group mean and fry's result (02_Protein_Contrasts, fry_concordance) is a clean test.
 signature_barcode <- function(proteins, fry_rows, window, set_level = "nominal",
                               span = 0.12, floor = 0.34) {
   contrasts <- paste0(window, c("_HR", "_LR"))
@@ -192,8 +192,8 @@ family_strips <- function(family, n, axis = "x") {
   }
 }
 
-# A module's name for figures: its top over-represented set at FDR < alpha_fdr (07_Characterise),
-# or a statement that it has none.
+# A module's name for figures: its top over-represented set at FDR < alpha_fdr
+# (07_Module_Characterisation), or a statement that it has none.
 module_identity <- function(labels, width = 34) {
   identity <- dplyr::if_else(
     labels$top_set_fdr < alpha_fdr, pathway_label(labels$top_set, width), "no set at FDR < 0.05"
@@ -500,7 +500,7 @@ panel_auc_top <- function(auc_by_level, counts_by_level, groups, file) {
 panel_group_vs_continuous <- function(group_difference, interaction, window, outcome, groups,
                                       file, n_label = 8) {
   d <- group_difference |>
-    filter(level == "proteins", .data$window == .env$window, .data$outcome == .env$outcome) |>
+    filter(level == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
     select(feature, label, t_group = t, p_group = p, fdr_group = fdr) |>
     inner_join(
       filter(interaction, .data$window == .env$window, strength_test == outcome) |>
@@ -552,10 +552,10 @@ panel_group_vs_continuous <- function(group_difference, interaction, window, out
 # with the group-difference hits marked. Within-group rho is descriptive at six to eight people.
 panel_within_rho <- function(within_group, group_difference, window, outcome, groups, file) {
   hits <- group_difference |>
-    filter(level == "proteins", .data$window == .env$window, .data$outcome == .env$outcome) |>
+    filter(level == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
     transmute(feature, hit = evidence_level(p, fdr))
   d <- within_group |>
-    filter(level == "proteins", .data$window == .env$window, .data$outcome == .env$outcome) |>
+    filter(level == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
     select(feature, label, group, rho) |>
     pivot_wider(names_from = group, values_from = rho) |>
     rename(first = all_of(groups[1]), second = all_of(groups[2])) |>
@@ -598,7 +598,7 @@ panel_within_rho <- function(within_group, group_difference, window, outcome, gr
 # each group's Spearman rho from the within-group sheet.
 panel_group_slope <- function(row, values, outcome, group_of, within, groups, file) {
   rho <- within |>
-    filter(feature == row$feature, window == row$window, outcome == row$outcome) |>
+    filter(feature == row$feature, window == row$window, trait == row$trait) |>
     with(set_names(sprintf("%s: rho %.2f (n = %d)", group, rho, n_subjects), group))
   d <- tibble::tibble(subject = names(values), value = values, trait = outcome[names(values)]) |>
     filter(!is.na(trait), !is.na(value), subject %in% names(group_of)) |>
@@ -615,7 +615,7 @@ panel_group_slope <- function(row, values, outcome, group_of, within, groups, fi
       subtitle = sprintf(
         "Group difference in slope: t = %.1f, %s, %s", row$t, label_p(row$p), label_fdr(row$fdr)
       ),
-      x = sprintf("%s, %s change (log2)", row$label, row$window), y = trait_label(row$outcome)
+      x = sprintf("%s, %s change (log2)", row$label, row$window), y = trait_label(row$trait)
     ) +
     figure_theme +
     theme(legend.position = "bottom", legend.direction = "vertical")

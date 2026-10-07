@@ -1,18 +1,18 @@
-# 05_Classify/03_Modules
+# 06_Classification/03_Modules
 
 Scores how well each module eigengene separates HR from LR on five between-group tasks.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Modules/c_data/modules.rds` |
+| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds` |
 | Writes | `c_data/03_modules.xlsx`, `b_reports/03_modules_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/05_Classify/03_Modules/a_script/classify_modules.R` |
+| Run | `Rscript 02_HRvLR_groups/06_Classification/03_Modules/a_script/classify_modules.R` |
 
 ## Method
 
 `classify_step()` in `R/classify.R`, on module eigengenes. The five tasks compare the groups: the T1, T2
 and T3 levels, and the training (T2 - T1) and acute (T3 - T2) changes. Within-group change is the
-subject of `02_DEP`, so no task here pairs a person with themselves.
+subject of `02_Protein_Contrasts`, so no task here pairs a person with themselves.
 
 Nothing is fitted. Each module's AUC is the Mann-Whitney statistic W / (n1 x n2), above 0.5
 when higher in HR, with the Wilcoxon rank-sum p, BH and Storey q within task. Every AUC

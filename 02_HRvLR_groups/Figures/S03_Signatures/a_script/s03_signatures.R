@@ -22,8 +22,8 @@ out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
-  contrasts = "02_HRvLR_groups/02_DEP/c_data/02_contrasts.xlsx",
-  set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds"
+  contrasts = "02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx",
+  set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
@@ -39,11 +39,11 @@ barcodes <- map(
   \(window) signature_barcode(proteins, fry_rows, window, set_level = "pi")
 )
 
-# Panel c: mean change from each person's T1 (02_DEP, set_trajectory). In the arm that chose
-# a set, the training window is where it was selected, so it carries no test, and the bout window
-# shares T2 with the selection: a protein high at T2 by chance reads as up, then down. Those cells
-# are faded and the bout result marked with a dagger. Each window reports the share of proteins
-# moving as they did in training and fry's FDR on that window's contrast.
+# Panel c: mean change from each person's T1 (02_Protein_Contrasts, set_trajectory). In the arm that
+# chose a set, the training window is where it was selected, so it carries no test, and the bout
+# window shares T2 with the selection: a protein high at T2 by chance reads as up, then down. Those
+# cells are faded and the bout result marked with a dagger. Each window reports the share of
+# proteins moving as they did in training and fry's FDR on that window's contrast.
 trajectory <- read_sheet("set_trajectory") |>
   filter(startsWith(set, "nominal_")) |>
   mutate(

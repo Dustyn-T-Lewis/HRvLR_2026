@@ -22,14 +22,13 @@
 # the continuous form of asking whether the strength link depends on growth.
 #
 # collection_of, when given, makes each collection its own screen: BH runs within collection.
-associate_step <- function(stage, inputs, paths, values, meta, feature_label, feature_noun,
+associate_step <- function(stage, name, inputs, paths, values, meta, feature_label, feature_noun,
                            feature_unit, value_label, row_groups, row_order,
                            collection_of = NULL, panel_name = \(label, collection) label,
                            observed_share = NULL, save_change_score = FALSE) {
   out <- file.path(stage, "c_data")
   figures <- file.path(stage, "b_reports")
-  step <- tolower(basename(stage))
-  workbook <- paste0(step, ".xlsx")
+  workbook <- paste0(name, ".xlsx")
   for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
   by_collection <- if (is.null(collection_of)) character(0) else "collection"
   labelled_heat <- \(...) heat(..., labels = feature_label)
@@ -419,7 +418,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   }
 
   # Points as one Dingbats glyph each rather than four curves: the PDF shrinks by about 60%.
-  pdf(file.path(figures, paste0(step, "_figures.pdf")),
+  pdf(file.path(figures, paste0(name, "_report.pdf")),
     width = 11, height = 8.5, useDingbats = TRUE
   )
   walk(overviews, \(page) page$draw())
@@ -442,15 +441,16 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       ), feature_unit),
       sprintf(paste(
         "Change score, every subject pooled: limma slope with its 95%% CI, t, p, BH, Storey q;",
-        "Spearman rho with its Fisher-z 95%% CI and p_rho; bicor and its p; per %s, window and trait."
+        "Spearman rho with its Fisher-z 95%% CI and p_rho; bicor and its p; per %s, window",
+        "and trait."
       ), feature_unit),
       sprintf(paste(
         "Two predictor: growth and strength slopes with 95%% CIs, t, p, BH and Storey q per %s,",
         "window and test."
       ), feature_unit),
       sprintf(paste(
-        "Interaction, feature ~ growth x strength gain: interaction term with its 95%% CI, t, p, BH",
-        "and Storey q per %s, window and test."
+        "Interaction, feature ~ growth x strength gain: interaction term with its 95%% CI, t, p,",
+        "BH and Storey q per %s, window and test."
       ), feature_unit),
       "PDF page of each overview, and page and panel position of every p < 0.05 row."
     ),

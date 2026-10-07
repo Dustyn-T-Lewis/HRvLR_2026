@@ -4,7 +4,7 @@
 #   b  the group-by-trait difference against the continuous growth-by-strength interaction
 #   c  within-group Spearman rho, HR against LR, for the same proteins
 #   d  the lead group-difference protein, person by person
-# Module preservation between the groups is in 04_Modules/02_Preserve.
+# Module preservation between the groups is in 05_Module_Preservation.
 
 suppressPackageStartupMessages({
   library(here)
@@ -23,14 +23,17 @@ source(here("R", "figure_panels.R"))
 groups <- c("HR", "LR")
 stage <- here("02_HRvLR_groups", "Figures", "F3_People")
 walk(file.path(stage, c("b_reports", "c_data")), dir.create, recursive = TRUE, showWarnings = FALSE)
-classify <- "02_HRvLR_groups/05_Classify"
+classify <- "02_HRvLR_groups/06_Classification"
 inputs <- c(
-  proteins = file.path(classify, "01_Proteins/c_data/01_proteins.xlsx"),
-  sets = file.path(classify, "02_Sets/c_data/02_sets.xlsx"),
-  modules = file.path(classify, "03_Modules/c_data/03_modules.xlsx"),
-  associate = "02_HRvLR_groups/06_Associate/c_data/06_associate.xlsx",
-  continuous = "04_Continuous_no_group/01_Associate/01_Proteins/c_data/01_proteins.xlsx",
-  corrected = "01_Trunk/03_Quantify/c_data/DAList_corrected.rds",
+  proteins = file.path(classify, "01_Proteins/c_data/protein_classification.xlsx"),
+  sets = file.path(classify, "02_Sets/c_data/set_classification.xlsx"),
+  modules = file.path(classify, "03_Modules/c_data/module_classification.xlsx"),
+  associate = "02_HRvLR_groups/07_Trait_Associations/c_data/trait_associations.xlsx",
+  continuous = file.path(
+    "04_Continuous_no_group/01_Trait_Associations/01_Proteins",
+    "c_data/protein_trait_associations.xlsx"
+  ),
+  corrected = "01_Trunk/03_Quantification/c_data/DAList_corrected.rds",
   phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
@@ -52,15 +55,15 @@ lead <- group_difference |>
   slice_min(p, n = 1, with_ties = FALSE)
 change <- subject_change(dal$data, as_tibble(dal$metadata), "T1", "T2")[lead$feature, ]
 trait_table <- phenotype_tables(phenotype)$pairings[[lead$window]]
-trait <- set_names(trait_table[[lead$outcome]], trait_table$subject)
+trait <- set_names(trait_table[[lead$trait]], trait_table$subject)
 
 panels <- list(
   a = panel_auc_top(auc, classify_counts, groups, inputs[["proteins"]]),
   b = panel_group_vs_continuous(
-    group_difference, interaction, lead$window, lead$outcome, groups, inputs[["associate"]]
+    group_difference, interaction, lead$window, lead$trait, groups, inputs[["associate"]]
   ),
   c = panel_within_rho(
-    within_group, group_difference, lead$window, lead$outcome, groups, inputs[["associate"]]
+    within_group, group_difference, lead$window, lead$trait, groups, inputs[["associate"]]
   ),
   d = panel_group_slope(lead, change, trait, group_of, within_group, groups, inputs[["associate"]])
 )
@@ -68,7 +71,7 @@ panels <- list(
 # Plotted numbers against their source tables.
 lead_rho <- filter(
   within_group,
-  feature == lead$feature, window == lead$window, outcome == lead$outcome
+  feature == lead$feature, window == lead$window, trait == lead$trait
 )
 tested <- imap(classify_counts, \(counts, level) {
   summarise(counts, n_tested = sum(n_tested), .by = task) |> mutate(level = level)

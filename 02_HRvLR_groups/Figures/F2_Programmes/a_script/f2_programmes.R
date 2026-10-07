@@ -22,12 +22,12 @@ groups <- c("HR", "LR")
 stage <- here("02_HRvLR_groups", "Figures", "F2_Programmes")
 walk(file.path(stage, c("b_reports", "c_data")), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  design = "02_HRvLR_groups/01_Design/c_data/01_design.xlsx",
-  module_tests = "02_HRvLR_groups/04_Modules/01_Contrasts/c_data/02_contrasts.xlsx",
-  set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds",
-  set_summary = "02_HRvLR_groups/03_Pathways/c_data/03_contrasts.xlsx",
-  modules = "01_Trunk/06_Modules/c_data/modules.rds",
-  module_labels = "01_Trunk/07_Characterise/c_data/05_characterise.xlsx"
+  design = "02_HRvLR_groups/01_Design_Contrasts/c_data/design_contrasts.xlsx",
+  module_tests = "02_HRvLR_groups/04_Module_Contrasts/c_data/module_contrasts.xlsx",
+  set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds",
+  set_summary = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_contrasts.xlsx",
+  modules = "01_Trunk/06_Module_Building/c_data/modules.rds",
+  module_labels = "01_Trunk/07_Module_Characterisation/c_data/module_characterisation.xlsx"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

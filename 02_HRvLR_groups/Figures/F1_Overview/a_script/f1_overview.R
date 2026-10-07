@@ -1,6 +1,6 @@
 # Figure 1: the design and the whole-proteome picture before any single result. Reads saved
 # outputs only. The one computation is the phenotype PCA, a projection with no test; every
-# p-value plotted comes from 02_DEP or 03_Pathways.
+# p-value plotted comes from 02_Protein_Contrasts or 03_Set_Contrasts.
 
 suppressPackageStartupMessages({
   library(here)
@@ -21,8 +21,8 @@ out <- file.path(stage, "c_data")
 walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
-  contrasts = "02_HRvLR_groups/02_DEP/c_data/02_contrasts.xlsx",
-  set_tests = "02_HRvLR_groups/03_Pathways/c_data/set_tests.rds",
+  contrasts = "02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx",
+  set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds",
   gene_sets = "01_Trunk/04_Gene_Sets/c_data/gene_sets.rds",
   phenotype = "00_Input/phenotype.csv",
   design = "02_HRvLR_groups/Figures/F1_Overview/assets/design.png"
@@ -122,8 +122,8 @@ panel_proteins <- ggplot(bars, aes(signed, contrast)) +
   ) +
   guides(fill = guide_legend(nrow = 2))
 
-# Panel c: proteome and phenotype PCA, each with its PERMANOVA (02_DEP). The phenotype is
-# the six size and strength traits at T1 and T2, scaled; the one biopsy missing a leg-extension
+# Panel c: proteome and phenotype PCA, each with its PERMANOVA (02_Protein_Contrasts). The phenotype
+# is the six size and strength traits at T1 and T2, scaled; the one biopsy missing a leg-extension
 # value is left out rather than filled. Arm is not tested on the phenotype, because HR and LR were
 # split on how much these traits changed.
 permanova <- read_sheet("permanova")
@@ -330,9 +330,9 @@ sheets <- list(
 )
 holds <- c(
   "Panel b: per contrast and direction, proteins at Pi < 0.05, at p < 0.05 or Pi, at FDR < 0.05.",
-  "Panel c, left: PC1 and PC2 per sample (02_DEP, pca).",
+  "Panel c, left: PC1 and PC2 per sample (02_Protein_Contrasts, pca).",
   "Panel c, right: PC1 and PC2 per biopsy from the six scaled size and strength traits.",
-  "Panel c: PERMANOVA for the proteome (time, arm) and the phenotype (time) (02_DEP).",
+  "Panel c: PERMANOVA, proteome (time, arm) and phenotype (time), from 02_Protein_Contrasts.",
   "Panel d: each selected set in all nine contrasts, with NES and fgsea FDR.",
   "Panels e, f: each arm's p < 0.05 sets in the other arm's ranking: n, % same way, fry FDR."
 )

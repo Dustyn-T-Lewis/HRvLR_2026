@@ -1,13 +1,13 @@
-# 01_Associate / 01_Proteins
+# 01_Trait_Associations / 01_Proteins
 
 Ties each protein's abundance (limpa's complete blood-corrected matrix) to phenotype, every subject pooled, no group label. The code is the shared
 `associate_step()` in `R/associate.R`, which the protein, set and module levels all call.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `DAList_limpa.rds` (overview row order), `00_Input/phenotype.csv` |
+| Reads | `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `DAList_limpa.rds` (overview row order), `00_Input/phenotype.csv` |
 | Writes | `c_data/associate.rds`, `c_data/01_proteins.xlsx`, `b_reports/01_proteins_figures.pdf` |
-| Run | `Rscript 04_Continuous_no_group/01_Associate/01_Proteins/a_script/associate_proteins.R` |
+| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/01_Proteins/a_script/associate_proteins.R` |
 
 ## Method
 
@@ -30,7 +30,7 @@ Two predictor: `value ~ comp_hypertrophy + strength gain`, once per 1RM. Interac
 `value ~ growth * strength gain`: does the link to strength gain depend on how much the person
 grew? A negative term means the strength slope falls as growth rises.
 
-`associate.rds` holds the change-score table; `02_Pathways` ranks proteins by its limma t and `04_Profile_Clusters` clusters its profiles. Protein rows carry `observed_share`, the share of the protein's values measured rather than filled by limpa.
+`associate.rds` holds the change-score table; `02_Trait_Pathways` ranks proteins by its limma t and `03_Profile_Clusters` clusters its profiles. Protein rows carry `observed_share`, the share of the protein's values measured rather than filled by limpa.
 
 ## Figures
 

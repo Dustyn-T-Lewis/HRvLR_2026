@@ -1,12 +1,12 @@
-# 01_Design
+# 01_Design_Contrasts
 
 Attaches the design and the nine contrasts to the DAList and records the within-subject correlation.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/03_Quantify/c_data/proteins.rds` |
+| Reads | `01_Trunk/03_Quantification/c_data/proteins.rds` |
 | Writes | `c_data/design.rds`, `c_data/01_design.xlsx` |
-| Run | `Rscript 02_HRvLR_groups/01_Design/a_script/01_design.R` |
+| Run | `Rscript 02_HRvLR_groups/01_Design_Contrasts/a_script/01_design.R` |
 
 ## Method
 

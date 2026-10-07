@@ -19,7 +19,7 @@ gap statistic for K = 1 to 3 with the one-standard-error rule of Tibshirani, Wal
 stable cluster, 0.6 to 0.75 as a pattern with doubtful membership and below 0.6 as untrustworthy.
 
 The gap statistic selects K = 1, no grouping, for size, strength and the proteome at every input.
-That result is reported in each `01_Cluster` workbook. K = 2 is then imposed for each, with the
+That result is reported in each `01_Clustering` workbook. K = 2 is then imposed for each, with the
 reason recorded in `imposed_reason`, so the exploratory comparisons can run:
 
 - size: K = 2 reproduces the HR/LR split exactly, so `Muscle_size` repeats that comparison;
@@ -29,12 +29,12 @@ reason recorded in `imposed_reason`, so the exploratory comparisons can run:
 
 ## How the phenotype sub-pipelines reuse the HR/LR code
 
-`01_Cluster` writes relabelled copies of the trunk's inputs to `c_data/inputs/`: the clusters
+`01_Clustering` writes relabelled copies of the trunk's inputs to `c_data/inputs/`: the clusters
 become groups `Hi` and `Lo` (by the mean of the family's first trait), and any unassigned
-subject's samples drop out. The stages from `02_Design` on are copies of the HR/LR stages that read
+subject's samples drop out. The stages from `02_Design_Contrasts` on are copies of the HR/LR stages that read
 those inputs, with HR and LR renamed Hi and Lo. A fix to one copy has to be made in all three.
 
 The proteome sub-pipeline runs the same template once per clustering input, on clusters C1 and C2,
 and tags every comparison by whether it reuses the time points the clustering was built from
-(`Proteome/README.md`). `08_Phenotype` tests size and strength, which played no part in the
+(`Proteome/README.md`). `08_Cluster_Phenotype` tests size and strength, which played no part in the
 clustering.

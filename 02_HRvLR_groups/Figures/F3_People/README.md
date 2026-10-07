@@ -5,7 +5,7 @@ between them?
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/05_Classify/{01_Proteins,02_Sets,03_Modules}/c_data/*.xlsx` (`auc`, `counts`), `02_HRvLR_groups/06_Associate/c_data/06_associate.xlsx` (`group_difference`, `within_group`), `04_Continuous_no_group/01_Associate/01_Proteins/c_data/01_proteins.xlsx` (`interaction`), `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `02_HRvLR_groups/06_Classification/{01_Proteins,02_Sets,03_Modules}/c_data/*.xlsx` (`auc`, `counts`), `02_HRvLR_groups/07_Trait_Associations/c_data/trait_associations.xlsx` (`group_difference`, `within_group`), `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx` (`interaction`), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
 | Writes | `b_reports/f3_people.pdf` (300 x 175 mm), `c_data/f3_people.xlsx` |
 | Run | `Rscript 02_HRvLR_groups/Figures/F3_People/a_script/f3_people.R` |
 
@@ -28,7 +28,7 @@ Single features do not separate the groups beyond chance. The best protein per t
 and eight people is what a null screen produces.
 
 The group differences that reach FDR < 0.05 all sit in one window and trait: training change
-against leg press 1RM % change (11 proteins, 28 sets, 1 module in `06_Associate`). HR and LR are a
+against leg press 1RM % change (11 proteins, 28 sets, 1 module in `07_Trait_Associations`). HR and LR are a
 median split of the hypertrophy composite, so the group-by-trait test is a dichotomised version of
 the continuous growth-by-strength interaction; across all 1,900 proteins the two t statistics have
 Spearman 0.88, and 11 of the 20 continuous hits at FDR < 0.05 are the same proteins. The hits are
@@ -36,7 +36,7 @@ sarcomere proteins (TPM3, MYH1, MYH7, MYL2, MYBPC2, TTN, TNNT1 and others); in e
 within-group rho is negative in HR and positive in LR. Within-group rho rests on six to eight
 people and is descriptive; the group difference is the test.
 
-Module preservation between the groups is in `04_Modules/02_Preserve` and not drawn here.
+Module preservation between the groups is in `05_Module_Preservation` and not drawn here.
 
 ## Workbook
 

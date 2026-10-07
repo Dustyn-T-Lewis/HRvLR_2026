@@ -1,12 +1,12 @@
-# 01_Cluster
+# 01_Clustering
 
 People clustered on their strength response before any proteome result is read.
 
 | | |
 |---|---|
-| Reads | `00_Input/phenotype.csv`; for the relabelled inputs, `01_Trunk/03_Quantify`, `05_Scores` and `06_Modules` outputs |
+| Reads | `00_Input/phenotype.csv`; for the relabelled inputs, `01_Trunk/03_Quantification`, `05_Set_Scores` and `06_Module_Building` outputs |
 | Writes | `c_data/01_cluster.xlsx`, `c_data/inputs/` (proteins, matrices, singscore, modules, groups), `b_reports/01_cluster_figures.pdf` |
-| Run | `Rscript 03_Cluster_groups/Muscle_strength/01_Cluster/a_script/01_cluster.R` |
+| Run | `Rscript 03_Cluster_groups/Muscle_strength/01_Clustering/a_script/01_cluster.R` |
 
 ## Method
 

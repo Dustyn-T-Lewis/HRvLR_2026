@@ -1,12 +1,12 @@
-# 02_DEP
+# 02_Protein_Contrasts
 
 Fits the nine contrasts with limpa and limma.
 
 | | |
 |---|---|
-| Reads | `01_Design/c_data/design.rds`, `01_Trunk/03_Quantify/c_data/proteins.rds`, `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Design_Contrasts/c_data/design.rds`, `01_Trunk/03_Quantification/c_data/proteins.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/fit.rds`, `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/02_DEP/a_script/02_dep.R` |
+| Run | `Rscript 02_HRvLR_groups/02_Protein_Contrasts/a_script/02_dep.R` |
 
 ## Method
 

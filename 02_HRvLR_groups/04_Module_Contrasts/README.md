@@ -1,13 +1,13 @@
-# 04_Modules/01_Contrasts
+# 04_Module_Contrasts
 
 Tests the modules on the nine contrasts, by eigengene and by fry, and reads membership against
 protein-level results.
 
 | | |
 |---|---|
-| Reads | `01_Trunk/06_Modules/c_data/modules.rds`, `02_HRvLR_groups/01_Design/c_data/design.rds`, `02_HRvLR_groups/02_DEP/c_data/fit.rds`, `01_Trunk/03_Quantify/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Trunk/06_Module_Building/c_data/modules.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `01_Trunk/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/04_Modules/01_Contrasts/a_script/01_contrasts.R` |
+| Run | `Rscript 02_HRvLR_groups/04_Module_Contrasts/a_script/01_contrasts.R` |
 
 ## Method
 

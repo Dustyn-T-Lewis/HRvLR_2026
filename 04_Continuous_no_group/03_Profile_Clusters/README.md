@@ -1,12 +1,12 @@
-# 04_Profile_Clusters
+# 03_Profile_Clusters
 
 Proteins grouped by how they relate to phenotype, every subject pooled.
 
 | | |
 |---|---|
-| Reads | `01_Associate/01_Proteins/c_data/associate.rds`, `01_Trunk/03_Quantify/c_data/DAList_corrected.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/06_Modules/c_data/modules.rds` |
+| Reads | `01_Trait_Associations/01_Proteins/c_data/associate.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/06_Module_Building/c_data/modules.rds` |
 | Writes | `c_data/04_profile_clusters.xlsx`, `b_reports/04_profile_clusters_figures.pdf` |
-| Run | `Rscript 04_Continuous_no_group/04_Profile_Clusters/a_script/04_profile_clusters.R` |
+| Run | `Rscript 04_Continuous_no_group/03_Profile_Clusters/a_script/04_profile_clusters.R` |
 
 ## Method
 
