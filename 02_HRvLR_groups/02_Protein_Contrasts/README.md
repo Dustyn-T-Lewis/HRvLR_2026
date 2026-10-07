@@ -1,55 +1,92 @@
 # 02_Protein_Contrasts
 
-Fits the nine contrasts with limpa and limma.
+Which proteins change between time points, and which differ between HR and LR?
+
+## The idea
+
+A contrast is one comparison of group means. The design (`01_Design_Contrasts`) has six cell
+means, one per group and time point (HR_T1, HR_T2, HR_T3, LR_T1, LR_T2, LR_T3), and nine contrasts
+built from them:
+
+| Family | Contrast | Compares |
+|---|---|---|
+| Training | `Training_HR`, `Training_LR` | T2 against T1 within a group |
+| Acute | `Acute_HR`, `Acute_LR` | T3 against T2 within a group |
+| HR - LR | `Baseline_HRvLR`, `Trained_HRvLR`, `Acute_HRvLR` | HR against LR at T1, T2, T3 |
+| Interaction | `Training_Interaction`, `Acute_Interaction` | HR's change minus LR's change |
+
+The interactions are the direct test of whether HR and LR respond differently. A protein that
+changes in one group and not the other is not, on that basis, a group difference.
+`Baseline_HRvLR` is the floor: HR and LR were defined from the outcome, so any difference at T1
+shows how far the split itself separates people before training.
+
+Each protein's logFC is the contrast on the log2 scale: +1 means twice as much in the later
+time point (or in HR), -1 half as much. Its 95% confidence interval is the range of logFC the
+data allow. The p-value asks how surprising the logFC would be if nothing changed; FDR
+(Benjamini-Hochberg) adjusts p for the 1,900 proteins tested in that contrast, so FDR < 0.05 means
+about 5% of the proteins called are expected to be false. Storey's q does the same with an
+estimate of how many proteins have no effect.
+
+## What the code does
+
+| Step | Function | Detail |
+|---|---|---|
+| Fit | `fit_limpa()` in `R/helpers.R`: `limpa::dpcDE()`, `limma::contrasts.fit()`, `limma::eBayes(robust = TRUE)` | limpa gives every protein a value in every biopsy and a standard error for each; uncertain values get less weight. Subject is a random block, because HR and LR are different people and each person gives up to three biopsies. Blood (haemoglobin index) is a covariate. |
+| Effects | `limma::topTable(confint = TRUE)` | logFC with its 95% interval, moderated t, p and BH FDR per contrast; Storey's q from `qvalue`. |
+| Blood check | the same fit without the blood term | Shows how much the blood covariate moves each result. |
+| Null check | `limma::propTrueNull()`, median \|t\|, share of p below 0.2 | A calibrated null has median \|t\| near 0.67 and a flat p histogram. |
+| Power | moderated standard error from `eBayes` | The logFC `Training_Interaction` could detect at 80% power, two-sided 0.05, per protein. |
+| Concordance | `limma::fry()` | Takes one group's p < 0.05 proteins for a window and tests them as a set in the other group's contrast. The groups are different people, so this asks whether a response carries over without reusing the data that chose it. |
+| Whole proteome | `prcomp()`, `vegan::adonis2()` | PCA on all proteins (scaled) and PERMANOVA on the distances between biopsies. Time is permuted within person; group is tested on one mean profile per person. |
+
+## How to read the outputs
+
+- Read logFC with its interval. With seven or eight people per group the intervals are wide; a
+  nominal p < 0.05 with an interval crossing 0.1 says little about size.
+- FDR is per contrast. A protein at FDR < 0.05 in one contrast and not another does not show the
+  two contrasts differ.
+- The concordance sets were chosen on p < 0.05, so their logFC in the choosing group is inflated;
+  their logFC in the other group is not.
+- PERMANOVA R² is the share of distance between biopsies the term explains; its p comes from
+  permutations, not a model.
+
+## Files
 
 | | |
 |---|---|
-| Reads | `01_Design_Contrasts/c_data/design.rds`, `01_Trunk/03_Quantification/c_data/proteins.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
-| Writes | `c_data/fit.rds`, `c_data/02_contrasts.xlsx`, `b_reports/02_contrasts_figures.pdf` |
-| Run | `Rscript 02_HRvLR_groups/02_Protein_Contrasts/a_script/02_dep.R` |
+| Reads | `01_Design_Contrasts/c_data/design.rds` (design and contrasts), `01_Trunk/03_Quantification/c_data/proteins.rds` (limpa object), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (blood-corrected complete matrix), `00_Input/phenotype.csv` |
+| Writes | `c_data/protein_contrasts.xlsx`, `c_data/fit.rds` (the fit, read by `03_Set_Contrasts` and `04_Module_Contrasts`), `b_reports/protein_contrasts_report.pdf` |
+| Run | `Rscript 02_HRvLR_groups/02_Protein_Contrasts/a_script/protein_contrasts.R` |
 
-## Method
+```
+02_Protein_Contrasts/
+├── a_script/protein_contrasts.R
+├── b_reports/protein_contrasts_report.pdf
+└── c_data/
+    ├── protein_contrasts.xlsx
+    └── fit.rds
+```
 
-`fit_limpa()` in `R/helpers.R`: limpa's `dpcDE()` turns each value's standard error into a
-precision weight (vooma), fits the design with subject blocked and blood as a covariate, then
-`contrasts.fit()` and `eBayes(robust = TRUE)`; BH within each contrast. limpa gives every protein a
-value in every sample, so every contrast tests all 1,900 proteins, and uncertain values count less.
-Each logFC carries its 95% confidence interval from `topTable(confint = TRUE)`, so the size of an
-effect the data allow can be read beside its p. The fry concordance check takes one arm's responders and
-tests them in the other arm's contrast on limpa's complete matrix. `fit.rds` holds the fit, its
-design, limpa's matrix and object; the pathway and module contrasts read it.
+## Workbook: `protein_contrasts.xlsx`
 
-The `unadjusted` sheet refits the nine contrasts without the blood term: the sensitivity check for
-the blood covariate.
+`read_me` lists the sheets; `columns` defines every column.
 
-The whole proteome is tested once, beside the per-protein fits. PCA runs on the complete
-blood-corrected matrix with proteins scaled, and PERMANOVA (`vegan::adonis2`, 9,999 permutations)
-on its Euclidean distances. Time is tested within subject, so permutations never move a sample to
-another person; arm is tested on one mean profile per subject, and at each time point. Time
-explains 6.3% of variance (p = 0.0009), most of it after the bout (acute 5.6%, p = 0.0005;
-training 4.2%, p = 0.052). Arm explains none beyond chance (subject means p = 0.42; T3
-p = 0.21). The same test on the six size and strength traits at T1 and T2 (time within subject)
-gives R² 3.6%, p = 0.037; arm is not tested there, because HR and LR were split on how much
-those traits changed.
+| Sheet | One row is | Key columns |
+|---|---|---|
+| `protein_by_contrast` | a protein in a contrast | `logFC`, `logFC_lower`, `logFC_upper`, `t`, `p`, `fdr`, `qvalue`, `n_obs` |
+| `contrast_summary` | a contrast | `n_tested`, `n_nominal`, `n_fdr_05`, `role` |
+| `null_calibration` | a contrast | `prop_true_null`, `median_abs_t`, `p_below_0.2` |
+| `detectable_effect` | a quantile | `log2_fc` detectable at 80% power |
+| `fry_concordance` | a chosen set tested in another contrast | `set_from`, `ranked_on`, `p`, `fdr`, `mean_logfc_own`, `mean_logfc_other`, `same_sign_share` |
+| `set_trajectory` | a set, group and time point | `mean_change` from each person's T1, `se` |
+| `unadjusted` | a protein | logFC and p per contrast without the blood term |
+| `pca`, `pca_variance` | a biopsy; a component | `PC1`, `PC2`; `variance_explained` |
+| `permanova` | a test | `data`, `term`, `window`, `r2`, `f`, `p` |
 
-## Figures
+## Report: `protein_contrasts_report.pdf`
 
-Two overview pages: every protein across the 45 biopsies, centred per protein, with arm, time point,
-fCSA mixed, mCSA, leg press 1RM and comp_hypertrophy above the columns (the biopsy
-traits are blank at T3, where none were measured); then log2 fold change in the nine contrasts
-beside a status map. Then the p-value histogram, a volcano per contrast, and the PCA.
-
-## Workbook
-
-| Sheet | Holds |
-|---|---|
-| `DEP_matrix` | logFC with its 95% CI (`ci_lower`, `ci_upper`), p, BH FDR and Storey q per protein and contrast, with samples observed. |
-| `contrast_summary` | Tested, p < 0.05 and BH counts per contrast, with its role. |
-| `null_calibration` | propTrueNull, median |t| and share of p below 0.2 per contrast. |
-| `detectable_effect` | log2 effect the primary contrast detects at 80% power, median and 90th percentile. |
-| `fry_concordance` | fry: one arm's responders in the other arm's same contrast, and each arm's training sets on both arms' acute contrasts; with mixed p, mean log2 FC in both contrasts and the share of members keeping sign. A training set on its own arm's acute contrast shares T2 and reads as a reversal by construction. |
-| `set_trajectory` | Each arm's p < 0.05 training sets: mean change from each subject's own T1, with SE, per arm and time point (blood-corrected complete matrix). |
-| `unadjusted` | logFC and p per protein and contrast before blood adjustment, for sensitivity. |
-| `pca` | PC1 and PC2 per sample, from the complete blood-corrected matrix with proteins scaled. |
-| `pca_variance` | Share of variance on the first four components. |
-| `permanova` | PERMANOVA: proteome time within subject per window and arm, arm on subject means and per time point; phenotype time within subject. |
+1. Every protein across the 45 biopsies (centred), with group, time point and traits above.
+2. logFC in the nine contrasts beside a p/FDR status map.
+3. p-value histogram per contrast.
+4. A volcano per contrast.
+5. PCA of the biopsies.

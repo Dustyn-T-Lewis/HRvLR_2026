@@ -1,50 +1,88 @@
 # 01_Trait_Associations / 02_Sets
 
-Ties each gene set's singscore to phenotype, every subject pooled, no group label. The code is the shared
-`associate_step()` in `R/associate.R`, which the protein, set and module levels all call.
+Which gene-set scores track each size and strength trait, with every person pooled?
+
+## The idea
+
+A gene set is a published list of genes that share a pathway or process (Hallmark, Reactome,
+KEGG_Legacy, GO BP, or a GO Slim term). `01_Trunk/05_Set_Scores` gives each set one number per
+biopsy with singscore: the proteins of that biopsy are ranked by abundance, and the set's score is
+where its members sit in that ranking, high when they sit near the top. The score rests on ranks
+within one biopsy, so it needs no covariate and does not move when other biopsies change.
+
+Each score then meets each trait through the shared association step, `associate_step()` in
+`R/associate.R`: the sample model, the change score in six windows, and the growth + strength
+and growth x strength models. `../README.md` explains each from the ground up.
+
+Only sets that qualify in `01_Trunk/04_Gene_Sets` enter: 15 to 500 members, and at least 15 of
+them measured here. Each collection is its own screen, so BH and Storey's q run within collection
+as well as within trait and term, or window and trait. A small collection is not corrected
+against a large one.
+
+This is a different question from `02_Trait_Pathways`. There a set is tested on how its proteins
+rank among all proteins in one trait's t ranking. Here a set's score is a value per person, and
+the test asks whether that value follows the trait across people, as for a single protein.
+
+## What the code does
+
+| Step | Function | Detail |
+|---|---|---|
+| Sets | `readRDS()` of `gene_sets.rds`, `filter(qualifies)` | The set catalogue: `set_id`, `collection`, `pathway`. |
+| Values | `readRDS()` of `singscore.rds` | `scores`, one row per qualifying set, one column per biopsy; checked to match the sample sheet's order. |
+| Sample sheet | `DAList_corrected.rds` `metadata` | Subject and time point of each biopsy. |
+| Labels | `enrichVolcano::ev_clean_label()` | Readable set names; report headers prefix the collection and wrap at 50 characters. |
+| Row order | `hclust(as.dist(1 - cor(t(...))), "average")` on singscore, within collection | Orders the overview heatmaps only. |
+| Associations | `associate_step(collection_of = ...)` | As in `../README.md`, with BH and q within collection. |
+
+## How to read the outputs
+
+- A set score summarises many proteins, so it can follow a trait when no single member does.
+  It can also follow a trait because a few strong members move while the rest do not; check the
+  members in `01_Proteins`.
+- Sets overlap. Two sets sharing most of their proteins give near-identical scores and will hit
+  together; that is one signal.
+- The score is relative within the biopsy. A set can rise in rank because other proteins fell.
+- BH is within collection, so `fdr` from different collections answers different screens.
+
+## Files
 
 | | |
 |---|---|
-| Reads | `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds`, `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (sample sheet), `00_Input/phenotype.csv` |
-| Writes | `c_data/02_sets.xlsx`, `b_reports/02_sets_figures.pdf` |
-| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/02_Sets/a_script/associate_sets.R` |
+| Reads | `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/04_Gene_Sets/c_data/gene_sets.rds` (catalogue and names), `01_Trunk/03_Quantification/c_data/DAList_corrected.rds` (sample sheet only), `00_Input/phenotype.csv` |
+| Writes | `c_data/set_trait_associations.xlsx`, `b_reports/set_trait_associations_report.pdf` |
+| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/02_Sets/a_script/set_trait_associations.R` |
 
-## Method
+```
+02_Sets/
+├── a_script/set_trait_associations.R
+├── b_reports/set_trait_associations_report.pdf
+└── c_data/set_trait_associations.xlsx
+```
 
-Traits: fibre area (mixed, type I, type II), mCSA and the leg-press and leg-extension 1RMs, as
-levels at each biopsy and as % change; plus `comp_hypertrophy` and `volume_load_total_kg`.
+## Workbook: `set_trait_associations.xlsx`
 
-Sample model. Per trait, limma fits `value ~ timepoint + between + within` on the T1 and T2 biopsies
-with subject blocked: `between` is the subject's mean trait, `within` the biopsy's deviation from
-it. BH within trait and term.
+`read_me` lists the sheets; `columns` defines every column. `feature` is the set ID
+(`collection|set name`), `collection` its collection and `label` its cleaned name.
 
-Change score. One value per subject in six pairings: training change, T1 level and acute change
-against the % changes, composite and volume (`baseline` is the T1 level against the change to
-come); T1 and T2 levels against the trait levels at the same biopsy (`baseline_level`,
-`post_level`); and the T3 level against the T2 trait levels (`post_bout_level`), since T3 follows
-the same training and also carries the bout's acute effect. Per set: limma on one value per
-subject (`p`), Spearman (`rho`, `p_rank`, from `cor.test`) and biweight midcorrelation (`bicor`,
-WGCNA). BH and Storey q within pairing and outcome.
+| Sheet | One row is | Key columns |
+|---|---|---|
+| `counts` | an analysis, comparison and collection | `analysis`, `comparison`, `collection`, `n_tested`, `n_nominal`, `n_fdr_05` |
+| `model` | a set, trait and term | `trait`, `term`, `n_samples`, `slope`, `slope_lower`, `slope_upper`, `t`, `p`, `fdr`, `qvalue` |
+| `change_score` | a set, window and trait | `window`, `trait`, `n_subjects`, `slope`, `slope_lower`, `slope_upper`, `t`, `p`, `rho`, `rho_lower`, `rho_upper`, `p_rho`, `bicor`, `p_bicor`, `fdr`, `qvalue` |
+| `two_predictor` | a set, window, 1RM and coefficient | `strength_test`, `coefficient`, `trait`, `slope`, `slope_lower`, `slope_upper`, `t`, `p`, `fdr`, `qvalue` |
+| `interaction` | a set, window and 1RM | `strength_test`, `interaction`, `interaction_lower`, `interaction_upper`, `t`, `p`, `fdr`, `qvalue` |
+| `plot_index` | a report page or a drawn hit | `analysis`, `collection`, `pdf_page`, `position` |
 
-Two predictor: `value ~ comp_hypertrophy + strength gain`, once per 1RM. Interaction:
-`value ~ growth * strength gain`: does the link to strength gain depend on how much the person
-grew? A negative term means the strength slope falls as growth rises.
+`slope` is change in singscore per unit of trait.
 
-Each collection is its own screen: BH runs within collection.
+## Report: `set_trait_associations_report.pdf`
 
-## Figures
+1. Overviews, one block per collection: a sample-model page (within- and between-person t per
+   trait beside the p and BH status maps), then one change-score page per window (Spearman rho
+   beside the limma status).
+2. Sample-model hits, up to 24 per trait and term across all collections, twelve panels to a page.
+3. Change-score hits, up to 24 per window.
+4. Two-predictor hits, up to 24 per window.
 
-Overview pages: within- and between-person t for every trait beside status maps, then pooled rho
-and limma status for every outcome, one page per pairing. Then every model hit, change-score pair
-and two-predictor hit at p < 0.05, twelve panels to a page, ordered by p.
-
-## Workbook
-
-| Sheet | Holds |
-|---|---|
-| `counts` | Tested, p < 0.05 and BH < 0.05 per analysis and comparison. |
-| `model` | Sample model: effect per trait unit, t, p, BH, Storey q per set, trait and term. |
-| `change_score` | limma effect, t, p, BH, Storey q; Spearman rho and p_rank; bicor and its p. |
-| `two_predictor` | Growth and strength terms, t, p, BH, Storey q. |
-| `interaction` | Growth x strength term, t, p, BH, Storey q. |
-| `plot_index` | PDF page of each overview, and page and panel of every p < 0.05 row. |
+Panel headers name the collection and set, then give the slope or rho, p, BH q and the number of
+biopsies or people.

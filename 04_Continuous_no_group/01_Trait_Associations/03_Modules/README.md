@@ -1,49 +1,79 @@
 # 01_Trait_Associations / 03_Modules
 
-Ties each module eigengene to phenotype, every subject pooled, no group label. The code is the shared
-`associate_step()` in `R/associate.R`, which the protein, set and module levels all call.
+Which co-expression modules track each size and strength trait, with every person pooled?
+
+## The idea
+
+A module is a group of proteins whose abundances rise and fall together across biopsies.
+`01_Trunk/06_Module_Building` finds them with WGCNA, using no label or trait, and summarises each
+module as an eigengene: one number per biopsy, the first principal component of the module's
+proteins, signed to follow their average abundance. Proteins left unassigned (the grey module) get
+no eigengene.
+
+Each eigengene then meets each trait through the shared association step, `associate_step()` in
+`R/associate.R`: the sample model, the change score in six windows, and the growth + strength and
+growth x strength models. `../README.md` explains each from the ground up.
+
+Modules turn many correlated proteins into a few tests. A module that tracks a trait says a whole
+co-moving block does, which a list of single proteins cannot show directly.
+
+## What the code does
+
+| Step | Function | Detail |
+|---|---|---|
+| Values | `readRDS()` of `modules.rds` | `eigengenes` (one row per module, one column per biopsy) and `meta` (sample sheet), checked to share one order. |
+| Labels | module colour | `feature` and `label` are both the module's WGCNA colour. |
+| Row order | `module_summary` | Overview rows follow module size. |
+| Associations | `associate_step()` | As in `../README.md`. BH within trait and term, or window and trait. |
+
+## How to read the outputs
+
+- Each screen holds one test per module, so BH costs little. Below 100 tests, Storey's q is set
+  equal to BH.
+- An eigengene follows its module's main axis. A subset of members can follow a trait while the
+  eigengene does not; `01_Proteins` shows the members one by one.
+- Modules were defined on subject-centred abundance, which removes each person's own level, and
+  scored on raw abundance. The between-person term therefore reads differences between people
+  along an axis found within people.
+- Module identity (top set, hub proteins) is in `01_Trunk/07_Module_Characterisation`.
+
+## Files
 
 | | |
 |---|---|
 | Reads | `01_Trunk/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` |
-| Writes | `c_data/03_modules.xlsx`, `b_reports/03_modules_figures.pdf` |
-| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/03_Modules/a_script/associate_modules.R` |
+| Writes | `c_data/module_trait_associations.xlsx`, `b_reports/module_trait_associations_report.pdf` |
+| Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/03_Modules/a_script/module_trait_associations.R` |
 
-## Method
+```
+03_Modules/
+├── a_script/module_trait_associations.R
+├── b_reports/module_trait_associations_report.pdf
+└── c_data/module_trait_associations.xlsx
+```
 
-Traits: fibre area (mixed, type I, type II), mCSA and the leg-press and leg-extension 1RMs, as
-levels at each biopsy and as % change; plus `comp_hypertrophy` and `volume_load_total_kg`.
+## Workbook: `module_trait_associations.xlsx`
 
-Sample model. Per trait, limma fits `value ~ timepoint + between + within` on the T1 and T2 biopsies
-with subject blocked: `between` is the subject's mean trait, `within` the biopsy's deviation from
-it. BH within trait and term.
+`read_me` lists the sheets; `columns` defines every column. `feature` and `label` are the module
+colour.
 
-Change score. One value per subject in six pairings: training change, T1 level and acute change
-against the % changes, composite and volume (`baseline` is the T1 level against the change to
-come); T1 and T2 levels against the trait levels at the same biopsy (`baseline_level`,
-`post_level`); and the T3 level against the T2 trait levels (`post_bout_level`), since T3 follows
-the same training and also carries the bout's acute effect. Per module: limma on one value per
-subject (`p`), Spearman (`rho`, `p_rank`, from `cor.test`) and biweight midcorrelation (`bicor`,
-WGCNA). BH and Storey q within pairing and outcome.
+| Sheet | One row is | Key columns |
+|---|---|---|
+| `counts` | an analysis and comparison | `analysis`, `comparison`, `n_tested`, `n_nominal`, `n_fdr_05` |
+| `model` | a module, trait and term | `trait`, `term`, `n_samples`, `slope`, `slope_lower`, `slope_upper`, `t`, `p`, `fdr`, `qvalue` |
+| `change_score` | a module, window and trait | `window`, `trait`, `n_subjects`, `slope`, `slope_lower`, `slope_upper`, `t`, `p`, `rho`, `rho_lower`, `rho_upper`, `p_rho`, `bicor`, `p_bicor`, `fdr`, `qvalue` |
+| `two_predictor` | a module, window, 1RM and coefficient | `strength_test`, `coefficient`, `trait`, `slope`, `slope_lower`, `slope_upper`, `t`, `p`, `fdr`, `qvalue` |
+| `interaction` | a module, window and 1RM | `strength_test`, `interaction`, `interaction_lower`, `interaction_upper`, `t`, `p`, `fdr`, `qvalue` |
+| `plot_index` | a report page or a drawn hit | `analysis`, `pdf_page`, `position` |
 
-Two predictor: `value ~ comp_hypertrophy + strength gain`, once per 1RM. Interaction:
-`value ~ growth * strength gain`: does the link to strength gain depend on how much the person
-grew? A negative term means the strength slope falls as growth rises.
+`slope` is change in eigengene per unit of trait.
 
+## Report: `module_trait_associations_report.pdf`
 
-## Figures
-
-Overview pages: within- and between-person t for every trait beside status maps, then pooled rho
-and limma status for every outcome, one page per pairing. Then every model hit, change-score pair
-and two-predictor hit at p < 0.05, twelve panels to a page, ordered by p.
-
-## Workbook
-
-| Sheet | Holds |
-|---|---|
-| `counts` | Tested, p < 0.05 and BH < 0.05 per analysis and comparison. |
-| `model` | Sample model: effect per trait unit, t, p, BH, Storey q per module, trait and term. |
-| `change_score` | limma effect, t, p, BH, Storey q; Spearman rho and p_rank; bicor and its p. |
-| `two_predictor` | Growth and strength terms, t, p, BH, Storey q. |
-| `interaction` | Growth x strength term, t, p, BH, Storey q. |
-| `plot_index` | PDF page of each overview, and page and panel of every p < 0.05 row. |
+1. Sample-model overview: every module, within- and between-person t per trait beside the p and
+   BH status maps.
+2. One change-score overview per window (six pages): Spearman rho per trait beside the limma
+   status.
+3. Sample-model hits, up to 24 per trait and term, twelve panels to a page.
+4. Change-score hits, up to 24 per window.
+5. Two-predictor hits, up to 24 per window.

@@ -1,30 +1,96 @@
 # 01_Clustering
 
-People clustered on their muscle size response before any proteome result is read.
+Do people fall into groups by how much their muscle grew, and if two groups are imposed, who is in
+each?
+
+## The idea
+
+Each person is described by four numbers: the % change from T1 to T2 in mixed, type I and type II
+fibre area and in mCSA, `100 * (T2 - T1) / T1` (`phenotype_tables()` in `R/helpers.R`). Each
+trait is z-scored across people so all four weigh the same in the distance between two people.
+Only people with all four traits are clustered. The proteome is not read until the clusters are
+fixed.
+
+PAM finds K groups around K real people (medoids). It returns K groups whatever the data look
+like, so the script asks separately whether the data hold groups at all: the gap statistic with
+the one-standard-error rule compares K = 1, 2 and 3 against data with no groups, and can choose
+K = 1. Silhouette and bootstrap Jaccard then describe the K = 2 and K = 3 solutions. The arc
+README ([`../../README.md`](../../README.md)) explains each from the ground up.
+
+`imposed_k` at the top of the script overrides the gap statistic, and `imposed_reason` records
+why. Both the selected and the imposed K are written to the workbook. The gap statistic selects
+K = 1 here; K = 2 is imposed because it reproduces the HR/LR split exactly, so the arc repeats
+that comparison under a size-cluster label.
+
+When the K used is 2, the script writes the trunk's inputs again with the clusters as the groups.
+The later stages read these copies, so they run the HR/LR code unchanged.
+
+## What the code does
+
+| Step | Function | Detail |
+|---|---|---|
+| Traits | `phenotype_tables()$pairings$training` in `R/helpers.R`, `tidyr::drop_na()`, `scale()` | % change over training in the four size traits, complete cases only, z-scored. |
+| Gap statistic | `cluster::clusGap(FUNcluster = pam, K.max = 3, B = 500)`, `cluster::maxSE(method = "Tibs2001SEmax")` | Gap and its SE for K = 1 to 3; the one-SE rule picks K. Seed 1. |
+| Solutions | `cluster::pam()` for K = 2 and 3 | Cluster per person and mean silhouette width. |
+| Stability | `fpc::clusterboot(clustermethod = fpc::claraCBI, usepam = TRUE, B = 500, seed = 1)` | Mean Jaccard per cluster over 500 bootstrap resamples of people, for K = 2 and 3. |
+| Choice | `coalesce(imposed_k, k_gap)` | The K used downstream: the imposed K, or the gap statistic's if none is imposed. |
+| Labels | mean `pct_fcsa_mixed` per cluster | The cluster with the higher mean is `Hi`, the other `Lo`. |
+| Relabelled inputs | `relabel()` in the script | Only when K used is 2. Rewrites `arm` as Hi/Lo and `group` as `Hi_T1` and so on in the trunk's protein, matrix, singscore and module objects, and drops the samples of anyone without a cluster. |
+| Space | `prcomp()` on the scaled traits | PC1 and PC2 per person, for Figure 1 panel a. A projection, no test. |
+
+## How to read the outputs
+
+- `k_gap` is the result. K = 1 means the size changes form one spread with no gap in it.
+- The imposed K = 2 is a decision, not a finding. Hi and Lo are halves of that spread; every
+  comparison between them downstream is exploratory.
+- Read the K = 2 Jaccard per cluster: 0.75 or more is stable, 0.6 to 0.75 a pattern with doubtful
+  membership, below 0.6 not to be trusted.
+- Hi and Lo differ in size change by construction. A size difference between them later restates
+  the split.
+- `space` carries each person's HR/LR arm beside their group, so the overlap with the template
+  split can be read off directly.
+
+## Files
 
 | | |
 |---|---|
-| Reads | `00_Input/phenotype.csv`; for the relabelled inputs, `01_Trunk/03_Quantification`, `05_Set_Scores` and `06_Module_Building` outputs |
-| Writes | `c_data/01_cluster.xlsx`, `c_data/inputs/` (proteins, matrices, singscore, modules, groups), `b_reports/01_cluster_figures.pdf` |
-| Run | `Rscript 03_Cluster_groups/Muscle_size/01_Clustering/a_script/01_cluster.R` |
+| Reads | `00_Input/phenotype.csv`; for the relabelled inputs, `01_Trunk/03_Quantification/c_data/proteins.rds`, `DAList_corrected.rds`, `DAList_limpa.rds`, `01_Trunk/05_Set_Scores/c_data/singscore.rds`, `01_Trunk/06_Module_Building/c_data/modules.rds` |
+| Writes | `c_data/clustering.xlsx`, `c_data/inputs/` (read by stages 02 to 07 and the F1 script), `b_reports/clustering_report.pdf` |
+| Run | `Rscript 03_Cluster_groups/Muscle_size/01_Clustering/a_script/clustering.R` |
 
-## Method
+`input_manifest` lists `phenotype.csv` only; the trunk files are read for relabelling, not for
+the clustering.
 
-PAM on the z-scored % changes (% change in fibre area (mixed, type I, type II) and mCSA). K diagnostics: the gap statistic for K = 1 to 3 with
-the one-standard-error rule (`cluster::clusGap`, `maxSE(method = "Tibs2001SEmax")`), mean
-silhouette for K = 2 and 3, group sizes, and bootstrap Jaccard stability per cluster
-(`fpc::clusterboot`, 500 resamples). `imposed_k` and `imposed_reason` at the top of the script fix
-K by hand; both K values are recorded.
+```
+01_Clustering/
+├── a_script/clustering.R
+├── b_reports/clustering_report.pdf
+└── c_data/
+    ├── clustering.xlsx
+    └── inputs/
+        ├── proteins.rds           limpa object, metadata relabelled
+        ├── DAList_corrected.rds   blood-corrected complete matrix
+        ├── DAList_limpa.rds       limpa's complete matrix
+        ├── singscore.rds          gene-set scores, subset to the kept samples
+        ├── modules.rds            module eigengenes, metadata relabelled
+        └── groups.rds             group_of (subject to Hi/Lo), labels, family, traits
+```
 
-The clusters become groups `Hi` and `Lo` by the mean of the first trait. The script writes the
-trunk's inputs again with `arm` and `group` set to those groups and any unassigned subject's
-samples removed, so the later stages run the HR/LR code unchanged.
+## Workbook: `clustering.xlsx`
 
-## Workbook
+`read_me` lists the sheets; `columns` defines every column.
 
-| Sheet | Holds |
-|---|---|
-| `choice` | K selected by the gap statistic, imposed K and reason, K used. |
-| `diagnostics` | Per K: gap, SE, mean silhouette, sizes, Jaccard per cluster. |
-| `stability` | Per K and cluster: mean bootstrap Jaccard. |
-| `assignments` | Per subject: the traits, the K = 2 and K = 3 clusters, the cluster used. |
+| Sheet | One row is | Key columns |
+|---|---|---|
+| `choice` | the arc | `n_subjects`, `traits`, `k_gap`, `k_imposed`, `imposed_reason`, `k_used`, `grouped` |
+| `diagnostics` | a K from 1 to 3 | `logW`, `E.logW`, `gap`, `SE.sim`, `mean_silhouette`, `sizes`, `min_jaccard`, `jaccard` |
+| `stability` | a cluster at K = 2 or 3 | `k`, `cluster`, `jaccard` |
+| `assignments` | a person | the four traits, `k2`, `k3`, `cluster` (empty for anyone not clustered) |
+| `space` | a clustered person | `arm` (HR/LR), `group` (Hi/Lo), `cluster`, `PC1`, `PC2` |
+| `space_variance` | a component | `variance_explained` |
+
+## Report: `clustering_report.pdf`
+
+1. Gap statistic against K with its SE; the dashed line marks the K the one-SE rule selects.
+2. People on the first two components of the scaled traits, coloured by the K = 2 and K = 3
+   clusters.
