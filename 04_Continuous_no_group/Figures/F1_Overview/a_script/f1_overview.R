@@ -113,11 +113,15 @@ pca <- as_tibble(pcs$x[, 1:2], rownames = "sample_id") |>
   inner_join(select(as_tibble(dal$metadata), sample_id, subject, timepoint), by = "sample_id") |>
   left_join(select(training, subject, comp_hypertrophy, pct_leg_press_1rm), by = "subject") |>
   pivot_longer(c(comp_hypertrophy, pct_leg_press_1rm), names_to = "trait") |>
-  mutate(trait = trait_label(trait))
-panel_pca <- ggplot(pca, aes(PC1, PC2, colour = value, shape = timepoint)) +
+  # The two traits sit on different scales, so each is coloured by rank within itself.
+  mutate(trait = trait_label(trait), rank = percent_rank(value), .by = trait)
+panel_pca <- ggplot(pca, aes(PC1, PC2, colour = rank, shape = timepoint)) +
   geom_point(size = 1.3) +
   facet_wrap(~trait, nrow = 1) +
-  scale_colour_viridis_c(option = "magma", end = 0.9, name = "trait value") +
+  scale_colour_viridis_c(
+    option = "magma", end = 0.9, breaks = c(0, 1), labels = c("low", "high"),
+    name = "rank within trait"
+  ) +
   scale_shape_manual(values = c(T1 = 16, T2 = 17, T3 = 15), name = NULL) +
   labs(
     title = "Proteome by growth and strength gain",
@@ -125,7 +129,7 @@ panel_pca <- ggplot(pca, aes(PC1, PC2, colour = value, shape = timepoint)) +
     x = sprintf("PC1 (%.1f%%)", 100 * variance[1]), y = sprintf("PC2 (%.1f%%)", 100 * variance[2])
   ) +
   figure_theme +
-  theme(legend.position = "bottom", legend.key.width = unit(5, "mm"))
+  theme(legend.position = "bottom", legend.key.width = unit(8, "mm"))
 
 # Panel d: sets at fgsea FDR < 0.05 for at least two traits over training, overlapping sets
 # pruned, the 20 strongest shown in every trait.
@@ -164,27 +168,34 @@ panel_sets <- ggplot(grid, aes(trait, set)) +
   figure_theme +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), axis.text.y = element_text(size = 5))
 
-# Panel e: the profile groups' mean t per screen (window and trait).
+# Panel e: the twelve largest profile groups' mean t per trait over training; every group and
+# window is in the workbook.
 profile_means <- readxl::read_excel(paths[["profiles"]], "profile_means")
 profile_groups <- readxl::read_excel(paths[["profiles"]], "profile_groups")
 profiles <- profile_means |>
   inner_join(select(profile_groups, group, n_proteins, main_module), by = "group") |>
   mutate(
-    row = factor(sprintf("%d (%d, %s)", group, n_proteins, main_module)),
+    row = sprintf("%d (%d, %s)", group, n_proteins, main_module),
     window = sub(" .*", "", screen), trait = trait_label(sub("^[^ ]+ ", "", screen))
   )
-t_limit <- max(abs(profiles$mean_t))
-panel_profiles <- ggplot(profiles, aes(trait, row, fill = mean_t)) +
+largest <- slice_max(profile_groups, n_proteins, n = 12, with_ties = FALSE)$group
+drawn <- profiles |>
+  filter(group %in% largest, window == "training") |>
+  mutate(row = reorder(row, n_proteins))
+t_limit <- max(abs(drawn$mean_t))
+panel_profiles <- ggplot(drawn, aes(trait, row, fill = mean_t)) +
   geom_tile(colour = "white", linewidth = 0.2) +
-  facet_grid(. ~ window, scales = "free_x", space = "free_x") +
   scale_fill_distiller(palette = "RdBu", limits = c(-t_limit, t_limit), name = "mean t") +
   labs(
     title = "Proteins that share a pattern of trait links",
-    subtitle = "Profile groups (n proteins, main module): mean limma t per window and trait",
+    subtitle = paste(
+      "Twelve largest profile groups (n proteins, main module):",
+      "mean limma t, training window"
+    ),
     x = NULL, y = NULL
   ) +
   figure_theme +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 4.5), panel.grid = element_blank())
+  theme(axis.text.x = element_text(angle = 30, hjust = 1), panel.grid = element_blank())
 
 figure <- wrap_plots(
   (panel_people | panel_links | panel_pca) + plot_layout(widths = c(1.2, 1.5, 1.3)),
@@ -203,7 +214,7 @@ write_workbook(
   list(
     people = select(people, subject, trait, value, z),
     links = select(links, level, window, trait, n_tested, n_nominal, share),
-    pca = select(pca, sample_id, subject, timepoint, PC1, PC2, trait, value),
+    pca = select(pca, sample_id, subject, timepoint, PC1, PC2, trait, value, rank),
     sets = select(grid, set_id, collection, pathway, trait, nes, fdr),
     profiles = select(profiles, group, n_proteins, main_module, screen, mean_t)
   ),
@@ -212,7 +223,7 @@ write_workbook(
     "Panel b: features tested and at p < 0.05 per level, change-score window and trait.",
     "Panel c: PC1 and PC2 per biopsy, with the person's growth and strength gain.",
     "Panel d: each selected set in every trait over training: NES and fgsea FDR.",
-    "Panel e: each profile group's mean t per window and trait."
+    "Panel e: each profile group's mean t per window and trait (the figure draws twelve)."
   ),
   file.path(stage, "c_data", "f1_overview.xlsx"), inputs, paths
 )

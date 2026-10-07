@@ -299,3 +299,4 @@ panel_sources,rule,Rule that picks the panel's rows.
 profile_groups|trait_groups,proteins,"Up to 15 member gene symbols, strongest |t| first."
 people,z,"The value as a z score within the trait (mean 0, SD 1 across people)."
 links,share,Share of features tested at p < 0.05.
+pca,rank,"Percentile rank of the trait value among people, 0 lowest, 1 highest."
