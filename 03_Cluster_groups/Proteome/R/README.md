@@ -1,6 +1,6 @@
 # R
 
-Shared code for the proteome arc: which clusterings exist, how far each comparison can be trusted
+Shared code for the proteome groupings: which clusterings exist, how far each comparison can be trusted
 against them, and how their five workbooks become one.
 
 `inputs.R` is sourced by stages `02_Design_Contrasts` to `07_Trait_Associations` and by

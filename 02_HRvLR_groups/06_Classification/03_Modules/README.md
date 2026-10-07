@@ -1,64 +1,36 @@
-# 06_Classification/03_Modules
+# 03_Modules
 
-Can one module eigengene tell one group from the other?
-
-## The idea
-
-The method, the five tasks, the AUC and its two intervals are explained in
-[`06_Classification`](../README.md). This substage runs them on every module eigengene.
-
-A module is a group of proteins that rise and fall together across biopsies (WGCNA, in
-`01_Processing/06_Module_Building`). Its eigengene is the first principal component of its members:
-one number per biopsy that summarises the module, signed to follow the members' average. The
-eigengenes are scored on blood-corrected abundance, so they carry differences between people;
-grey, the proteins in no module, has none.
-
-There are few modules, so BH has few tests to adjust over and Storey's q equals BH
-(`storey_q()` returns BH below 100 tests).
-
-## What the code does
-
-| Step | Function | Detail |
-|---|---|---|
-| Values | `readRDS()` | `eigengenes` and `meta` from `modules.rds`. The script stops if the columns are out of order. |
-| Labels | `set_names(rownames(values))` | Each module is named by its colour. |
-| Row order | `module_summary$module` | Module size, largest first. |
-| Scoring | `classify_step()` in `R/classify.R` | As described in the parent README. |
-
-## How to read the outputs
-
-- With few modules, the 5% chance share is a fraction of one module per task. Read each module's
-  AUC and interval directly rather than the count.
-- An eigengene summarises a module's dominant pattern. A module can separate the groups through a
-  few members without its eigengene doing so; `01_Proteins` would show those members.
-
-## Files
+Can a single module eigengene tell one group from the other?
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds` |
-| Writes | `c_data/module_classification.xlsx` (read by `Figures/F3_People`), `b_reports/module_classification_report.pdf` |
+| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/06_Module_Building/c_data/modules.rds` |
+| Writes | `c_data/module_classification.xlsx`, `b_reports/module_classification_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/06_Classification/03_Modules/a_script/module_classification.R` |
+| Code | `R/classify.R`, shared with the cluster groupings |
 
-```
-03_Modules/
-├── a_script/module_classification.R
-├── b_reports/module_classification_report.pdf
-└── c_data/module_classification.xlsx
-```
+## Key result
 
-## Workbook: `module_classification.xlsx`
+- 15 modules tested in each of 5 tasks; 0 at FDR < 0.05 in any task.
+- No modules at p < 0.05 in any task.
 
-Sheets as in the parent README.
+## Method
 
-| Sheet | One row is | Key columns |
-|---|---|---|
-| `counts` | a task | `n_positive`, `n_negative`, `min_p`, `n_tested`, `n_nominal`, `n_fdr_05` |
-| `auc` | a module in a task | `auc`, `auc_lower`, `auc_upper`, `p`, `fdr`, `qvalue`, `boot_lower`, `boot_upper` |
-| `plot_index` | an overview page or a drawn module | `task`, `feature`, `pdf_page`, `position` |
+- Five tasks: the groups compared at T1, T2 and T3, and on the training and acute changes.
+- AUC is the Mann-Whitney W / (n1 n2), above 0.5 when the module is higher in the first group; Wilcoxon p, BH and Storey q within task.
+- DeLong 95% interval for every AUC; stratified bootstrap (2,000 resamples) for the drawn modules (`classify_step()` in `R/classify.R`).
 
-## Report: `module_classification_report.pdf`
+## Read with care
 
-1. One overview page: AUC for every module in the five tasks beside a p/FDR status map, rows by
-   size.
-2. ROC curves for the modules at p < 0.05 in each task.
+- The best AUC among many module eigengenes is high even when nothing separates the groups; read its interval.
+- With seven or eight people per group the rank-sum p has a floor (`min_p` in `counts`).
+
+## Sheets
+
+`module_classification.xlsx` opens with `read_me` and `columns` (every column defined) and closes with `input_manifest` and `package_versions`.
+
+| Sheet | Holds |
+|---|---|
+| `counts` | Per task: n per group, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts. |
+| `auc` | Per module and task: AUC with DeLong 95% interval, Wilcoxon p, BH and Storey q; bootstrap 95% interval for the features drawn in the report. |
+| `plot_index` | PDF page of each overview, and page and panel position (1 to 12) of every drawn row. |

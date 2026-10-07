@@ -1,148 +1,90 @@
 # HRvLR Proteomics
 
 DIA mass-spectrometry proteomics of skeletal muscle from a resistance-training study. Sixteen
-people were biopsied three times: at baseline (T1), after the training programme (T2), and after
-one acute bout at the end of it (T3). Of 48 runs, 45 enter the analysis;
-`01_Processing/01_Protein_Filtering` records which three are dropped and why.
+people were biopsied at baseline (T1), after the training programme (T2) and after one acute bout
+at the end of it (T3). Of 48 runs, 45 pass quality control, and 1,900 of 2,400 proteins are
+analysed.
 
-The study labelled each person a High or Low Responder (HR, LR) by a median split of a composite
-hypertrophy score. That split is mostly a fibre-area split, so the repository asks its questions
-three ways:
+The study split the sixteen at the median of a composite hypertrophy score into High and Low
+Responders (HR, LR). The repository asks its questions three ways: with that split, with groups
+found by clustering, and with no groups at all.
 
-| Arc | Who is compared | Question |
-|---|---|---|
-| [`02_HRvLR_groups`](02_HRvLR_groups/README.md) | the study's HR and LR | do the proteome and its response differ between responder groups? |
-| [`03_Cluster_groups`](03_Cluster_groups/README.md) | groups found by clustering people on size, on strength, or on their proteome | do groups defined another way differ? |
-| [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number | which proteins, sets and modules track size and strength? |
+![Pipeline: every step and what it reads](pipeline.png)
 
-All three read the same [`01_Processing`](01_Processing/README.md) and never each other. 01_Processing uses no
-group label in any value it produces, with one exception: the detection filter in
-`01_Protein_Filtering` keeps a protein when it is detected often enough within at least one of the
-six HR/LR-by-time cells.
+## Folders
 
-## Map
-
-```
-HRvLR_V2/
-├── 00_Input/                        study data, no code
-├── 01_Processing/                        shared steps every arc reads
-│   ├── 01_Protein_Filtering/        contaminants, outlier runs, detection filter
-│   ├── 02_Normalisation/            cyclic loess
-│   ├── 03_Quantification/           limpa: a value and a standard error for every protein in every biopsy
-│   ├── 04_Gene_Sets/                MSigDB and GO Slim sets mapped to the measured proteins
-│   ├── 05_Set_Scores/               singscore: one score per set per biopsy
-│   ├── 06_Module_Building/          WGCNA co-expression modules and eigengenes
-│   └── 07_Module_Characterisation/  what each module is: enriched sets, top members, STRING
-├── 02_HRvLR_groups/
-│   ├── 01_Design_Contrasts/         six cell means, nine contrasts
-│   ├── 02_Protein_Contrasts/        limma on every protein
-│   ├── 03_Set_Contrasts/            fgsea and fry on every gene set
-│   ├── 04_Module_Contrasts/         limma on eigengenes, fry on module members
-│   ├── 05_Module_Preservation/      are each group's modules found in the other?
-│   ├── 06_Classification/           can one protein, set or module tell HR from LR?
-│   │   ├── 01_Proteins/  02_Sets/  03_Modules/
-│   ├── 07_Trait_Associations/       does a feature's link to a trait differ by group?
-│   └── Figures/                     F1 to F3 and supplements S01 to S03
-├── 03_Cluster_groups/
-│   ├── Muscle_size/                 01_Clustering, then copies of the HR/LR stages on Hi and Lo
-│   ├── Muscle_strength/             the same, clustered on strength
-│   └── Proteome/                    clustered five ways on the proteome; 08_Cluster_Phenotype
-├── 04_Continuous_no_group/
-│   ├── 01_Trait_Associations/       limma, Spearman and bicor of every feature against each trait
-│   ├── 02_Trait_Pathways/           fgsea on each trait's protein ranking
-│   ├── 03_Profile_Clusters/         proteins grouped by their pattern of trait links
-│   └── Figures/                     F1
-├── R/                               shared code (below)
-├── docs/                            decisions log and concept images
-└── run_all.R                        runs every stage in order
-```
-
-## What every stage folder holds
-
-```
-NN_Stage_Name/
-├── README.md        what the stage asks, how it works, how to read its outputs
-├── a_script/        one R script, named for the stage (stage_name.R)
-├── b_reports/       stage_name_report.pdf: overview pages, then one panel per notable feature
-└── c_data/          stage_name.xlsx, plus any .rds a later stage reads
-```
-
-Every workbook has the same frame:
-
-| Sheet | Holds |
+| Folder | Holds |
 |---|---|
-| `read_me` | one line per sheet |
-| `columns` | every column of every sheet, with what it holds (from `R/column_dictionary.csv`) |
-| result sheets | named for what one row is, e.g. `protein_by_contrast` |
-| `input_manifest` | every file the script read, with its md5 |
-| `package_versions` | packages loaded at run time |
+| [`00_Input`](00_Input/README.md) | study data and reference files; no code |
+| [`01_Processing`](01_Processing/README.md) | the shared steps: filtering, normalisation, quantification, gene sets, set scores, modules |
+| [`02_HRvLR_groups`](02_HRvLR_groups/README.md) | HR against LR: contrasts, gene sets, modules, classification, trait links, figures |
+| [`03_Cluster_groups`](03_Cluster_groups/README.md) | the same steps on groups found by clustering size, strength or the proteome |
+| [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
+| [`R`](R/README.md) | shared functions the step scripts call |
+| [`docs`](docs/README.md) | decisions log, concept images and the script that draws `pipeline.png` |
 
-Columns use one vocabulary across the repository. An estimate is named for what it is (`logFC`,
-`slope`, `slope_difference`, `interaction`, `rho`, `auc`) and its 95% interval is named after it
-(`logFC_lower`, `logFC_upper`, `rho_lower`, ...). `p` is the nominal p-value, `fdr` the
-Benjamini-Hochberg adjustment within the screen the `read_me` names, `qvalue` Storey's q over the
-same screen.
+The three analysis folders read `01_Processing` and never each other, except the parked HR/LR
+Figure 3, which also reads `04_Continuous_no_group`.
 
-## Reading order
+## Every step folder
 
-1. `01_Processing/README.md`, then its stages in order: how a raw run becomes a protein value.
-2. `02_HRvLR_groups/README.md` and its `Figures/F1_Overview`: the study's own question.
-3. `02_HRvLR_groups/02_Protein_Contrasts/README.md`: the contrasts every later stage reuses.
-4. `04_Continuous_no_group`: the same data without the split.
-5. `03_Cluster_groups`: the split made other ways.
+```
+NN_Step_Name/
+├── README.md     what it reads and writes, how to run it, the key result
+├── a_script/     one R script, named for the step
+├── b_reports/    the step's PDF report
+└── c_data/       the step's workbook, plus any .rds a later step reads
+```
+
+Every workbook opens with `read_me` (one line per sheet) and `columns` (every column defined, from
+`R/column_dictionary.csv`), and closes with `input_manifest` (every file read, with its md5) and
+`package_versions`. A step reads only files earlier steps saved, so any step reruns alone.
 
 ## Run
 
 ```sh
 Rscript -e 'renv::restore()'
-Rscript run_all.R            # every stage in order, figures last; logs in .runlogs/
-Rscript run_all.R 01 02      # only the arcs whose folder starts with 01 or 02
+Rscript run_all.R            # every step in order; logs in .runlogs/
+Rscript run_all.R 01 02      # only the folders starting 01 or 02
+Rscript docs/pipeline.R      # redraw pipeline.png from the current outputs
 ```
 
-Every input and reference file is in `00_Input/`; no step downloads anything.
+Every input, including the STRING, MSigDB and GO Slim files, is in `00_Input`; no step downloads
+anything. Random steps are seeded.
 
-## Shared code in `R/`
+## Terms
 
-| File | Holds |
+| Term | Meaning here |
 |---|---|
-| `helpers.R` | limpa and limma fits, `subject_fit()` (limma on one value per person, with intervals), `spearman_by_row()` (rho with a Fisher-z interval), Storey's q, phenotype tables, heatmap pages, `write_workbook()` |
-| `column_dictionary.csv` | what every workbook column holds; a column it does not describe stops the run |
-| `classify.R` | the classification step shared by the protein, set and module levels |
-| `associate.R` | the continuous association step shared by the three levels |
-| `figure_theme.R` | colours, the contrast palette, strip boxes, label helpers |
-| `figure_panels.R`, `figure_overview.R` | panel builders; `figure_overview()` builds Figure 1 for any two-group arc |
+| contrast | one comparison of group means, e.g. `Training_HR` (HR's T2 minus T1) or `Training_Interaction` (HR's training change minus LR's) |
+| logFC, `_lower`, `_upper` | the contrast on the log2 scale (+1 is twice as much) and its 95% interval; every estimate's interval is named after it (`slope_lower`, `rho_upper`) |
+| `p`, `fdr`, `qvalue` | nominal p; Benjamini-Hochberg within the screen the sheet names; Storey's q over the same screen |
+| limpa | gives every protein a value and a standard error in every biopsy from a detection-probability curve, so missing values are modelled rather than filled |
+| fgsea, fry | two gene-set tests: fgsea asks whether a set ranks high against other proteins; fry asks whether its proteins move consistently across people |
+| module, eigengene, kME | a WGCNA group of co-varying proteins, its one-number summary per biopsy, and a protein's correlation with that summary |
+| singscore | one score per gene set per biopsy, from the set's rank within that biopsy |
+| AUC | the chance a random person from the first group has a higher value than one from the second |
+| floor | the baseline contrast: the groups come from an outcome, so a T1 difference shows how far the split separates people before training |
 
-## Conventions every stage shares
+## Conventions
 
-- Missing values: limpa (Li, Cobbold & Smyth 2025) fits a detection-probability curve, the chance
-  a peptide is seen given its abundance, and gives every protein a value and a standard error in
-  every biopsy. Protein contrasts use those standard errors as weights; every other test reads the
-  complete matrix, and protein rows carry `observed_share`, the share of values measured rather
-  than estimated.
-- Blood: an index (mean log2 HBB and HBA1 against the sample median) enters every limma model as a
-  covariate. Tests that take no covariate read a copy with each protein's blood slope removed
-  (`limma::removeBatchEffect`, design = time point, so no group label enters).
+- Blood: an index (mean log2 HBB and HBA1 against the sample median) is a covariate in every
+  limma model. Tests that take no covariate read a copy with each protein's blood slope removed
+  against time point only.
 - People: each person gives up to three biopsies, so person is a random block in biopsy-level
-  models, and change scores carry one value per person.
-- Reporting: each package's own statistic, nominal p and BH FDR, with Storey's q beside them.
-  Nothing is filtered on a threshold before it is written; reports draw at most 24 features per
-  screen and the workbooks keep every row.
-- Identifiers: proteins by UniProt accession, gene sets by `collection|name`, modules by colour; every
-  result table carries them as `feature` with a readable `label`. Module colours come from WGCNA and
-  change if 01_Processing is rebuilt.
+  models; change scores carry one value per person.
+- Reporting: nothing is filtered on a threshold before it is written. Reports draw at most 24
+  features per screen; the workbooks keep every row.
+- Identifiers: proteins by UniProt accession, gene sets by `collection|name`, modules by colour.
+  Module colours change if `01_Processing` is rebuilt.
 
-## Limits stated rather than tested
+## Limits
 
-- Biopsy composition: a needle biopsy holds a varying share of fibre, connective tissue and fat.
-  Large co-moving sarcomere changes could partly reflect that share; no covariate adjusts for it.
-- The composite hypertrophy formula and the biopsy timing (programme length, time from bout to
-  T3) are not in the repository.
+- A needle biopsy holds a varying share of fibre, connective tissue and fat; no covariate adjusts
+  for it.
+- The composite hypertrophy formula and the biopsy timing are not in the repository.
 
 ## Dependencies
 
-`renv.lock` pins every package. One comes from outside CRAN and Bioconductor's current releases:
-`enrichVolcano`, pinned to GitHub commit `d3fed631f4` for the HR/LR volcano supplement.
-
-The first version of this project, with its prediction screen, `functions/`, `tests/` and
-`archive/`, is the git tag `legacy-v1`. Decisions and their reasons are logged in
-`docs/decisions.md`.
+`renv.lock` pins every package the code loads. `enrichVolcano` comes from GitHub, pinned to commit
+`d3fed631f4`. Decisions and their reasons are in `docs/decisions.md`.

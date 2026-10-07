@@ -1,66 +1,36 @@
-# 06_Classification/01_Proteins
+# 01_Proteins
 
-Can one protein's abundance tell one group from the other?
-
-## The idea
-
-The method, the five tasks, the AUC and its two intervals are explained in
-[`06_Classification`](../README.md). This substage runs them on every protein.
-
-The values are limpa's complete log2 abundance with the blood slope removed
-(`DAList_corrected.rds`). limpa fills every protein in every biopsy, estimating the values the
-mass spectrometer did not record from how detection depends on abundance. A rank test cannot tell
-an estimated value from a measured one, so each row carries `observed_share`, the share of the
-protein's values that were measured. A protein that separates the groups mostly through estimated
-values deserves less trust than one measured throughout.
-
-BH and Storey's q run within task, over all proteins.
-
-## What the code does
-
-| Step | Function | Detail |
-|---|---|---|
-| Values | `readRDS()` | `dal$data` from `DAList_corrected.rds`; `observed_share` is `rowMeans(dal$observed)`. |
-| Labels | gene symbol per UniProt accession | The script stops if a symbol is missing or repeated. |
-| Row order | `hclust(as.dist(1 - cor(t(...))), "average")` | On limpa's complete matrix (`DAList_limpa.rds`), for the overview only. |
-| Scoring | `classify_step()` in `R/classify.R` | As described in the parent README. |
-
-## How to read the outputs
-
-- Check `observed_share` before reading a protein's AUC.
-- With about 1,900 proteins in each task, the count expected at p < 0.05 by chance alone is about
-  95. Compare `n_nominal` in `counts` with that.
-- A protein's AUC here and its logFC in `02_Protein_Contrasts` answer different questions: the
-  logFC compares group averages under the model, the AUC asks how often individuals are ordered
-  by group.
-
-## Files
+Can a single protein tell one group from the other?
 
 | | |
 |---|---|
-| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds` (values, metadata, `observed`), `01_Processing/03_Quantification/c_data/DAList_limpa.rds` (overview row order) |
-| Writes | `c_data/protein_classification.xlsx` (read by `Figures/F3_People`), `b_reports/protein_classification_report.pdf` |
+| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds` |
+| Writes | `c_data/protein_classification.xlsx`, `b_reports/protein_classification_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/06_Classification/01_Proteins/a_script/protein_classification.R` |
+| Code | `R/classify.R`, shared with the cluster groupings |
 
-```
-01_Proteins/
-├── a_script/protein_classification.R
-├── b_reports/protein_classification_report.pdf
-└── c_data/protein_classification.xlsx
-```
+## Key result
 
-## Workbook: `protein_classification.xlsx`
+- 1,900 proteins tested in each of 5 tasks; 0 at FDR < 0.05 in any task.
+- Proteins at p < 0.05 run from 44 (Baseline_HRvLR) to 100 (Acute_HRvLR).
 
-Sheets as in the parent README. `auc` adds `label` (gene symbol) and `observed_share`.
+## Method
 
-| Sheet | One row is | Key columns |
-|---|---|---|
-| `counts` | a task | `n_positive`, `n_negative`, `min_p`, `n_tested`, `n_nominal`, `n_fdr_05` |
-| `auc` | a protein in a task | `label`, `observed_share`, `auc`, `auc_lower`, `auc_upper`, `p`, `fdr`, `qvalue`, `boot_lower`, `boot_upper` |
-| `plot_index` | an overview page or a drawn protein | `task`, `feature`, `pdf_page`, `position` |
+- Five tasks: the groups compared at T1, T2 and T3, and on the training and acute changes.
+- AUC is the Mann-Whitney W / (n1 n2), above 0.5 when the protein is higher in the first group; Wilcoxon p, BH and Storey q within task.
+- DeLong 95% interval for every AUC; stratified bootstrap (2,000 resamples) for the drawn proteins (`classify_step()` in `R/classify.R`).
 
-## Report: `protein_classification_report.pdf`
+## Read with care
 
-1. One overview page: AUC for every protein in the five tasks beside a p/FDR status map, rows in
-   clustering order.
-2. ROC curves for the proteins at p < 0.05 in each task, at most 24 per task.
+- The best AUC among many proteins is high even when nothing separates the groups; read its interval.
+- With seven or eight people per group the rank-sum p has a floor (`min_p` in `counts`).
+
+## Sheets
+
+`protein_classification.xlsx` opens with `read_me` and `columns` (every column defined) and closes with `input_manifest` and `package_versions`.
+
+| Sheet | Holds |
+|---|---|
+| `counts` | Per task: n per group, smallest attainable p, tested, p < 0.05 and BH < 0.05 counts. |
+| `auc` | Per protein and task: AUC with DeLong 95% interval, Wilcoxon p, BH and Storey q; bootstrap 95% interval for the features drawn in the report. |
+| `plot_index` | PDF page of each overview, and page and panel position (1 to 12) of every drawn row. |

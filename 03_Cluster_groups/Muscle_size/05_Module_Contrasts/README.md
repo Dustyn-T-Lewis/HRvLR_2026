@@ -1,20 +1,30 @@
 # 05_Module_Contrasts
 
-Which co-expression modules shift?
+Which co-expression modules shift in each of the nine contrasts?
 
-The HR/LR stage [`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md) run on the muscle-size clusters, groups Hi and Lo, read from the relabelled inputs in `01_Clustering/c_data/inputs/`. The code differs from the template only in its paths and group names.
+Groups: Hi and Lo, the muscle-size clusters.
+
+The method is the HR/LR step's ([`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md)), run through the same function in `R/module_contrasts.R`.
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/modules.rds`, `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds`, `03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/fit.rds`, `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/DAList_limpa.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds`, `03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
 | Writes | `c_data/module_contrasts.xlsx`, `b_reports/module_contrasts_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/05_Module_Contrasts/a_script/module_contrasts.R` |
+| Code | `R/module_contrasts.R` |
 
-```
-05_Module_Contrasts/
-├── a_script/module_contrasts.R
-├── b_reports/   module_contrasts_report.pdf
-└── c_data/      module_contrasts.xlsx
-```
+## Key result
 
-The method, the sheets, the columns and the report pages are described in [`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md).
+- 15 modules by 9 contrasts: 9 eigengene tests at p < 0.05 and 0 at FDR < 0.05.
+- fry: 8 module tests at p < 0.05 and 1 at FDR < 0.05.
+
+## Sheets
+
+`module_contrasts.xlsx` opens with `read_me` and `columns` (every column defined) and closes with `input_manifest` and `package_versions`.
+
+| Sheet | Holds |
+|---|---|
+| `eigengene_tests` | limma on module eigengenes: logFC, moderated t, p, BH and Storey q per contrast. |
+| `fry_tests` | fry on each module as a protein set: direction, p and FDR per contrast. |
+| `membership_contrast` | Spearman rho (Fisher-z 95% CI) between member kME and protein moderated t, per module and contrast. |
+| `correlation` | Within-subject correlation on the eigengenes and on limpa's matrix. |

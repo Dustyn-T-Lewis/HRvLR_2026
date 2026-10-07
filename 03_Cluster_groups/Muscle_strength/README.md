@@ -2,67 +2,31 @@
 
 Do people grouped by how much stronger they became differ in their proteome and its response?
 
-## What was clustered
+People are clustered on their % change over training in leg-press and leg-extension 1RM
+(`pct_leg_press_1rm`, `pct_leg_ext_1rm`); anyone missing one has no group. No proteome value enters
+the clustering. The cluster with the higher mean `pct_leg_press_1rm` is `Hi`.
 
-Each person's % change over training (T1 to T2) in two strength traits: leg-press 1RM
-(`pct_leg_press_1rm`) and leg-extension 1RM (`pct_leg_ext_1rm`). Only people with both are
-clustered; anyone missing one has no group, and their samples drop out of every later stage. No
-proteome value enters the clustering.
+The gap statistic selects K = 1; K = 2 is imposed because both clusters are stable by bootstrap
+Jaccard and the split is unrelated to HR/LR (adjusted Rand index -0.07). Results here are
+exploratory.
 
-The gap statistic selects K = 1. K = 2 is imposed with this recorded reason: both clusters are
-stable by bootstrap Jaccard and the split is independent of HR/LR; exploratory. The cluster with
-the higher mean `pct_leg_press_1rm` is `Hi`, the other `Lo`.
+## Steps
 
-The method (PAM, gap statistic, silhouette, bootstrap Jaccard) is explained in
-[`../README.md`](../README.md); the details for this arc are in
-[`01_Clustering`](01_Clustering/README.md).
+| Step | Asks |
+|---|---|
+| [`01_Clustering`](01_Clustering/README.md) | how people split on strength change; writes `groups.rds` |
+| [`02_Design_Contrasts`](02_Design_Contrasts/README.md) | which comparisons |
+| [`03_Protein_Contrasts`](03_Protein_Contrasts/README.md) | which proteins differ |
+| [`04_Set_Contrasts`](04_Set_Contrasts/README.md) | which gene sets shift |
+| [`05_Module_Contrasts`](05_Module_Contrasts/README.md) | which modules shift |
+| [`06_Classification`](06_Classification/README.md) | can one protein, set or module tell Hi from Lo |
+| [`07_Trait_Associations`](07_Trait_Associations/README.md) | does a feature's link to a trait differ by group |
+| [`Figures/F1_Overview`](Figures/F1_Overview/README.md) | the folder on a page |
 
-## How to read it
+Steps 02 to 07 call the same functions as `02_HRvLR_groups`, with Hi and Lo in place of HR and LR.
 
-- Hi and Lo were defined by strength change, so any strength-change difference between them is
-  built in. `Baseline_HivLo` is the floor, as `Baseline_HRvLR` is in the template.
-- With K = 2 imposed over a gap-statistic K = 1, the groups are halves of a spread, not two kinds
-  of people. A stable split is one a resample redraws the same way; it is still exploratory.
-- The split cuts across HR/LR, so this arc asks a question the template does not.
-  `01_Clustering/c_data/clustering.xlsx` (`space`) lists each person's HR/LR arm beside their
-  group.
+## Read with care
 
-## Stages
-
-| Stage | Asks | Copy of |
-|---|---|---|
-| [`01_Clustering`](01_Clustering/README.md) | how people split on strength change | new: K diagnostics, Hi/Lo, relabelled inputs |
-| [`02_Design_Contrasts`](02_Design_Contrasts/README.md) | which comparisons | `02_HRvLR_groups/01_Design_Contrasts` |
-| [`03_Protein_Contrasts`](03_Protein_Contrasts/README.md) | which proteins differ | `02_HRvLR_groups/02_Protein_Contrasts` |
-| [`04_Set_Contrasts`](04_Set_Contrasts/README.md) | which gene sets shift | `02_HRvLR_groups/03_Set_Contrasts` |
-| [`05_Module_Contrasts`](05_Module_Contrasts/README.md) | which modules shift | `02_HRvLR_groups/04_Module_Contrasts` |
-| [`06_Classification/01_Proteins`](06_Classification/01_Proteins/README.md) | can one protein tell Hi from Lo | `02_HRvLR_groups/06_Classification/01_Proteins` |
-| [`06_Classification/02_Sets`](06_Classification/02_Sets/README.md) | can one gene-set score tell Hi from Lo | `02_HRvLR_groups/06_Classification/02_Sets` |
-| [`06_Classification/03_Modules`](06_Classification/03_Modules/README.md) | can one module tell Hi from Lo | `02_HRvLR_groups/06_Classification/03_Modules` |
-| [`07_Trait_Associations`](07_Trait_Associations/README.md) | does a feature's link to a trait differ by group | `02_HRvLR_groups/07_Trait_Associations` |
-| [`Figures/F1_Overview`](Figures/F1_Overview/README.md) | the arc on a page | `02_HRvLR_groups/Figures/F1_Overview` |
-
-Stages 02 to 07 read `01_Clustering/c_data/inputs/` in place of the 01_Processing files. `run_all.R`
-runs 01 to 07 in order, then the F1 script.
-
-## Files
-
-```
-Muscle_strength/
-├── 01_Clustering/
-│   ├── a_script/clustering.R
-│   ├── b_reports/clustering_report.pdf
-│   └── c_data/
-│       ├── clustering.xlsx
-│       └── inputs/              01_Processing inputs relabelled Hi/Lo, read by 02 to 07
-├── 02_Design_Contrasts/
-├── 03_Protein_Contrasts/
-├── 04_Set_Contrasts/
-├── 05_Module_Contrasts/
-├── 06_Classification/
-│   ├── 01_Proteins/
-│   ├── 02_Sets/
-│   └── 03_Modules/
-├── 07_Trait_Associations/
-└── Figures/F1_Overview/
-```
+- Hi and Lo were defined by strength change, so a strength-change difference between them is built in.
+- K = 2 over a gap-statistic K = 1 cuts one spread of people in two; it does not show two kinds of
+  people.

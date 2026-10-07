@@ -191,3 +191,15 @@ every stage against its package documentation and its outputs. The interview set
 | Cluster F1 | Panel a shows the clustering groups and a brief K report, then the overall data as in HR/LR. Proteome: one F1 per clustering input with validity on every contrast. Continuous: people and traits, links against chance, PCA by growth and strength, fgsea grid, profile clusters. | Each arc opens on who is compared and on the whole-proteome picture. |
 | Muscle_size | Full copy kept, though K = 2 reproduces HR/LR. | Symmetry with Muscle_strength. |
 | Proteome outputs in git | None tracked. | 247 MB of per-input outputs; a rerun regenerates them. |
+
+## 2026-10-07: shared step functions, inputs in the repository, short READMEs
+
+| Question | Decision | Reason |
+|---|---|---|
+| Layout | The three analysis folders keep their mirrored steps; `01_Trunk` becomes `01_Processing`. | The mirroring is the design; "trunk" did not say what the folder does. |
+| Mirrored steps | Design, protein, set and module contrasts, classification and group trait associations are one function each in `R/`; every grouping's step script states its inputs and calls it. | One method, one place to change it; about 5,000 copied lines gone, and the copies' generator scripts were never in the repository. |
+| Relabelled copies | Removed. `design.rds` records the groups; later steps read the processing files through `for_design()`. | The copies differed only in group labels. Every result is unchanged; `group` is now a factor in the cluster metadata, as it already was for HR/LR. |
+| Reference files | STRING (the three files read), the MSigDB snapshot and GO Slim live in `00_Input`; the download branch and its md5 files are gone. | No step downloads anything; git records the files. |
+| Hubs | Called top members (each module's ten highest-kME proteins). | Plain name for what the table holds. |
+| READMEs | Short: question, reads, writes, run, key result read from the workbook, method, read with care. Background terms once in the root README. | The 2026-10-06 rule against results in READMEs is replaced: key results are regenerated from the outputs, so they do not go stale unnoticed. |
+| Pipeline diagram | `pipeline.png` at the root, drawn by `docs/pipeline.R` from `run_all.R` and each workbook's `input_manifest`. | The picture follows the files actually read. |

@@ -9,7 +9,7 @@ here, and no script downloads anything.
 |---|---|---|
 | `HRvLR_raw.xlsx` | a protein: `uniprot_id`, `protein`, `gene`, `description`, `n_seq`, then one intensity column per MS run (48 runs) | `01_Processing/01_Protein_Filtering` |
 | `metadata.csv` | an MS run (48 rows): `sample_id`, `subject`, `arm`, `timepoint`, `group` | `01_Processing/01_Protein_Filtering` |
-| `phenotype.csv` | a subject (16 rows): fibre area, fibre counts, muscle area and strength before and after training, the composite and the training volume | the arcs (contrasts, trait associations, clustering, figures); never 01_Processing |
+| `phenotype.csv` | a subject (16 rows): fibre area, fibre counts, muscle area and strength before and after training, the composite and the training volume | the analysis folders (contrasts, trait associations, clustering, figures); never 01_Processing |
 | `blood_contaminants.csv` | a curated blood protein (95 rows) with its `class` and `reason` | `01_Processing/01_Protein_Filtering` |
 | `HPA_annotations_full.tsv` | a Human Protein Atlas gene (20,162 rows) | `01_Processing/01_Protein_Filtering` |
 | `RBC_proteome_reference.tsv` | a red-cell protein (7,012 rows): `acc`, `gene`, `sources`, `n_sources` | `01_Processing/01_Protein_Filtering` |
