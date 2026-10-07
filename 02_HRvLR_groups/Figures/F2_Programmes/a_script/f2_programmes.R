@@ -87,7 +87,7 @@ write_workbook(
   ),
   c(
     "Per panel: what it shows, the file and sheet it reads, and the rule that picks its rows.",
-    "a: module size, top set and its FDR, three hub proteins, STRING enrichment ratio.",
+    "a: module size, top set and its FDR, three top members, STRING enrichment ratio.",
     "b: eigengene logFC, p and FDR, and fry p and FDR, per module and contrast.",
     "c: sets called up and down per contrast by fgsea (FDR), fry (FDR) and fry (p).",
     "d: each person's eigengene for the module with the smallest interaction p."

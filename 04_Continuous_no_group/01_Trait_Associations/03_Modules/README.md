@@ -35,7 +35,7 @@ co-moving block does, which a list of single proteins cannot show directly.
 - Modules were defined on subject-centred abundance, which removes each person's own level, and
   scored on raw abundance. The between-person term therefore reads differences between people
   along an axis found within people.
-- Module identity (top set, hub proteins) is in `01_Processing/07_Module_Characterisation`.
+- Module identity (top set, top members) is in `01_Processing/07_Module_Characterisation`.
 
 ## Files
 

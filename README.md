@@ -32,7 +32,7 @@ HRvLR_V2/
 │   ├── 04_Gene_Sets/                MSigDB and GO Slim sets mapped to the measured proteins
 │   ├── 05_Set_Scores/               singscore: one score per set per biopsy
 │   ├── 06_Module_Building/          WGCNA co-expression modules and eigengenes
-│   └── 07_Module_Characterisation/  what each module is: enriched sets, hubs, STRING
+│   └── 07_Module_Characterisation/  what each module is: enriched sets, top members, STRING
 ├── 02_HRvLR_groups/
 │   ├── 01_Design_Contrasts/         six cell means, nine contrasts
 │   ├── 02_Protein_Contrasts/        limma on every protein

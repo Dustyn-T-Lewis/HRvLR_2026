@@ -10,7 +10,7 @@ biology, so each module is described three ways, each answering a different ques
 | Evidence | Question | Method |
 |---|---|---|
 | Enriched gene sets | Do the members share known functions more than chance? | Over-representation analysis (ORA) |
-| Hubs | Which proteins track the module most closely? | Highest kME |
+| Top members | Which proteins track the module most closely? | Highest kME |
 | STRING edges | Do the members physically or functionally interact more than chance? | STRING PPI enrichment |
 
 ORA asks, for each gene set: of the module's members, how many belong to the set, and how
@@ -26,7 +26,7 @@ each member is in the background. A module with far more edges than expected is 
 known biology as well as by correlation. The background is the measured proteins STRING can map,
 not the whole proteome.
 
-Hubs are the module's highest-kME proteins: those whose abundance follows the eigengene most
+Top members are the module's highest-kME proteins: those whose abundance follows the eigengene most
 closely within a person. They are the module's most typical members, not necessarily its most
 important ones.
 
@@ -35,11 +35,11 @@ important ones.
 | Step | Function | Detail |
 |---|---|---|
 | ORA | `clusterProfiler::compareCluster(fun = "enricher")` | Each module's member genes (grey excluded) against the qualifying sets, universe `gene_universe`, `minGSSize = 15`, `maxGSSize = 500`, no p or q cut-off, so every tested set is kept. BH within module. |
-| Hubs | `dplyr::slice_max(kme, n = 10)` | The ten highest-kME members of each module. |
+| Top members | `dplyr::slice_max(kme, n = 10)` | The ten highest-kME members of each module. |
 | STRING map | `STRINGdb$new(version = "12.0", species = 9606, score_threshold = 700)`, `$map()` | Reads the files in `00_Input/STRING`. Every module protein, grey included, is mapped by UniProt accession; unmapped proteins drop out. `$set_background()` sets the mapped proteins as background. |
 | STRING enrichment | `$get_ppi_enrichment()` | Per module: observed edges, expected edges (`lambda`), their ratio and a p; BH across modules. |
-| Labels | `dplyr::slice_min(p)` | Per module: the set with the lowest ORA p, the GO Slim term with the lowest p, the hubs and the STRING ratio. |
-| Hub networks | `$get_interactions()`, `tidygraph`, `ggraph` | Each module's 25 highest-kME members and the STRING edges among them at score 700 or more. Force-directed layout, seeded. |
+| Labels | `dplyr::slice_min(p)` | Per module: the set with the lowest ORA p, the GO Slim term with the lowest p, the top members and the STRING ratio. |
+| Member networks | `$get_interactions()`, `tidygraph`, `ggraph` | Each module's 25 highest-kME members and the STRING edges among them at score 700 or more. Force-directed layout, seeded. |
 
 ## How to read the outputs
 
@@ -50,8 +50,8 @@ important ones.
   they co-vary, and members of one pathway co-vary too, so ORA p-values within modules run small.
 - `string` ratio is observed over expected edges. A small module with few expected edges can show a
   large ratio from a handful of edges; read `n_edges` beside it.
-- The hub-network layout carries no meaning: distance and position on the page are arbitrary.
-  Node fill is kME, node size the number of edges among the drawn hubs, edge width the STRING
+- The member-network layout carries no meaning: distance and position on the page are arbitrary.
+  Node fill is kME, node size the number of edges among the drawn members, edge width the STRING
   score.
 - Module colours change when 01_Processing is rebuilt, so this workbook belongs to one build of
   `modules.rds`.
@@ -79,11 +79,11 @@ important ones.
 
 | Sheet | One row is | Key columns |
 |---|---|---|
-| `labels` | a module | `n_proteins`, `top_set`, `top_set_fdr`, `top_go_slim`, `go_slim_fdr`, `hubs`, `string_ratio`, `string_fdr` |
+| `labels` | a module | `n_proteins`, `top_set`, `top_set_fdr`, `top_go_slim`, `go_slim_fdr`, `top_members`, `string_ratio`, `string_fdr` |
 | `ora` | a module and gene set | `set_id`, `collection`, `pathway`, `gene_ratio`, `bg_ratio`, `n_overlap`, `p`, `fdr` |
-| `hubs` | a hub protein | `module`, `uniprot_id`, `gene`, `kme` |
+| `top_members` | one of a module's ten highest-kME proteins | `module`, `uniprot_id`, `gene`, `kme` |
 | `string` | a module | `n_mapped`, `n_edges`, `n_expected`, `ratio`, `p`, `fdr` |
-| `hub_edges` | a STRING edge between two drawn hubs | `module`, `from_gene`, `to_gene`, `combined_score` |
+| `network_edges` | a STRING edge between two drawn members | `module`, `from_gene`, `to_gene`, `combined_score` |
 
 ## Report: `module_characterisation_report.pdf`
 
@@ -91,4 +91,4 @@ important ones.
    ratio, colour BH. Modules with no set at BH < 0.05 do not appear.
 2. STRING edges per module: observed edges against expected, on a log scale, labelled with the
    ratio.
-3. Hub networks, four modules to a page, as many pages as the modules need.
+3. Member networks, four modules to a page, as many pages as the modules need.

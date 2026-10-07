@@ -1,4 +1,4 @@
-# What each module is: its enriched gene sets, its hub proteins, and whether its members
+# What each module is: its enriched gene sets, its top members by kME, and whether its members
 # interact more than chance in STRING.
 #
 # Enrichment is clusterProfiler's hypergeometric ORA against the 04_Gene_Sets sets, with the
@@ -10,7 +10,7 @@
 # degree. STRINGdb reads the v12 files in 00_Input/STRING; at this threshold it takes
 # the min700 links file.
 #
-# The hub drawings show each module's 25 highest-kME members and the STRING edges among them.
+# The network pages show each module's 25 highest-kME members and the STRING edges among them.
 
 suppressPackageStartupMessages({
   library(here)
@@ -48,7 +48,7 @@ modules <- readRDS(paths[["modules"]])
 gs <- readRDS(paths[["gene_sets"]])
 members <- filter(modules$membership, module != "grey")
 string_min_score <- 700L
-hubs_per_module <- 10L
+top_per_module <- 10L
 
 term2gene <- enframe(gs$sets, "set_id", "gene") |> unnest(gene)
 ora_fit <- compareCluster(
@@ -63,8 +63,8 @@ ora <- as_tibble(ora_fit) |>
   ) |>
   left_join(select(gs$set_catalog, set_id, collection, pathway), by = "set_id")
 
-hubs <- members |>
-  slice_max(kme, n = hubs_per_module, by = module, with_ties = FALSE)
+top_members <- members |>
+  slice_max(kme, n = top_per_module, by = module, with_ties = FALSE)
 
 string_db <- STRINGdb$new(
   version = "12.0", species = 9606, score_threshold = string_min_score,
@@ -102,7 +102,10 @@ labels <- count(members, module, name = "n_proteins") |>
       select(module, top_go_slim = pathway, go_slim_fdr = fdr),
     by = "module"
   ) |>
-  left_join(summarise(hubs, hubs = paste(gene, collapse = ", "), .by = module), by = "module") |>
+  left_join(
+    summarise(top_members, top_members = paste(gene, collapse = ", "), .by = module),
+    by = "module"
+  ) |>
   left_join(select(string_check, module, string_ratio = ratio, string_fdr = fdr), by = "module") |>
   arrange(desc(n_proteins))
 
@@ -152,24 +155,24 @@ string_figure <- string_check |>
   caption_theme
 
 # Each module's highest-kME members and the STRING edges among them, at the same score threshold
-# as the enrichment test. Node fill is kME, size the node's degree among the drawn hubs. The
+# as the enrichment test. Node fill is kME, size the node's degree among the drawn members. The
 # layout is seeded; its geometry carries no meaning.
 hubs_drawn <- 25L
-hub_nodes <- mapped |>
+network_nodes <- mapped |>
   filter(module != "grey") |>
   slice_max(kme, n = hubs_drawn, by = module, with_ties = FALSE)
-hub_edges <- string_db$get_interactions(hub_nodes$STRING_id) |>
+network_edges <- string_db$get_interactions(network_nodes$STRING_id) |>
   distinct(from, to, .keep_all = TRUE) |>
-  inner_join(select(hub_nodes, from = STRING_id, module), by = "from") |>
-  inner_join(select(hub_nodes, to = STRING_id, to_module = module), by = "to") |>
+  inner_join(select(network_nodes, from = STRING_id, module), by = "from") |>
+  inner_join(select(network_nodes, to = STRING_id, to_module = module), by = "to") |>
   filter(module == to_module) |>
   select(module, from, to, combined_score)
-max_degree <- max(table(c(hub_edges$from, hub_edges$to)))
-draw_hub_network <- function(which_module) {
-  nodes <- hub_nodes |>
+max_degree <- max(table(c(network_edges$from, network_edges$to)))
+draw_module_network <- function(which_module) {
+  nodes <- network_nodes |>
     filter(module == which_module) |>
     transmute(name = STRING_id, gene, kme)
-  edges <- hub_edges |>
+  edges <- network_edges |>
     filter(module == which_module) |>
     transmute(from, to, score = combined_score / 1000)
   graph <- nodes |>
@@ -187,28 +190,28 @@ draw_hub_network <- function(which_module) {
     scale_fill_viridis_c(option = "mako", direction = -1, limits = c(0.4, 1), name = "kME") +
     scale_size_continuous(range = c(1.5, 5), limits = c(1, max_degree), name = "degree") +
     labs(title = sprintf(
-      "%s: %d edges among %d hubs, %d without an edge", which_module, nrow(edges), nrow(nodes),
+      "%s: %d edges among %d members, %d without an edge", which_module, nrow(edges), nrow(nodes),
       isolated
     )) +
     theme_void(base_size = 9) +
     theme(plot.title = element_text(face = "bold", size = 10), legend.position = "right")
 }
-hub_pages <- labels$module |>
-  map(draw_hub_network) |>
+network_pages <- labels$module |>
+  map(draw_module_network) |>
   split(ceiling(seq_along(labels$module) / 4)) |>
   imap(\(panels, page) {
     wrap_plots(panels, ncol = 2, guides = "collect") +
       plot_annotation(
-        title = "Module hub networks",
+        title = "STRING edges among each module's top members",
         subtitle = sprintf(
           "top %d members by kME per module, STRING v12 edges at score >= %d; page %s of %d",
           hubs_drawn, string_min_score, page, ceiling(length(labels$module) / 4)
         ),
         caption = stringr::str_wrap(width = 190, paste(
           "Nodes: a module's highest-kME members with at least one edge among them, fill = kME,",
-          "size = degree among the drawn hubs; the title counts those without an edge. Edges:",
+          "size = degree among the drawn members; the title counts those without an edge. Edges:",
           "STRING combined score, width = score. Layout is force-directed and seeded; its",
-          "geometry carries no meaning. Table: c_data/module_characterisation.xlsx, hub_edges."
+          "geometry carries no meaning. Table: c_data/module_characterisation.xlsx, network_edges."
         )),
         theme = theme(
           plot.title = element_text(face = "bold", size = 13),
@@ -218,19 +221,19 @@ hub_pages <- labels$module |>
       )
   })
 pdf(file.path(figure_dir, "module_characterisation_report.pdf"), width = 11, height = 8.5)
-walk(c(list(enrichment_figure, string_figure), unname(hub_pages)), print)
+walk(c(list(enrichment_figure, string_figure), unname(network_pages)), print)
 invisible(dev.off())
 
 sheets <- list(
-  labels = labels, ora = arrange(ora, module, p), hubs = hubs, string = string_check,
-  hub_edges = left_join(hub_edges,
-    select(hub_nodes, from = STRING_id, from_gene = gene),
+  labels = labels, ora = arrange(ora, module, p), top_members = top_members, string = string_check,
+  network_edges = left_join(network_edges,
+    select(network_nodes, from = STRING_id, from_gene = gene),
     by = "from"
   ) |>
-    left_join(select(hub_nodes, to = STRING_id, to_gene = gene), by = "to")
+    left_join(select(network_nodes, to = STRING_id, to_gene = gene), by = "to")
 )
 holds <- c(
-  "One row per module: size, top set, top GO Slim term, hubs, STRING enrichment.",
+  "One row per module: size, top set, top GO Slim term, top members, STRING enrichment.",
   "clusterProfiler ORA of every module against the 04_Gene_Sets sets, BH within module.",
   "The ten highest-kME members of each module.",
   "STRINGdb PPI enrichment per module: observed and expected edges at score >= 700.",

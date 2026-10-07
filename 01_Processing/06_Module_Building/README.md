@@ -27,7 +27,7 @@ Two summaries describe a module:
   that best represents how the whole module moves. Its sign is aligned so it rises when the
   module's proteins on average rise.
 - kME (module membership) is each protein's correlation with its module's eigengene. A protein
-  with kME near 1 tracks the module closely; the highest-kME proteins are its hubs.
+  with kME near 1 tracks the module closely; the highest-kME proteins are its top members.
 
 WGCNA treats samples as independent. These 45 biopsies come from 16 people, up to three each, and
 subject identity drives the leading patterns in raw abundance. Fed raw abundance, WGCNA would

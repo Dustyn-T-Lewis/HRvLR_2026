@@ -202,17 +202,19 @@ module_identity <- function(labels, width = 34) {
 }
 
 # What each module is: its size in its own WGCNA colour, named by its top set, with its three
-# strongest hubs. Rows run largest first, the order panel_module_contrasts() uses.
+# three top members by kME. Rows run largest first, the order panel_module_contrasts() uses.
 panel_module_identity <- function(labels, file) {
   d <- labels |>
     mutate(
       module = factor(module, rev(module)),
-      hubs = map_chr(strsplit(hubs, ", "), \(h) paste(utils::head(h, 3), collapse = ", "))
+      top_members = map_chr(
+        strsplit(top_members, ", "), \(h) paste(utils::head(h, 3), collapse = ", ")
+      )
     )
   plot <- ggplot(d, aes(n_proteins, module)) +
     geom_col(aes(fill = module), width = 0.6, colour = "grey30", linewidth = 0.15, alpha = 0.85) +
     geom_text(
-      aes(label = hubs),
+      aes(label = top_members),
       hjust = -0.08, size = 1.7, colour = "grey35", fontface = "italic"
     ) +
     scale_fill_identity() +
@@ -221,15 +223,17 @@ panel_module_identity <- function(labels, file) {
     facet_grid2(. ~ "Module", strip = family_strips(NA, 1)) +
     labs(
       title = "Co-expression programmes",
-      subtitle = sprintf("%d WGCNA modules: size, top set, hub proteins", nrow(labels)),
+      subtitle = sprintf("%d WGCNA modules: size, top set, top members", nrow(labels)),
       x = "proteins", y = NULL
     ) +
     figure_theme +
     theme(panel.grid.major.y = element_blank(), axis.text.y = element_text(size = 5.5))
   list(
-    plot = plot, data = select(d, module, n_proteins, top_set, top_set_fdr, hubs, string_ratio),
+    plot = plot,
+    data = select(d, module, n_proteins, top_set, top_set_fdr, top_members, string_ratio),
     source = panel_source(
-      "a", "module size, top set and hubs", file, "labels", "every module; top set if FDR < 0.05"
+      "a", "module size, top set and top members", file, "labels",
+      "every module; top set if FDR < 0.05"
     )
   )
 }

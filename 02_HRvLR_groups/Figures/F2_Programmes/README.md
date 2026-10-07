@@ -14,7 +14,7 @@ by person.
 
 | Panel | Draws | Rule that picks the rows |
 |---|---|---|
-| a | Each module's size as a bar in its WGCNA colour, named by its top over-represented gene set (or "no set at FDR < 0.05"), with its three strongest hub proteins (highest kME). | every module, largest first |
+| a | Each module's size as a bar in its WGCNA colour, named by its top over-represented gene set (or "no set at FDR < 0.05"), with its three top members (highest kME). | every module, largest first |
 | b | Each module's eigengene in the nine contrasts, same rows as a. Tile fill is the eigengene logFC; a filled dot marks limma's eigengene FDR < 0.05, an open dot p < 0.05 only; a square marks fry p < 0.05 on the module's proteins. Columns sit under Training, Acute, Between groups and Interaction strips. | every module and contrast |
 | c | Gene sets called per contrast, stacked up and down, in three columns: fgsea at FDR < 0.05, fry at FDR < 0.05, fry at p < 0.05. The dashed line in the last column is 5% of the sets tested, the count chance gives at p < 0.05. | every set and contrast |
 | d | Each person's eigengene at T1, T2 and T3 for one module, one facet per group, with the group mean as a thick line. The subtitle gives that module's logFC and p in both interaction contrasts. | the module with the smallest eigengene p in either interaction contrast |
@@ -30,7 +30,7 @@ different questions and can disagree.
 
 | Step | Function | Detail |
 |---|---|---|
-| Panel a | `panel_module_identity()`, `module_identity()` in `R/figure_panels.R` | Labels, top set and hubs from `module_characterisation.xlsx`, sheet `labels`. A top set is named only at FDR < 0.05. |
+| Panel a | `panel_module_identity()`, `module_identity()` in `R/figure_panels.R` | Labels, top set and top members from `module_characterisation.xlsx`, sheet `labels`. A top set is named only at FDR < 0.05. |
 | Panel b | `panel_module_contrasts()` | `eigengene_tests` and `fry_tests` from `module_contrasts.xlsx`; marks from `evidence_level()` in `R/figure_theme.R`. |
 | Panel c | `panel_set_calls()` | `set_tests` from `set_tests.rds`; chance line at `n_tested * 0.05`. |
 | Panel d | `panel_module_people()` | Eigengenes and metadata from `modules.rds`. |
@@ -70,7 +70,7 @@ F2_Programmes/
 | Sheet | One row is | Key columns |
 |---|---|---|
 | `panel_sources` | a panel | `panel`, `shows`, `file`, `sheet`, `rule` |
-| `panel_a` | a module | `n_proteins`, `top_set`, `top_set_fdr`, `hubs`, `string_ratio` |
+| `panel_a` | a module | `n_proteins`, `top_set`, `top_set_fdr`, `top_members`, `string_ratio` |
 | `panel_b` | a module in a contrast | `logFC`, `p`, `fdr`, `p_fry`, `fdr_fry`, `family`, `column` |
 | `panel_c` | a call and contrast | `call`, `family`, `row`, `contrast`, `n` |
 | `panel_d` | a biopsy of the drawn module | `subject`, `arm`, `timepoint`, `value`, `module` |

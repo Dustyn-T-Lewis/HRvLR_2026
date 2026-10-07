@@ -170,7 +170,7 @@ soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThres
 ,top_set_fdr,FDR of the top set.
 ,top_go_slim,Most over-represented GO Slim term.
 ,go_slim_fdr,FDR of the top GO Slim term.
-,hubs,Members with the highest kME.
+,top_members,Members with the highest kME.
 ,string_ratio,"STRING interactions among the members, observed over expected."
 ,string_fdr,FDR of the STRING interaction enrichment.
 ,gene_ratio,Members in the set over members tested.
