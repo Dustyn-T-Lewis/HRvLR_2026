@@ -22,7 +22,7 @@ inputs <- c(
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
-    "Run 01_Gene_Sets first. Missing: ",
+    "Run 04_Gene_Sets first. Missing: ",
     paste(inputs[!file.exists(paths)], collapse = ", ")
   )
 }

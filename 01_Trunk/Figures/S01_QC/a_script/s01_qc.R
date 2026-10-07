@@ -192,7 +192,12 @@ panel_blood <- ggplot(blood, aes(timepoint, blood_rel, colour = timepoint, shape
   figure_theme
 
 # h: each protein's log2 FC with and without the blood covariate, every contrast pooled.
-dep <- read_sheet("contrasts", "DEP_matrix")
+# One row per protein, logFC and p per contrast, as the unadjusted sheet is laid out.
+dep <- read_sheet("contrasts", "protein_by_contrast") |>
+  tidyr::pivot_wider(
+    id_cols = uniprot_id, names_from = contrast, values_from = c(logFC, p),
+    names_glue = "{contrast}_{.value}"
+  )
 unadjusted <- read_sheet("contrasts", "unadjusted")
 blood_effect <- names(contrast_family) |>
   map(\(cn) {
@@ -283,7 +288,7 @@ figure <- wrap_plots(
   plot_annotation(tag_levels = "a") &
   figure_tags &
   theme(legend.position = "bottom", legend.key.size = unit(2.5, "mm"))
-save_figure(figure, figure_dir, "s04_qc", width = 300, height = 190)
+save_figure(figure, figure_dir, "s01_qc", width = 300, height = 190)
 
 sheets <- list(
   filter_log = select(filter_log, step, n_removed, n_after),
@@ -309,5 +314,5 @@ holds <- c(
   "Panel i: per contrast, propTrueNull, median |t| and share of p below 0.2.",
   "Panel j: log2 FC the training interaction detects at 80% power."
 )
-write_workbook(sheets, holds, file.path(out, "s04_qc.xlsx"), inputs, paths)
-message("wrote s04_qc.pdf, s04_qc.png and s04_qc.xlsx")
+write_workbook(sheets, holds, file.path(out, "s01_qc.xlsx"), inputs, paths)
+message("wrote s01_qc.pdf and s01_qc.xlsx")

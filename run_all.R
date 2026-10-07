@@ -63,7 +63,8 @@ stages <- c(
   "02_HRvLR_groups/Figures/F3_People",
   "02_HRvLR_groups/Figures/S01_Volcano",
   "02_HRvLR_groups/Figures/S02_NES_Scatter",
-  "02_HRvLR_groups/Figures/S03_Signatures"
+  "02_HRvLR_groups/Figures/S03_Signatures",
+  "01_Trunk/Figures/S01_QC"
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]

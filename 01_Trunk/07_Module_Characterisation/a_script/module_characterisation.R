@@ -40,7 +40,7 @@ inputs <- c(
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
-    "Run 06_Module_Building and 01_Gene_Sets, and fetch STRING (00_Input/README.md). ",
+    "Run 06_Module_Building and 04_Gene_Sets, and fetch STRING (00_Input/README.md). ",
     "Missing: ", paste(inputs[!file.exists(paths)], collapse = ", ")
   )
 }
@@ -234,7 +234,7 @@ sheets <- list(
 )
 holds <- c(
   "One row per module: size, top set, top GO Slim term, hubs, STRING enrichment.",
-  "clusterProfiler ORA of every module against the 01_Gene_Sets sets, BH within module.",
+  "clusterProfiler ORA of every module against the 04_Gene_Sets sets, BH within module.",
   "The ten highest-kME members of each module.",
   "STRINGdb PPI enrichment per module: observed and expected edges at score >= 700.",
   "STRING edges among each module's 25 highest-kME members, as drawn."

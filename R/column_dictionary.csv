@@ -69,7 +69,7 @@ soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThres
 ,size,Proteins of the set present in the ranking.
 ,source_size,Genes in the set as published.
 ,measured_size,Proteins of the set measured here.
-,qualifies,TRUE when the measured size lies between 15 and 500 and the set is tested.
+,qualifies,TRUE when the set is tested: 15 to 500 genes in the source (MSigDB sets) and at least 15 measured.
 ,n_subjects,People contributing to the row.
 ,n_samples,Biopsies contributing to the row.
 ,n_obs,Biopsies in which the protein was observed rather than estimated.

@@ -221,7 +221,7 @@ panel_module_identity <- function(labels, file) {
     facet_grid2(. ~ "Module", strip = family_strips(NA, 1)) +
     labs(
       title = "Co-expression programmes",
-      subtitle = "15 WGCNA modules: size, top set, hub proteins",
+      subtitle = sprintf("%d WGCNA modules: size, top set, hub proteins", nrow(labels)),
       x = "proteins", y = NULL
     ) +
     figure_theme +
