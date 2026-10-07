@@ -1,6 +1,6 @@
-# Read one MSigDB release, map the protein matrix onto gene symbols, and keep the sets large
-# enough to test. Writes the set list every set-level step in 01_Processing and the arcs reads, so
-# membership is decided once.
+# Read one MSigDB release, map the protein matrix onto gene symbols, and keep the sets large enough
+# to test. Writes the set list every set-level step in 01_Processing and the analysis folders read,
+# so membership is decided once.
 
 suppressPackageStartupMessages({
   library(here)

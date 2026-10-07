@@ -40,7 +40,7 @@ observed <- proteins$other$n.observations > 0
 stopifnot(!anyNA(proteins$E), identical(observed, !is.na(values)))
 
 # The blood slope is fitted beside time point only, so no group label shapes the corrected matrix
-# that every arc reads.
+# that every analysis reads.
 corrected <- blood_corrected(proteins$E, meta$blood, model.matrix(~ 0 + timepoint, meta))
 as_dalist <- function(data) {
   list(data = data, annotation = dal$annotation, metadata = meta, observed = observed)

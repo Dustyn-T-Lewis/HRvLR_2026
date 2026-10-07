@@ -1,4 +1,4 @@
-# Panel builders shared by the figures in every arc's Figures folder. Each takes its data as
+# Panel builders shared by the figures in every Figures folder. Each takes its data as
 # arguments and returns a ggplot (or a list holding one and the numbers it plots); colours and
 # theme come from figure_theme.R, which must be sourced first.
 
@@ -169,9 +169,9 @@ save_figure <- function(plot, dir, stem, width, height) {
 }
 
 
-# The builders below serve F2 and F3 in every arc. Each returns list(plot, data, source): the plot,
-# the numbers it draws, and one row naming where they come from. They expect ggplot2, dplyr, tidyr
-# and purrr attached, and pick rows by the rule each states.
+# The builders below serve F2 and F3 in every grouping. Each returns list(plot, data, source): the
+# plot, the numbers it draws, and one row naming where they come from. They expect ggplot2, dplyr,
+# tidyr and purrr attached, and pick rows by the rule each states.
 panel_source <- \(panel, shows, file, sheet, rule) {
   tibble::tibble(panel, shows, file, sheet, rule)
 }

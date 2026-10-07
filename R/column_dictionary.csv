@@ -12,7 +12,7 @@ sheet,column,meaning
 ,module,WGCNA module colour.
 ,sample_id,One biopsy: subject_timepoint.
 ,subject,Participant identifier.
-,arm,"Study group of the participant (HR or LR), or the cluster that replaces it in a cluster arc."
+,arm,"Study group of the participant (HR or LR), or the cluster that replaces it in a cluster grouping."
 ,group,"Group the row belongs to (HR, LR, Hi, Lo, C1, C2), or a group cell such as HR_T1."
 ,timepoint,"T1 baseline, T2 after training, T3 after the acute bout at the end of training."
 ,level,"Feature level: proteins, sets or modules."

@@ -1,6 +1,6 @@
-# The continuous arc's association step, shared by the protein, set and module levels. Each level's
-# script reads its own matrix and labels and passes them here. No group label enters: every subject
-# is pooled and each trait is a number.
+# The continuous analysis's association step, shared by the protein, set and module levels. Each
+# level's script reads its own matrix and labels and passes them here. No group label enters: every
+# subject is pooled and each trait is a number.
 #
 # Sample model: every T1 and T2 biopsy carries its own trait values. Per trait, limma fits
 # abundance ~ timepoint + between + within with subject blocked, where between is the subject's

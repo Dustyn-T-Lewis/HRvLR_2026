@@ -1,7 +1,7 @@
 # Runs every substage in order, each in its own R session, and stops at the first failure.
 #   Rscript run_all.R               all stages
-#   Rscript run_all.R 01 04         only the arcs whose folder starts with 01 or 04
-# Logs go to .runlogs/<arc>_<substage>.log.
+#   Rscript run_all.R 01 04         only the folders starting 01 or 04
+# Logs go to .runlogs/, one per step.
 
 stages <- c(
   "01_Processing/01_Protein_Filtering",
@@ -57,7 +57,7 @@ stages <- c(
   "04_Continuous_no_group/02_Trait_Pathways",
   "04_Continuous_no_group/03_Profile_Clusters",
   "04_Continuous_no_group/Figures/F1_Overview",
-  # Figures last: F3 reads the continuous arc.
+  # Figures last: F3 reads 04_Continuous_no_group.
   "02_HRvLR_groups/Figures/F1_Overview",
   "02_HRvLR_groups/Figures/F2_Programmes",
   "02_HRvLR_groups/Figures/F3_People",

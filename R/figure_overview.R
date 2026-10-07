@@ -1,5 +1,5 @@
-# Figure 1 panels for any arc that compares two groups (HR/LR, Hi/Lo, C1/C2). Each builder takes
-# saved outputs and the two group names, and returns list(plot, data). figure_theme.R and
+# Figure 1 panels for any grouping that compares two groups (HR/LR, Hi/Lo, C1/C2). Each builder
+# takes saved outputs and the two group names, and returns list(plot, data). figure_theme.R and
 # figure_panels.R must be sourced first, with dplyr, tidyr, purrr, tibble and ggplot2 attached.
 
 # The nine contrasts of a two-group design with their panel family and row label: the group for a
@@ -99,7 +99,7 @@ panel_protein_counts <- function(proteins, groups, n_tested, validity = NULL) {
 # Proteome and phenotype PCA side by side, each with its PERMANOVA (from the protein-contrasts
 # stage). The phenotype is the six size and strength traits at T1 and T2, scaled; a biopsy missing
 # a trait is left out rather than filled. Groups are not tested on the phenotype when they were
-# split on it. group_of relabels people for a cluster arc.
+# split on it. group_of relabels people for a cluster grouping.
 panel_pca_pair <- function(pca, variance, permanova, phenotype, groups, group_of = NULL,
                            n_proteins = NULL) {
   shapes <- set_names(unname(arm_shapes), groups)
@@ -272,7 +272,7 @@ panel_pathway_grid <- function(set_tests, gene_sets, groups) {
   )
 }
 
-# Figure 1 for a two-group arc: the arc's own panel a (design or clustering), then b proteins per
+# Figure 1 for a two-group grouping: its own panel a (design or clustering), then b proteins per
 # contrast, c proteome and phenotype PCA, d the pathway grid, and e-f each group's training and
 # acute sets ranked in the other group. inputs must name contrasts (the protein-contrasts
 # workbook), set_tests, gene_sets and phenotype. Every plotted number is checked against its
@@ -358,9 +358,9 @@ figure_overview <- function(panel_a, inputs, paths, groups, out_dir, stem, a_she
   )
 }
 
-# Panel a for a cluster arc: each person on the first two components of what they were clustered
-# on, coloured by group, with HR/LR as shape; people not clustered are grey. The subtitle gives the
-# K the gap statistic selects, the K used, and each group's size and bootstrap Jaccard.
+# Panel a for a cluster grouping: each person on the first two components of what they were
+# clustered on, coloured by group, with HR/LR as shape; people not clustered are grey. The subtitle
+# gives the K the gap statistic selects, the K used, and each group's size and bootstrap Jaccard.
 panel_clustering <- function(space, variance, choice, stability, groups, clustered_on) {
   d <- space |>
     mutate(group = factor(group, groups), arm = factor(arm, c("HR", "LR")))

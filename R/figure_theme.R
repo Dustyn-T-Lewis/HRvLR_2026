@@ -1,4 +1,4 @@
-# Colours and theme shared by every figure in every arc. The contrast palette is sampled from the
+# Colours and theme shared by every figure in every folder. The contrast palette is sampled from the
 # design panel (02_HRvLR_groups/Figures/F1_Overview/assets/design.png), so a contrast family looks
 # the same in the schematic and in every plot.
 #
@@ -129,15 +129,6 @@ contrast_window <- function(contrast) {
     startsWith(contrast, "Acute") ~ "Acute"
   )
 }
-contrast_colour <- function(contrast, groups = c("HR", "LR")) {
-  group <- sub(".*_", "", contrast)
-  family <- contrast_family(contrast)
-  shade <- dplyr::case_when(group == groups[1] ~ "ink", group == groups[2] ~ "line")
-  ifelse(
-    is.na(shade), contrast_tone("line")[family],
-    purrr::map2_chr(family, shade, \(f, s) if (is.na(s)) NA else contrast_tone(s)[[f]])
-  )
-}
 
 # The strip a contrast sits under from F2 on, which names no group, and its short column label:
 # the group for a within-group window, the time point for a between-group level, the window for an
@@ -155,7 +146,7 @@ contrast_short <- function(contrast) {
     .default = sub(".*_", "", contrast)
   )
 }
-# The two groups of any arc in the design panel's HR (dark) and LR (light) greys.
+# The two groups of any grouping in the design panel's HR (dark) and LR (light) greys.
 group_colours <- \(groups) rlang::set_names(unname(arm_colours), groups)
 
 # Trait column names as axis text: "pct_leg_press_1rm" reads "leg press 1RM (% change)".

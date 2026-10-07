@@ -1,5 +1,5 @@
-# Figure 1 for the continuous arc: every person pooled and each trait kept as a number. Reads saved
-# outputs only; the one computation is the proteome PCA, a projection with no test.
+# Figure 1 for the continuous analysis: every person pooled and each trait kept as a number. Reads
+# saved outputs only; the one computation is the proteome PCA, a projection with no test.
 #   a  each person's training response, trait by trait
 #   b  share of features linked to each trait (p < 0.05) per window and level, against chance
 #   c  the proteome PCA, coloured by growth and by strength gain
@@ -19,17 +19,17 @@ source(here("R", "helpers.R"))
 source(here("R", "figure_theme.R"))
 source(here("R", "figure_panels.R"))
 
-arc <- "04_Continuous_no_group"
-stage <- here(arc, "Figures", "F1_Overview")
+folder <- "04_Continuous_no_group"
+stage <- here(folder, "Figures", "F1_Overview")
 walk(file.path(stage, c("b_reports", "c_data")), dir.create, recursive = TRUE, showWarnings = FALSE)
-level_file <- \(level, name) file.path(arc, "01_Trait_Associations", level, "c_data", name)
+level_file <- \(level, name) file.path(folder, "01_Trait_Associations", level, "c_data", name)
 inputs <- c(
   proteins = level_file("01_Proteins", "protein_trait_associations.xlsx"),
   sets = level_file("02_Sets", "set_trait_associations.xlsx"),
   modules = level_file("03_Modules", "module_trait_associations.xlsx"),
-  pathways = file.path(arc, "02_Trait_Pathways/c_data/trait_pathways.xlsx"),
+  pathways = file.path(folder, "02_Trait_Pathways/c_data/trait_pathways.xlsx"),
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  profiles = file.path(arc, "03_Profile_Clusters/c_data/profile_clusters.xlsx"),
+  profiles = file.path(folder, "03_Profile_Clusters/c_data/profile_clusters.xlsx"),
   corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
   phenotype = "00_Input/phenotype.csv"
 )
