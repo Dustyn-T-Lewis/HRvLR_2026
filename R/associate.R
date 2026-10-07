@@ -48,7 +48,6 @@ associate_step <- function(stage, name, inputs, paths, values, meta, feature_lab
   phenotype_list <- phenotype_tables(phenotype)
   traits <- phenotype_list$traits
   biopsy <- phenotype_list$biopsy
-  outcomes <- phenotype_list$outcomes
   pairing_tables <- phenotype_list$pairings
   pairing_outcomes <- map(pairing_tables, \(tt) setdiff(names(tt), "subject"))
   outcome_of <- \(name, subjects) pairing_value(pairing_tables, "training", name, subjects)

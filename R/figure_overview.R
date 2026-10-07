@@ -27,7 +27,7 @@ overview_contrasts <- function(groups) {
 
 # Proteins per contrast. The light bar counts every protein at p < 0.05 (or Pi < 0.05); the dark
 # bar, drawn over it from zero, counts the Pi < 0.05 subset. Each row's name sits in a box in its
-# family's tint and border. `validity`, named by contrast, adds a tag to each row label.
+# family's tint and border. validity, named by contrast, adds a tag to each row label.
 panel_protein_counts <- function(proteins, groups, n_tested, validity = NULL) {
   contrast_labels <- overview_contrasts(groups)
   if (!is.null(validity)) {
@@ -99,7 +99,7 @@ panel_protein_counts <- function(proteins, groups, n_tested, validity = NULL) {
 # Proteome and phenotype PCA side by side, each with its PERMANOVA (from the protein-contrasts
 # stage). The phenotype is the six size and strength traits at T1 and T2, scaled; a biopsy missing
 # a trait is left out rather than filled. Groups are not tested on the phenotype when they were
-# split on it. `group_of` relabels people for a cluster arc.
+# split on it. group_of relabels people for a cluster arc.
 panel_pca_pair <- function(pca, variance, permanova, phenotype, groups, group_of = NULL,
                            n_proteins = NULL) {
   shapes <- set_names(unname(arm_shapes), groups)
@@ -162,7 +162,7 @@ panel_pathway_grid <- function(set_tests, gene_sets, groups) {
   collections <- c(
     Hallmark = "#332288", Reactome = "#88CCEE", KEGG_Legacy = "#DDCC77", GOBP = "#777777"
   )
-  members <- map(gene_sets$sets, \(s) intersect(s, gene_sets$gene_universe))
+  members <- gene_sets$sets
   fgsea <- set_tests$set_tests |>
     filter(method == "fgsea", collection %in% names(collections)) |>
     select(contrast, set_id, collection, pathway, nes, fdr, leading_edge)
@@ -274,7 +274,7 @@ panel_pathway_grid <- function(set_tests, gene_sets, groups) {
 
 # Figure 1 for a two-group arc: the arc's own panel a (design or clustering), then b proteins per
 # contrast, c proteome and phenotype PCA, d the pathway grid, and e-f each group's training and
-# acute sets ranked in the other group. `inputs` must name contrasts (the protein-contrasts
+# acute sets ranked in the other group. inputs must name contrasts (the protein-contrasts
 # workbook), set_tests, gene_sets and phenotype. Every plotted number is checked against its
 # source table before anything is written.
 figure_overview <- function(panel_a, inputs, paths, groups, out_dir, stem, a_sheets = list(),

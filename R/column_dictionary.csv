@@ -142,7 +142,6 @@ soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThres
 ,n_qualifying,Sets of the collection that qualify for testing.
 ,median_measured,Median measured size of the collection's sets.
 ,n_seq,Peptide sequences behind the protein.
-,mean_obs,Samples in which the protein was observed.
 ,mapping_status,How the protein maps to a gene symbol.
 ,selected,TRUE when the protein represents its gene symbol in the gene sets.
 ,min,Smallest value.

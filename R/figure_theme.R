@@ -2,8 +2,8 @@
 # design panel (02_HRvLR_groups/Figures/F1_Overview/assets/design.png), so a contrast family looks
 # the same in the schematic and in every plot.
 #
-# Each family has three tones: `line` is the panel's own colour, for marks; `fill` is the panel's
-# box tint, behind strip labels; `ink` is a darker shade of the same hue for text, because the
+# Each family has three tones: line is the panel's own colour, for marks; fill is the panel's
+# box tint, behind strip labels; ink is a darker shade of the same hue for text, because the
 # panel's orange and yellow are too light to read at 6 pt on white.
 
 contrast_palette <- tibble::tribble(
@@ -62,7 +62,7 @@ figure_tags <- ggplot2::theme(
 )
 
 # Facet strips as the design panel's labelled boxes: family tint inside a border in the family
-# colour, with the name in bold black. A level outside the palette (the database column in F01)
+# colour, with the name in bold black. A level outside the palette (the database column in Figure 1)
 # gets no box.
 contrast_strips <- function(x = NULL, y = NULL) {
   line <- contrast_tone("line")
@@ -84,7 +84,7 @@ contrast_strips <- function(x = NULL, y = NULL) {
 # Axis labels coloured one by one, rendered with ggtext::element_markdown().
 in_colour <- \(text, colour) sprintf("<span style='color:%s'>%s</span>", colour, text)
 
-# The two thresholds every figure from F02 on uses, and one way of printing p and FDR.
+# The two thresholds the figures use, and one way of printing p and FDR.
 alpha_nominal <- 0.05
 alpha_fdr <- 0.05
 label_p <- scales::label_pvalue(accuracy = 0.001, prefix = c("p < ", "p = ", "p > "))

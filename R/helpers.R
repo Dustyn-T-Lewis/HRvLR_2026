@@ -52,20 +52,21 @@ subject_change <- function(values, meta, from, to) {
 # Permutation p that is never zero: (b + 1) / (m + 1) (Phipson & Smyth 2010).
 permutation_p <- function(observed, null) (sum(null >= observed) + 1) / (length(null) + 1)
 
-# A feature needs three observations per side. Ties push wilcox.test to its normal approximation
-# and it warns on every call.
 sides <- function(spec, id) {
   pos <- spec$positive[id, ]
   neg <- spec$negative[id, ]
   list(pos = pos[!is.na(pos)], neg = neg[!is.na(neg)])
 }
+# A feature needs three observations per side. Ties push wilcox.test to its normal approximation
+# and it warns on every call.
 classify_row <- function(spec, id) {
   s <- sides(spec, id)
   n <- c(n_positive = length(s$pos), n_negative = length(s$neg))
   if (min(n) < 3) {
     return(c(auc = NA, auc_lower = NA, auc_upper = NA, p = NA, n))
   }
-  w <- suppressWarnings(wilcox.test(s$pos, s$neg)$statistic)
+  test <- suppressWarnings(wilcox.test(s$pos, s$neg))
+  w <- unname(test$statistic)
   # direction = "<" pins the first group as the higher side; pROC otherwise flips any AUC below
   # 0.5. At perfect separation DeLong's variance is zero and the interval collapses, so none is
   # given.
@@ -78,15 +79,15 @@ classify_row <- function(spec, id) {
       _[c(1, 3)]
   }
   c(
-    auc = unname(w) / prod(n), auc_lower = interval[1], auc_upper = interval[2],
-    p = suppressWarnings(wilcox.test(s$pos, s$neg)$p.value), n
+    auc = w / prod(n), auc_lower = interval[1], auc_upper = interval[2], p = test$p.value, n
   )
 }
 
 # The phenotype as the association steps use it, one row per subject per table. Size and strength
 # traits only (the MyoVision fibre counts stay out). pairings maps each window to the table it is
 # tested against: % change, composite and volume for the change windows and for the T1 level
-# ("baseline"), the trait levels at the same biopsy for baseline_level and post_level.
+# ("baseline"), the trait levels at the same biopsy for baseline_level and post_level, and the T2
+# levels for post_bout_level, since T3 follows the same training.
 phenotype_tables <- function(phenotype) {
   traits <- c("fcsa_mixed", "fcsa_type1", "fcsa_type2", "mcsa", "leg_press_1rm", "leg_ext_1rm")
   biopsy <- phenotype |>
@@ -106,7 +107,6 @@ phenotype_tables <- function(phenotype) {
   level <- \(tp) filter(biopsy, timepoint == tp) |> select(subject, all_of(traits))
   list(
     traits = traits, biopsy = biopsy,
-    outcomes = c("comp_hypertrophy", "volume_load_total_kg", paste0("pct_", traits)),
     pairings = list(
       training = change, baseline = change, acute = change,
       baseline_level = level("T1"), post_level = level("T2"), post_bout_level = level("T2")
@@ -238,8 +238,6 @@ counts_line <- \(info, noun, hits) {
   )
 }
 
-# Every workbook opens on read_me and ends with the inputs' md5 and the loaded packages; note, when
-# given, is one more read_me row.
 # What every column in every workbook holds, from R/column_dictionary.csv: a name (or a pattern
 # starting with ^) and, where one name means different things, the sheets it applies to. The
 # columns sheet lists each sheet's columns with their meaning; a column the dictionary does not
@@ -269,6 +267,8 @@ describe_columns <- function(sheets) {
   mutate(rows, meaning = meaning)
 }
 
+# Every workbook opens on read_me and columns and ends with the inputs' md5 and the loaded packages;
+# note, when given, is one more read_me row.
 write_workbook <- function(sheets, holds, file, inputs, paths, note = NULL) {
   sheets <- c(sheets, list(
     input_manifest = tibble(

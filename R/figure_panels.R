@@ -27,10 +27,10 @@ pca_panel <- function(scores, variance, title, subtitle, stats, shapes = arm_sha
     figure_theme
 }
 
-# One window's signature rank: each arm's sets for that window (p < 0.05 or Pi < 0.05) placed in
-# the other arm's ranking for the same window, drawn as limma's barcode (Wu & Smyth 2012).
+# One window's signature rank: each group's sets for that window (p < 0.05 or Pi < 0.05) placed in
+# the other group's ranking for the same window, drawn as limma's barcode (Wu & Smyth 2012).
 # Members are ticks, the up-set above the axis and the down-set below, with a tricube moving
-# average of membership along the rank. The two arms are different people, so the comparison
+# average of membership along the rank. The two groups are different people, so the comparison
 # shares no group mean and fry's result (02_Protein_Contrasts, fry_concordance) is a clean test.
 signature_barcode <- function(proteins, fry_rows, window, set_level = "nominal",
                               span = 0.12, floor = 0.34, groups = c("HR", "LR")) {
@@ -133,8 +133,8 @@ signature_barcode <- function(proteins, fry_rows, window, set_level = "nominal",
   )
 }
 
-# Keeps each set unless it shares at least `cut` of its measured proteins with a set already kept;
-# `ids` must be ordered strongest first.
+# Keeps each set unless it shares at least cut of its measured proteins with a set already kept;
+# ids must be ordered strongest first.
 prune_overlapping <- function(ids, members, cut = 0.5) {
   overlap <- \(a, b) length(intersect(a, b)) / min(length(a), length(b))
   purrr::reduce(ids, \(kept, id) {
@@ -177,7 +177,7 @@ panel_source <- \(panel, shows, file, sheet, rule) {
 }
 
 # Strip boxes for facets named after something other than a contrast family, in one family's tint,
-# or in grey when `family` is NA.
+# or in grey when family is NA.
 family_strips <- function(family, n, axis = "x") {
   tone <- \(name, grey) dplyr::coalesce(contrast_tone(name)[family], grey)
   boxes <- ggh4x::elem_list_rect(
@@ -236,7 +236,7 @@ panel_module_identity <- function(labels, file) {
 
 # Every module on every contrast: tile fill is the eigengene logFC; the dot is limma's evidence on
 # the eigengene, filled at FDR and open at p only; the square marks fry p < alpha_nominal on the
-# module's proteins. Rows follow `module_levels`, so the panel sits beside panel_module_identity().
+# module's proteins. Rows follow module_levels, so the panel sits beside panel_module_identity().
 panel_module_contrasts <- function(eigengene_tests, fry_tests, module_levels, groups, file) {
   d <- eigengene_tests |>
     select(contrast, module, logFC, p, fdr) |>
