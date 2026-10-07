@@ -11,20 +11,22 @@ contrast_palette <- tibble::tribble(
   "Training", "#317EC2", "#B9DBF4", "#1F5A8F",
   "Acute", "#E7872B", "#F6BF93", "#A85A0E",
   "HR - LR", "#4F609C", "#E5EBFB", "#36447A",
+  "Hi - Lo", "#4F609C", "#E5EBFB", "#36447A",
+  "C1 - C2", "#4F609C", "#E5EBFB", "#36447A",
   "Between groups", "#4F609C", "#E5EBFB", "#36447A",
   "Interaction", "#E9C61D", "#F4E6AA", "#8A7208"
 )
 contrast_tone <- \(tone) tibble::deframe(contrast_palette[c("family", tone)])
 
-# Within Training and Acute, HR takes the ink and LR the line colour, so HR reads darker, as in the
-# design panel, and both stay legible.
-arm_shade <- function(family, arm) {
+# Within Training and Acute, the first group (HR) takes the ink and the second (LR) the line colour,
+# so the first reads darker, as in the design panel, and both stay legible.
+arm_shade <- function(family, arm, groups = c("HR", "LR")) {
   purrr::map2_chr(family, arm, \(f, a) {
     row <- contrast_palette[contrast_palette$family == f, ]
-    if (!nrow(row) || !a %in% c("HR", "LR")) {
+    if (!nrow(row) || !a %in% groups) {
       return("grey30")
     }
-    if (a == "HR") row$ink else row$line
+    if (a == groups[1]) row$ink else row$line
   })
 }
 

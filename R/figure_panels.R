@@ -3,7 +3,7 @@
 # theme come from figure_theme.R, which must be sourced first.
 
 # PCA scores with a shaded 95% t-ellipse per time point and a test summary in the top-left corner.
-pca_panel <- function(scores, variance, title, subtitle, stats) {
+pca_panel <- function(scores, variance, title, subtitle, stats, shapes = arm_shapes) {
   axis <- \(i) sprintf("PC%d (%.1f%%)", i, 100 * variance[i])
   ggplot2::ggplot(scores, ggplot2::aes(PC1, PC2)) +
     ggplot2::stat_ellipse(
@@ -20,7 +20,7 @@ pca_panel <- function(scores, variance, title, subtitle, stats) {
       values = time_colours, limits = names(time_colours), name = NULL
     ) +
     ggplot2::scale_fill_manual(values = time_colours, limits = names(time_colours), name = NULL) +
-    ggplot2::scale_shape_manual(values = arm_shapes, name = NULL) +
+    ggplot2::scale_shape_manual(values = shapes, name = NULL) +
     # Headroom above the points for the test summary.
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.05, 0.32))) +
     ggplot2::labs(x = axis(1), y = axis(2), title = title, subtitle = subtitle) +
@@ -33,8 +33,8 @@ pca_panel <- function(scores, variance, title, subtitle, stats) {
 # average of membership along the rank. The two arms are different people, so the comparison
 # shares no group mean and fry's result (02_Protein_Contrasts, fry_concordance) is a clean test.
 signature_barcode <- function(proteins, fry_rows, window, set_level = "nominal",
-                              span = 0.12, floor = 0.34) {
-  contrasts <- paste0(window, c("_HR", "_LR"))
+                              span = 0.12, floor = 0.34, groups = c("HR", "LR")) {
+  contrasts <- paste0(window, "_", groups)
   threshold <- c(nominal = "p", pi = "pi_score")[[set_level]]
   level_text <- c(nominal = "p < 0.05", pi = "\u03a0 < 0.05")[[set_level]]
   rankings <- proteins |>
@@ -49,12 +49,12 @@ signature_barcode <- function(proteins, fry_rows, window, set_level = "nominal",
     dplyr::filter(contrast %in% contrasts, .data[[threshold]] < 0.05) |>
     dplyr::transmute(
       chosen = sub(".*_", "", contrast), direction = ifelse(logFC > 0, "up", "down"),
-      uniprot_id, ranked_in = ifelse(chosen == "HR", "LR", "HR")
+      uniprot_id, ranked_in = ifelse(chosen == groups[1], groups[2], groups[1])
     ) |>
     dplyr::inner_join(rankings, by = c("ranked_in", "uniprot_id")) |>
     dplyr::summarise(ranks = list(rank), n = dplyr::n(), .by = c(chosen, ranked_in, direction)) |>
     dplyr::mutate(
-      lane = factor(lane_name(chosen, ranked_in), lane_name(c("LR", "HR"), c("HR", "LR"))),
+      lane = factor(lane_name(chosen, ranked_in), lane_name(rev(groups), groups)),
       side = ifelse(direction == "up", 1, -1)
     )
   ticks <- lanes |>
@@ -114,11 +114,11 @@ signature_barcode <- function(proteins, fry_rows, window, set_level = "nominal",
     ) +
     ggplot2::labs(
       x = sprintf(
-        "rank in the other arm's %s contrast, up to down (n = %d)", tolower(window), n_ranked
+        "rank in the other group's %s contrast, up to down (n = %d)", tolower(window), n_ranked
       ),
       y = NULL, title = paste(window, "signature rank"),
       subtitle = sprintf(
-        "fry: each arm's %s %s sets in the other arm's ranking", level_text, tolower(window)
+        "fry: each group's %s %s sets in the other group's ranking", level_text, tolower(window)
       )
     ) +
     figure_theme +
