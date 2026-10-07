@@ -1,5 +1,5 @@
 # Runs every step in order, each in its own R session, and stops at the first failure. A full run
-# then rewrites the step READMEs and pipeline.png.
+# then rewrites the step READMEs and pipeline.png and runs the tests.
 #   Rscript run_all.R               all stages
 #   Rscript run_all.R 01 04         only the folders starting 01 or 04
 # Logs go to .runlogs/, one per step.
@@ -82,8 +82,10 @@ for (stage in stages) {
   stopifnot(length(script) == 1)
   run(script, stage)
 }
-# After a full run, the step READMEs and pipeline.png are redrawn from the new outputs.
+# After a full run, the step READMEs and pipeline.png are redrawn from the new outputs, and the
+# tests check the shared functions and the outputs.
 if (!length(only)) {
   run("docs/readmes.R", "docs/readmes")
   run("docs/pipeline.R", "docs/pipeline")
+  run(c("-e", shQuote("testthat::test_dir('tests/testthat')")), "tests")
 }

@@ -22,6 +22,7 @@ found by clustering, and with no groups at all.
 | [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
 | [`R`](R/README.md) | shared functions the step scripts call |
 | [`docs`](docs/README.md) | decisions log, concept images, and the scripts that write the step READMEs and `pipeline.png` |
+| [`tests`](tests/README.md) | tests of the shared functions and checks on the saved outputs |
 
 The three analysis folders read `01_Processing` and never each other, except the parked HR/LR
 Figure 3, which also reads `04_Continuous_no_group`.
@@ -44,8 +45,9 @@ Every workbook opens with `read_me` (one line per sheet) and `columns` (every co
 
 ```sh
 Rscript -e 'renv::restore()'
-Rscript run_all.R            # every step in order, then the step READMEs and pipeline.png
+Rscript run_all.R            # every step in order, then the step READMEs, pipeline.png and tests
 Rscript run_all.R 01 02      # only the folders starting 01 or 02
+Rscript -e 'testthat::test_dir("tests/testthat")'   # the tests alone, about 40 s
 ```
 
 A full run rewrites each step README's files, key result and sheets from that step's outputs
