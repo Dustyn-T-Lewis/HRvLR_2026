@@ -1,9 +1,8 @@
 # fgsea and fry, side by side. fgsea is competitive on moderated t and
 # assumes exchangeable proteins, which they are not. fry is self-contained and rotates residuals
 # under the design, subject block and within-subject correlation. fry takes no missing value, so
-# it reads the imputed matrix with a correlation estimated on that matrix. Each method's own BH
-# runs within contrast over the sets it tested: all of them for fry, fewer for fgsea when a
-# contrast leaves a set under minSize.
+# it reads limpa's complete matrix with a correlation estimated on that matrix. Each method's own
+# BH runs within contrast over every qualifying set.
 
 suppressPackageStartupMessages({
   library(here)
@@ -15,7 +14,6 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(grid)
   library(ComplexHeatmap)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 
@@ -56,7 +54,7 @@ stopifnot(
 )
 
 # topTable rebuilds all nine contrasts from the saved fit, BH within each as upstream applied it.
-# pi_score is the Xiao et al. (2014) score: it orders a contrast and selects nothing.
+# pi_score is the Xiao et al. (2014) score, p^|logFC|; the figures draw proteins at Pi < 0.05.
 protein_results <- map(set_names(contrast_names), function(contrast) {
   topTable(eb, coef = contrast, number = Inf, adjust.method = "BH", sort.by = "none") |>
     rownames_to_column("uniprot_id") |>
@@ -69,24 +67,20 @@ stopifnot(nrow(protein_results) == length(protein_ids) * length(contrast_names))
 
 protein_summary <- protein_results |>
   summarise(
-    n_tested = sum(!is.na(p)),
-    n_up = sum(fdr < 0.05 & logFC > 0, na.rm = TRUE),
-    n_down = sum(fdr < 0.05 & logFC < 0, na.rm = TRUE),
-    min_fdr = signif(min(fdr, na.rm = TRUE), 3), .by = contrast
+    n_tested = n(), n_up = sum(fdr < 0.05 & logFC > 0), n_down = sum(fdr < 0.05 & logFC < 0),
+    min_fdr = signif(min(fdr), 3), .by = contrast
   )
-print(protein_summary)
 
 # One vector per contrast, representative proteins only, keyed by gene symbol so fgsea's
-# leadingEdge comes back in the namespace the volcanoes label with. A protein untested in a
-# contrast has no t and drops out of that ranking.
+# leadingEdge comes back in the namespace the volcanoes label with.
 ranked <- protein_results |>
-  filter(selected, !is.na(gene), !is.na(t)) |>
+  filter(selected) |>
   split(~contrast) |>
   map(\(result) set_names(result$t, result$gene))
 ranked <- ranked[contrast_names]
 
 # fry indexes rows of the matrix, not genes, so the sets are mapped back through the
-# representative protein chosen in 01_Gene_Sets.
+# representative protein chosen in 04_Gene_Sets.
 gene_map <- filter(protein_map, selected)
 set_rows <- map(sets, \(genes) {
   match(gene_map$uniprot_id[match(genes, gene_map$gene)], protein_ids)
@@ -151,8 +145,7 @@ set_tests <- set_tests |>
   ) |>
   relocate(contrast, method, set_id, collection, pathway)
 
-# One row per contrast: how many sets each test called, and how many survived collapse. The floor
-# is printed first.
+# The floor contrast sorts first, so the null reference opens the sheet.
 set_summary <- set_tests |>
   summarise(
     n_tested_fry = sum(method == "fry"),
@@ -163,7 +156,6 @@ set_summary <- set_tests |>
     .by = contrast
   ) |>
   arrange(contrast != d$floor)
-print(as.data.frame(set_summary))
 
 
 # Every fgsea collapse survivor at FDR < 0.05 and every set at fry p < 0.05, one dot plot per
@@ -211,7 +203,7 @@ fry_pages <- dot_pages(
     mutate(signed = if_else(direction == "Up", 1, -1) * -log10(p)),
   "signed", "signed -log10 p (positive: up)", "fry sets at p < 0.05",
   paste(
-    "fry on the imputed matrix with the fitted design, subject block and within-subject",
+    "fry on limpa's complete matrix with the fitted design, subject block and within-subject",
     "correlation; BH within contrast. Table: set_tests in c_data/set_tests.rds."
   )
 )
@@ -236,7 +228,7 @@ row_groups <- split(catalog$set_id, factor(catalog$collection, unique(catalog$co
 
 # Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
 # sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
-arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
+report_arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -266,13 +258,13 @@ tracks <- list(
 sample_annotation <- HeatmapAnnotation(
   df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
   col = c(
-    list(arm = arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    list(arm = report_arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
     map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
   simple_anno_size = unit(3, "mm")
 )
-row_order <- paste(
+row_order_note <- paste(
   "Rows are ordered within collection by average-linkage clustering (1 - Pearson r)",
   "of singscore, for display only."
 )
@@ -300,19 +292,18 @@ overviews <- imap(row_groups, \(rows, group) {
       "grouped by arm and time point; column labels are subjects.",
       "Fill: singscore minus the set's mean over biopsies.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", limit),
-      row_order, "Grey: missing."
+      row_order_note, "Grey in the trait tracks: not measured (T3 has no traits)."
     ), legends = list()),
     heatmap_page(contrast_maps, sprintf("Contrast overview: %s", group), paste(
       sprintf("All %s %s by the nine contrasts.", n_rows, feature_noun),
       "Fill: fgsea normalised enrichment score; status: p and BH q within contrast,",
       "collections pooled.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_limit),
-      row_order, "Grey: not tested. Table: c_data/set_tests.rds, set_tests."
+      row_order_note, "Table: c_data/set_tests.rds, set_tests."
     ))
   )
 }) |>
   list_flatten()
-stopifnot(length(overviews) == 2 * length(row_groups))
 
 pdf(file.path(figures, "set_contrasts_report.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())

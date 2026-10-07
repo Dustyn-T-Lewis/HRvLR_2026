@@ -13,7 +13,6 @@ suppressPackageStartupMessages({
   library(limpa)
   library(dplyr)
   library(tibble)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 

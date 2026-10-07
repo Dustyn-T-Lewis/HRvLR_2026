@@ -40,9 +40,9 @@ paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 
 read_sheet <- \(name, sheet) readxl::read_excel(paths[[name]], sheet, guess_max = 1e5)
-levels <- c("proteins", "sets", "modules")
-auc <- map(set_names(levels), \(level) read_sheet(level, "auc"))
-classify_counts <- map(set_names(levels), \(level) read_sheet(level, "counts"))
+feature_levels <- c("proteins", "sets", "modules")
+auc <- map(set_names(feature_levels), \(level) read_sheet(level, "auc"))
+classify_counts <- map(set_names(feature_levels), \(level) read_sheet(level, "counts"))
 group_difference <- read_sheet("associate", "group_difference")
 within_group <- read_sheet("associate", "within_group")
 interaction <- read_sheet("continuous", "interaction")
@@ -82,7 +82,7 @@ person_rho <- panels$d$data |>
   summarise(rho = cor(value, trait, method = "spearman"), n = n(), .by = arm) |>
   inner_join(lead_rho, by = c(arm = "group"))
 stopifnot(
-  nrow(panels$a$data) == length(levels) * 5,
+  nrow(panels$a$data) == length(feature_levels) * 5,
   nrow(tested) == nrow(panels$a$data), all(tested$n_tested.x == tested$n_tested.y),
   nrow(panels$b$data) == nrow(dal$data),
   isTRUE(all.equal(person_rho$rho.x, person_rho$rho.y)), all(person_rho$n == person_rho$n_subjects)

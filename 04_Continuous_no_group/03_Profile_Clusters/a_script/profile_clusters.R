@@ -1,7 +1,7 @@
 # Proteins grouped by how they relate to phenotype, every subject pooled, no group label.
 #   profiles   each protein described by its limma t against every trait in every pairing
 #              (01_Trait_Associations/01_Proteins); average linkage on 1 - Pearson r, cut by
-# dynamicTreeCut
+#              dynamicTreeCut
 #   per trait  for each trait's training change and T1 level, the proteins at p < 0.05 grouped by
 #              how they co-vary across people, with each group's direction and main module
 # Every group is described by over-representation (clusterProfiler::enricher) against the proteins

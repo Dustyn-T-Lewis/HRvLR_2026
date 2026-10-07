@@ -21,7 +21,6 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(grid)
   library(ComplexHeatmap)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 
@@ -93,33 +92,28 @@ message(
 
 protein_t <- as_tibble(fit$eBayes_fit$t, rownames = "uniprot_id") |>
   pivot_longer(-uniprot_id, names_to = "contrast", values_to = "t")
-member_rho <- function(data, value) {
-  data |>
-    filter(!is.na(.data[[value]])) |>
-    summarise(
-      n_members = n(),
-      test = list(cor.test(kme, .data[[value]], method = "spearman", exact = FALSE)),
-      .by = c(module, any_of("contrast"))
-    ) |>
-    mutate(
-      rho = map_dbl(test, "estimate"),
-      rho_lower = map2_dbl(rho, n_members, \(r, n) DescTools::CorCI(r, n)[["lwr.ci"]]),
-      rho_upper = map2_dbl(rho, n_members, \(r, n) DescTools::CorCI(r, n)[["upr.ci"]]),
-      p = map_dbl(test, "p.value"), test = NULL
-    )
-}
 membership_contrast <- members |>
   inner_join(protein_t, by = "uniprot_id", relationship = "one-to-many") |>
-  member_rho("t")
+  summarise(
+    n_members = n(),
+    test = list(cor.test(kme, t, method = "spearman", exact = FALSE)),
+    .by = c(module, contrast)
+  ) |>
+  mutate(
+    rho = map_dbl(test, "estimate"),
+    rho_lower = map2_dbl(rho, n_members, \(r, n) DescTools::CorCI(r, n)[["lwr.ci"]]),
+    rho_upper = map2_dbl(rho, n_members, \(r, n) DescTools::CorCI(r, n)[["upr.ci"]]),
+    p = map_dbl(test, "p.value"), test = NULL
+  )
 
-figure_theme <- theme_minimal(base_size = 10) +
+report_theme <- theme_minimal(base_size = 10) +
   theme(
     axis.text.x = element_text(angle = 35, hjust = 1),
     plot.title = element_text(face = "bold", size = 13),
     plot.subtitle = element_text(size = 9, colour = "grey30"),
     plot.caption = element_text(hjust = 0, size = 7, colour = "grey45")
   )
-# One tile per module and column; the label marks nominal p and a black border BH < 0.05.
+# The label marks nominal p and a black border BH < 0.05.
 module_tiles <- function(data, columns, fill_label, limits, title, subtitle, caption) {
   data |>
     mutate(
@@ -141,7 +135,7 @@ module_tiles <- function(data, columns, fill_label, limits, title, subtitle, cap
         "Table: c_data/module_contrasts.xlsx."
       ))
     ) +
-    figure_theme
+    report_theme
 }
 
 eigengene_figure <- module_tiles(
@@ -180,7 +174,6 @@ membership_contrast_figure <- module_tiles(
 
 primary <- members |>
   inner_join(filter(protein_t, contrast == "Training_Interaction"), by = "uniprot_id") |>
-  filter(!is.na(t)) |>
   left_join(
     filter(membership_contrast, contrast == "Training_Interaction") |> select(module, rho),
     by = "module"
@@ -203,7 +196,7 @@ primary_figure <- ggplot(primary, aes(kme, t)) +
       "Table: c_data/module_contrasts.xlsx, membership_contrast."
     )
   ) +
-  figure_theme +
+  report_theme +
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
 
 sample_values <- me
@@ -215,7 +208,7 @@ row_groups <- list(modules = module_order)
 
 # Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
 # sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
-arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
+report_arm_colours <- c(HR = "#2166AC", LR = "#B2182B")
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -245,19 +238,16 @@ tracks <- list(
 sample_annotation <- HeatmapAnnotation(
   df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
   col = c(
-    list(arm = arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    list(arm = report_arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
     map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
   simple_anno_size = unit(3, "mm")
 )
-row_order <- paste(
-  "Rows follow module size."
-)
+row_order_note <- "Rows follow module size."
 effect_limit <- cap(contrast_results$effect)
 overviews <- imap(row_groups, \(rows, group) {
   m <- sample_values[rows, columns$sample_id, drop = FALSE]
-  m <- m
   limit <- cap(m)
   labelled_heat <- \(...) heat(..., labels = feature_label)
   biopsy_map <- labelled_heat(m, "biopsies", c(-limit, 0, limit), "eigengene",
@@ -280,18 +270,17 @@ overviews <- imap(row_groups, \(rows, group) {
       "grouped by arm and time point; column labels are subjects.",
       "Fill: module eigengene.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", limit),
-      row_order, "Grey: missing."
+      row_order_note, "Grey in the trait tracks: not measured (T3 has no traits)."
     ), legends = list()),
     heatmap_page(contrast_maps, sprintf("Contrast overview: %s", group), paste(
       sprintf("All %s %s by the nine contrasts.", n_rows, feature_noun),
       "Fill: eigengene fold change from limma; status: p and BH q within contrast.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_limit),
-      row_order, "Grey: not tested. Table: c_data/module_contrasts.xlsx, eigengene_tests."
+      row_order_note, "Table: c_data/module_contrasts.xlsx, eigengene_tests."
     ))
   )
 }) |>
   list_flatten()
-stopifnot(length(overviews) == 2 * length(row_groups))
 
 pdf(file.path(figures, "module_contrasts_report.pdf"), width = 11, height = 8.5)
 walk(overviews, \(page) page$draw())

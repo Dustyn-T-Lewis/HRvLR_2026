@@ -15,7 +15,6 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(forcats)
   library(patchwork)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 
@@ -148,7 +147,7 @@ blood_cor <- suppressWarnings(as.vector(cor(
 )))
 blood_cor[!testable] <- NA
 # The model covariate is haemoglobin relative to the sample's median log2 intensity, so loading
-# does not enter it. 01_Design_Contrasts centres it and every model carries it as a covariate.
+# does not enter it. 03_Quantification centres it and every model carries it as a covariate.
 blood_rel <- blood_index - apply(log_int, 2, median, na.rm = TRUE)
 metadata$blood_rel <- unname(blood_rel[metadata$sample_id])
 
@@ -325,7 +324,7 @@ blood_data <- dal$metadata |>
   select(sample_id, subject, arm, timepoint) |>
   mutate(
     arm = factor(arm, c("HR", "LR")),
-    log2_index = unname(blood_index[sample_id]),
+    log2_index = unname(blood_index[sample_id])
   ) |>
   left_join(
     filter(qc_index, panel == "blood") |> select(sample_id, pct_signal),
@@ -354,8 +353,8 @@ blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
 }) |>
   list_rbind()
 
-# The old blood_cor cut of 0.45 rested on a null recorded at 0.43. Recomputed and split by how many
-# samples saw a protein, the null differs by observation count, so no single cut serves all.
+# The permutation null of blood_cor, split by how many samples saw a protein: it differs by
+# observation count, so no single correlation cut serves every protein.
 set.seed(42)
 tested <- log_int[testable, ]
 blood_null_rho <- replicate(300, abs(as.vector(suppressWarnings(cor(

@@ -95,7 +95,7 @@ protein_map <- proteins$annotation |>
   as_tibble() |>
   transmute(
     uniprot_id, n_seq,
-    mean_obs = rowSums(!is.na(proteins$data))[uniprot_id],
+    n_obs = rowSums(!is.na(proteins$data))[uniprot_id],
     gene = trimws(gene),
     mapping_status = case_when(
       is.na(gene) | !nzchar(gene) ~ "missing_symbol",
@@ -106,7 +106,7 @@ protein_map <- proteins$annotation |>
   )
 representatives <- protein_map |>
   filter(mapping_status == "candidate") |>
-  arrange(gene, desc(mean_obs), desc(n_seq), uniprot_id) |>
+  arrange(gene, desc(n_obs), desc(n_seq), uniprot_id) |>
   distinct(gene, .keep_all = TRUE) |>
   pull(uniprot_id)
 protein_map <- protein_map |>
@@ -129,7 +129,6 @@ gene_map <- filter(protein_map, selected)
 gene_universe <- gene_map$gene
 stopifnot(!anyDuplicated(protein_map$label))
 mapping_summary <- count(protein_map, mapping_status, name = "n_proteins")
-print(mapping_summary)
 message("measured gene universe: ", length(gene_universe))
 
 # Size is the only pre-test filter, and the measured bar counts what this experiment detected.
@@ -195,7 +194,6 @@ collection_summary <- set_catalog |>
     median_measured = median(measured_size[qualifies]), .by = collection
   ) |>
   arrange(match(collection, c(collections, "GO_Slim")))
-print(collection_summary)
 message("qualifying sets: ", length(sets))
 
 saveRDS(
@@ -219,5 +217,4 @@ holds <- c(
   "Every protein, its gene symbol, and the representative chosen per symbol.",
   "Proteins per mapping status."
 )
-write_workbook(sheets, holds, file.path(out, "gene_sets.xlsx"), inputs, here(inputs))
-message("wrote gene_sets.rds and gene_sets.xlsx")
+write_workbook(sheets, holds, file.path(out, "gene_sets.xlsx"), inputs, map_chr(inputs, here))

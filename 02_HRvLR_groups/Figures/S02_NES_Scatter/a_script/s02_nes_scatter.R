@@ -34,9 +34,7 @@ run_pair <- function(x_contrast, y_contrast, tag) {
       names_from = contrast, values_from = c(n_proteins, nes, fdr, main)
     ) |>
     mutate(
-      # A protein untested in one contrast leaves that ranking, so a set's measured size can
-      # differ by one or two between arms; the point is sized by the larger.
-      n_proteins = pmax(n_proteins_x, n_proteins_y),
+      n_proteins = n_proteins_x,
       significance = case_when(
         fdr_x < 0.05 & fdr_y < 0.05 ~ "Both",
         fdr_x < 0.05 ~ x_contrast,
@@ -48,10 +46,6 @@ run_pair <- function(x_contrast, y_contrast, tag) {
       survivor = main_x | main_y,
       label = enrichVolcano::ev_clean_label(pathway)
     )
-  # A set near the size floor can drop out of one arm entirely. Only sets scored in both are
-  # compared.
-  paired <- filter(paired, !is.na(nes_x), !is.na(nes_y))
-  stopifnot(nrow(paired) > 0)
 
   concordance <- function(data) {
     # A quadrant panel can hold one or two sets, too few for cor.test.
@@ -79,14 +73,13 @@ run_pair <- function(x_contrast, y_contrast, tag) {
     c("#6A3D9A", "#D7301F", "#2B6CB0"), c("Both", x_contrast, y_contrast)
   )
 
-  # One panel builder for all six panels. `labelled` is the subset that gets names, so a dense
+  # One panel builder for all six panels. labelled is the subset that gets names, so a dense
   # cloud and a zoomed handful of sets differ only in what is passed in.
   nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
     span <- range(c(data$nes_x, data$nes_y))
     limit <- span + c(-1, 1) * diff(span) * pad
     shown <- filter(data, significance != "NS")
     stats <- concordance(data)
-    # A panel reports rho only with 30 or more sets.
     caption <- sprintf(
       "%d set%s | %d significant%s | %d discordant", stats$n_sets,
       if (stats$n_sets == 1) "" else "s", stats$n_significant,
@@ -216,7 +209,6 @@ pairs <- list(
 )
 summary_table <- list_rbind(map(pairs, "summary"))
 export <- list_rbind(map(pairs, "export"))
-print(as.data.frame(summary_table))
 
 pdf(file.path(figure_dir, "s02_nes_scatter.pdf"), width = 11, height = 8.5)
 walk(list_flatten(map(pairs, "figures")), print)
@@ -230,4 +222,3 @@ holds <- c(
   "One row per set scored in both arms: both NES, both FDR, significance and discordance."
 )
 write_workbook(sheets, holds, file.path(out, "s02_nes_scatter.xlsx"), inputs, paths)
-message("wrote s02_nes_scatter.xlsx and 4 composites")

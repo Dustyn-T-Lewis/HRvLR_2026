@@ -134,7 +134,7 @@ panel_pca <- ggplot(pca, aes(PC1, PC2, colour = rank, shape = timepoint)) +
 # Panel d: sets at fgsea FDR < 0.05 for at least two traits over training, overlapping sets
 # pruned, the 20 strongest shown in every trait.
 gene_sets <- readRDS(paths[["gene_sets"]])
-members <- map(gene_sets$sets, \(s) intersect(s, gene_sets$gene_universe))
+members <- gene_sets$sets
 fgsea <- readxl::read_excel(paths[["pathways"]], "pathways") |>
   filter(window == "training", collection != "GO_Slim")
 eligible <- fgsea |>
@@ -204,12 +204,9 @@ figure <- wrap_plots(
 ) +
   plot_annotation(tag_levels = "a") &
   figure_tags
+# Every selected set is drawn in every trait.
+stopifnot(nrow(grid) == length(kept) * n_distinct(fgsea$trait))
 save_figure(figure, file.path(stage, "b_reports"), "f1_overview", width = 300, height = 175)
-
-stopifnot(
-  all(links$n_tested > 0), nrow(grid) == length(kept) * n_distinct(fgsea$trait),
-  all(abs(links$share) <= 1)
-)
 write_workbook(
   list(
     people = select(people, subject, trait, value, z),
@@ -227,4 +224,3 @@ write_workbook(
   ),
   file.path(stage, "c_data", "f1_overview.xlsx"), inputs, paths
 )
-message("wrote f1_overview.pdf and f1_overview.xlsx")

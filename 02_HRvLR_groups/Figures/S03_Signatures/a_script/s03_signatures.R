@@ -150,4 +150,3 @@ holds <- c(
   "Panel c: per cell and window, share of proteins moving as in training and fry FDR."
 )
 write_workbook(sheets, holds, file.path(out, "s03_signatures.xlsx"), inputs, paths)
-message("wrote s03_signatures.pdf and s03_signatures.xlsx")

@@ -8,7 +8,6 @@ suppressPackageStartupMessages({
   library(tibble)
   library(limma)
   library(ggplot2)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 

@@ -12,7 +12,6 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(grid)
   library(ComplexHeatmap)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 
@@ -37,7 +36,9 @@ proteins <- readRDS(paths[["proteins"]])$proteins
 design <- dal$design$design_matrix
 contrast_matrix <- dal$design$contrast_matrix
 meta <- dal$metadata
-stopifnot(identical(colnames(proteins$E), rownames(design)))
+stopifnot(
+  identical(colnames(proteins$E), rownames(design)), identical(meta$sample_id, rownames(design))
+)
 eb <- fit_limpa(proteins, design, contrast_matrix, meta$subject)
 
 # The same nine contrasts without the blood term: the sensitivity check for the blood covariate.
@@ -81,11 +82,8 @@ n_obs <- set_names(rowSums(proteins$other$n.observations > 0), rownames(proteins
 
 contrast_summary <- results |>
   summarise(
-    n_tested = sum(!is.na(p)),
-    n_nominal = sum(p < 0.05, na.rm = TRUE),
-    n_fdr_05 = sum(fdr < 0.05, na.rm = TRUE),
-    n_fdr_10 = sum(fdr < 0.10, na.rm = TRUE),
-    min_fdr = min(fdr, na.rm = TRUE),
+    n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
+    n_fdr_10 = sum(fdr < 0.10), min_fdr = min(fdr),
     .by = contrast
   ) |>
   left_join(d$roles, by = "contrast")
@@ -93,7 +91,6 @@ contrast_summary <- results |>
 # propTrueNull() saturates at 1, so it cannot tell a flat null from a conservative one. Median |t|
 # (0.674 under a calibrated null) and the share of p below 0.2 can.
 null_calibration <- results |>
-  filter(!is.na(p)) |>
   summarise(
     prop_true_null = round(propTrueNull(p), 3),
     median_abs_t = round(median(abs(t)), 3),
@@ -105,21 +102,17 @@ null_calibration <- results |>
 # set tested on its own arm's acute contrast shares T2, so a protein high at T2 by chance reads as
 # up then down. fry reads limpa's complete matrix with the same design and block.
 abundance <- proteins$E
-stopifnot(
-  identical(colnames(abundance), rownames(design)), identical(meta$sample_id, rownames(design)),
-  !anyNA(abundance)
-)
-fry_correlation <- duplicateCorrelation(abundance, design, block = meta$subject)
-fry_correlation <- fry_correlation$consensus.correlation
+within_subject <- duplicateCorrelation(abundance, design, block = meta$subject)
+fry_correlation <- within_subject$consensus.correlation
 member_rows <- function(cn, criterion, direction) {
   r <- filter(results, contrast == cn)
   sign_ok <- if (direction == "up") r$logFC > 0 else r$logFC < 0
   hit <- switch(criterion,
     pi = r$sig_pi == if (direction == "up") 1L else -1L,
-    bh = !is.na(r$fdr) & r$fdr < 0.05 & sign_ok,
-    nominal = !is.na(r$p) & r$p < 0.05 & sign_ok
+    bh = r$fdr < 0.05 & sign_ok,
+    nominal = r$p < 0.05 & sign_ok
   )
-  which(rownames(abundance) %in% r$uniprot_id[coalesce(hit, FALSE)])
+  which(rownames(abundance) %in% r$uniprot_id[hit])
 }
 pairings <- tribble(
   ~set_from, ~ranked_on,
@@ -170,7 +163,6 @@ fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
   list_rbind()
 
 p_histogram <- results |>
-  filter(!is.na(p)) |>
   mutate(contrast = factor(contrast, levels = contrast_names)) |>
   ggplot(aes(p)) +
   geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
@@ -190,9 +182,7 @@ p_histogram <- results |>
   ) +
   theme_minimal(base_size = 10)
 
-# One volcano per contrast. Nominal proteins in colour; BH < 0.05 proteins labelled.
 volcano <- results |>
-  filter(!is.na(p)) |>
   mutate(
     contrast = factor(contrast, levels = contrast_names),
     call = case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", TRUE ~ "not nominal")
@@ -245,7 +235,7 @@ row_groups <- list(
 
 # Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
 # sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
-arm_colours <- c(Hi = "#2166AC", Lo = "#B2182B")
+report_arm_colours <- c(Hi = "#2166AC", Lo = "#B2182B")
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -275,13 +265,13 @@ tracks <- list(
 sample_annotation <- HeatmapAnnotation(
   df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
   col = c(
-    list(arm = arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    list(arm = report_arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
     map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
   simple_anno_size = unit(3, "mm")
 )
-row_order <- paste(
+row_order_note <- paste(
   "Rows are ordered by average-linkage clustering (1 - Pearson r) of limpa's",
   "matrix, for display only."
 )
@@ -311,18 +301,17 @@ overviews <- imap(row_groups, \(rows, group) {
       "grouped by arm and time point; column labels are subjects.",
       "Fill: log2 abundance minus the protein's mean over biopsies.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", limit),
-      row_order, "Grey: missing."
+      row_order_note, "Grey in the trait tracks: not measured (T3 has no traits)."
     ), legends = list()),
     heatmap_page(contrast_maps, sprintf("Contrast overview: %s", group), paste(
       sprintf("All %s %s by the nine contrasts.", n_rows, feature_noun),
       "Fill: log2 fold change from the limma fit; status: p and BH q within contrast.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_limit),
-      row_order, "Grey: not tested. Table: c_data/protein_contrasts.xlsx, protein_by_contrast."
+      row_order_note, "Table: c_data/protein_contrasts.xlsx, protein_by_contrast."
     ))
   )
 }) |>
   list_flatten()
-stopifnot(length(overviews) == 2 * length(row_groups))
 
 corrected <- readRDS(paths[["corrected"]])
 sample_meta <- as_tibble(meta)

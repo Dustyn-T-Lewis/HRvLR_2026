@@ -35,10 +35,9 @@ protein_t <- readRDS(paths[["associate"]])$change_score |>
 rank_tests <- function(d) {
   stats <- set_names(d$t, gene_of[d$feature])
   set.seed(1)
-  fg <- fgsea::fgsea(gs$sets, stats, minSize = 15, maxSize = 500) |>
+  fgsea::fgsea(gs$sets, stats, minSize = 15, maxSize = 500) |>
     as_tibble() |>
     transmute(set_id = pathway, size, nes = NES, p = pval, fdr = padj, leading_edge = leadingEdge)
-  fg
 }
 pathways <- protein_t |>
   nest(.by = c(window, trait)) |>
@@ -63,7 +62,7 @@ top_sets <- pathways |>
 pdf(file.path(figures, "trait_pathways_report.pdf"), width = 11, height = 8.5)
 print(
   ggplot(
-    tidyr::pivot_longer(counts, c(n_up, n_down), names_to = "direction"),
+    pivot_longer(counts, c(n_up, n_down), names_to = "direction"),
     aes(value, trait, fill = direction)
   ) +
     geom_col() +

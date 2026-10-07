@@ -1,8 +1,8 @@
 # What each module is: its enriched gene sets, its hub proteins, and whether its members
 # interact more than chance in STRING.
 #
-# Enrichment is clusterProfiler's hypergeometric ORA against the 04_Gene_Sets sets,
-# with the 1,900 measured genes as universe; testing against the genome would reward any module
+# Enrichment is clusterProfiler's hypergeometric ORA against the 04_Gene_Sets sets, with the
+# measured genes (one per symbol) as universe; testing against the genome would reward any module
 # for being muscle. BH runs within each module.
 #
 # The STRING check is STRINGdb's PPI enrichment at combined score >= 700, with the background set
@@ -105,9 +105,6 @@ labels <- count(members, module, name = "n_proteins") |>
   left_join(summarise(hubs, hubs = paste(gene, collapse = ", "), .by = module), by = "module") |>
   left_join(select(string_check, module, string_ratio = ratio, string_fdr = fdr), by = "module") |>
   arrange(desc(n_proteins))
-print(as.data.frame(select(labels, module, n_proteins, top_set, top_set_fdr, string_ratio)),
-  digits = 3
-)
 
 caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
 
@@ -240,4 +237,3 @@ holds <- c(
   "STRING edges among each module's 25 highest-kME members, as drawn."
 )
 write_workbook(sheets, holds, file.path(out, "module_characterisation.xlsx"), inputs, paths)
-message("wrote module_characterisation.xlsx and ", 2 + length(hub_pages), " figure pages")

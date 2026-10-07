@@ -9,7 +9,6 @@ suppressPackageStartupMessages({
   library(purrr)
   library(tibble)
   library(ggplot2)
-  library(writexl)
   library(grid)
   library(ComplexHeatmap)
 })

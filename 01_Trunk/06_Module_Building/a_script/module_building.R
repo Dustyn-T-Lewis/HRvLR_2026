@@ -116,12 +116,11 @@ subject_icc <- eigengene_long |>
 module_summary <- count(filter(membership, module != "grey"), module, name = "n_proteins") |>
   left_join(subject_icc, by = "module") |>
   arrange(desc(n_proteins))
-print(as.data.frame(module_summary), digits = 3)
+at_power <- filter(fit_indices, Power == power)
 message(sprintf(
-  "power %d (signed R2 %.3f, mean k %.1f); %d modules, %d of %d proteins unassigned; %s",
-  power, fit_indices$signed_r2[power], fit_indices$mean.k.[power], nrow(eigengenes),
-  sum(colours == "grey"), length(colours),
-  sprintf("%d of %d samples define the modules", nrow(expr), ncol(abund))
+  "power %d (signed R2 %.3f, mean k %.1f); %d modules, %d of %d proteins unassigned; %d of %d %s",
+  power, at_power$signed_r2, at_power$mean.k., nrow(eigengenes), sum(colours == "grey"),
+  length(colours), nrow(expr), ncol(abund), "samples define the modules"
 ))
 
 caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
@@ -221,4 +220,3 @@ holds <- c(
   "pickSoftThreshold fit indices per power; chosen marks the power used."
 )
 write_workbook(sheets, holds, file.path(out, "module_building.xlsx"), inputs, paths)
-message("wrote modules.rds, module_building.xlsx and 3 figures")

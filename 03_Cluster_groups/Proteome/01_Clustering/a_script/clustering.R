@@ -16,8 +16,8 @@ suppressPackageStartupMessages({
   library(cluster)
 })
 source(here("R", "helpers.R"))
+source(here("03_Cluster_groups", "Proteome", "R", "inputs.R"))
 
-inputs_used <- c("T1", "T2", "T3", "training", "acute")
 imposed_k <- set_names(rep(2L, 5), inputs_used)
 imposed_reason <- set_names(rep(paste(
   "Gap statistic selects K = 1 at every input, which is reported as the result; K = 2 imposed",
@@ -31,9 +31,14 @@ stage <- here("03_Cluster_groups", "Proteome", "01_Clustering")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
+quantified <- "01_Trunk/03_Quantification/c_data"
 inputs <- c(
   modules = "01_Trunk/06_Module_Building/c_data/modules.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Input/phenotype.csv",
+  proteins = file.path(quantified, "proteins.rds"),
+  DAList_corrected = file.path(quantified, "DAList_corrected.rds"),
+  DAList_limpa = file.path(quantified, "DAList_limpa.rds"),
+  singscore = "01_Trunk/05_Set_Scores/c_data/singscore.rds"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -86,6 +91,8 @@ per_input <- imap(by_input, \(m, input) {
     ) |>
     mutate(input = input, .before = 1)
   k_used <- coalesce(as.integer(imposed_k[[input]]), k_gap)
+  cluster <- if (k_used > 1) solutions[[as.character(k_used)]]$clustering else 1L
+  pcs <- prcomp(x)
   list(
     diagnostics = diagnostics,
     stability = mutate(stability, input = input, .before = 1),
@@ -97,19 +104,17 @@ per_input <- imap(by_input, \(m, input) {
     assignments = tibble(
       input,
       subject = rownames(x), arm = unname(arm_of[rownames(x)]),
-      k2 = solutions[["2"]]$clustering, k3 = solutions[["3"]]$clustering,
-      cluster = if (k_used > 1) solutions[[as.character(k_used)]]$clustering else 1L
+      k2 = solutions[["2"]]$clustering, k3 = solutions[["3"]]$clustering, cluster
     ),
     gap = mutate(gap_table, input = input, k_gap = k_gap),
     space = tibble(
       input,
       subject = rownames(x), arm = unname(arm_of[rownames(x)]),
-      cluster = if (k_used > 1) solutions[[as.character(k_used)]]$clustering else 1L,
-      PC1 = prcomp(x)$x[, 1], PC2 = prcomp(x)$x[, 2]
+      cluster, PC1 = pcs$x[, 1], PC2 = pcs$x[, 2]
     ),
     space_variance = tibble(
       input,
-      component = c("PC1", "PC2"), variance_explained = summary(prcomp(x))$importance[2, 1:2]
+      component = c("PC1", "PC2"), variance_explained = summary(pcs)$importance[2, 1:2]
     )
   )
 })
@@ -117,12 +122,9 @@ results <- map(set_names(names(per_input[[1]])), \(sheet) list_rbind(map(per_inp
 
 # The trunk's inputs relabelled once per input, for the stages after this one: arm and group carry
 # the clusters as C1 and C2, and the samples of anyone not clustered at that input drop out.
-trunk <- \(path) readRDS(here("01_Trunk", path))
-proteins_all <- trunk("03_Quantification/c_data/proteins.rds")
-matrices <- map(set_names(c("DAList_corrected", "DAList_limpa")), \(name) {
-  trunk(file.path("03_Quantification/c_data", paste0(name, ".rds")))
-})
-scores_all <- trunk("05_Set_Scores/c_data/singscore.rds")
+proteins_all <- readRDS(paths[["proteins"]])
+matrices <- map(set_names(c("DAList_corrected", "DAList_limpa")), \(name) readRDS(paths[[name]]))
+scores_all <- readRDS(paths[["singscore"]])
 walk(inputs_used, \(input) {
   used <- filter(results$assignments, input == .env$input)
   group_of <- set_names(paste0("C", used$cluster), used$subject)

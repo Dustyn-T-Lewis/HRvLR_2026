@@ -2,15 +2,14 @@
 # eigengenes. The pooled, label-free associations live in 04_Continuous_no_group; this stage asks
 # only what the grouping adds.
 #
-# Within group: Spearman between each feature and each trait, exact p (cor.test) and a Fisher-z
-# 95% interval, in each group.
-# Descriptive: each group holds 6 to 8 subjects, and a group split on a trait restricts that
-# trait's range inside each group.
-# Group difference: limma on feature ~ group * trait, the first group's slope minus the second's
-# with its 95% interval,
-# the one test of whether a link differs between the groups.
-# The traits that define the grouping stay out of the group difference: they re-measure the
-# split. Each group needs five subjects with the trait measured.
+# Within group: Spearman between each feature and each trait in each group, exact p (cor.test) and
+# a Fisher-z 95% interval. Descriptive: each group holds 6 to 8 subjects, and a group split on a
+# trait restricts that trait's range inside it.
+#
+# Group difference: limma on feature ~ group * trait, Hi's slope minus Lo's with its 95% interval,
+# the one test of whether a link differs between the groups. The traits that define the grouping
+# stay out of it, since they re-measure the split. Each group needs five subjects with the trait
+# measured.
 
 suppressPackageStartupMessages({
   library(here)
@@ -42,6 +41,7 @@ stopifnot(file.exists(paths))
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 groups <- readRDS(paths[["groups"]])
 group_of <- groups$group_of
+# Lo is the reference level, so the group-by-trait term is Hi's slope minus Lo's.
 group_levels <- c("Lo", "Hi")
 defining_outcomes <- groups$traits
 

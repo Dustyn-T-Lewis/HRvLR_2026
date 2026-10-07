@@ -148,7 +148,7 @@ panel_missing <- ggplot(protein_table, aes(mean_observed, 1 - prop_observed)) +
 correlation <- read_sheet("quantify", "sample_correlation")
 r <- as.matrix(column_to_rownames(correlation, "sample_id"))
 ordering <- rownames(r)[hclust(as.dist(1 - r), method = "average")$order]
-subject_of <- setNames(read_sheet("quantify", "blood")$subject, kept_samples)
+subject_of <- set_names(read_sheet("quantify", "blood")$subject, kept_samples)
 pairs <- as_tibble(r, rownames = "a") |>
   pivot_longer(-a, names_to = "b", values_to = "r") |>
   filter(a < b) |>
@@ -194,7 +194,7 @@ panel_blood <- ggplot(blood, aes(timepoint, blood_rel, colour = timepoint, shape
 # h: each protein's log2 FC with and without the blood covariate, every contrast pooled.
 # One row per protein, logFC and p per contrast, as the unadjusted sheet is laid out.
 dep <- read_sheet("contrasts", "protein_by_contrast") |>
-  tidyr::pivot_wider(
+  pivot_wider(
     id_cols = uniprot_id, names_from = contrast, values_from = c(logFC, p),
     names_glue = "{contrast}_{.value}"
   )
@@ -315,4 +315,3 @@ holds <- c(
   "Panel j: log2 FC the training interaction detects at 80% power."
 )
 write_workbook(sheets, holds, file.path(out, "s01_qc.xlsx"), inputs, paths)
-message("wrote s01_qc.pdf and s01_qc.xlsx")

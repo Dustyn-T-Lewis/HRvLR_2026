@@ -34,10 +34,10 @@ validity <- function(input, name) {
 }
 
 # One workbook, <content>_all_inputs.xlsx, from the five per-input workbooks of a stage: every
-# result sheet stacked with an
-# input column, and a validity column wherever a contrast, task or window names the comparison.
+# result sheet stacked with an input column, and a validity column wherever a contrast, task or
+# window names the comparison.
 # Sheets are read as text and typed after stacking, since an empty sheet reads as logical. Sheets in
-# `leave_out` stay in the per-input workbooks only (xlsx caps a sheet at 1,048,576 rows).
+# leave_out stay in the per-input workbooks only (xlsx caps a sheet at 1,048,576 rows).
 stack_inputs <- function(stage, leave_out = character()) {
   files <- purrr::map_chr(inputs_used, \(input) {
     list.files(file.path(stage, input, "c_data"), "\\.xlsx$", full.names = TRUE)

@@ -58,4 +58,3 @@ figure_input <- function(input) {
   )
 }
 walk(inputs_used, figure_input)
-message("wrote one f1_overview_<input>.pdf and .xlsx per clustering input")

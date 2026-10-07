@@ -47,7 +47,8 @@ stopifnot(identical(colnames(abund), meta$sample_id))
 bicor_args <- list(corType = "bicor", maxPOutliers = 0.05, pearsonFallback = "individual")
 permutations <- 200L
 
-# Subject-centred abundance for a set of subjects, those with one biopsy left out as in 01.
+# Subject-centred abundance for a set of subjects, those with one biopsy left out as in
+# 06_Module_Building.
 centred <- function(subjects) {
   kept <- meta |>
     filter(subject %in% subjects) |>
@@ -59,8 +60,8 @@ centred <- function(subjects) {
 expr <- map(set_names(c("HR", "LR")), \(arm) centred(unique(meta$subject[meta$arm == arm])))
 message("samples per arm: ", paste(names(expr), map_int(expr, nrow), collapse = ", "))
 
-# The same construction as 01, arm by arm: pickSoftThreshold's estimate, with the WGCNA FAQ's
-# signed table as the fallback power.
+# The same construction as 06_Module_Building, arm by arm: pickSoftThreshold's estimate, with the
+# WGCNA FAQ's signed table as the fallback power.
 build_arm <- function(data) {
   sft <- pickSoftThreshold(data,
     powerVector = 1:20, networkType = "signed",
@@ -126,7 +127,6 @@ preservation_table <- map(c(HR = "LR", LR = "HR"), \(test) {
     z_summary, c(-Inf, 2, 10, Inf),
     labels = c("none", "weak to moderate", "strong")
   ))
-print(as.data.frame(preservation_table), digits = 3)
 
 plot_data <- preservation_table |>
   mutate(direction = paste(reference, "modules tested in", test)) |>
@@ -184,4 +184,3 @@ holds <- c(
   "Every protein's module in each arm's network."
 )
 write_workbook(sheets, holds, file.path(out, "module_preservation.xlsx"), inputs, paths)
-message("wrote module_preservation.xlsx and its figure")

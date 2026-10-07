@@ -27,19 +27,14 @@ if (!all(file.exists(paths))) {
 }
 fg <- readRDS(paths[["set_tests"]])
 
-# Bound only the logarithm for plotting. A protein untested in a contrast has no p there and is
-# not drawn.
-protein_results <- fg$protein_results |>
-  filter(!is.na(p)) |>
-  mutate(plot_p = pmax(p, .Machine$double.xmin))
+# Bound only the logarithm for plotting.
+protein_results <- mutate(fg$protein_results, plot_p = pmax(p, .Machine$double.xmin))
 fgsea_results <- filter(fg$set_tests, method == "fgsea", main)
 stopifnot(nrow(fgsea_results) > 0, !is.null(protein_results$label))
 
 # volcano_ring() matches leading-edge genes against the point labels, and a label carries its
 # accession when a symbol sits on more than one protein. Translate the edges into label space
 # or the tick lines silently draw nothing.
-# Built from every protein, tested or not, so a protein untested in one contrast still gets its
-# tick in another.
 gene_to_label <- fg$protein_results |>
   filter(selected, !is.na(gene)) |>
   distinct(gene, label) |>
@@ -161,4 +156,3 @@ holds <- c(
   "The proteins named on each volcano, by FDR or by pi score."
 )
 write_workbook(sheets, holds, file.path(out, "s01_volcano.xlsx"), inputs, paths)
-message("drew ", length(volcanoes), " volcanoes")

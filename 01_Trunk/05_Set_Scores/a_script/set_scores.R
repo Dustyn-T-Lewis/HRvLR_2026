@@ -56,7 +56,6 @@ score_summary <- tibble(
   mean_sd_across_sets = round(mean(apply(scores, 2, sd)), 4),
   mean_sd_across_samples = round(mean(apply(scores, 1, sd)), 4)
 )
-print(score_summary)
 
 # Dispersion is the spread of a set's member ranks within one sample: low means the members sit
 # together, high that they scatter. multiScore returns it beside the scores at no extra cost.
@@ -72,7 +71,6 @@ collection_spread <- set_spread |>
     n_sets = n(), median_score = round(median(score), 4),
     median_dispersion = round(median(dispersion), 1), .by = collection
   )
-print(as.data.frame(collection_spread))
 
 # How much of the leading components subject identity explains. A large share is why the
 # association step reads within-subject change beside the baseline level.
@@ -88,7 +86,6 @@ structure_check <- tibble(
   variance_explained = round(as.numeric(variance), 3),
   subject_share = c(round(participant_share, 3), NA, NA)
 )
-print(structure_check)
 
 # singscore's plotDispersion and plotRankDensity draw one signature at a time. These cohort-scale
 # views are plain ggplots over the score and dispersion matrices multiScore already returned.
@@ -151,4 +148,3 @@ holds <- c(
   "The set by sample score matrix, as saved in singscore.rds."
 )
 write_workbook(sheets, holds, file.path(out, "set_scores.xlsx"), inputs, paths)
-message("wrote singscore.rds, set_scores.xlsx and 2 figures")

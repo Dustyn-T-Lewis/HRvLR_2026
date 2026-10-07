@@ -10,7 +10,6 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(grid)
   library(ComplexHeatmap)
-  library(writexl)
 })
 source(here("R", "helpers.R"))
 source(here("R", "classify.R"))

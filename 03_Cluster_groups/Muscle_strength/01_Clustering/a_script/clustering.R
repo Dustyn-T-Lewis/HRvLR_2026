@@ -3,7 +3,8 @@
 # one-standard-error rule of Tibshirani, Walther & Hastie (2001), mean silhouette for K = 2 and 3,
 # group sizes, and bootstrap Jaccard stability per cluster (fpc::clusterboot; Hennig 2007).
 # imposed_k fixes K by hand; both the data-selected and the imposed K are recorded with the reason.
-# If K = 1 is selected and nothing is imposed, the family is not grouped and this arc stops here.
+# The relabelled inputs for the later stages are written only when K = 2 is used; with any other K
+# the arc stops here.
 
 suppressPackageStartupMessages({
   library(here)
@@ -19,10 +20,9 @@ source(here("R", "helpers.R"))
 family <- "Muscle_strength"
 traits <- c("pct_leg_press_1rm", "pct_leg_ext_1rm")
 imposed_k <- 2L
-imposed_reason <- paste0(
-  "Gap statistic selects K = 1; K = 2 imposed by decision (2026-10-06) because both",
-  " clusters are stable (bootstrap Jaccard >= 0.84) and the split is independent of",
-  " HR/LR. Exploratory."
+imposed_reason <- paste(
+  "Gap statistic selects K = 1; K = 2 imposed by decision (2026-10-06) because both clusters",
+  "are stable (bootstrap Jaccard >= 0.84) and the split is independent of HR/LR. Exploratory."
 )
 k_max <- 3
 n_boot <- 500
@@ -31,7 +31,15 @@ stage <- here("03_Cluster_groups", family, "01_Clustering")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
-inputs <- c(phenotype = "00_Input/phenotype.csv")
+quantified <- "01_Trunk/03_Quantification/c_data"
+inputs <- c(
+  phenotype = "00_Input/phenotype.csv",
+  proteins = file.path(quantified, "proteins.rds"),
+  DAList_corrected = file.path(quantified, "DAList_corrected.rds"),
+  DAList_limpa = file.path(quantified, "DAList_limpa.rds"),
+  singscore = "01_Trunk/05_Set_Scores/c_data/singscore.rds",
+  modules = "01_Trunk/06_Module_Building/c_data/modules.rds"
+)
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 
@@ -41,6 +49,7 @@ complete <- change |>
   select(subject, all_of(traits)) |>
   drop_na()
 x <- scale(as.matrix(select(complete, -subject)))
+arm_of <- set_names(phenotype$arm, phenotype$subject)
 rownames(x) <- complete$subject
 
 pam1 <- \(x, k) list(cluster = pam(x, k, cluster.only = TRUE))
@@ -63,7 +72,8 @@ diagnostics <- gap_table |>
     imap(solutions, \(fit, k) {
       tibble(
         k = as.integer(k), mean_silhouette = fit$silinfo$avg.width,
-        sizes = paste(table(fit$clustering), collapse = "/")
+        sizes = paste(table(fit$clustering), collapse = "/"),
+        hr_lr_ari = mclust::adjustedRandIndex(fit$clustering, arm_of[rownames(x)])
       )
     }) |>
       list_rbind(),
@@ -110,24 +120,23 @@ if (k_used == 2) {
     meta$group <- paste(meta$arm, meta$timepoint, sep = "_")
     meta
   }
-  trunk <- \(path) readRDS(here("01_Trunk", path))
   inputs_dir <- file.path(out, "inputs")
   dir.create(inputs_dir, showWarnings = FALSE)
-  proteins <- trunk("03_Quantification/c_data/proteins.rds")
+  proteins <- readRDS(paths[["proteins"]])
   proteins$metadata <- relabel(proteins$metadata)
   proteins$proteins <- proteins$proteins[, proteins$metadata$sample_id]
   saveRDS(proteins, file.path(inputs_dir, "proteins.rds"), compress = "xz")
   walk(c("DAList_corrected", "DAList_limpa"), \(name) {
-    d <- trunk(file.path("03_Quantification/c_data", paste0(name, ".rds")))
+    d <- readRDS(paths[[name]])
     d$metadata <- relabel(d$metadata)
     d$data <- d$data[, d$metadata$sample_id]
     d$observed <- d$observed[, d$metadata$sample_id]
     saveRDS(d, file.path(inputs_dir, paste0(name, ".rds")), compress = "xz")
   })
-  scores <- trunk("05_Set_Scores/c_data/singscore.rds")
+  scores <- readRDS(paths[["singscore"]])
   scores$scores <- scores$scores[, proteins$metadata$sample_id]
   saveRDS(scores, file.path(inputs_dir, "singscore.rds"), compress = "xz")
-  modules <- trunk("06_Module_Building/c_data/modules.rds")
+  modules <- readRDS(paths[["modules"]])
   modules$meta <- relabel(modules$meta)
   modules$eigengenes <- modules$eigengenes[, modules$meta$sample_id]
   saveRDS(modules, file.path(inputs_dir, "modules.rds"), compress = "xz")
@@ -191,7 +200,7 @@ write_workbook(
   ),
   c(
     "K selected by the gap statistic, any imposed K and its reason, and the K used downstream.",
-    "Per K: gap, SE, mean silhouette, group sizes, bootstrap Jaccard per cluster.",
+    "Per K: gap, SE, mean silhouette, group sizes, HR/LR adjusted Rand index, bootstrap Jaccard.",
     "Per K and cluster: mean bootstrap Jaccard (fpc::clusterboot, PAM).",
     "Per subject: the traits, the K = 2 and K = 3 clusters, and the cluster used downstream.",
     "Per subject: HR/LR arm, group, cluster, and PC1 and PC2 of the scaled traits.",

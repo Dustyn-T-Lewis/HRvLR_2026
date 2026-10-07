@@ -51,4 +51,3 @@ figure_overview(
   stem = "f1_overview",
   note = "Panel a is the BioRender design panel (assets/design.png); it reads no data."
 )
-message("wrote f1_overview.pdf and f1_overview.xlsx")

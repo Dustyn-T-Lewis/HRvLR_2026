@@ -62,7 +62,7 @@ set_summary <- readxl::read_excel(paths[["set_summary"]], "set_summary")
 fgsea_totals <- panels$c$data |>
   filter(startsWith(as.character(call), "fgsea")) |>
   inner_join(set_summary, by = "contrast")
-fry_totals <- filter(panels$c$data, call == levels(call)[2]) |>
+fry_totals <- filter(panels$c$data, startsWith(as.character(call), "fry\nFDR")) |>
   inner_join(set_summary, by = "contrast")
 stopifnot(
   setequal(labels$module, eigengene_tests$module),
