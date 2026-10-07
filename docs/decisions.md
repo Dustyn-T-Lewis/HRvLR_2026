@@ -177,3 +177,17 @@ every stage against its package documentation and its outputs. The interview set
 | Shared steps | `R/classify.R` and `R/associate.R` replace three copies each; every workbook goes through `write_workbook()`. | About 1,300 fewer lines; every workbook diffs identical except the intended changes. |
 | Associate PDFs | Two-point regression lines and Dingbats points. | 11.6 and 10.2 MB down to 3.1 and 2.9 MB, same pictures. |
 | enrichVolcano | Pinned to GitHub commit `d3fed631f4`. | The lock had no remote. The current release drops the functions the code calls; earlier commits word set labels differently. |
+
+## 2026-10-06: methods review, then navigation before figures
+
+| Question | Decision | Reason |
+|---|---|---|
+| Methods | treat, ANCOVA, cameraPR, DGCA and the preservation calibration removed; logFC carries a 95% CI; classification is the five between-group tasks with DeLong and bootstrap AUC intervals; associations are within-group Spearman plus limma group x trait. | Package-native methods only, each answering one question. |
+| Pathway method | fgsea leads; fry stays as the stricter, self-contained test. | fgsea ranks sets against the other proteins; fry treats people as the unit and calls nothing at FDR at n = 7-8. |
+| F2 and F3 | Parked. Every arc gets its own F1 first. | Navigation and clean outputs come before the story figures. |
+| Intervals | 95% CI on every limma effect; Fisher-z CI (DescTools::CorCI) on every Spearman rho. NES, fry and PERMANOVA stay point estimates. | Effect size and its uncertainty beside every p. |
+| Names | Stage folders are number + content (02_Protein_Contrasts); each writes its content name in lower case (protein_contrasts.xlsx, protein_contrasts_report.pdf). Columns say what they hold (logFC, slope, rho, auc), each interval named after its estimate; a `columns` sheet defines every column. | Files and columns should read without a lookup. |
+| READMEs | At every arc, stage and figure root; no results; tables, directory trees and text layouts; premises explained from the ground up; no images. | The repository is read by hand; numbers in READMEs go stale on every rerun. |
+| Cluster F1 | Panel a shows the clustering groups and a brief K report, then the overall data as in HR/LR. Proteome: one F1 per clustering input with validity on every contrast. Continuous: people and traits, links against chance, PCA by growth and strength, fgsea grid, profile clusters. | Each arc opens on who is compared and on the whole-proteome picture. |
+| Muscle_size | Full copy kept, though K = 2 reproduces HR/LR. | Symmetry with Muscle_strength. |
+| Proteome outputs in git | None tracked. | 247 MB of per-input outputs; a rerun regenerates them. |
