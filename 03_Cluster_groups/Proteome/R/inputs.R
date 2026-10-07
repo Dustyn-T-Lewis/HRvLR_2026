@@ -42,7 +42,7 @@ stack_inputs <- function(stage, leave_out = character()) {
   files <- purrr::map_chr(inputs_used, \(input) {
     list.files(file.path(stage, input, "c_data"), "\\.xlsx$", full.names = TRUE)
   })
-  skip <- c("read_me", "input_manifest", "package_versions", "plot_index", leave_out)
+  skip <- c("read_me", "columns", "input_manifest", "package_versions", "plot_index", leave_out)
   sheets <- setdiff(readxl::excel_sheets(files[1]), skip)
   stacked <- purrr::map(rlang::set_names(sheets), \(sheet) {
     purrr::map2(files, inputs_used, \(file, input) {

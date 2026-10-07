@@ -89,7 +89,7 @@ soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThres
 ,n_up,Features up.
 ,n_down,Features down.
 ,pdf_page,Page of the report PDF that draws the row.
-,position,Panel position on that page (1 to 24).
+,position,Panel position on that page (1 to 12).
 ,panel,"Contamination panel the share is computed for (blood, erythrocyte, plasma and so on)."
 ,pct_signal,Share of the sample's total intensity that the panel's proteins carry (%).
 ,contaminant,TRUE when the protein is removed as a contaminant.
@@ -108,7 +108,7 @@ soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThres
 ,lr_minus_hr_at_t3,LR minus HR blood index at T3 (model estimate).
 ,permutation_p,"Permutation p, (b + 1) / (m + 1)."
 ,observations,Bin of how many samples observed the protein.
-,proteins,Number of proteins in the row's bin or group.
+,proteins,Number of proteins in the row's bin.
 ,null_999,99.9th percentile of |blood_cor| under shuffled blood indices.
 ,pct_missing,Share of values missing (%).
 ,delta_missing,Largest gap in missingness between the subject's biopsies.
@@ -296,3 +296,4 @@ panel_sources,rule,Rule that picks the panel's rows.
 ,significance,In which contrast the set reaches FDR < 0.05.
 ,discordant,TRUE when the NES changes sign between the contrasts.
 ,survivor,TRUE when collapsePathways keeps the set in either contrast.
+profile_groups|trait_groups,proteins,"Up to 15 member gene symbols, strongest |t| first."
