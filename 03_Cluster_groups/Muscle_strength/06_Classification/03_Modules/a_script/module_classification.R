@@ -1,5 +1,5 @@
-# How well each module eigengene separates the groups, on the five between-group tasks of
-# classify_step().
+# The strength clusters Hi and Lo: how well each module eigengene separates the groups. The analysis
+# is module_classification() in R/classify.R, shared by every grouping.
 
 suppressPackageStartupMessages({
   library(here)
@@ -14,22 +14,7 @@ suppressPackageStartupMessages({
 source(here("R", "helpers.R"))
 source(here("R", "classify.R"))
 
-inputs <- c(
-  modules = "03_Cluster_groups/Muscle_strength/01_Clustering/c_data/inputs/modules.rds"
-)
-paths <- map_chr(inputs, here)
-stopifnot(file.exists(paths))
-modules <- readRDS(paths[["modules"]])
-values <- modules$eigengenes
-meta <- modules$meta
-stopifnot(identical(colnames(values), meta$sample_id))
-
-classify_step(
-  stage = here("03_Cluster_groups", "Muscle_strength", "06_Classification", "03_Modules"),
-  name = "module_classification", inputs = inputs, paths = paths,
-  values = values, meta = meta, feature_label = set_names(rownames(values)),
-  feature_noun = "modules", feature_unit = "module", value_label = "eigengene",
-  row_groups = list(modules = modules$module_summary$module),
-  row_order = "Rows follow module size.",
-  groups = c("Hi", "Lo")
+module_classification(
+  stage = "03_Cluster_groups/Muscle_strength/06_Classification/03_Modules",
+  design_file = "03_Cluster_groups/Muscle_strength/02_Design_Contrasts/c_data/design.rds"
 )

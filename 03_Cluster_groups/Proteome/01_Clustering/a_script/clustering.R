@@ -21,7 +21,7 @@ source(here("03_Cluster_groups", "Proteome", "R", "inputs.R"))
 imposed_k <- set_names(rep(2L, 5), inputs_used)
 imposed_reason <- set_names(rep(paste(
   "Gap statistic selects K = 1 at every input, which is reported as the result; K = 2 imposed",
-  "by decision (2026-10-06) so the exploratory arc can compare the two halves the proteome",
+  "by decision (2026-10-06) so the exploratory grouping can compare the two halves the proteome",
   "suggests. Read each split with its bootstrap Jaccard."
 ), 5), inputs_used)
 k_max <- 3
@@ -31,14 +31,9 @@ stage <- here("03_Cluster_groups", "Proteome", "01_Clustering")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
-quantified <- "01_Processing/03_Quantification/c_data"
 inputs <- c(
   modules = "01_Processing/06_Module_Building/c_data/modules.rds",
-  phenotype = "00_Input/phenotype.csv",
-  proteins = file.path(quantified, "proteins.rds"),
-  DAList_corrected = file.path(quantified, "DAList_corrected.rds"),
-  DAList_limpa = file.path(quantified, "DAList_limpa.rds"),
-  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds"
+  phenotype = "00_Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -120,40 +115,18 @@ per_input <- imap(by_input, \(m, input) {
 })
 results <- map(set_names(names(per_input[[1]])), \(sheet) list_rbind(map(per_input, sheet)))
 
-# The 01_Processing inputs relabelled once per input, for the stages after this one: arm and group
-# carry the clusters as C1 and C2, and the samples of anyone not clustered at that input drop out.
-proteins_all <- readRDS(paths[["proteins"]])
-matrices <- map(set_names(c("DAList_corrected", "DAList_limpa")), \(name) readRDS(paths[[name]]))
-scores_all <- readRDS(paths[["singscore"]])
+# Each input's clusters as the grouping's two groups, C1 and C2. The design step reads these files;
+# the samples of anyone not clustered at that input drop out there.
+dir.create(file.path(out, "groups"), showWarnings = FALSE)
 walk(inputs_used, \(input) {
   used <- filter(results$assignments, input == .env$input)
-  group_of <- set_names(paste0("C", used$cluster), used$subject)
-  relabel <- function(meta) {
-    meta <- meta[meta$subject %in% names(group_of), , drop = FALSE]
-    meta$arm <- unname(group_of[meta$subject])
-    meta$group <- paste(meta$arm, meta$timepoint, sep = "_")
-    meta
-  }
-  dir <- file.path(out, "inputs", input)
-  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  proteins <- proteins_all
-  proteins$metadata <- relabel(proteins$metadata)
-  proteins$proteins <- proteins$proteins[, proteins$metadata$sample_id]
-  saveRDS(proteins, file.path(dir, "proteins.rds"), compress = "xz")
-  iwalk(matrices, \(d, name) {
-    d$metadata <- relabel(d$metadata)
-    d$data <- d$data[, d$metadata$sample_id]
-    d$observed <- d$observed[, d$metadata$sample_id]
-    saveRDS(d, file.path(dir, paste0(name, ".rds")), compress = "xz")
-  })
-  scores <- scores_all
-  scores$scores <- scores$scores[, proteins$metadata$sample_id]
-  saveRDS(scores, file.path(dir, "singscore.rds"), compress = "xz")
-  arc_modules <- modules
-  arc_modules$meta <- relabel(arc_modules$meta)
-  arc_modules$eigengenes <- arc_modules$eigengenes[, arc_modules$meta$sample_id]
-  saveRDS(arc_modules, file.path(dir, "modules.rds"), compress = "xz")
-  saveRDS(list(group_of = group_of, input = input), file.path(dir, "groups.rds"))
+  saveRDS(
+    list(
+      group_of = set_names(paste0("C", used$cluster), used$subject),
+      arms = c("C1", "C2"), defining_traits = character(0)
+    ),
+    file.path(out, "groups", paste0(input, ".rds"))
+  )
 })
 
 pdf(file.path(figures, "clustering_report.pdf"), width = 11, height = 8.5)

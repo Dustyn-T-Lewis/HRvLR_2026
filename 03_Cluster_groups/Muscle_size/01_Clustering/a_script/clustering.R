@@ -3,8 +3,8 @@
 # one-standard-error rule of Tibshirani, Walther & Hastie (2001), mean silhouette for K = 2 and 3,
 # group sizes, and bootstrap Jaccard stability per cluster (fpc::clusterboot; Hennig 2007).
 # imposed_k fixes K by hand; both the data-selected and the imposed K are recorded with the reason.
-# The relabelled inputs for the later stages are written only when K = 2 is used; with any other K
-# the arc stops here.
+# The groups file for the later steps is written only when K = 2 is used; with any other K the
+# grouping stops here.
 
 suppressPackageStartupMessages({
   library(here)
@@ -22,7 +22,7 @@ traits <- c("pct_fcsa_mixed", "pct_fcsa_type1", "pct_fcsa_type2", "pct_mcsa")
 imposed_k <- 2L
 imposed_reason <- paste(
   "Gap statistic selects K = 1; K = 2 imposed by decision (2026-10-06). It reproduces the HR/LR",
-  "split exactly, so this arc repeats that comparison under a size-cluster label."
+  "split exactly, so this grouping repeats that comparison under a size-cluster label."
 )
 k_max <- 3
 n_boot <- 500
@@ -31,15 +31,7 @@ stage <- here("03_Cluster_groups", family, "01_Clustering")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
-quantified <- "01_Processing/03_Quantification/c_data"
-inputs <- c(
-  phenotype = "00_Input/phenotype.csv",
-  proteins = file.path(quantified, "proteins.rds"),
-  DAList_corrected = file.path(quantified, "DAList_corrected.rds"),
-  DAList_limpa = file.path(quantified, "DAList_limpa.rds"),
-  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
-)
+inputs <- c(phenotype = "00_Input/phenotype.csv")
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 
@@ -102,9 +94,10 @@ assignments <- complete |>
   right_join(select(change, subject), by = "subject") |>
   arrange(cluster, subject)
 
-# The 01_Processing inputs, relabelled for this arc: arm and group carry the clusters, named Hi and
-# Lo by the mean of the family's first trait, and the samples of any unassigned subject drop out.
-# The arc's stages read these copies, so they run the same code as 02_HRvLR_groups on new labels.
+# The clusters as the grouping's two groups, named Hi and Lo by the mean of the family's first
+# trait. The design step reads this file; the samples of anyone without a cluster drop out there.
+# The traits the clusters were built on, and the composite (these clusters are the HR/LR split),
+# stay out of the group-by-trait tests.
 if (k_used == 2) {
   label_of <- assignments |>
     filter(!is.na(cluster)) |>
@@ -114,35 +107,12 @@ if (k_used == 2) {
   group_of <- assignments |>
     inner_join(label_of, by = "cluster") |>
     with(set_names(label, subject))
-  relabel <- function(meta) {
-    meta <- meta[meta$subject %in% names(group_of), , drop = FALSE]
-    meta$arm <- unname(group_of[meta$subject])
-    meta$group <- paste(meta$arm, meta$timepoint, sep = "_")
-    meta
-  }
-  inputs_dir <- file.path(out, "inputs")
-  dir.create(inputs_dir, showWarnings = FALSE)
-  proteins <- readRDS(paths[["proteins"]])
-  proteins$metadata <- relabel(proteins$metadata)
-  proteins$proteins <- proteins$proteins[, proteins$metadata$sample_id]
-  saveRDS(proteins, file.path(inputs_dir, "proteins.rds"), compress = "xz")
-  walk(c("DAList_corrected", "DAList_limpa"), \(name) {
-    d <- readRDS(paths[[name]])
-    d$metadata <- relabel(d$metadata)
-    d$data <- d$data[, d$metadata$sample_id]
-    d$observed <- d$observed[, d$metadata$sample_id]
-    saveRDS(d, file.path(inputs_dir, paste0(name, ".rds")), compress = "xz")
-  })
-  scores <- readRDS(paths[["singscore"]])
-  scores$scores <- scores$scores[, proteins$metadata$sample_id]
-  saveRDS(scores, file.path(inputs_dir, "singscore.rds"), compress = "xz")
-  modules <- readRDS(paths[["modules"]])
-  modules$meta <- relabel(modules$meta)
-  modules$eigengenes <- modules$eigengenes[, modules$meta$sample_id]
-  saveRDS(modules, file.path(inputs_dir, "modules.rds"), compress = "xz")
   saveRDS(
-    list(group_of = group_of, labels = label_of, family = family, traits = traits),
-    file.path(inputs_dir, "groups.rds")
+    list(
+      group_of = group_of, arms = c("Hi", "Lo"),
+      defining_traits = c(traits, "comp_hypertrophy")
+    ),
+    file.path(out, "groups.rds")
   )
 }
 
@@ -181,7 +151,7 @@ print(
 invisible(dev.off())
 
 # Each person on the first two components of the scaled traits: the space the clusters were found
-# in, for the arc's Figure 1.
+# in, for this grouping's Figure 1.
 space <- as_tibble(pcs$x[, 1:2], rownames = "subject") |>
   left_join(select(assignments, subject, cluster), by = "subject") |>
   mutate(

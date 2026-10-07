@@ -185,3 +185,99 @@ classify_step <- function(stage, name, inputs, paths, values, meta, feature_labe
     inputs, paths
   )
 }
+
+# The three levels' inputs for classify_step(). stage is the grouping's classification folder;
+# design_file its design.rds, which names the groups and who is in each.
+protein_classification <- function(stage, design_file) {
+  inputs <- c(
+    design = design_file,
+    corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+    limpa = "01_Processing/03_Quantification/c_data/DAList_limpa.rds"
+  )
+  paths <- map_chr(inputs, here)
+  stopifnot(file.exists(paths))
+  d <- readRDS(paths[["design"]])
+  # Rank tests and correlations take no covariate, so they read limpa's complete blood-corrected
+  # matrix; observed_share marks how much of each protein was measured rather than estimated.
+  dal <- for_design(readRDS(paths[["corrected"]]), d)
+  # Every protein carries one distinct gene symbol.
+  feature_label <- with(dal$annotation, set_names(gene, uniprot_id))
+  stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
+  # Display order for the overviews: average-linkage clustering on 1 - Pearson r of limpa's matrix.
+  complete <- for_design(readRDS(paths[["limpa"]]), d)$data
+
+  classify_step(
+    stage = here(stage), name = "protein_classification", inputs = inputs, paths = paths,
+    values = dal$data, observed_share = rowMeans(dal$observed), meta = dal$metadata,
+    feature_label = feature_label, feature_noun = "proteins", feature_unit = "protein",
+    value_label = "log2 abundance",
+    row_groups = list(
+      proteins = rownames(complete)[hclust(as.dist(1 - cor(t(complete))), "average")$order]
+    ),
+    row_order = paste(
+      "Rows are ordered by average-linkage clustering (1 - Pearson r) of limpa's",
+      "matrix, for display only."
+    ),
+    groups = d$arms
+  )
+}
+
+# Each collection is its own screen, so BH runs within task and collection.
+set_classification <- function(stage, design_file) {
+  inputs <- c(
+    design = design_file,
+    singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+    gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+    proteins = "01_Processing/03_Quantification/c_data/DAList_corrected.rds"
+  )
+  paths <- map_chr(inputs, here)
+  stopifnot(file.exists(paths))
+  d <- readRDS(paths[["design"]])
+  catalog <- readRDS(paths[["gene_sets"]])$set_catalog |> filter(qualifies)
+  values <- for_design(readRDS(paths[["singscore"]]), d)$scores[catalog$set_id, ]
+  meta <- for_design(readRDS(paths[["proteins"]]), d)$metadata
+  stopifnot(identical(colnames(values), meta$sample_id))
+
+  classify_step(
+    stage = here(stage), name = "set_classification", inputs = inputs, paths = paths,
+    values = values, meta = meta,
+    feature_label = with(catalog, set_names(enrichVolcano::ev_clean_label(pathway), set_id)),
+    feature_noun = "sets", feature_unit = "set", value_label = "singscore",
+    # Display order within each collection: average-linkage clustering on 1 - Pearson r of
+    # singscore.
+    row_groups = split(catalog$set_id, factor(catalog$collection, unique(catalog$collection))) |>
+      map(\(ids) ids[hclust(as.dist(1 - cor(t(values[ids, ]))), "average")$order]),
+    row_order = paste(
+      "Rows are ordered within collection by average-linkage clustering (1 - Pearson r)",
+      "of singscore, for display only."
+    ),
+    collection_of = with(catalog, set_names(collection, set_id)),
+    # ev_clean_label() breaks names every few words; panel headers re-wrap them at 50 characters.
+    panel_name = \(label, collection) {
+      paste0(collection, ": ", stringr::str_wrap(gsub("\n", " ", label), 50))
+    },
+    groups = d$arms
+  )
+}
+
+module_classification <- function(stage, design_file) {
+  inputs <- c(
+    design = design_file,
+    modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+  )
+  paths <- map_chr(inputs, here)
+  stopifnot(file.exists(paths))
+  d <- readRDS(paths[["design"]])
+  modules <- for_design(readRDS(paths[["modules"]]), d)
+  values <- modules$eigengenes
+  meta <- modules$meta
+  stopifnot(identical(colnames(values), meta$sample_id))
+
+  classify_step(
+    stage = here(stage), name = "module_classification", inputs = inputs, paths = paths,
+    values = values, meta = meta, feature_label = set_names(rownames(values)),
+    feature_noun = "modules", feature_unit = "module", value_label = "eigengene",
+    row_groups = list(modules = modules$module_summary$module),
+    row_order = "Rows follow module size.", groups = d$arms
+  )
+}

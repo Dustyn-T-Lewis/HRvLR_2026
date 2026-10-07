@@ -36,6 +36,30 @@ storey_q <- function(p) {
   q
 }
 
+# A grouping on a sample table: only the people it groups, with its labels in arm and
+# group (group is arm and time point, e.g. Hi_T1).
+relabel_samples <- function(meta, group_of) {
+  meta <- meta[meta$subject %in% names(group_of), , drop = FALSE]
+  meta$arm <- unname(group_of[meta$subject])
+  meta$group <- factor(paste(meta$arm, meta$timepoint, sep = "_"))
+  meta
+}
+
+# A 01_Processing object as a grouping sees it: relabelled by its design.rds and cut to the
+# samples left, so every grouping reads the same processing files.
+for_design <- function(x, design) {
+  samples <- design$dal$metadata$sample_id
+  meta_field <- intersect(c("metadata", "meta"), names(x))
+  if (length(meta_field)) {
+    x[[meta_field]] <- relabel_samples(x[[meta_field]], design$group_of)
+    samples <- x[[meta_field]]$sample_id
+  }
+  for (field in intersect(c("proteins", "data", "observed", "scores", "eigengenes"), names(x))) {
+    x[[field]] <- x[[field]][, samples]
+  }
+  x
+}
+
 # One column per subject at a time point, and the change between two time points over the
 # subjects sampled at both.
 subject_values <- function(values, meta, timepoint) {
