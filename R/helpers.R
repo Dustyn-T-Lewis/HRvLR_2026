@@ -117,8 +117,9 @@ pairing_value <- \(pairings, window, name, subjects) {
   set_names(pairings[[window]][[name]], pairings[[window]]$subject)[subjects]
 }
 
-# Spearman rho and p per row from cor.test. exact = TRUE gives the exact permutation p, which
-# cor.test computes for nine subjects or fewer (the within-arm tests); with ties it falls back to
+# Spearman rho and p per row from cor.test, with a 95% interval from Fisher's z transform
+# (DescTools::CorCI), approximate at this n. exact = TRUE gives the exact permutation p, which
+# cor.test computes for nine subjects or fewer (the within-group tests); with ties it falls back to
 # the normal approximation.
 spearman_by_row <- function(x, outcome, exact = FALSE) {
   usable <- !is.na(outcome)
@@ -126,24 +127,34 @@ spearman_by_row <- function(x, outcome, exact = FALSE) {
   tests <- map(seq_len(nrow(x)), \(i) {
     suppressWarnings(cor.test(x[i, ], outcome[usable], method = "spearman", exact = exact))
   })
+  n <- unname(rowSums(!is.na(x)))
+  rho <- map_dbl(tests, \(r) unname(r$estimate))
+  interval <- map2(rho, n, \(r, k) {
+    if (is.na(r) || k < 4) c(NA, NA) else unname(DescTools::CorCI(r, k)[2:3])
+  })
   tibble(
-    feature = rownames(x), n_subjects = unname(rowSums(!is.na(x))),
-    rho = map_dbl(tests, \(r) unname(r$estimate)), p = map_dbl(tests, "p.value")
+    feature = rownames(x), n_subjects = n, rho = rho,
+    rho_lower = map_dbl(interval, 1), rho_upper = map_dbl(interval, 2),
+    p = map_dbl(tests, "p.value")
   )
 }
 
-# limma on one value per subject: the chosen terms' effect, t and p.
+# limma on one value per subject: each chosen term's estimate with its 95% interval, t and p
+# (topTable, confint = TRUE).
 subject_fit <- function(x, predictors, formula, terms) {
   ok <- complete.cases(predictors)
   x <- x[, ok, drop = FALSE]
   fit <- lmFit(x, model.matrix(formula, predictors[ok, , drop = FALSE])) |>
     eBayes(robust = TRUE)
+  n <- set_names(unname(rowSums(!is.na(x))), rownames(x))
   map(terms, \(term) {
-    tibble(
-      feature = rownames(x), coefficient = term, n_subjects = unname(rowSums(!is.na(x))),
-      effect = unname(fit$coefficients[, term]), t = unname(fit$t[, term]),
-      p = unname(fit$p.value[, term])
-    )
+    topTable(fit, coef = term, number = Inf, sort.by = "none", confint = TRUE) |>
+      as_tibble(rownames = "feature") |>
+      transmute(
+        feature,
+        coefficient = term, n_subjects = n[feature], estimate = logFC,
+        estimate_lower = CI.L, estimate_upper = CI.R, t, p = P.Value
+      )
   }) |>
     list_rbind() |>
     filter(!is.na(p))

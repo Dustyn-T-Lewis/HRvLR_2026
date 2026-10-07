@@ -2,13 +2,15 @@
 # eigengenes. The pooled, label-free associations live in 04_Continuous_no_group; this stage asks
 # only what the grouping adds.
 #
-# Within group: Spearman between each feature and each outcome, exact p (cor.test), in each group.
+# Within group: Spearman between each feature and each trait, exact p (cor.test) and a Fisher-z
+# 95% interval, in each group.
 # Descriptive: each group holds 6 to 8 subjects, and a group split on a trait restricts that
 # trait's range inside each group.
-# Group difference: limma on feature ~ group * outcome, the first group's slope minus the second's,
+# Group difference: limma on feature ~ group * trait, the first group's slope minus the second's
+# with its 95% interval,
 # the one test of whether a link differs between the groups.
-# The outcomes that define the grouping stay out of the group difference: they re-measure the
-# split. Each group needs five subjects with the outcome measured.
+# The traits that define the grouping stay out of the group difference: they re-measure the
+# split. Each group needs five subjects with the trait measured.
 
 suppressPackageStartupMessages({
   library(here)
@@ -87,7 +89,7 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
         spearman_by_row(s$x[, kept, drop = FALSE], s$outcome[kept], exact = TRUE)
       }) |>
         list_rbind(names_to = "group") |>
-        mutate(outcome = name)
+        mutate(trait = name)
     }) |>
       list_rbind() |>
       mutate(window = window)
@@ -96,7 +98,8 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
 
   no_fits <- tibble(
     feature = character(), coefficient = character(), n_subjects = double(),
-    effect = double(), t = double(), p = double(), outcome = character()
+    estimate = double(), estimate_lower = double(), estimate_upper = double(), t = double(),
+    p = double(), trait = character()
   )
   group_difference <- imap(screens, \(by_outcome, window) {
     by_outcome[setdiff(names(by_outcome), defining_outcomes)] |>
@@ -107,14 +110,18 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
         )
         term <- sprintf("group%s:outcome", group_levels[2])
         subject_fit(s$x, predictors, ~ group * outcome, term) |>
-          mutate(outcome = name)
+          mutate(trait = name)
       }) |>
       # A split too uneven for five per group in any trait leaves nothing to fit.
       list_rbind(ptype = no_fits) |>
       mutate(window = window)
   }) |>
     list_rbind() |>
-    select(-any_of("coefficient"))
+    select(-coefficient) |>
+    rename(
+      slope_difference = estimate, slope_difference_lower = estimate_lower,
+      slope_difference_upper = estimate_upper
+    )
 
   tidy <- \(d) {
     d |>
@@ -129,7 +136,7 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
       ) |>
       mutate(
         fdr = p.adjust(p, "BH"), qvalue = storey_q(p),
-        .by = c(level, window, outcome, any_of("group"), collection)
+        .by = c(level, window, trait, any_of("group"), collection)
       )
   }
   list(
@@ -142,7 +149,7 @@ results <- map(set_names(names(per_level[[1]])), \(sheet) list_rbind(map(per_lev
 counts <- imap(results, \(d, test) {
   summarise(d,
     n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
-    .by = c(level, window, outcome, any_of("group"))
+    .by = c(level, window, trait, any_of("group"))
   ) |>
     mutate(test = test, .before = 1)
 }) |>
@@ -153,15 +160,15 @@ count_plot <- counts |>
     test = if_else(is.na(group), test, paste(test, group)),
     window = factor(window, names(window_of(feature_levels$modules$values)))
   ) |>
-  ggplot(aes(n_nominal / n_tested, outcome, fill = test)) +
+  ggplot(aes(n_nominal / n_tested, trait, fill = test)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.75) +
   geom_vline(xintercept = 0.05, linetype = "dashed", linewidth = 0.3) +
   facet_grid(level ~ window, scales = "free_y", space = "free_y") +
   scale_x_continuous(labels = scales::label_percent()) +
   labs(
-    title = "Share of features at p < 0.05, per test, window and outcome",
+    title = "Share of features at p < 0.05, per test, window and trait",
     subtitle = sprintf(
-      "Groups: %s. Dashed: 5%%. BH within level, window, outcome and collection.",
+      "Groups: %s. Dashed: 5%%. BH within level, window, trait and collection.",
       paste(group_levels, collapse = " and ")
     ),
     x = "Features at p < 0.05", y = NULL, fill = NULL
@@ -173,12 +180,15 @@ print(count_plot)
 invisible(dev.off())
 
 write_workbook(
-  c(list(counts = counts), map(results, \(d) arrange(d, level, window, outcome, p))),
+  c(list(counts = counts), map(results, \(d) arrange(d, level, window, trait, p))),
   c(
-    "Tested, p < 0.05 and BH < 0.05 per test, level, window, outcome and group.",
-    "Spearman rho and exact p within each group, every feature and outcome.",
+    "Tested, p < 0.05 and BH < 0.05 per test, level, window, trait and group.",
+    "Spearman rho with its Fisher-z 95% CI and exact p within each group, every feature and trait.",
     sprintf(
-      "limma, feature ~ group * outcome: %s slope minus %s slope, t, p, BH and Storey q.",
+      paste(
+        "limma, feature ~ group * trait: %s slope minus %s slope with its 95%% CI, t, p, BH and",
+        "Storey q."
+      ),
       group_levels[2], group_levels[1]
     )
   ),

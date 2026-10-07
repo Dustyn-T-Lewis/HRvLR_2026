@@ -63,7 +63,7 @@ stopifnot(identical(rownames(eb$coefficients), annotation$uniprot_id))
 results <- map(set_names(contrast_names), \(contrast) {
   topTable(eb, coef = contrast, number = Inf, sort.by = "none", confint = TRUE) |>
     as_tibble() |>
-    select(logFC, ci_lower = CI.L, ci_upper = CI.R, AveExpr, t, P.Value, adj.P.Val) |>
+    select(logFC, logFC_lower = CI.L, logFC_upper = CI.R, AveExpr, t, P.Value, adj.P.Val) |>
     bind_cols(annotation, x = _)
 }) |>
   list_rbind(names_to = "contrast") |>
@@ -184,7 +184,8 @@ p_histogram <- results |>
     title = "p-value histogram per contrast", x = "p", y = "proteins",
     caption = paste(
       "Dashed line: a flat null (tested / 20). A spike at zero on a flat background is signal;",
-      "a slope up toward 1 is a conservative test. Table: c_data/02_contrasts.xlsx, DEP_matrix."
+      "a slope up toward 1 is a conservative test.",
+      "Table: c_data/02_contrasts.xlsx, protein_by_contrast."
     )
   ) +
   theme_minimal(base_size = 10)
@@ -217,7 +218,7 @@ volcano <- results |>
     x = "log2 fold change", y = "-log10 p",
     caption = paste(
       "limma on limpa's quantification, subject blocked, blood as a covariate. Dashed line:",
-      "p = 0.05. BH within contrast. Table: c_data/02_contrasts.xlsx, DEP_matrix."
+      "p = 0.05. BH within contrast. Table: c_data/02_contrasts.xlsx, protein_by_contrast."
     )
   ) +
   theme_minimal(base_size = 9) +
@@ -316,7 +317,7 @@ overviews <- imap(row_groups, \(rows, group) {
       sprintf("All %s %s by the nine contrasts.", n_rows, feature_noun),
       "Fill: log2 fold change from the limma fit; status: p and BH q within contrast.",
       sprintf("Colours stop at the 99th percentile of |value|, %.2g.", effect_limit),
-      row_order, "Grey: not tested. Table: c_data/02_contrasts.xlsx, DEP_matrix."
+      row_order, "Grey: not tested. Table: c_data/02_contrasts.xlsx, protein_by_contrast."
     ))
   )
 }) |>
@@ -435,13 +436,12 @@ invisible(dev.off())
 
 write_workbook(
   list(
-    DEP_matrix = results |>
+    protein_by_contrast = results |>
       mutate(n_obs = n_obs[uniprot_id]) |>
-      select(uniprot_id, gene, n_obs, contrast, logFC, ci_lower, ci_upper, p, fdr, qvalue) |>
-      pivot_wider(
-        names_from = contrast, values_from = c(logFC, ci_lower, ci_upper, p, fdr, qvalue),
-        names_glue = "{contrast}_{.value}"
-      ),
+      select(
+        contrast, uniprot_id, gene, n_obs, logFC, logFC_lower, logFC_upper, t, p, fdr, qvalue
+      ) |>
+      arrange(match(contrast, contrast_names), p),
     contrast_summary = contrast_summary,
     null_calibration = null_calibration,
     detectable_effect = tibble(
@@ -456,7 +456,10 @@ write_workbook(
     permanova = global_tests
   ),
   c(
-    "logFC with its 95% CI, p, BH and Storey q per protein and contrast, with samples observed.",
+    paste(
+      "One row per contrast and protein: logFC with its 95% CI, t, p, BH and Storey q, and the",
+      "samples observed."
+    ),
     "Tested, p < 0.05 and BH counts per contrast, with its role.",
     "propTrueNull, median |t| and share of p below 0.2 per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",

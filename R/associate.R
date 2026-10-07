@@ -12,8 +12,11 @@
 # change against the % trait changes, composite and volume ("baseline" is the T1 level against
 # later change); T1 and T2 levels against the trait levels at the same biopsy; and the T3 level
 # against the T2 trait levels, since T3 follows the same training (it also carries the bout's
-# acute effect). Per feature: limma on one value per subject (p), Spearman (p_rank) and biweight
-# midcorrelation (bicor).
+# acute effect). Per feature: limma on one value per subject (slope with its 95% interval, p),
+# Spearman (rho with a Fisher-z interval, p_rho) and biweight midcorrelation (bicor).
+#
+# Every limma estimate carries its 95% interval (topTable, confint = TRUE), named after the
+# estimate: slope_lower and slope_upper, interaction_lower and interaction_upper.
 #
 # Two predictor: feature ~ growth + strength gain. Interaction: feature ~ growth x strength gain,
 # the continuous form of asking whether the strength link depends on growth.
@@ -68,9 +71,13 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     fit <- lmFit(y, design, block = s$subject, correlation = correlation) |>
       eBayes(robust = TRUE)
     map(c("within", "between"), \(term) {
-      topTable(fit, coef = term, number = Inf, sort.by = "none") |>
+      topTable(fit, coef = term, number = Inf, sort.by = "none", confint = TRUE) |>
         as_tibble(rownames = "feature") |>
-        transmute(trait, term, feature, n_samples = nrow(s), effect = logFC, t, p = P.Value)
+        transmute(
+          trait, term, feature,
+          n_samples = nrow(s), slope = logFC, slope_lower = CI.L,
+          slope_upper = CI.R, t, p = P.Value
+        )
     }) |>
       list_rbind()
   }) |>
@@ -89,23 +96,28 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   change_windows <- c("training", "baseline", "acute")
   linear <- \(x, outcome) subject_fit(x, data.frame(trait = outcome), ~trait, "trait")
   continuous <- function(x, outcome) {
-    fit <- linear(x, outcome) |> select(feature, n_subjects, effect, t, p)
+    fit <- linear(x, outcome) |>
+      select(
+        feature, n_subjects,
+        slope = estimate, slope_lower = estimate_lower, slope_upper = estimate_upper, t, p
+      )
     ok <- !is.na(outcome)
     bc <- WGCNA::bicorAndPvalue(t(x[fit$feature, ok, drop = FALSE]), outcome[ok])
+    rank <- spearman_by_row(x, outcome) |> select(feature, rho, rho_lower, rho_upper, p_rho = p)
     fit |>
-      left_join(select(spearman_by_row(x, outcome), feature, rho, p_rank = p), by = "feature") |>
+      left_join(rank, by = "feature") |>
       mutate(bicor = bc$bicor[feature, 1], p_bicor = bc$p[feature, 1])
   }
   change_score <- imap(windows, \(x, window) {
     map(set_names(pairing_outcomes[[window]]), \(name) {
       continuous(x, pairing_value(pairing_tables, window, name, colnames(x)))
     }) |>
-      list_rbind(names_to = "outcome") |>
+      list_rbind(names_to = "trait") |>
       mutate(window = window, .before = 1)
   }) |>
     list_rbind() |>
     labelled() |>
-    corrected(window, outcome)
+    corrected(window, trait)
   strength_tests <- c("pct_leg_press_1rm", "pct_leg_ext_1rm")
   two_predictor <- imap(windows[change_windows], \(x, window) {
     map(set_names(strength_tests), \(test) {
@@ -113,14 +125,15 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         growth = outcome_of("comp_hypertrophy", colnames(x)),
         strength = outcome_of(test, colnames(x))
       )
-      subject_fit(x, predictors, ~ growth + strength, c("growth", "strength"))
+      subject_fit(x, predictors, ~ growth + strength, c("growth", "strength")) |>
+        rename(slope = estimate, slope_lower = estimate_lower, slope_upper = estimate_upper)
     }) |>
       list_rbind(names_to = "strength_test") |>
       mutate(window = window, .before = 1)
   }) |>
     list_rbind() |>
     mutate(
-      outcome = if_else(coefficient == "growth", "comp_hypertrophy", strength_test),
+      trait = if_else(coefficient == "growth", "comp_hypertrophy", strength_test),
       .after = coefficient
     ) |>
     labelled() |>
@@ -133,7 +146,11 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         growth = outcome_of("comp_hypertrophy", colnames(x)),
         strength = outcome_of(test, colnames(x))
       )
-      subject_fit(x, predictors, ~ growth * strength, "growth:strength")
+      subject_fit(x, predictors, ~ growth * strength, "growth:strength") |>
+        rename(
+          interaction = estimate, interaction_lower = estimate_lower,
+          interaction_upper = estimate_upper
+        )
     }) |>
       list_rbind(names_to = "strength_test") |>
       mutate(window = window, .before = 1)
@@ -155,9 +172,9 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         analysis = paste("model:", term), comparison = trait, pick(all_of(by_collection)),
         n_tested, n_nominal, n_fdr_05
       ),
-    tally(change_score, window, outcome) |>
+    tally(change_score, window, trait) |>
       transmute(
-        analysis = paste("change score:", window), comparison = outcome,
+        analysis = paste("change score:", window), comparison = trait,
         pick(all_of(by_collection)), n_tested, n_nominal, n_fdr_05
       ),
     tally(two_predictor, window, strength_test, coefficient) |>
@@ -187,7 +204,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   bh_scope <- if (length(by_collection)) " and collection" else ""
   name_of <- \(d) panel_name(d$label, d[["collection"]])
 
-  # Overviews: sample-model t by trait, then change-score rho by outcome, one page per window.
+  # Overviews: sample-model t by trait, then change-score rho by trait, one page per window.
   t_limit <- cap(model$t)
   overviews <- imap(row_groups, \(rows, group) {
     term_grid <- \(term, value) {
@@ -213,18 +230,18 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     window_pages <- map(names(windows), \(w) {
       d <- filter(change_score, window == w)
       maps <- labelled_heat(
-        as_grid(d, rows, pairing_outcomes[[w]], "outcome", \(d) d$rho),
+        as_grid(d, rows, pairing_outcomes[[w]], "trait", \(d) d$rho),
         "Spearman rho, both arms pooled", c(-1, 0, 1), "rho"
       ) +
         labelled_heat(
-          as_grid(d, rows, pairing_outcomes[[w]], "outcome", \(d) status_of(d$p, d$fdr)),
+          as_grid(d, rows, pairing_outcomes[[w]], "trait", \(d) status_of(d$p, d$fdr)),
           "limma p and BH q",
           row_names = TRUE
         )
       heatmap_page(maps, sprintf("Change score overview, %s window: %s", w, group), paste(
         sprintf("All %s %s, one row each.", format(length(rows), big.mark = ","), feature_noun),
         sprintf(
-          "Spearman rho between the %s (%s) and each outcome; status from limma.", value_label,
+          "Spearman rho between the %s (%s) and each trait; status from limma.", value_label,
           window_axis[[w]]
         ),
         row_order, paste0("Grey: not tested. Table: c_data/", workbook, ", change_score.")
@@ -246,7 +263,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       }),
       name = name_of(pick(everything())),
       panel = sprintf(
-        "%s\n%s %.3g  p %.2g  q %.2g\n%d biopsies, %d subjects", name, term, effect, p, fdr,
+        "%s\n%s %.3g  p %.2g  q %.2g\n%d biopsies, %d subjects", name, term, slope, p, fdr,
         n_biopsies, n_subjects
       )
     ) |>
@@ -282,7 +299,7 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
         caption = stringr::str_wrap(width = 160, paste(
           "limma, abundance ~ timepoint + between + within, subject blocked, on the T1 and T2",
           "biopsies with the trait measured. Lines join each subject's two biopsies: the within",
-          "term reads their slopes, the between term the spread of subjects. Header: effect per",
+          "term reads their slopes, the between term the spread of subjects. Header: slope per",
           "trait unit, p, BH q within", model_scope,
           "and the biopsies and subjects where the feature was observed.",
           paste0("Table: c_data/", workbook, ", model.")
@@ -296,23 +313,23 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     mutate(
       name = name_of(pick(everything())),
       panel = sprintf(
-        "%s vs %s (%s)\nrho %+.2f  p %.2g  q %.2g  n %d", name, outcome, outcome_unit[outcome],
+        "%s vs %s (%s)\nrho %+.2f  p %.2g  q %.2g  n %d", name, trait, outcome_unit[trait],
         rho, p, fdr, n_subjects
       )
     ) |>
-    arrange(match(window, names(windows)), p, desc(abs(rho)), feature, outcome) |>
+    arrange(match(window, names(windows)), p, desc(abs(rho)), feature, trait) |>
     paginate("window")
   page_captions <- c(
     "change score" = paste(
       "One point per subject, every subject pooled. The line is a least-squares fit, drawn as a",
-      "guide. Header: Spearman rho, and limma p and BH q within window, outcome%s, with the",
+      "guide. Header: Spearman rho, and limma p and BH q within window, trait%s, with the",
       paste0("subjects used. Table: c_data/", workbook, ", change_score.")
     ),
     "two predictor" = paste(
       "One point per subject. Header: the growth or strength coefficient from limma, feature ~",
       "comp_hypertrophy + strength gain, each adjusted for the other, with p, BH q within",
       "window, strength test, term%s, and the subjects used. The x axis shows the term's own",
-      "outcome; the drawing does not hold the other predictor fixed.",
+      "trait; the drawing does not hold the other predictor fixed.",
       paste0("Table: c_data/", workbook, ", two_predictor.")
     )
   )
@@ -323,15 +340,15 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       filter(analysis == paste0(kind, ": ", w)) |>
       summarise(across(c(n_tested, n_nominal, n_fdr_05), sum))
     points <- hits |>
-      select(feature, outcome, panel) |>
+      select(feature, trait, panel) |>
       cross_join(tibble(subject = colnames(windows[[w]]))) |>
       mutate(
         value = windows[[w]][cbind(feature, subject)],
-        outcome_value = map2_dbl(outcome, subject, \(o, s) pairing_value(pairing_tables, w, o, s)),
+        trait_value = map2_dbl(trait, subject, \(o, s) pairing_value(pairing_tables, w, o, s)),
         panel = factor(panel, slots(hits$panel))
       ) |>
-      filter(!is.na(value), !is.na(outcome_value))
-    ggplot(points, aes(value, outcome_value)) +
+      filter(!is.na(value), !is.na(trait_value))
+    ggplot(points, aes(value, trait_value)) +
       # A straight line needs two points, not the default 80.
       geom_smooth(
         method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.5, n = 2, colour = "grey40"
@@ -340,8 +357,8 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       facet_wrap(~panel, nrow = 3, ncol = 4, scales = "free", drop = FALSE) +
       labs(
         title = sprintf("%s, %s window", stringr::str_to_sentence(kind), w),
-        subtitle = counts_line(info, "feature-outcome pairs", hits),
-        x = sprintf("%s, %s", value_label, window_axis[[w]]), y = "outcome (unit in header)",
+        subtitle = counts_line(info, "feature-trait pairs", hits),
+        x = sprintf("%s, %s", value_label, window_axis[[w]]), y = "trait (unit in header)",
         caption = stringr::str_wrap(page_captions[[kind]], 160)
       ) +
       page_theme
@@ -353,17 +370,17 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
     mutate(
       kind = "two predictor",
       header = sprintf(
-        "%s term, %s model %+.3g", coefficient, sub("pct_", "", strength_test), effect
+        "%s term, %s model %+.3g", coefficient, sub("pct_", "", strength_test), slope
       )
     ) |>
     mutate(
       name = name_of(pick(everything())),
       panel = sprintf(
-        "%s vs %s (%s)\n%s  p %.2g  q %.2g  n %d", name, outcome, outcome_unit[outcome], header,
+        "%s vs %s (%s)\n%s  p %.2g  q %.2g  n %d", name, trait, outcome_unit[trait], header,
         p, fdr, n_subjects
       )
     ) |>
-    arrange(match(window, names(windows)), p, desc(abs(t)), feature, outcome) |>
+    arrange(match(window, names(windows)), p, desc(abs(t)), feature, trait) |>
     paginate(c("kind", "window"))
   slope_pages <- map(split(slope_hits, slope_hits$pdf_page), \(hits) {
     change_page(hits, hits$kind[1])
@@ -378,11 +395,11 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
       pdf_page = pdf_page + length(overviews), position
     ),
     transmute(change_hits,
-      analysis = "change score", window, outcome, pick(all_of(by_collection)), feature, label,
+      analysis = "change score", window, trait, pick(all_of(by_collection)), feature, label,
       pdf_page = pdf_page + length(overviews) + length(model_pages), position
     ),
     transmute(slope_hits,
-      analysis = kind, window, outcome, strength_test, coefficient, pick(all_of(by_collection)),
+      analysis = kind, window, trait, strength_test, coefficient, pick(all_of(by_collection)),
       feature, label,
       pdf_page = pdf_page + length(overviews) + length(model_pages) + length(change_pages),
       position
@@ -412,28 +429,28 @@ associate_step <- function(stage, inputs, paths, values, meta, feature_label, fe
   write_workbook(
     list(
       counts = counts, model = arrange(model, trait, term, p),
-      change_score = arrange(change_score, window, outcome, p),
+      change_score = arrange(change_score, window, trait, p),
       two_predictor = arrange(two_predictor, window, strength_test, coefficient, p),
       interaction = arrange(interaction, window, strength_test, p),
       plot_index = plot_index
     ),
     c(
-      "Tested, p < 0.05 and BH < 0.05 counts per term and trait, and per window and outcome.",
-      sprintf(
-        "Sample model: effect per trait unit, t, p, BH and Storey q per %s, trait and term.",
-        feature_unit
-      ),
+      "Tested, p < 0.05 and BH < 0.05 counts per term and trait, and per window and trait.",
       sprintf(paste(
-        "Change score, every subject pooled: limma effect, t, p, BH, Storey q; Spearman rho and",
-        "p_rank; bicor and its p; per %s, window and outcome."
+        "Sample model: slope per trait unit with its 95%% CI, t, p, BH and Storey q per %s, trait",
+        "and term."
       ), feature_unit),
-      sprintf(
-        "Two predictor: growth and strength terms, t, p, BH and Storey q per %s, window and test.",
-        feature_unit
-      ),
       sprintf(paste(
-        "Interaction, feature ~ growth x strength gain: effect, t, p, BH and Storey q per %s,",
+        "Change score, every subject pooled: limma slope with its 95%% CI, t, p, BH, Storey q;",
+        "Spearman rho with its Fisher-z 95%% CI and p_rho; bicor and its p; per %s, window and trait."
+      ), feature_unit),
+      sprintf(paste(
+        "Two predictor: growth and strength slopes with 95%% CIs, t, p, BH and Storey q per %s,",
         "window and test."
+      ), feature_unit),
+      sprintf(paste(
+        "Interaction, feature ~ growth x strength gain: interaction term with its 95%% CI, t, p, BH",
+        "and Storey q per %s, window and test."
       ), feature_unit),
       "PDF page of each overview, and page and panel position of every p < 0.05 row."
     ),

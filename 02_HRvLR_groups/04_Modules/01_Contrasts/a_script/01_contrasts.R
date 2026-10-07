@@ -63,9 +63,13 @@ me_fit <- lmFit(me, design, block = subject, correlation = me_correlation) |>
   contrasts.fit(contrast_matrix) |>
   eBayes(robust = TRUE)
 eigengene_tests <- map(contrast_names, \(contrast) {
-  topTable(me_fit, coef = contrast, number = Inf, sort.by = "none") |>
+  topTable(me_fit, coef = contrast, number = Inf, sort.by = "none", confint = TRUE) |>
     rownames_to_column("module") |>
-    transmute(contrast, module, logFC, t, p = P.Value, fdr = adj.P.Val, qvalue = storey_q(p))
+    transmute(
+      contrast, module, logFC,
+      logFC_lower = CI.L, logFC_upper = CI.R, t, p = P.Value, fdr = adj.P.Val,
+      qvalue = storey_q(p)
+    )
 }) |>
   list_rbind()
 
