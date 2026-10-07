@@ -407,8 +407,7 @@ run_input <- function(input) {
       list_rbind()
   )
   # The same test on the phenotype: the six size and strength traits at T1 and T2, scaled, time
-  # within subject. Arm is not tested, because C1 and C2 were split on how much these traits
-  # changed.
+  # within subject. The clusters are not tested here; 08_Cluster_Phenotype tests them on the traits.
   trait_sets <- phenotype_tables(trait_table)
   trait_rows <- filter(trait_sets$biopsy, if_all(all_of(trait_sets$traits), \(x) !is.na(x)))
   set.seed(1)

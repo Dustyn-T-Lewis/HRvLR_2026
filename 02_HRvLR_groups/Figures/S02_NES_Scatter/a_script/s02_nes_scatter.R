@@ -61,9 +61,16 @@ run_pair <- function(x_contrast, y_contrast, tag) {
       list(estimate = NA_real_, p.value = NA_real_)
     }
     hits <- filter(data, significance != "NS")
+    interval <- if (is.na(test$estimate)) {
+      c(NA_real_, NA_real_)
+    } else {
+      unname(DescTools::CorCI(test$estimate, nrow(data))[2:3])
+    }
     tibble(
       n_sets = nrow(data), n_significant = nrow(hits), n_discordant = sum(hits$discordant),
-      rho = round(unname(test$estimate), 3), p = test$p.value,
+      rho = round(unname(test$estimate), 3),
+      rho_lower = interval[1], rho_upper = interval[2],
+      p = test$p.value,
       same_sign = round(mean(!hits$discordant), 3)
     )
   }
@@ -219,7 +226,7 @@ sheets <- list(
   nes_scatter = export
 )
 holds <- c(
-  "Spearman rho of HR against LR NES, and significant and discordant counts, per population.",
+  "Spearman rho (Fisher-z 95% CI) of HR against LR NES, significant and discordant counts.",
   "One row per set scored in both arms: both NES, both FDR, significance and discordance."
 )
 write_workbook(sheets, holds, file.path(out, "s02_nes_scatter.xlsx"), inputs, paths)

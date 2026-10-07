@@ -297,3 +297,5 @@ panel_sources,rule,Rule that picks the panel's rows.
 ,discordant,TRUE when the NES changes sign between the contrasts.
 ,survivor,TRUE when collapsePathways keeps the set in either contrast.
 profile_groups|trait_groups,proteins,"Up to 15 member gene symbols, strongest |t| first."
+people,z,"The value as a z score within the trait (mean 0, SD 1 across people)."
+links,share,Share of features tested at p < 0.05.

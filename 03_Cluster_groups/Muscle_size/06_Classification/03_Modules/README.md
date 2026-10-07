@@ -1,12 +1,20 @@
 # 06_Classification/03_Modules
 
-Does one module separate the groups? A copy of `02_HRvLR_groups/06_Classification/03_Modules` run on the muscle size clusters: groups Hi and Lo from
-`01_Clustering`, read from the relabelled inputs in `01_Clustering/c_data/inputs/`.
+Can one module tell the groups apart?
+
+The HR/LR stage [`02_HRvLR_groups/06_Classification/03_Modules`](../../../../02_HRvLR_groups/06_Classification/03_Modules/README.md) run on the muscle-size clusters, groups Hi and Lo, read from the relabelled inputs in `01_Clustering/c_data/inputs/`. The code differs from the template only in its paths and group names.
 
 | | |
 |---|---|
 | Reads | `03_Cluster_groups/Muscle_size/01_Clustering/c_data/inputs/modules.rds` |
-| Writes | `c_data/03_modules.xlsx`, `b_reports/03_modules_figures.pdf` |
-| Run | `Rscript 03_Cluster_groups/Muscle_size/06_Classification/03_Modules/a_script/classify_modules.R` |
+| Writes | `c_data/module_classification.xlsx`, `b_reports/module_classification_report.pdf` |
+| Run | `Rscript 03_Cluster_groups/Muscle_size/06_Classification/03_Modules/a_script/module_classification.R` |
 
-Method, figures and sheets are as in [`02_HRvLR_groups/06_Classification/03_Modules`](../../../../02_HRvLR_groups/06_Classification/03_Modules/README.md), with HR and LR read as Hi and Lo.
+```
+03_Modules/
+├── a_script/module_classification.R
+├── b_reports/   module_classification_report.pdf
+└── c_data/      module_classification.xlsx
+```
+
+The method, the sheets, the columns and the report pages are described in [`02_HRvLR_groups/06_Classification/03_Modules`](../../../../02_HRvLR_groups/06_Classification/03_Modules/README.md).

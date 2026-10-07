@@ -219,7 +219,7 @@ run_input <- function(input) {
   contrast_results <- transmute(eigengene_tests, feature = module, contrast, effect = logFC, p, fdr)
   row_groups <- list(modules = module_order)
 
-  # Overviews: every feature across the 48 biopsies, then across the nine contrasts. Biopsy traits
+  # Overviews: every feature across the 45 biopsies, then across the nine contrasts. Biopsy traits
   # sit on the T1 and T2 columns; T3 has none. comp_hypertrophy is one value per subject.
   arm_colours <- c(C1 = "#2166AC", C2 = "#B2182B")
   trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
