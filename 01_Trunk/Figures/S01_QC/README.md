@@ -15,10 +15,10 @@ calibrated, and what effect size the primary contrast can detect.
 
 Two of the checks need a premise:
 
-- Calibration. If no protein changed, p-values would spread evenly between 0 and 1 and the
+- Calibration: if no protein changed, p-values would spread evenly between 0 and 1 and the
   median \|t\| would sit near 0.67. A pile of small p-values on a flat floor is signal; a histogram
   bent everywhere suggests a mis-specified model.
-- Power. For each protein the moderated standard error from limma fixes the smallest log2 fold
+- Power: for each protein the moderated standard error from limma fixes the smallest log2 fold
   change the training interaction could detect at 80% power, two-sided 0.05. Comparing the observed
   effects with that size says whether a null result means "no effect" or "too small to see here".
 

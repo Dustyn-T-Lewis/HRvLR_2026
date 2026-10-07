@@ -103,7 +103,7 @@ MSigDB snapshot and its `.md5` makes the next run fetch it again.
 |---|---|---|
 | `collection_summary` | a collection | `n_in_source`, `n_qualifying`, `median_measured` |
 | `set_catalog` | a set in the source | `set_id`, `collection`, `pathway`, `source_id`, `source_size`, `measured_size`, `qualifies` |
-| `protein_gene_map` | a protein | `gene`, `mapping_status`, `selected`, `label`, `mean_obs`, `n_seq` |
+| `protein_gene_map` | a protein | `gene`, `mapping_status`, `selected`, `label`, `n_obs`, `n_seq` |
 | `mapping_summary` | a mapping status | `n_proteins` |
 
 No report PDF.

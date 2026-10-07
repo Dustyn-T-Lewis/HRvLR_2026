@@ -41,7 +41,7 @@ regress it out.
 | Outlier runs | `prcomp()`, `mahalanobis()`, `mad()`, `cor()` | Four flags: missingness above the Tukey fence (Q3 + 1.5 IQR) on its share or on its spread within the subject; Mahalanobis distance on the first three principal components beyond the chi-square 0.99 quantile; median log2 intensity more than 3 MAD from the median (Hampel); median correlation with other runs more than 3 MAD below the median. Three of four removes the run (`proteoDA::filter_samples()`). |
 | Detection | `proteoDA::filter_proteins_by_group()` | A protein stays when it is detected in at least 5 samples of at least one of the six arm-by-time cells (`group`). |
 | Blood by arm | `lme4::lmer()`, `permutation_p()` in `R/helpers.R` | `arm * timepoint + (1 \| subject)` on the blood index and on the blood panel share; the arm-by-T3 term, with a p from 999 shuffles of arm across subjects. A check, not a correction. |
-| `blood_cor` null | `cor(method = "spearman")` | 300 shuffles of the blood index; the 99.9th percentile of \|rho\| by how many samples saw the protein (15-25, 26-40, 41-48). Records why a single correlation cut was dropped. |
+| `blood_cor` null | `cor(method = "spearman")` | 300 shuffles of the blood index; the 99.9th percentile of \|rho\| by how many samples saw the protein (15-25, 26-40, 41-48). Shows why no single correlation cut fits every protein. |
 
 ## How to read the outputs
 

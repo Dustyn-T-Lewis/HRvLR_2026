@@ -34,14 +34,14 @@ done
 ```
 
 `07_Module_Characterisation` asks `STRINGdb` for edges at score 700 or more, and at that threshold
-STRINGdb reads the `min700` links file. A full `9606.protein.links.v12.0.txt.gz` may sit in
-`downloads/` from an earlier version; no script reads it.
+STRINGdb reads the `min700` links file. No script reads a full `9606.protein.links.v12.0.txt.gz`,
+if one sits in `downloads/`.
 
 ## HR and LR are the median split of the composite
 
 `arm` splits the 16 subjects on `comp_hypertrophy`: the top eight are HR, the bottom eight LR. The
-composite is built from fibre-area change, so a fibre-area difference between arms is built in and
-is not a finding.
+composite tracks fibre-area change far more than strength gain (its formula is not in the
+repository), so a fibre-area difference between arms is built in and is not a finding.
 
 ## phenotype.csv holds pre and post side by side
 
@@ -60,10 +60,9 @@ immunoglobulin, 19 erythrocyte, 10 complement, 5 leukocyte. Every entry was chec
 UniProt name. `01_Protein_Filtering` reads only `uniprot_id`, `gene`, `class` and `reason`; the
 `blood_cor`, `ery` and `myo` columns record the evidence at curation and decide nothing.
 
-The list replaced a cut at `blood_cor` 0.45. The permutation null for that correlation depends on
-how many samples saw the protein (sheet `blood_cor_null` in `01_Protein_Filtering`), so one cut
-cannot serve every protein. Sixteen proteins the old cut removed, all expressed in myonuclei, are
-not on the list: RBMX, SYNE2, HNRNPA3, DDI2, GDI2, STK38, CPNE3, CCS, FBXO7, LXN, ARF1, ANP32E,
+No single cut on `blood_cor` works: its permutation null depends on how many samples saw the
+protein (sheet `blood_cor_null` in `01_Protein_Filtering`). Sixteen proteins that a cut at 0.45
+would remove, all expressed in myonuclei, are not on the list: RBMX, SYNE2, HNRNPA3, DDI2, GDI2, STK38, CPNE3, CCS, FBXO7, LXN, ARF1, ANP32E,
 SEPTIN6, RAN, DNAJB4 and FLOT1.
 
 ## The Human Protein Atlas table tags blood proteins the list misses

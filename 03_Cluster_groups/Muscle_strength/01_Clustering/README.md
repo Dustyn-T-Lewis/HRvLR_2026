@@ -32,6 +32,7 @@ The later stages read these copies, so they run the HR/LR code unchanged.
 | Traits | `phenotype_tables()$pairings$training` in `R/helpers.R`, `tidyr::drop_na()`, `scale()` | % change over training in `pct_leg_press_1rm` and `pct_leg_ext_1rm`, complete cases only, z-scored. |
 | Gap statistic | `cluster::clusGap(FUNcluster = pam, K.max = 3, B = 500)`, `cluster::maxSE(method = "Tibs2001SEmax")` | Gap and its SE for K = 1 to 3; the one-SE rule picks K. Seed 1. |
 | Solutions | `cluster::pam()` for K = 2 and 3 | Cluster per person and mean silhouette width. |
+| Agreement with HR/LR | `mclust::adjustedRandIndex()` | Per K, the clusters against HR/LR: 1 is the same split, 0 no more alike than chance. Description only. |
 | Stability | `fpc::clusterboot(clustermethod = fpc::claraCBI, usepam = TRUE, B = 500, seed = 1)` | Mean Jaccard per cluster over 500 bootstrap resamples of people, for K = 2 and 3. |
 | Choice | `coalesce(imposed_k, k_gap)` | The K used downstream: the imposed K, or the gap statistic's if none is imposed. |
 | Labels | mean `pct_leg_press_1rm` per cluster | The cluster with the higher mean is `Hi`, the other `Lo`. |
@@ -85,7 +86,7 @@ the clustering.
 | Sheet | One row is | Key columns |
 |---|---|---|
 | `choice` | the arc | `n_subjects`, `traits`, `k_gap`, `k_imposed`, `imposed_reason`, `k_used`, `grouped` |
-| `diagnostics` | a K from 1 to 3 | `logW`, `E.logW`, `gap`, `SE.sim`, `mean_silhouette`, `sizes`, `min_jaccard`, `jaccard` |
+| `diagnostics` | a K from 1 to 3 | `logW`, `E.logW`, `gap`, `SE.sim`, `mean_silhouette`, `sizes`, `hr_lr_ari`, `min_jaccard`, `jaccard` |
 | `stability` | a cluster at K = 2 or 3 | `k`, `cluster`, `jaccard` |
 | `assignments` | a person | the two traits, `k2`, `k3`, `cluster` (empty for anyone not clustered) |
 | `space` | a clustered person | `arm` (HR/LR), `group` (Hi/Lo), `cluster`, `PC1`, `PC2` |
