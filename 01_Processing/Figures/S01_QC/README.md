@@ -1,31 +1,6 @@
 # S01_QC
 
-Did the samples hold up, and does the analysis behave?
-
-It reads a workbook from `02_HRvLR_groups`, so `run_all.R` runs it with the figures at the end.
-
-## The idea
-
-A supplementary figure in ten panels. The top row asks whether the data are sound: how many
-proteins survived filtering, how complete each run is, whether normalisation lined the samples up,
-how wide the dynamic range is, and whether missing values follow intensity as limpa assumes. The
-bottom row asks whether the statistics behave: whether biopsies from one person resemble each
-other, how much blood each biopsy carries and what the blood covariate does, whether p-values are
-calibrated, and what effect size the primary contrast can detect.
-
-Two of the checks need a premise:
-
-- Calibration: if no protein changed, p-values would spread evenly between 0 and 1 and the
-  median \|t\| would sit near 0.67. A pile of small p-values on a flat floor is signal; a histogram
-  bent everywhere suggests a mis-specified model.
-- Power: for each protein the moderated standard error from limma fixes the smallest log2 fold
-  change the training interaction could detect at 80% power, two-sided 0.05. Comparing the observed
-  effects with that size says whether a null result means "no effect" or "too small to see here".
-
-The script tests nothing itself. Its own summaries (ordering, within- and between-person
-correlation, histograms) describe the saved outputs it reads.
-
-## What the code does
+Did the samples hold up, and does the analysis behave? Ten panels: the top row checks the data (filtering, completeness, normalisation, dynamic range, the detection curve), the bottom row the statistics (within-person correlation, blood, p-value calibration, power). The script tests nothing; it reads `02_HRvLR_groups/02_Protein_Contrasts` as well, so `run_all.R` runs it last.
 
 | Panel | Shows | Reads |
 |---|---|---|
@@ -40,38 +15,20 @@ correlation, histograms) describe the saved outputs it reads.
 | i | p-value histogram per contrast against a flat null, with median \|t\| | `protein_contrasts.xlsx`, `protein_by_contrast`, `null_calibration` |
 | j | Observed \|log2 FC\| in the training interaction against the detectable effect for the median protein and the 90th percentile | `protein_contrasts.xlsx`, `protein_by_contrast`, `detectable_effect` |
 
-Before writing, `stopifnot()` checks that every plotted count traces to its table: 48 runs, three
-excluded, 45 kept, nine contrasts, two power quantiles.
-
-## How to read the outputs
-
-- Panel b's three dropped runs are the consensus outliers from `01_Protein_Filtering`.
-- Panel e is the visual case for limpa: if missingness falls as abundance rises, a missing value
-  says "faint", which is what the detection curve models.
-- Panel f is drawn on a capped scale (r from -0.6 to 0.6); the diagonal is blank.
-- Panel h shows how far the blood covariate moves effects. Points on the diagonal are untouched.
-- Panel j answers the power question for one contrast, `Training_Interaction`, only.
-
-## Files
-
 | | |
 |---|---|
 | Reads | `01_Processing/01_Protein_Filtering/c_data/protein_filtering.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_arm`), `01_Processing/02_Normalisation/c_data/normalisation.xlsx` (`intensity_quantiles`), `01_Processing/03_Quantification/c_data/quantification.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`protein_by_contrast`, `unadjusted`, `null_calibration`, `detectable_effect`) |
 | Writes | `b_reports/s01_qc.pdf` (300 x 190 mm, cairo PDF), `c_data/s01_qc.xlsx` |
 | Run | `Rscript 01_Processing/Figures/S01_QC/a_script/s01_qc.R`, or `run_all.R` with the figures at the end (it reads the HR/LR protein contrasts) |
 
+## Reading the panels
 
-```
-S01_QC/
-├── a_script/s01_qc.R
-├── b_reports/s01_qc.pdf
-└── c_data/s01_qc.xlsx
-```
+- Calibration (i): with no change, p-values spread evenly and the median |t| sits near 0.67; a pile of small p on a flat floor is signal.
+- Power (j): the smallest `Training_Interaction` log2 FC each protein could show at 80% power, against the observed effects.
+- Panel e is the case for limpa: missingness falls as abundance rises, so a missing value says "faint".
+- The script stops unless every plotted count traces to its table: 48 runs, three excluded, 45 kept, nine contrasts, two power quantiles.
 
-## Workbook: `s01_qc.xlsx`
-
-`read_me` lists the sheets; `columns` defines every column; `input_manifest` and
-`package_versions` close it.
+## Sheets
 
 | Sheet | Panel | One row is | Key columns |
 |---|---|---|---|

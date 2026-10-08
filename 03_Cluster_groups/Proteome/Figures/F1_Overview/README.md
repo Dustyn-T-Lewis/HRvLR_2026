@@ -1,27 +1,6 @@
 # F1_Overview
 
-Figure 1 for the proteome grouping, once per clustering input: who is in C1 and C2, then the
-whole-proteome picture with C1 and C2 in place of HR and LR.
-
-## The idea
-
-The figure is the HR/LR Figure 1 (`02_HRvLR_groups/Figures/F1_Overview`) drawn five times, once
-for each clustering input (T1, T2, T3, training change, acute change). Panel a changes: the design
-drawing becomes a map of that input's clustering. Panels b to f are the same builders in
-`R/figure_overview.R` with the groups set to `C1` and `C2`.
-
-Here the groups come from the proteome, so some contrasts in panel b compare the clusters on the
-values that formed them. Each contrast's row label carries its validity against the input
-(`validity()` in `../../R/inputs.R`, explained in [`../../README.md`](../../README.md)): `(circ.)`
-for circular, `(caut.)` for caution, nothing for clean.
-
-The script reads saved outputs only. Its one computation is the phenotype PCA, a projection with
-no test. Before writing anything, `figure_overview()` checks the plotted numbers against their
-sources: nine contrasts whose FDR counts match `contrast_summary`, one PERMANOVA row per test,
-every selected pathway in all nine contrasts, and eight barcode lanes whose FDR matches
-`fry_concordance`. A mismatch stops the script.
-
-## Panels
+Figure 1 for the proteome grouping, once per clustering input (T1, T2, T3, training, acute): who is in C1 and C2, then the HR/LR Figure 1 builders with C1 and C2 in place of HR and LR. Each contrast in panel b carries its validity against the input: `(circ.)` circular, `(caut.)` caution, nothing for clean ([`../../README.md`](../../README.md)).
 
 | Panel | Shows | Built by | Source |
 |---|---|---|---|
@@ -29,28 +8,7 @@ every selected pathway in all nine contrasts, and eight barcode lanes whose FDR 
 | b | Proteins per contrast, down left and up right, each row tagged with its validity. The light bar counts p < 0.05 or Π < 0.05; the dark bar, drawn over it from zero, counts the Π < 0.05 subset. The subtitle gives the number tested and at FDR < 0.05. | `panel_protein_counts()` | `04_Set_Contrasts/<input>/c_data/set_tests.rds`, `protein_results` |
 | c | Proteome PCA (left) and PCA of the six size and strength traits at T1 and T2 (right), each with its PERMANOVA: time and group for the proteome, time only for the phenotype. People are relabelled C1/C2 for that input. | `panel_pca_pair()` | `03_Protein_Contrasts/<input>/c_data/protein_contrasts.xlsx`: `pca`, `pca_variance`, `permanova`; `phenotype.csv`; `design.rds` (who is in each group) |
 | d | Pathways at fgsea FDR < 0.05 in both clusters of a window (C1 - C2: two of the three time points; Interaction: either interaction, strongest five) from Hallmark, Reactome, KEGG and GO BP, each shown in all nine contrasts. | `panel_pathway_grid()` | `set_tests.rds`, `set_tests`; `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` |
-| e, f | Each cluster's p < 0.05 sets for one window (e: training, f: acute) placed in the other cluster's ranking, drawn as limma's barcode. | `signature_barcode()` | `set_tests.rds`; `protein_contrasts.xlsx`, `fry_concordance` |
-
-Π is Xiao et al. (2014): p^|log2 FC|, which ranks a protein on p and fold change together.
-
-## How to read it
-
-- Read panel b's tags first. A circular row shows the difference the clustering made; a caution
-  row may show regression to the mean; only clean rows test whether the split carries over.
-- Panels c to f carry no tags but follow the same rule. The proteome PERMANOVA group test uses
-  every person's mean over all time points, so it shares the clustering's time points at every
-  input (caution in `03_Protein_Contrasts/c_data/protein_contrasts_all_inputs.xlsx`). A pathway or
-  barcode in a window inherits that window's tag in panel b.
-- The phenotype played no part in the clustering, but the phenotype PCA still has no group test;
-  `08_Cluster_Phenotype` tests the traits by cluster.
-- C1 and C2 are PAM's cluster numbers: they carry no direction, and C1 in one input's figure is
-  unrelated to C1 in another's.
-- Read the Jaccard in panel a's subtitle before the rest: 0.75 or more stable, 0.6 to 0.75
-  doubtful membership, below 0.6 not to be trusted.
-- Panel d's rules (overlap pruning, `*` for opposite signs, the "Proteasome:" label) are those of
-  the HR/LR figure and are explained in its README.
-
-## Files
+| e, f | Each cluster's p < 0.05 proteins for one window (e: training, f: acute) placed in the other cluster's ranking, drawn as limma's barcode. | `signature_barcode()` | `set_tests.rds`; `protein_contrasts.xlsx`, `fry_concordance` |
 
 | | |
 |---|---|
@@ -60,18 +18,14 @@ every selected pathway in all nine contrasts, and eight barcode lanes whose FDR 
 
 The outputs are not tracked in git.
 
-```
-F1_Overview/
-├── a_script/f1_overview.R
-├── b_reports/
-│   └── f1_overview_T1.pdf  _T2  _T3  _training  _acute
-└── c_data/
-    └── f1_overview_T1.xlsx  _T2  _T3  _training  _acute
-```
+## Read with care
 
-## Workbook: `f1_overview_<input>.xlsx`
+- Read panel b's tags first: a circular row shows the difference the clustering made, a caution row may show regression to the mean, only clean rows test whether the split carries over.
+- Panels c to f carry no tags but follow the same rule; the proteome PERMANOVA group test uses every time point, so it is caution at every input.
+- C1 and C2 are PAM's numbers: no direction, and unrelated between inputs. Read the Jaccard in panel a's subtitle first.
+- `08_Cluster_Phenotype` tests the traits by cluster; the phenotype PCA has no group test.
 
-`read_me` lists the sheets; `columns` defines every column.
+## Sheets
 
 | Sheet | Holds |
 |---|---|

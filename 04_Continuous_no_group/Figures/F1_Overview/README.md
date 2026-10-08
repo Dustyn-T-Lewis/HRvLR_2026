@@ -1,15 +1,6 @@
 # F1_Overview
 
-Figure 1 for the continuous analysis: how people responded, how many features track each trait, and
-which sets and protein groups lead, on one page.
-
-## The idea
-
-The figure gathers the folder's saved outputs into five panels. It reads workbooks and RDS files
-written by the stages and recomputes no test. Its one computation is a proteome PCA, a projection
-of the biopsies onto the two directions of greatest spread, which carries no p-value.
-
-## Panels
+Figure 1 for the continuous analysis: how people responded, how many features track each trait, and which sets and protein groups lead. It reads the folder's saved outputs; its one computation is a proteome PCA, which carries no p-value.
 
 | Panel | Shows | Source |
 |---|---|---|
@@ -19,48 +10,20 @@ of the biopsies onto the two directions of greatest spread, which carries no p-v
 | d | Gene sets leading each trait's protein ranking over training: fgsea NES as fill, -log10 FDR (capped at 8) as dot size, each selected set shown in every trait. | `trait_pathways.xlsx`, `pathways` |
 | e | Profile groups: each group's mean limma t per window and trait, rows labelled with group number, size and main module. | `profile_clusters.xlsx`, `profile_means` and `profile_groups` |
 
-Panel d selects its rows in four steps: training window only, GO Slim left out; keep sets at
-FDR < 0.05 for at least two traits; rank them by that count, then by total |NES| across traits;
-drop any set that shares half or more of its measured proteins with a stronger one
-(`prune_overlapping()` in `R/figure_panels.R`) and keep the first 20.
-
-Before writing, the script checks that every level, window and trait in panel b tested at least
-one feature, that panel d has one row per selected set and trait, and that no share exceeds 1.
-
-## How to read the figure
-
-- Panel b compares each share with 5%. A share near 5% is what chance gives with no link at all;
-  a share well above it says the trait has more links than chance, not which ones are real.
-- Panel c tests nothing. Colour shows whether growth or strength lines up with the main axes of
-  the proteome; the absence of a gradient does not rule out a link along a smaller axis.
-- Panel d inherits fgsea's high counts (see `02_Trait_Pathways/README.md`). Read it for which sets
-  lead and their direction.
-- Panel e describes groups built from the t values it shows; see `03_Profile_Clusters/README.md`.
-
-## Files
-
 | | |
 |---|---|
 | Reads | `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx`, `04_Continuous_no_group/01_Trait_Associations/02_Sets/c_data/set_trait_associations.xlsx`, `04_Continuous_no_group/01_Trait_Associations/03_Modules/c_data/module_trait_associations.xlsx` (each `counts`), `04_Continuous_no_group/02_Trait_Pathways/c_data/trait_pathways.xlsx` (`pathways`), `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set members for pruning), `04_Continuous_no_group/03_Profile_Clusters/c_data/profile_clusters.xlsx` (`profile_means`, `profile_groups`), `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
 | Writes | `b_reports/f1_overview.pdf` (300 x 175 mm, `cairo_pdf` through `save_figure()`), `c_data/f1_overview.xlsx` |
 | Run | `Rscript 04_Continuous_no_group/Figures/F1_Overview/a_script/f1_overview.R`, after every step of the folder; `run_all.R` runs it after `03_Profile_Clusters`. |
 
-```
-F1_Overview/
-├── a_script/f1_overview.R
-├── b_reports/f1_overview.pdf
-└── c_data/f1_overview.xlsx
-```
+## Reading the panels
 
-Theme, colours and thresholds (`alpha_nominal`, `alpha_fdr`, both 0.05) come from
-`R/figure_theme.R`; `trait_label()` turns `pct_leg_press_1rm` into "leg press 1RM (% change)".
-`pathway_label()` and `prune_overlapping()` come from `R/figure_panels.R`.
+- Panel b compares each share with 5%, what chance gives with no link; a share well above it says the trait has more links than chance, not which ones are real.
+- Panel d keeps training-window sets at FDR < 0.05 for at least two traits (GO Slim out), ranked by that count and total |NES|, drops any set sharing half its proteins with a stronger one, and shows the first 20. It inherits fgsea's high counts.
+- Panel c tests nothing: no colour gradient does not rule out a link along a smaller axis.
+- The script stops if a level, window or trait tested nothing, or a share exceeds 1.
 
-## Workbook: `f1_overview.xlsx`
-
-`read_me` lists the sheets; `columns` defines every column. Each sheet holds the numbers one panel
-draws. `trait` and, in `links`, `window` hold the labels the panels print ("leg press 1RM
-(% change)", "T1 level"), not the column codes.
+## Sheets
 
 | Sheet | Panel | One row is | Key columns |
 |---|---|---|---|
