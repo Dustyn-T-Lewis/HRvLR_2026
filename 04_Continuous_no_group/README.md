@@ -1,41 +1,32 @@
 # 04_Continuous_no_group
 
 Which proteins, gene sets and modules follow muscle size and strength when every person is pooled
-and each trait stays a number?
+and each trait stays a number? No group label enters any model. Traits are used as measured
+(`phenotype_tables()` in `00_Setup/Shared_functions/analysis_reporting_helpers.R`): fibre area
+(mixed, type I, type II), muscle area and two 1RMs as levels at T1 and T2 and as % change, plus the
+composite hypertrophy score and total volume load. T3 has no phenotype.
 
-The other folders split people into groups and compare the groups. Here all 16 people are pooled,
-no group label enters any model, and each trait is used as measured (`phenotype_tables()` in
-`00_Setup/Shared_functions/analysis_reporting_helpers.R`): fibre area (mixed, type I, type II), muscle area and two 1RMs as levels at T1 and T2
-and as % change, plus the composite hypertrophy score and total volume load as one value per
-person. T3 has no phenotype.
-
-## Windows: what meets what
-
-| Window | Feature value per person | Trait | Asks |
-|---|---|---|---|
-| `training` | change, T1 to T2 | % change, composite, volume | Does the feature change more in people whose trait grew more? |
-| `baseline` | T1 level | % change, composite, volume | Does the starting level predict the response to come? |
-| `acute` | change, T2 to T3 | % change, composite, volume | Does the response to the final bout follow the training response? |
-| `baseline_level` | T1 level | trait levels at T1 | Do people with more of the trait carry more of the feature? |
-| `post_level` | T2 level | trait levels at T2 | The same after training. |
-| `post_bout_level` | T3 level | trait levels at T2 | T3 follows the same training, so the T2 traits stand in; T3 also carries the bout. |
-
-A change window needs both of its biopsies; a person missing one drops out of that window only.
-
-## Steps
-
-| Step | Asks | Method |
+| Walkthrough | Does | Writes |
 |---|---|---|
-| [`01_Trait_Associations`](01_Trait_Associations/README.md) | which proteins, set scores and eigengenes track each trait | `run_continuous_associations()` in `00_Setup/Shared_analyses/run_continuous_associations.R` |
-| [`02_Trait_Pathways`](02_Trait_Pathways/README.md) | which gene sets lead each trait's protein ranking | fgsea on the limma t from `01_Proteins` |
-| [`03_Profile_Clusters`](03_Profile_Clusters/README.md) | which proteins share a pattern of trait links | clustering of each protein's t across the 42 screens |
-| [`Figures/F1_Overview`](Figures/F1_Overview/README.md) | the folder on one page | saved outputs, plus a proteome PCA |
+| `01_Trait_Associations/a_script/trait_associations.qmd` | sample model, change score, two-predictor and interaction fits at three levels | `01_Proteins/`, `02_Sets/`, `03_Modules/` workbooks; `associate.rds` |
+| `02_Trait_Pathways/a_script/trait_pathways.qmd` | fgsea on each trait's protein ranking | `trait_pathways.xlsx`, `pathways.rds` |
+| `03_Profile_Clusters/a_script/profile_clusters.qmd` | proteins grouped by their pattern of trait links | `profile_clusters.xlsx` |
 
-`02_Trait_Pathways` and `03_Profile_Clusters` read `01_Proteins/c_data/associate.rds`, so
-`01_Proteins` runs first; `run_all.R` keeps that order.
+`02` and `03` read the protein change scores `01` saves, so `01` runs first.
 
-## Read with care
+## Inputs
 
-- Every test rests on 16 people or fewer; read each slope with its interval.
-- Pooling avoids a split, not confounding: a feature that tracks growth may track anything that
-  travels with growth across these people.
+`01_Processing` outputs (`DAList_corrected.rds`, `DAList_limpa.rds`, `singscore.rds`,
+`gene_sets.rds`, `modules.rds`) and `00_Setup/Input/phenotype.csv`.
+
+## Run
+
+```sh
+Rscript run_all.R 04_Continuous_no_group
+```
+
+## Outputs
+
+Each step's `b_reports/` holds its rendered walkthrough and `c_data/` its workbooks. Every test
+rests on 16 people or fewer, and HR and LR are the extremes of 25, so correlations across these 16
+run stronger than they would across all 25.
