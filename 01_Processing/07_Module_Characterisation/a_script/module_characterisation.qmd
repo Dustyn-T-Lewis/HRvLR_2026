@@ -1,55 +1,76 @@
-# What each module is: its enriched gene sets, its top members by kME, and whether its members
-# interact more than chance in STRING.
-#
-# Enrichment is clusterProfiler's hypergeometric ORA against the 04_Gene_Sets sets, with the
-# measured genes (one per symbol) as universe; testing against the genome would reward any module
-# for being muscle. BH runs within each module.
-#
-# The STRING check is STRINGdb's PPI enrichment at combined score >= 700, with the background set
-# to the measured proteins STRING can map. Its expected edge count accounts for each member's
-# degree. STRINGdb reads the v12 files in 01_Processing/07_Module_Characterisation/references/STRING; at this threshold it takes
-# the min700 links file.
-#
-# The network pages show each module's 25 highest-kME members and the STRING edges among them.
+---
+title: "Module characterisation"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tibble)
-  library(tidyr)
-  library(purrr)
-  library(ggplot2)
-  library(clusterProfiler)
-  library(STRINGdb)
-  library(patchwork)
-})
+A module from `06_Module_Building` is a list of co-varying proteins with a colour for a name. This
+step says what each module is, three ways: which gene sets its members over-represent, which
+members follow it most closely, and whether its members interact with each other more than chance
+in STRING, a database of known and predicted protein interactions.
+
+## Packages
+
+clusterProfiler runs the enrichment and STRINGdb the interaction test. tidygraph, ggraph and igraph
+draw the networks and are called with `::`.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(purrr)
+library(ggplot2)
+library(clusterProfiler)
+library(STRINGdb)
+library(patchwork)
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+```
 
+## Inputs
+
+The modules and their kME, the tested gene sets, and three STRING v12.0 files kept in
+`references/STRING/` (source and version in `references/README.md`).
+
+```{r}
+#| label: inputs
 stage <- here("01_Processing", "07_Module_Characterisation")
 out <- file.path(stage, "c_data")
-figure_dir <- file.path(stage, "b_reports")
-for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+string_dir <- "01_Processing/07_Module_Characterisation/references/STRING"
 inputs <- c(
   modules = "01_Processing/06_Module_Building/c_data/modules.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  string_links = "01_Processing/07_Module_Characterisation/references/STRING/9606.protein.links.v12.0.min700.txt.gz",
-  string_aliases = "01_Processing/07_Module_Characterisation/references/STRING/9606.protein.aliases.v12.0.txt.gz",
-  string_info = "01_Processing/07_Module_Characterisation/references/STRING/9606.protein.info.v12.0.txt.gz"
+  string_links = file.path(string_dir, "9606.protein.links.v12.0.min700.txt.gz"),
+  string_aliases = file.path(string_dir, "9606.protein.aliases.v12.0.txt.gz"),
+  string_info = file.path(string_dir, "9606.protein.info.v12.0.txt.gz")
 )
 paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) {
-  stop(
-    "Run 06_Module_Building and 04_Gene_Sets first. ",
-    "Missing: ", paste(inputs[!file.exists(paths)], collapse = ", ")
-  )
-}
+stopifnot(file.exists(paths))
 modules <- readRDS(paths[["modules"]])
 gs <- readRDS(paths[["gene_sets"]])
 members <- filter(modules$membership, module != "grey")
-string_min_score <- 700L
-top_per_module <- 10L
+count(members, module, name = "n_proteins") |> arrange(desc(n_proteins))
+```
 
+## Gene-set enrichment
+
+Over-representation analysis (ORA) asks, per module and per set, whether more of the module's
+genes fall in the set than a random draw of the same size would give. The test is hypergeometric
+(clusterProfiler's `enricher()`, run for every module by `compareCluster()`). The universe is the
+1,900 measured genes, one per symbol: testing against the whole genome would reward any module for
+being muscle. Sets keep the 15-to-500 size rule from `04_Gene_Sets`. Benjamini-Hochberg (BH)
+correction runs within each module. No cutoff is applied, so every set is kept with its p.
+
+```{r}
+#| label: ora
 term2gene <- enframe(gs$sets, "set_id", "gene") |> unnest(gene)
 ora_fit <- compareCluster(
   split(members$gene, members$module),
@@ -62,18 +83,49 @@ ora <- as_tibble(ora_fit) |>
     n_overlap = Count, p = pvalue, fdr = p.adjust
   ) |>
   left_join(select(gs$set_catalog, set_id, collection, pathway), by = "set_id")
+ora |>
+  slice_min(p, n = 1, by = module, with_ties = FALSE) |>
+  select(module, pathway, gene_ratio, fdr)
+```
 
+```{r}
+#| label: fig-enrichment
+#| fig-cap: "Top three sets per module at BH < 0.05. Size: gene ratio. Colour: BH within module."
+#| fig-width: 10
+#| fig-height: 7
+ora_fit |>
+  clusterProfiler::filter(p.adjust < 0.05) |>
+  enrichplot::dotplot(showCategory = 3, label_format = 50, font.size = 7)
+```
+
+## Top members
+
+Each module's ten members with the highest kME, the proteins that follow the module most closely.
+
+```{r}
+#| label: top-members
 top_members <- members |>
-  slice_max(kme, n = top_per_module, by = module, with_ties = FALSE)
+  slice_max(kme, n = 10, by = module, with_ties = FALSE)
+summarise(top_members, top_members = paste(gene, collapse = ", "), .by = module) |>
+  head(4)
+```
 
+## STRING interactions
+
+STRINGdb maps the measured proteins to STRING identifiers and counts the high-confidence edges
+(combined score at least 700, STRING's "high confidence" band) among each module's members. The
+expected count accounts for each member's number of partners in the background, which is the
+mapped measured proteins, not the whole proteome. A ratio above 1 means the members interact more
+than proteins drawn at random from this experiment. BH runs across modules. At a threshold of 700,
+STRINGdb reads the pre-filtered `min700` links file.
+
+```{r}
+#| label: string
 string_db <- STRINGdb$new(
-  version = "12.0", species = 9606, score_threshold = string_min_score,
-  network_type = "full", input_directory = here("01_Processing", "07_Module_Characterisation", "references", "STRING")
+  version = "12.0", species = 9606, score_threshold = 700L,
+  network_type = "full", input_directory = here(string_dir)
 )
-mapped <- string_db$map(
-  as.data.frame(modules$membership), "uniprot_id",
-  removeUnmappedRows = TRUE
-)
+mapped <- string_db$map(as.data.frame(modules$membership), "uniprot_id", removeUnmappedRows = TRUE)
 string_db$set_background(mapped$STRING_id)
 string_check <- mapped |>
   filter(module != "grey") |>
@@ -87,7 +139,14 @@ string_check <- mapped |>
     fdr = p.adjust(p, "BH")
   ) |>
   select(-ids, -enrichment)
+c(proteins = nrow(modules$membership), mapped = nrow(mapped))
+arrange(string_check, desc(ratio))
+```
 
+## One label per module
+
+```{r}
+#| label: labels
 labels <- count(members, module, name = "n_proteins") |>
   left_join(
     ora |>
@@ -108,28 +167,16 @@ labels <- count(members, module, name = "n_proteins") |>
   ) |>
   left_join(select(string_check, module, string_ratio = ratio, string_fdr = fdr), by = "module") |>
   arrange(desc(n_proteins))
+select(labels, module, n_proteins, top_set, top_set_fdr, string_ratio)
+```
 
-caption_theme <- theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0))
-
-enrichment_figure <- ora_fit |>
-  clusterProfiler::filter(p.adjust < 0.05) |>
-  enrichplot::dotplot(showCategory = 3, label_format = 50, font.size = 7) +
-  labs(
-    title = "Module enrichment",
-    subtitle = sprintf(
-      "clusterProfiler ORA, universe %d measured genes; top 3 sets per module at BH < 0.05",
-      length(gs$gene_universe)
-    ),
-    caption = paste(
-      "enrichplot::dotplot of the compareCluster result. Columns: modules, members carrying a",
-      "set in brackets. Size is gene ratio, colour BH within module; modules with no set at",
-      "BH < 0.05 are absent. Table: c_data/module_characterisation.xlsx, ora."
-    )
-  ) +
-  caption_theme
-
+```{r}
+#| label: fig-string
+#| fig-cap: "STRING edges within each module: point observed, tick expected, label the ratio."
+#| fig-width: 7
+#| fig-height: 5
 module_colours <- set_names(string_check$module, string_check$module)
-string_figure <- string_check |>
+string_check |>
   mutate(module = factor(module, levels = rev(labels$module))) |>
   ggplot(aes(y = module)) +
   geom_segment(aes(x = n_expected, xend = n_edges, yend = module), colour = "grey70") +
@@ -138,35 +185,39 @@ string_figure <- string_check |>
   geom_text(aes(x = n_edges, label = sprintf("%.1fx", ratio)), hjust = -0.4, size = 2.8) +
   scale_fill_manual(values = module_colours, guide = "none") +
   scale_x_log10(expand = expansion(mult = c(0.05, 0.15))) +
-  labs(
-    x = "within-module edges (log scale)", y = NULL,
-    title = "STRING edges within each module",
-    subtitle = sprintf(
-      "STRINGdb PPI enrichment, v12, score >= %d, background the mapped measured proteins",
-      string_min_score
-    ),
-    caption = paste(
-      "Point: observed high-confidence edges among a module's members. Tick: edges STRINGdb",
-      "expects from the members' degrees in the background. Label: observed over expected.",
-      "Table: c_data/module_characterisation.xlsx, string."
-    )
-  ) +
-  theme_minimal(base_size = 10) +
-  caption_theme
+  labs(x = "within-module edges (log scale)", y = NULL) +
+  theme_minimal(base_size = 10)
+```
 
-# Each module's highest-kME members and the STRING edges among them, at the same score threshold
-# as the enrichment test. Node fill is kME, size the node's degree among the drawn members. The
-# layout is seeded; its geometry carries no meaning.
-hubs_drawn <- 25L
+## Networks of the top members
+
+Each module's 25 highest-kME members and the STRING edges among them, at the same 700 threshold.
+Node fill is kME; node size is the number of edges among the drawn members. Members with no edge
+are left out and counted in the panel title. The layout is force-directed and seeded; its geometry
+carries no meaning.
+
+```{r}
+#| label: network-edges
 network_nodes <- mapped |>
   filter(module != "grey") |>
-  slice_max(kme, n = hubs_drawn, by = module, with_ties = FALSE)
+  slice_max(kme, n = 25, by = module, with_ties = FALSE)
 network_edges <- string_db$get_interactions(network_nodes$STRING_id) |>
   distinct(from, to, .keep_all = TRUE) |>
   inner_join(select(network_nodes, from = STRING_id, module), by = "from") |>
   inner_join(select(network_nodes, to = STRING_id, to_module = module), by = "to") |>
   filter(module == to_module) |>
   select(module, from, to, combined_score)
+count(network_edges, module, name = "edges")
+```
+
+`draw_module_network()` takes one module's colour and returns its network panel; it is called once
+per module.
+
+```{r}
+#| label: fig-networks
+#| fig-cap: "STRING edges among each module's top 25 members by kME."
+#| fig-width: 11
+#| fig-height: 8.5
 max_degree <- max(table(c(network_edges$from, network_edges$to)))
 draw_module_network <- function(which_module) {
   nodes <- network_nodes |>
@@ -196,34 +247,36 @@ draw_module_network <- function(which_module) {
     theme_void(base_size = 9) +
     theme(plot.title = element_text(face = "bold", size = 10), legend.position = "right")
 }
-network_pages <- labels$module |>
+labels$module |>
   map(draw_module_network) |>
   split(ceiling(seq_along(labels$module) / 4)) |>
-  imap(\(panels, page) {
-    wrap_plots(panels, ncol = 2, guides = "collect") +
-      plot_annotation(
-        title = "STRING edges among each module's top members",
-        subtitle = sprintf(
-          "top %d members by kME per module, STRING v12 edges at score >= %d; page %s of %d",
-          hubs_drawn, string_min_score, page, ceiling(length(labels$module) / 4)
-        ),
-        caption = stringr::str_wrap(width = 190, paste(
-          "Nodes: a module's highest-kME members with at least one edge among them, fill = kME,",
-          "size = degree among the drawn members; the title counts those without an edge. Edges:",
-          "STRING combined score, width = score. Layout is force-directed and seeded; its",
-          "geometry carries no meaning. Table: c_data/module_characterisation.xlsx, network_edges."
-        )),
-        theme = theme(
-          plot.title = element_text(face = "bold", size = 13),
-          plot.subtitle = element_text(size = 9, colour = "grey30"),
-          plot.caption = element_text(hjust = 0, size = 7, colour = "grey45")
-        )
-      )
-  })
-pdf(file.path(figure_dir, "module_characterisation_report.pdf"), width = 11, height = 8.5)
-walk(c(list(enrichment_figure, string_figure), unname(network_pages)), print)
-invisible(dev.off())
+  walk(\(panels) print(wrap_plots(panels, ncol = 2, guides = "collect")))
+```
 
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  setequal(labels$module, unique(members$module)),
+  all(ora$fdr >= ora$p),
+  all(network_edges$combined_score >= 700),
+  all(top_members$module %in% labels$module)
+)
+```
+
+## Summary
+
+`r nrow(labels)` modules were characterised. `r sum(labels$top_set_fdr < 0.05, na.rm = TRUE)`
+have at least one gene set at BH < 0.05, and `r sum(string_check$fdr < 0.05)` have more STRING
+edges among their members than expected at BH < 0.05.
+
+## Save
+
+The workbook holds every table above and is the reference for what each module colour means.
+
+```{r}
+#| label: save
 sheets <- list(
   labels = labels, ora = arrange(ora, module, p), top_members = top_members, string = string_check,
   network_edges = left_join(network_edges,
@@ -240,3 +293,4 @@ holds <- c(
   "STRING edges among each module's 25 highest-kME members, as drawn."
 )
 write_workbook(sheets, holds, file.path(out, "module_characterisation.xlsx"), inputs, paths)
+```

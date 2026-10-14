@@ -1,6 +1,6 @@
 # Module characterisation references
 
-`STRING/` holds the human STRING v12.0 files read by `../a_script/module_characterisation.R`:
+`STRING/` holds the human STRING v12.0 files read by `../a_script/module_characterisation.qmd`:
 
 | File | Purpose |
 |---|---|
