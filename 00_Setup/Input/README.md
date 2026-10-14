@@ -22,11 +22,12 @@ measurement columns to metadata; subject IDs connect metadata to phenotype.
 All original runs stay here. Filtering decisions and exclusions belong to
 [`01_Protein_Filtering`](../../01_Processing/01_Protein_Filtering/README.md).
 
-## HR and LR are the median split of the composite
+## HR and LR are the two ends of the composite
 
-`arm` splits the 16 subjects on `comp_hypertrophy`: the top eight are HR, the bottom eight LR. The
-composite tracks fibre-area change far more than strength gain (its formula is not in the
-repository), so a fibre-area difference between arms is built in and is not a finding.
+25 people trained. `arm` marks the top eight on `comp_hypertrophy` as HR and the bottom eight as
+LR; the middle nine were not profiled. The composite is (2 × %ΔmCSA + %ΔfCSA) / 3, the
+manuscript's formula, and `02_Groups` recomputes and checks it. Muscle and fibre growth define the
+groups, so a growth difference between arms is built in and is not a finding.
 
 ## phenotype.csv holds pre and post side by side
 

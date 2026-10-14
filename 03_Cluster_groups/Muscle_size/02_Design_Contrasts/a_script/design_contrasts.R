@@ -13,5 +13,5 @@ source(here("00_Setup", "Shared_analyses", "run_design_contrasts.R"))
 
 run_design_contrasts(
   stage = "03_Cluster_groups/Muscle_size/02_Design_Contrasts",
-  groups = "03_Cluster_groups/Muscle_size/01_Clustering/c_data/groups.rds"
+  groups = "02_Groups/Muscle_size/c_data/groups.rds"
 )

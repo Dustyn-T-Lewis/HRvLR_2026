@@ -1,6 +1,6 @@
 # 03_Cluster_groups
 
-If the groups came from the data rather than from the study's median split, would the results
+If the groups came from the data rather than from the study's HR/LR labels, would the results
 change?
 
 `02_HRvLR_groups` compares the study's High and Low Responders. Here the data propose the groups,

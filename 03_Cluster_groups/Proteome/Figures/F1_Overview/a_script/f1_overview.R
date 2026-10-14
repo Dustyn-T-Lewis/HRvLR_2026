@@ -32,7 +32,7 @@ figure_input <- function(input) {
     set_tests = file.path(folder, "04_Set_Contrasts", input, "c_data/set_tests.rds"),
     gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
     phenotype = "00_Setup/Input/phenotype.csv",
-    clustering = file.path(folder, "01_Clustering/c_data/clustering.xlsx"),
+    clustering = "02_Groups/Proteome/c_data/clustering.xlsx",
     design = file.path(folder, "02_Design_Contrasts", input, "c_data/design.rds")
   )
   paths <- map_chr(inputs, here)

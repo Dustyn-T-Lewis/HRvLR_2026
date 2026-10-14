@@ -3,10 +3,9 @@
 Do the muscle proteome and its response to training and to one bout differ between High and Low
 Responders?
 
-The study split its sixteen people at the median of a composite hypertrophy score: eight HR and
-eight LR. The composite tracks fibre-area change far more than strength gain (its formula is not
-in the repository), so a fibre-area difference between the groups restates the split rather than
-finding something.
+HR and LR are the top and bottom eight of 25 trained people on a composite hypertrophy score,
+(2 × %ΔmCSA + %ΔfCSA) / 3 (`02_Groups/HRvLR`). Growth defines the groups, so a growth difference
+between them restates the selection rather than finding something.
 
 | Step | Asks | Method |
 |---|---|---|

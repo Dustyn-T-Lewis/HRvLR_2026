@@ -299,3 +299,7 @@ profile_groups|trait_groups,proteins,"Up to 15 member gene symbols, strongest |t
 people,z,"The value as a z score within the trait (mean 0, SD 1 across people)."
 links,share,Share of features tested at p < 0.05.
 pca,rank,"Percentile rank of the trait value among people, 0 lowest, 1 highest."
+composite,pct_mcsa,"Percent change in vastus lateralis muscle cross-sectional area over training."
+composite,pct_fcsa,"Percent change in mixed muscle fibre cross-sectional area over training."
+composite,recomputed,"Composite hypertrophy recomputed as (2 x pct_mcsa + pct_fcsa) / 3, the manuscript's formula."
+composite,comp_hypertrophy,"Composite hypertrophy score as supplied in phenotype.csv; the top and bottom 8 of 25 trained people on it are HR and LR."

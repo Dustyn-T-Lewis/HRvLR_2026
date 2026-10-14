@@ -1,7 +1,7 @@
 # Run stages in order, each in a separate R session (.R by Rscript, .qmd by quarto render);
 # stop on the first failure.
 # Rscript run_all.R          all stages
-# Rscript run_all.R 01 04    selected folders; their prerequisites must already exist
+# Rscript run_all.R 01 04    stages starting with these prefixes; prerequisites must exist
 # Logs are local to Scratch/runlogs/.
 
 stages <- c(
@@ -12,6 +12,10 @@ stages <- c(
   "01_Processing/05_Set_Scores",
   "01_Processing/06_Module_Building",
   "01_Processing/07_Module_Characterisation",
+  "02_Groups/a_script/study_groups.qmd@HRvLR",
+  "02_Groups/a_script/clustering.qmd@Muscle_size",
+  "02_Groups/a_script/clustering.qmd@Muscle_strength",
+  "02_Groups/a_script/clustering.qmd@Proteome",
   "02_HRvLR_groups/01_Design_Contrasts",
   "02_HRvLR_groups/02_Protein_Contrasts",
   "02_HRvLR_groups/03_Set_Contrasts",
@@ -21,7 +25,6 @@ stages <- c(
   "02_HRvLR_groups/06_Classification/02_Sets",
   "02_HRvLR_groups/06_Classification/03_Modules",
   "02_HRvLR_groups/07_Trait_Associations",
-  "03_Cluster_groups/Muscle_size/01_Clustering",
   "03_Cluster_groups/Muscle_size/02_Design_Contrasts",
   "03_Cluster_groups/Muscle_size/03_Protein_Contrasts",
   "03_Cluster_groups/Muscle_size/04_Set_Contrasts",
@@ -31,7 +34,6 @@ stages <- c(
   "03_Cluster_groups/Muscle_size/06_Classification/03_Modules",
   "03_Cluster_groups/Muscle_size/07_Trait_Associations",
   "03_Cluster_groups/Muscle_size/Figures/F1_Overview",
-  "03_Cluster_groups/Muscle_strength/01_Clustering",
   "03_Cluster_groups/Muscle_strength/02_Design_Contrasts",
   "03_Cluster_groups/Muscle_strength/03_Protein_Contrasts",
   "03_Cluster_groups/Muscle_strength/04_Set_Contrasts",
@@ -41,7 +43,6 @@ stages <- c(
   "03_Cluster_groups/Muscle_strength/06_Classification/03_Modules",
   "03_Cluster_groups/Muscle_strength/07_Trait_Associations",
   "03_Cluster_groups/Muscle_strength/Figures/F1_Overview",
-  "03_Cluster_groups/Proteome/01_Clustering",
   "03_Cluster_groups/Proteome/02_Design_Contrasts",
   "03_Cluster_groups/Proteome/03_Protein_Contrasts",
   "03_Cluster_groups/Proteome/04_Set_Contrasts",
@@ -68,19 +69,30 @@ stages <- c(
   "01_Processing/Figures/S01_QC"
 )
 only <- commandArgs(trailingOnly = TRUE)
-if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]
+if (length(only)) stages <- stages[rowSums(outer(stages, only, startsWith)) > 0]
 dir.create("Scratch/runlogs", recursive = TRUE, showWarnings = FALSE)
-for (stage in stages) {
+# A stage is a step folder holding one script in a_script/, or "<walkthrough>.qmd@<grouping>": one
+# walkthrough rendered with params$grouping set, its report written to <grouping>/b_reports.
+render_args <- function(stage) {
+  if (grepl("@", stage)) {
+    script <- sub("@.*", "", stage)
+    grouping <- sub(".*@", "", stage)
+    return(c(
+      "render", script, "-P", paste0("grouping:", grouping),
+      "--output-dir", file.path("..", grouping, "b_reports")
+    ))
+  }
   script <- list.files(file.path(stage, "a_script"), pattern = "\\.(R|qmd)$", full.names = TRUE)
   stopifnot(length(script) == 1)
-  log <- file.path("Scratch/runlogs", paste0(gsub("/", "_", stage), ".log"))
+  if (endsWith(script, ".qmd")) c("render", script, "--output-dir", "../b_reports") else script
+}
+for (stage in stages) {
+  args <- render_args(stage)
+  log <- file.path("Scratch/runlogs", paste0(gsub("[/@]", "_", stage), ".log"))
   started <- Sys.time()
   # Called from the project root, quarto's R session loads the renv library before any package.
-  status <- if (endsWith(script, ".qmd")) {
-    system2("quarto", c("render", script, "--output-dir", "../b_reports"), stdout = log, stderr = log)
-  } else {
-    system2("Rscript", script, stdout = log, stderr = log)
-  }
+  program <- if (args[1] == "render") "quarto" else "Rscript"
+  status <- system2(program, args, stdout = log, stderr = log)
   message(sprintf("%-32s %6.1f min", stage, as.numeric(Sys.time() - started, units = "mins")))
   if (status != 0) stop(stage, " failed; see ", log)
 }

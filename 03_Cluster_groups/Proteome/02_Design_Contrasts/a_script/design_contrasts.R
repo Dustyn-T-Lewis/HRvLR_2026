@@ -18,7 +18,7 @@ folder <- "03_Cluster_groups/Proteome"
 walk(inputs_used, \(input) {
   run_design_contrasts(
     stage = file.path(folder, "02_Design_Contrasts", input),
-    groups = file.path(folder, "01_Clustering/c_data/groups", paste0(input, ".rds"))
+    groups = file.path("02_Groups/Proteome/c_data/groups", paste0(input, ".rds"))
   )
 })
 stack_inputs(here(folder, "02_Design_Contrasts"))

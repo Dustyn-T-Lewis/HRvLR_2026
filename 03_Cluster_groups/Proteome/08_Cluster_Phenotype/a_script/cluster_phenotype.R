@@ -19,7 +19,7 @@ out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  clusters = "03_Cluster_groups/Proteome/01_Clustering/c_data/clustering.xlsx",
+  clusters = "02_Groups/Proteome/c_data/clustering.xlsx",
   phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)

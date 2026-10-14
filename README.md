@@ -1,13 +1,15 @@
 # HRvLR Proteomics
 
 DIA mass-spectrometry proteomics of skeletal muscle from a resistance-training study. Sixteen
-people were biopsied at baseline (T1), after the training programme (T2) and after one acute bout
-at the end of it (T3). Of 48 runs, 45 pass quality control, and 1,900 of 2,400 proteins are
-analysed.
+people were biopsied before training (T1), 96 h after the last of 16 sessions (T2), and 24 h after
+one further standardised session (T3). Of 48 runs, 45 pass quality control, and 1,900 of 2,400
+proteins are analysed.
 
-The study split the sixteen at the median of a composite hypertrophy score into High and Low
-Responders (HR, LR). The repository asks its questions three ways: with that split, with groups
-found by clustering, and with no groups at all.
+Twenty-five people trained. The study ranked them on a composite hypertrophy score,
+(2 × %ΔmCSA + %ΔfCSA) / 3, and profiled the top eight as higher responders (HR) and the bottom
+eight as lower responders (LR); the middle nine were not profiled. The repository asks its
+questions three ways: with those groups, with groups found by clustering, and with no groups at
+all.
 
 ## Folders
 
@@ -87,7 +89,6 @@ are seeded.
 
 - A needle biopsy holds a varying share of fibre, connective tissue and fat; no covariate adjusts
   for it.
-- The composite hypertrophy formula and the biopsy timing are not in the repository.
 
 ## Dependencies
 
