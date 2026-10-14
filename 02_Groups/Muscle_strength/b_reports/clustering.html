@@ -2325,7 +2325,7 @@ HR_S24             -0.97            0.34</code></pre>
 </div>
 <p>For the proteome the features are the 15 module eigengenes, as levels at each time point and as within-person change over training (T2 − T1) and after the bout (T3 − T2).</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;03_Cluster_groups&quot;</span>, <span class="st">&quot;Proteome&quot;</span>, <span class="st">&quot;R&quot;</span>, <span class="st">&quot;inputs.R&quot;</span>))</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;proteome_inputs.R&quot;</span>))</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>modules <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;modules&quot;</span>]])</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(modules<span class="sc">$</span>meta)</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> modules<span class="sc">$</span>eigengenes</span>
