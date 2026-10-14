@@ -1,6 +1,6 @@
 # Protein filtering references
 
-These reference files are read by `../a_script/protein_filtering.R`. The curated blood list
+These reference files are read by `../a_script/protein_filtering.qmd`. The curated blood list
 is part of the filtering specification; preserve it with the analysis code. The HPA and RBC
 tables are retained reference snapshots.
 

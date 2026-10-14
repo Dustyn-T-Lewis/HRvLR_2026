@@ -1,6 +1,6 @@
 # Gene-set references
 
-Fixed reference snapshots read by `../a_script/gene_sets.R`. MSigDB supplies Hallmark,
+Fixed reference snapshots read by `../a_script/gene_sets.qmd`. MSigDB supplies Hallmark,
 Reactome, KEGG Legacy and GO:BP membership. GO Slim supplies broad ontology terms; the
 script combines these with `GO.db` and MSigDB to construct additional gene sets.
 

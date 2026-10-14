@@ -1,35 +1,30 @@
 # 04_Gene_Sets
 
-Which groups of proteins count as one biological process, decided once for every analysis?
+Decides gene-set membership once for every set-level analysis: one protein per gene, MSigDB sets
+cut to the measured genes, GO Slim terms built from the GO:BP hierarchy, and a 15-to-500 size rule.
 
-| | |
+## Inputs
+
+| File | Holds |
 |---|---|
-| Reads | `01_Processing/02_Normalisation/c_data/DAList_normalized.rds`, `01_Processing/04_Gene_Sets/references/msigdb_2026.1.Hs.rds`, `01_Processing/04_Gene_Sets/references/goslim_generic.obo` |
-| Writes | `c_data/gene_sets.rds`, `c_data/gene_sets.xlsx` |
-| Run | `Rscript 01_Processing/04_Gene_Sets/a_script/gene_sets.R` |
+| `01_Processing/02_Normalisation/c_data/DAList_normalized.rds` | the measured proteins and their detection counts |
+| `references/msigdb_2026.1.Hs.rds` | MSigDB 2026.1.Hs: Hallmark, Reactome, KEGG Legacy, GO:BP |
+| `references/goslim_generic.obo` | the GO Consortium's generic GO Slim |
 
-## Key result
+`references/README.md` gives the sources and dates of both snapshots.
 
-- 1,378 sets qualify for testing: Hallmark 33 of 50, Reactome 328 of 1,839, KEGG_Legacy 62 of 186, GOBP 897 of 7,538, GO_Slim 58 of 71.
-- All 1,900 proteins map to one distinct gene symbol each.
+## Run
 
-## Method
+```sh
+quarto render 01_Processing/04_Gene_Sets/a_script/gene_sets.qmd --output-dir ../b_reports
+```
 
-- MSigDB 2026.1.Hs (Hallmark, Reactome, KEGG Legacy, GO:BP) from the snapshot in `references/`, plus GO Slim terms built from the GO:BP hierarchy (`GSEABase`, `GO.db`).
-- One protein per gene symbol: the one observed in the most samples. Proteins with no symbol or several are left out.
-- A set is tested when it holds 15 to 500 genes in the source and at least 15 measured here (GO Slim: 15 to 500 measured).
+Run from the project root, so R starts with the project's renv library.
 
-## Read with care
+## Outputs
 
-- Overlapping sets are kept, so one signal can appear in several neighbouring sets.
-
-## Sheets
-
-`gene_sets.xlsx` opens with `read_me` and `columns` (every column defined) and closes with `input_manifest` and `package_versions`.
-
-| Sheet | Holds |
+| File | Holds |
 |---|---|
-| `collection_summary` | Sets per collection in the source, sets that qualify, median measured size. |
-| `set_catalog` | Every set with its source and measured size and whether it qualifies (15 to 500). |
-| `protein_gene_map` | Every protein, its gene symbol, and the representative chosen per symbol. |
-| `mapping_summary` | Proteins per mapping status. |
+| `b_reports/gene_sets.html` | the walkthrough: mapping, size rule, GO Slim construction |
+| `c_data/gene_sets.rds` | tested sets, full catalogue, protein-to-gene map, gene universe; read by every set-level step |
+| `c_data/gene_sets.xlsx` | the same catalogue and map as tables |
