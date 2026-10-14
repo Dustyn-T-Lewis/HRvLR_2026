@@ -401,7 +401,8 @@ panel_set_calls <- function(set_tests, contrast_order, groups, file) {
   )
 }
 
-# The five between-group classification tasks of 00_Setup/Shared_analyses/run_feature_discrimination.R under the contrast strips: the
+# The five between-group classification tasks of
+# 03_Group_comparisons/a_script/05_classification.qmd under the contrast strips: the
 # levels sit under Between groups, the changes under their window.
 task_panel <- function(task) {
   family <- dplyr::case_when(

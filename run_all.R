@@ -66,9 +66,7 @@ stages <- c(
   "03_Group_comparisons/a_script/06_trait_associations.qmd@Proteome/training",
   "03_Group_comparisons/a_script/06_trait_associations.qmd@Proteome/acute",
   "03_Group_comparisons/a_script/07_cluster_phenotype.qmd@Proteome",
-  "04_Continuous_no_group/01_Trait_Associations/01_Proteins",
-  "04_Continuous_no_group/01_Trait_Associations/02_Sets",
-  "04_Continuous_no_group/01_Trait_Associations/03_Modules",
+  "04_Continuous_no_group/01_Trait_Associations",
   "04_Continuous_no_group/02_Trait_Pathways",
   "04_Continuous_no_group/03_Profile_Clusters",
   # Figures read saved results only, so they run last.

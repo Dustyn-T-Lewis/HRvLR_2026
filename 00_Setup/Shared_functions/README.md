@@ -1,7 +1,7 @@
 # Shared functions
 
-These files define helpers; they do not run a complete analysis. Stage scripts load their
-packages before sourcing the files they need. The helpers are not a standalone R package.
+These files define helpers; they do not run a complete analysis. Each walkthrough loads its
+packages before sourcing the files it needs. The helpers are not a standalone R package.
 
 | File | Purpose |
 |---|---|
@@ -10,6 +10,7 @@ packages before sourcing the files they need. The helpers are not a standalone R
 | `figure_style.R` | Colours, labels and figure styling |
 | `figure_panels.R` | Reusable figure panels and figure export |
 | `group_overview_figure.R` | Group-overview panels and `build_group_overview()` |
+| `proteome_inputs.R` | The five Proteome clustering inputs, `validity()` of a comparison against them, `stack_inputs()` |
 
 Key helpers:
 

@@ -1,35 +1,78 @@
-# The continuous analysis's association step, shared by the protein, set and module levels. Each
-# level's script reads its own matrix and labels and passes them here. No group label enters: every
-# subject is pooled and each trait is a number.
-#
-# Sample model: every T1 and T2 biopsy carries its own trait values. Per trait, limma fits
-# abundance ~ timepoint + between + within with subject blocked, where between is the subject's
-# mean trait and within the biopsy's deviation from it. within asks whether a feature rises in the
-# biopsies where that person's trait rose; between asks whether people with more of the trait
-# carry more of the feature.
-#
-# Change score: one value per subject and pairing. Pairings: training change, T1 level and acute
-# change against the % trait changes, composite and volume ("baseline" is the T1 level against
-# later change); T1 and T2 levels against the trait levels at the same biopsy; and the T3 level
-# against the T2 trait levels, since T3 follows the same training (it also carries the bout's
-# acute effect). Per feature: limma on one value per subject (slope with its 95% interval, p),
-# Spearman (rho with a Fisher-z interval, p_rho) and biweight midcorrelation (bicor).
-#
-# Every limma estimate carries its 95% interval (topTable, confint = TRUE), named after the
-# estimate: slope_lower and slope_upper, interaction_lower and interaction_upper.
-#
-# Two predictor: feature ~ growth + strength gain. Interaction: feature ~ growth x strength gain,
-# the continuous form of asking whether the strength link depends on growth.
-#
-# collection_of, when given, makes each collection its own screen: BH runs within collection.
-run_continuous_associations <- function(stage, name, inputs, paths, values, meta, feature_label, feature_noun,
-                           feature_unit, value_label, row_groups, row_order,
-                           collection_of = NULL, panel_name = \(label, collection) label,
-                           observed_share = NULL, save_change_score = FALSE) {
+---
+title: "Trait associations, everyone pooled"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Which proteins, gene-set scores and module eigengenes follow muscle size and strength when every
+person is pooled and each trait stays a number? No group label enters any model. Pooling avoids a
+split, not confounding: a feature that tracks growth may track anything that travels with growth
+across these 16 people, and HR and LR are extreme groups, so correlations across them run stronger
+than they would across all 25 trained people.
+
+Four analyses, each at three levels (proteins, gene sets, modules):
+
+- Sample model. Every T1 and T2 biopsy carries that person's trait values at that time. Per trait,
+  limma fits feature ~ timepoint + between + within with person as a block, where `between` is the
+  person's mean trait and `within` the biopsy's deviation from it. `within` asks whether a feature
+  rises in the biopsies where that person's trait rose; `between` asks whether people with more of
+  the trait carry more of the feature.
+- Change score. One value per person per window (table below), against each trait: limma slope
+  with its 95% interval, Spearman's rho with a Fisher-z interval, and the biweight midcorrelation
+  (bicor), a correlation that down-weights outliers.
+- Two predictor: feature ~ growth + strength gain, each slope adjusted for the other.
+- Interaction: feature ~ growth × strength gain, asking whether the link to strength gain depends
+  on how much the person grew.
+
+| window | feature value | traits |
+|---|---|---|
+| `training` | change T1 → T2 | % change, composite, volume |
+| `baseline` | T1 level | % change, composite, volume |
+| `acute` | change T2 → T3 | % change, composite, volume |
+| `baseline_level` | T1 level | trait levels at T1 |
+| `post_level` | T2 level | trait levels at T2 |
+| `post_bout_level` | T3 level | trait levels at T2 (T3 has no phenotype) |
+
+BH and Storey's q run within each screen (and within collection for gene sets).
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+library(grid)
+library(ComplexHeatmap)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+```
+
+## The association helper
+
+`associate_level()` runs the four analyses for one level and is called three times below. It takes
+the feature-by-run matrix, the sample sheet, labels and display order; it draws the overview
+heatmaps and the strongest p < 0.05 hits (at most 12 per page), and writes the level's workbook. It
+returns the level's counts of tests and calls.
+
+```{r}
+#| label: associate-level
+associate_level <- function(stage, name, inputs, paths, values, meta, feature_label, feature_noun,
+                            feature_unit, value_label, row_groups, row_order,
+                            collection_of = NULL, panel_name = \(label, collection) label,
+                            observed_share = NULL, save_change_score = FALSE) {
   out <- file.path(stage, "c_data")
-  figures <- file.path(stage, "b_reports")
+  dir.create(out, recursive = TRUE, showWarnings = FALSE)
   workbook <- paste0(name, ".xlsx")
-  for (path in c(out, figures)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
   by_collection <- if (is.null(collection_of)) character(0) else "collection"
   labelled_heat <- \(...) make_report_heatmap(..., labels = feature_label)
   labelled <- function(d) {
@@ -137,7 +180,6 @@ run_continuous_associations <- function(stage, name, inputs, paths, values, meta
     labelled() |>
     corrected(window, strength_test, coefficient)
 
-  # Interaction: does the link to strength gain depend on how much the person grew?
   interaction <- imap(windows[change_windows], \(x, window) {
     map(set_names(strength_tests), \(test) {
       predictors <- data.frame(
@@ -188,7 +230,6 @@ run_continuous_associations <- function(stage, name, inputs, paths, values, meta
       )
   )
 
-  # Units come from the phenotype column names.
   unit_cols <- grep("_pre_", names(phenotype), value = TRUE)
   unit_of <- set_names(sub(".*_pre_", "", unit_cols), sub("_pre_.*", "", unit_cols))
   outcome_unit <- c(
@@ -202,7 +243,6 @@ run_continuous_associations <- function(stage, name, inputs, paths, values, meta
   bh_scope <- if (length(by_collection)) " and collection" else ""
   name_of <- \(d) panel_name(d$label, d[["collection"]])
 
-  # Overviews: sample-model t by trait, then change-score rho by trait, one page per window.
   t_limit <- cap(model$t)
   overviews <- imap(row_groups, \(rows, group) {
     term_grid <- \(term, value) {
@@ -249,7 +289,6 @@ run_continuous_associations <- function(stage, name, inputs, paths, values, meta
   }) |>
     list_flatten()
 
-  # Grids: every p < 0.05 hit, strongest first (p, then |t| or |rho|, then feature ID).
   trait_samples <- map(set_names(traits), \(trait) filter(samples, !is.na(.data[[trait]])))
   seen_in <- \(feature, trait) !is.na(values[feature, trait_samples[[trait]]$sample_id])
   model_hits <- model |>
@@ -416,13 +455,8 @@ run_continuous_associations <- function(stage, name, inputs, paths, values, meta
     saveRDS(list(change_score = change_score), file.path(out, "associate.rds"), compress = "xz")
   }
 
-  # Points as one Dingbats glyph each rather than four curves: the PDF shrinks by about 60%.
-  pdf(file.path(figures, paste0(name, "_report.pdf")),
-    width = 11, height = 8.5, useDingbats = TRUE
-  )
   walk(overviews, \(page) page$draw())
   walk(c(model_pages, change_pages, slope_pages), print)
-  invisible(dev.off())
 
   write_workbook(
     list(
@@ -456,4 +490,117 @@ run_continuous_associations <- function(stage, name, inputs, paths, values, meta
     file.path(out, workbook),
     inputs, paths
   )
+  counts
 }
+```
+
+## Proteins
+
+Rank tests and correlations take no covariate, so proteins come from limpa's blood-corrected
+matrix; `observed_share` records how much of each protein was measured rather than estimated. The
+protein change scores are also saved to `associate.rds` for `02_Trait_Pathways`.
+
+```{r}
+#| label: fig-proteins
+#| fig-cap: "Proteins: overviews, then the strongest p < 0.05 hits per analysis."
+#| fig-width: 11
+#| fig-height: 8.5
+inputs <- c(
+  corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+  limpa = "01_Processing/03_Quantification/c_data/DAList_limpa.rds",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["corrected"]])
+feature_label <- with(dal$annotation, set_names(gene, uniprot_id))
+stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
+complete <- readRDS(paths[["limpa"]])$data
+protein_counts <- associate_level(
+  stage = here("04_Continuous_no_group", "01_Trait_Associations", "01_Proteins"),
+  name = "protein_trait_associations", inputs = inputs, paths = paths,
+  values = dal$data, observed_share = rowMeans(dal$observed), meta = as_tibble(dal$metadata),
+  feature_label = feature_label, feature_noun = "proteins", feature_unit = "protein",
+  value_label = "log2 abundance",
+  row_groups = list(
+    proteins = rownames(complete)[hclust(as.dist(1 - cor(t(complete))), "average")$order]
+  ),
+  row_order = "Rows: average-linkage clustering of limpa's matrix, for display only.",
+  save_change_score = TRUE
+)
+```
+
+## Gene sets
+
+Each set's singscore per run; each collection is its own screen.
+
+```{r}
+#| label: fig-sets
+#| fig-cap: "Gene sets: overviews by collection, then the strongest p < 0.05 hits."
+#| fig-width: 11
+#| fig-height: 8.5
+inputs <- c(
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  proteins = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+catalog <- readRDS(paths[["gene_sets"]])$set_catalog |> filter(qualifies)
+values <- readRDS(paths[["singscore"]])$scores[catalog$set_id, ]
+meta <- as_tibble(readRDS(paths[["proteins"]])$metadata)
+stopifnot(identical(colnames(values), meta$sample_id))
+set_counts <- associate_level(
+  stage = here("04_Continuous_no_group", "01_Trait_Associations", "02_Sets"),
+  name = "set_trait_associations", inputs = inputs, paths = paths,
+  values = values, meta = meta,
+  feature_label = with(catalog, set_names(enrichVolcano::ev_clean_label(pathway), set_id)),
+  feature_noun = "sets", feature_unit = "set", value_label = "singscore",
+  row_groups = split(catalog$set_id, factor(catalog$collection, unique(catalog$collection))) |>
+    map(\(ids) ids[hclust(as.dist(1 - cor(t(values[ids, ]))), "average")$order]),
+  row_order = "Rows: average-linkage clustering of singscore within collection, display only.",
+  collection_of = with(catalog, set_names(collection, set_id)),
+  panel_name = \(label, collection) {
+    paste0(collection, ": ", stringr::str_wrap(gsub("\n", " ", label), 50))
+  }
+)
+```
+
+## Modules
+
+```{r}
+#| label: fig-modules
+#| fig-cap: "Modules: overviews, then the strongest p < 0.05 hits."
+#| fig-width: 11
+#| fig-height: 8.5
+inputs <- c(
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+modules <- readRDS(paths[["modules"]])
+values <- modules$eigengenes
+meta <- as_tibble(modules$meta)
+stopifnot(identical(colnames(values), meta$sample_id))
+module_counts <- associate_level(
+  stage = here("04_Continuous_no_group", "01_Trait_Associations", "03_Modules"),
+  name = "module_trait_associations", inputs = inputs, paths = paths,
+  values = values, meta = meta, feature_label = set_names(rownames(values)),
+  feature_noun = "modules", feature_unit = "module", value_label = "eigengene",
+  row_groups = list(modules = modules$module_summary$module),
+  row_order = "Rows follow module size."
+)
+```
+
+## Summary
+
+Tests and calls per analysis and level, summed over traits and windows:
+
+```{r}
+#| label: summary
+bind_rows(proteins = protein_counts, sets = set_counts, modules = module_counts, .id = "level") |>
+  mutate(analysis = sub(":.*", "", analysis)) |>
+  summarise(across(c(n_tested, n_nominal, n_fdr_05), sum), .by = c(level, analysis))
+```
