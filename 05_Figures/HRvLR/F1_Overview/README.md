@@ -1,7 +1,7 @@
 # F1_Overview
 
 Figure 1: what does the design look like, and how does the whole proteome respond before any
-single result? Every p-value it draws comes from `02_Protein_Contrasts` or `03_Set_Contrasts`; its
+single result? Every p-value it draws comes from `02_protein_contrasts` or `03_set_contrasts`; its
 only computation is the phenotype PCA, a projection with no test.
 
 | Panel | Shows | Source |
@@ -14,7 +14,7 @@ only computation is the phenotype PCA, a projection with no test.
 
 | | |
 |---|---|
-| Reads | `03_Group_comparisons/HRvLR/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`contrast_summary`, `pca`, `pca_variance`, `permanova`, `fry_concordance`), `03_Group_comparisons/HRvLR/03_Set_Contrasts/c_data/set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set members, for pruning), `00_Setup/Input/phenotype.csv`, `assets/design.png` |
+| Reads | `03_Group_comparisons/HRvLR/c_data/02_protein_contrasts.xlsx` (`contrast_summary`, `pca`, `pca_variance`, `permanova`, `fry_concordance`), `03_Group_comparisons/HRvLR/c_data/03_set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set members, for pruning), `00_Setup/Input/phenotype.csv`, `assets/design.png` |
 | Writes | `b_reports/f1_overview.pdf`, `c_data/f1_overview.xlsx` |
 | Run | `Rscript 05_Figures/HRvLR/F1_Overview/a_script/f1_overview.R` |
 
@@ -38,7 +38,7 @@ only computation is the phenotype PCA, a projection with no test.
 
 - Read the floor (`Baseline_HRvLR`) in panel b before any other count.
 - fgsea in panel d treats proteins as independent draws, so a large co-regulated set is easy to
-  call; `03_Set_Contrasts` reports fry beside it.
+  call; `03_set_contrasts` reports fry beside it.
 - Carry-over in one direction only (e, f) can come from unequal power as well as biology.
 - Panel a is a BioRender drawing (`assets/design.png`) and reads no data.
 

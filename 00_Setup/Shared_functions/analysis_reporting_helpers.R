@@ -207,7 +207,8 @@ results_to_matrix <- function(d, rows, cols, col, value) {
 # An effect map on a diverging scale when breaks are given, otherwise a status map; labels name
 # the rows.
 make_report_heatmap <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
-                 column_title = title, column_names_gp = gpar(fontsize = 7), labels, ...) {
+                                column_title = title, column_names_gp = gpar(fontsize = 7),
+                                labels, ...) {
   rows <- rownames(m)
   Heatmap(m,
     name = title, na_col = "grey80",
@@ -262,10 +263,10 @@ counts_line <- \(info, noun, hits) {
   )
 }
 
-# What every column in every workbook holds, from 00_Setup/Shared_functions/workbook_columns.csv: a name (or a pattern
-# starting with ^) and, where one name means different things, the sheets it applies to. The
-# columns sheet lists each sheet's columns with their meaning; a column the dictionary does not
-# describe stops the run, so no workbook ships an unexplained column.
+# What every column in every workbook holds, from 00_Setup/Shared_functions/workbook_columns.csv:
+# a name (or a pattern starting with ^) and, where one name means different things, the sheets it
+# applies to. The columns sheet lists each sheet's columns with their meaning; a column the
+# dictionary does not describe stops the run, so no workbook ships an unexplained column.
 column_dictionary <- readr::read_csv(
   here::here("00_Setup", "Shared_functions", "workbook_columns.csv"),
   col_types = "ccc", na = ""
@@ -286,7 +287,10 @@ describe_columns <- function(sheets) {
   })
   missing <- unique(rows$column[is.na(meaning)])
   if (length(missing)) {
-    stop("00_Setup/Shared_functions/workbook_columns.csv does not describe: ", paste(missing, collapse = ", "))
+    stop(
+      "00_Setup/Shared_functions/workbook_columns.csv does not describe: ",
+      paste(missing, collapse = ", ")
+    )
   }
   mutate(rows, meaning = meaning)
 }

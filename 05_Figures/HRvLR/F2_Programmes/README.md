@@ -13,7 +13,7 @@ Figure 2: which co-expression programmes (WGCNA modules) move with training and 
 
 | | |
 |---|---|
-| Reads | `03_Group_comparisons/HRvLR/01_Design_Contrasts/c_data/design_contrasts.xlsx` (`contrasts`, for column order), `03_Group_comparisons/HRvLR/04_Module_Contrasts/c_data/module_contrasts.xlsx` (`eigengene_tests`, `fry_tests`), `03_Group_comparisons/HRvLR/03_Set_Contrasts/c_data/set_tests.rds`, `03_Group_comparisons/HRvLR/03_Set_Contrasts/c_data/set_contrasts.xlsx` (`set_summary`, for the check), `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/07_Module_Characterisation/c_data/module_characterisation.xlsx` (`labels`) |
+| Reads | `03_Group_comparisons/HRvLR/c_data/01_design_contrasts.xlsx` (`contrasts`, for column order), `03_Group_comparisons/HRvLR/c_data/04_module_contrasts.xlsx` (`eigengene_tests`, `fry_tests`), `03_Group_comparisons/HRvLR/c_data/03_set_tests.rds`, `03_Group_comparisons/HRvLR/c_data/03_set_contrasts.xlsx` (`set_summary`, for the check), `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/07_Module_Characterisation/c_data/module_characterisation.xlsx` (`labels`) |
 | Writes | `b_reports/f2_programmes.pdf`, `c_data/f2_programmes.xlsx` |
 | Run | `Rscript 05_Figures/HRvLR/F2_Programmes/a_script/f2_programmes.R` |
 

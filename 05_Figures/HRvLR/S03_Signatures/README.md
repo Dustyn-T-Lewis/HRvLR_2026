@@ -9,7 +9,7 @@ Supplement to Figure 1: does the signature carry-over hold with stricter sets, a
 
 | | |
 |---|---|
-| Reads | `03_Group_comparisons/HRvLR/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`fry_concordance`, `set_trajectory`), `03_Group_comparisons/HRvLR/03_Set_Contrasts/c_data/set_tests.rds` (`protein_results`) |
+| Reads | `03_Group_comparisons/HRvLR/c_data/02_protein_contrasts.xlsx` (`fry_concordance`, `set_trajectory`), `03_Group_comparisons/HRvLR/c_data/03_set_tests.rds` (`protein_results`) |
 | Writes | `b_reports/s03_signatures.pdf`, `c_data/s03_signatures.xlsx` |
 | Run | `Rscript 05_Figures/HRvLR/S03_Signatures/a_script/s03_signatures.R` |
 

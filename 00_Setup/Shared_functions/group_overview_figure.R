@@ -277,9 +277,9 @@ panel_pathway_grid <- function(set_tests, gene_sets, groups) {
 # acute sets ranked in the other group. inputs must name contrasts (the protein-contrasts
 # workbook), set_tests, gene_sets and phenotype. Every plotted number is checked against its
 # source table before anything is written.
-build_group_overview <- function(panel_a, inputs, paths, groups, out_dir, stem, a_sheets = list(),
-                            a_holds = character(), note = NULL, validity = NULL,
-                            group_of = NULL) {
+build_group_overview <- function(panel_a, inputs, paths, groups, out_dir, stem,
+                                 a_sheets = list(), a_holds = character(), note = NULL,
+                                 validity = NULL, group_of = NULL) {
   walk(file.path(out_dir, c("b_reports", "c_data")), dir.create,
     recursive = TRUE, showWarnings = FALSE
   )

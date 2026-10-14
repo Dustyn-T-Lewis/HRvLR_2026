@@ -5,6 +5,8 @@ complete protein values, gene-set scores and co-expression modules. No step read
 contrast. One reads the HR/LR label: the detection filter counts detections per group-by-time
 cell, never abundance.
 
+![The seven processing steps, their methods and the files they write](schematic.png)
+
 | Step | Does | Writes for later steps |
 |---|---|---|
 | [`01_Protein_Filtering`](01_Protein_Filtering/README.md) | removes contaminants, outlier runs and rarely detected proteins | `DAList_filtered.rds` |

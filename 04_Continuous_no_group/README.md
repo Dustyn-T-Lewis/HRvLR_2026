@@ -6,6 +6,8 @@ and each trait stays a number? No group label enters any model. Traits are used 
 (mixed, type I, type II), muscle area and two 1RMs as levels at T1 and T2 and as % change, plus the
 composite hypertrophy score and total volume load. T3 has no phenotype.
 
+![Inputs, the six windows and the three steps of the continuous analysis](schematic.png)
+
 | Walkthrough | Does | Writes |
 |---|---|---|
 | `01_Trait_Associations/a_script/trait_associations.qmd` | sample model, change score, two-predictor and interaction fits at three levels | `01_Proteins/`, `02_Sets/`, `03_Modules/` workbooks; `associate.rds` |

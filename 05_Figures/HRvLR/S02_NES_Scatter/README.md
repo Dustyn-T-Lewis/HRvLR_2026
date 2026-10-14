@@ -11,7 +11,7 @@ Supplement: do HR and LR shift the same gene sets, set by set? Each set's fgsea 
 
 | | |
 |---|---|
-| Reads | `03_Group_comparisons/HRvLR/03_Set_Contrasts/c_data/set_tests.rds` (`set_tests`) |
+| Reads | `03_Group_comparisons/HRvLR/c_data/03_set_tests.rds` (`set_tests`) |
 | Writes | `b_reports/s02_nes_scatter.pdf`, `c_data/s02_nes_scatter.xlsx` |
 | Run | `Rscript 05_Figures/HRvLR/S02_NES_Scatter/a_script/s02_nes_scatter.R` |
 
@@ -19,7 +19,7 @@ Supplement: do HR and LR shift the same gene sets, set by set? Each set's fgsea 
 
 - Sets overlap and share proteins; the concordance rho describes agreement, and its p overstates the evidence. The Hallmark and GO Slim panels limit the nesting.
 - NES compares a set with the other proteins in the same contrast, so a group whose whole proteome moved more can differ in NES without the set behaving differently.
-- Agreement between the groups' NES is not a test of a group difference; the interaction contrasts in `03_Set_Contrasts` are.
+- Agreement between the groups' NES is not a test of a group difference; the interaction contrasts in `03_set_contrasts` are.
 
 ## Sheets
 

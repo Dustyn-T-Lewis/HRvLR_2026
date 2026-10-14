@@ -20,35 +20,56 @@ arm](pipeline.png)
 |---|---|
 | [`00_Setup`](00_Setup/README.md) | study inputs and the helpers every walkthrough sources |
 | [`01_Processing`](01_Processing/README.md) | filtering, normalisation, limpa quantification, gene sets, set scores, modules |
-| [`02_Groups`](02_Groups/README.md) | who is compared: HR/LR, and clusters on size, strength and the proteome |
-| [`03_Group_comparisons`](03_Group_comparisons/README.md) | how two groups differ: contrasts, sets, modules, classification, trait links |
+| [`02_Groups`](02_Groups/README.md) | who is compared: eight parallel groupings, from the study labels and from clustering |
+| [`03_Group_comparisons`](03_Group_comparisons/README.md) | how two groups differ: contrasts, sets, modules, classification, trait links, for every grouping |
 | [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
-| `05_Figures` | figures drawn from saved results only |
+| [`05_Figures`](05_Figures/README.md) | figures drawn from saved results only |
+
+The eight groupings run side by side through the same steps:
+
+| Grouping | Groups | Defined by |
+|---|---|---|
+| `HRvLR` | HR, LR | the study: top and bottom 8 of 25 on the composite hypertrophy score |
+| `Muscle_size` | Hi, Lo | clustering on % change in fibre and muscle area |
+| `Muscle_strength` | Hi, Lo | clustering on % change in leg-press and leg-extension 1RM |
+| `Proteome_T1`, `_T2`, `_T3`, `_training`, `_acute` | C1, C2 | clustering on module eigengenes at a time point, or their change |
 
 ## Every step
 
-Each analysis is one Quarto walkthrough: it loads packages, reads its inputs, checks them, runs
-the analysis, validates the result, summarises and saves, explaining each step beside the code.
+Each analysis loads packages, reads its inputs, checks them, runs the analysis, validates the
+result, summarises and saves, explaining each step beside the code.
 
 ```
-NN_Step_Name/
-├── a_script/     the walkthrough (.qmd)
-├── b_reports/    the rendered walkthrough (.html), and figure PDFs
-└── c_data/       workbooks, plus any .rds a later step reads
+01_Processing/NN_Step/            04_Continuous_no_group/NN_Step/
+├── a_script/   the walkthrough (.qmd)
+├── b_reports/  the rendered walkthrough (.html)
+└── c_data/     workbooks, plus any .rds a later step reads
+
+02_Groups/, 03_Group_comparisons/
+├── code/       each step written once, as an R script that is also its report
+└── <grouping>/
+    ├── a_script/  run_groups.R or run_comparisons.R: runs every step for this grouping
+    ├── b_reports/ one PDF per step
+    └── c_data/    files numbered by step
+
+05_Figures/<grouping or phase>/<Figure>/
+├── a_script/   a plain R script (F1's comes from 05_Figures/code/)
+├── b_reports/  the figure PDF
+└── c_data/     the numbers each panel draws
 ```
 
-Walkthroughs shared by several groupings sit in their phase's `a_script/` and are rendered once
-per grouping into `<grouping>/<NN_Step>/`. Every workbook opens with `read_me` (one line per
-sheet) and `columns` (every column defined, from `00_Setup/Shared_functions/workbook_columns.csv`),
-and closes with `input_manifest` (every file read, with its md5) and `package_versions`. A step
-reads only files earlier steps saved, so any step reruns alone.
+Every workbook opens with `read_me` (one line per sheet) and `columns` (every column defined, from
+`00_Setup/Shared_functions/workbook_columns.csv`), and closes with `input_manifest` (every file
+read, with its md5) and `package_versions`. A step reads only files earlier steps saved, so any
+step reruns alone.
 
 ## Run
 
 ```sh
 Rscript -e 'renv::restore()'
 Rscript run_all.R                       # every step in order
-Rscript run_all.R 01_Processing 02      # steps whose path starts with these prefixes
+Rscript run_all.R 01_Processing 02      # stages whose path starts with these prefixes
+Rscript 03_Group_comparisons/HRvLR/a_script/run_comparisons.R   # one grouping
 ```
 
 Run from the project root, so Quarto's R sessions start with the project's renv library. The

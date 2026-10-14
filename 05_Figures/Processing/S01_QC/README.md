@@ -1,6 +1,6 @@
 # S01_QC
 
-Did the samples hold up, and does the analysis behave? Ten panels: the top row checks the data (filtering, completeness, normalisation, dynamic range, the detection curve), the bottom row the statistics (within-person correlation, blood, p-value calibration, power). The script tests nothing; it reads `03_Group_comparisons/HRvLR/02_Protein_Contrasts` as well, so `run_all.R` runs it last.
+Did the samples hold up, and does the analysis behave? Ten panels: the top row checks the data (filtering, completeness, normalisation, dynamic range, the detection curve), the bottom row the statistics (within-person correlation, blood, p-value calibration, power). The script tests nothing; it reads `03_Group_comparisons/HRvLR/c_data/02_protein_contrasts.xlsx` as well, so `run_all.R` runs it last.
 
 | Panel | Shows | Reads |
 |---|---|---|
@@ -17,7 +17,7 @@ Did the samples hold up, and does the analysis behave? Ten panels: the top row c
 
 | | |
 |---|---|
-| Reads | `01_Processing/01_Protein_Filtering/c_data/protein_filtering.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_arm`), `01_Processing/02_Normalisation/c_data/normalisation.xlsx` (`intensity_quantiles`), `01_Processing/03_Quantification/c_data/quantification.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `03_Group_comparisons/HRvLR/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`protein_by_contrast`, `unadjusted`, `null_calibration`, `detectable_effect`) |
+| Reads | `01_Processing/01_Protein_Filtering/c_data/protein_filtering.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_arm`), `01_Processing/02_Normalisation/c_data/normalisation.xlsx` (`intensity_quantiles`), `01_Processing/03_Quantification/c_data/quantification.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `03_Group_comparisons/HRvLR/c_data/02_protein_contrasts.xlsx` (`protein_by_contrast`, `unadjusted`, `null_calibration`, `detectable_effect`) |
 | Writes | `b_reports/s01_qc.pdf` (300 x 190 mm, cairo PDF), `c_data/s01_qc.xlsx` |
 | Run | `Rscript 05_Figures/Processing/S01_QC/a_script/s01_qc.R`, or `run_all.R` with the figures at the end (it reads the HR/LR protein contrasts) |
 

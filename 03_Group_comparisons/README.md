@@ -1,25 +1,32 @@
 # 03_Group_comparisons
 
-How do two groups of people differ? The same analyses run for every grouping from `02_Groups`:
-the study's HR and LR, and the three clusterings (muscle size, muscle strength, proteome). Each
-analysis is written once in `a_script/` and rendered once per grouping; the grouping folders hold
-results only.
+How do two groups of people differ? The same analyses run, in parallel, for all eight groupings
+from `02_Groups`: HRvLR, Muscle_size, Muscle_strength and the five proteome clusterings. Each
+analysis is written once in `code/`; each grouping folder holds a runner, its reports and its
+results.
 
-| Walkthrough | Does | Writes (per grouping) |
+![One workflow of six steps, run for every grouping into its own a_script, b_reports and c_data](schematic.png)
+
+## Scripts
+
+| Script | Does | Writes to `<grouping>/c_data/` |
 |---|---|---|
-| `01_design_contrasts.qmd` | cell-means model with blood and person block; nine contrasts and their roles | `design.rds`, `design_contrasts.xlsx` |
-| `02_protein_contrasts.qmd` | limma on limpa values: logFC with 95% CI, BH, Storey q, Π; fry concordance; PCA and PERMANOVA | `fit.rds`, `protein_contrasts.xlsx` |
-| `03_set_contrasts.qmd` | fgsea and fry on every gene set; fgsea collapse | `set_tests.rds`, `set_contrasts.xlsx` |
-| `04_module_contrasts.qmd` | limma on eigengenes, fry on modules, membership against protein change | `module_contrasts.xlsx` |
-| `05_classification.qmd` | single-feature AUC with DeLong and bootstrap intervals, five tasks, three levels | `05_Classification/0{1,2,3}_*/*_classification.xlsx` |
-| `06_trait_associations.qmd` | Spearman within each group; limma group × trait slope difference | `trait_associations.xlsx` |
-| `07_module_preservation.qmd` | HR/LR only: WGCNA preservation of each group's modules in the other | `module_preservation.xlsx` |
-| `07_cluster_phenotype.qmd` | Proteome only: do the proteome clusters differ in size or strength? | `cluster_phenotype.xlsx` |
+| `code/01_design_contrasts.R` | cell-means model with blood and person block; nine contrasts and their roles | `01_design.rds`, `01_design_contrasts.xlsx` |
+| `code/02_protein_contrasts.R` | limma on limpa values: logFC with 95% CI, BH, Storey q, Π; fry concordance; PCA and PERMANOVA | `02_fit.rds`, `02_protein_contrasts.xlsx` |
+| `code/03_set_contrasts.R` | fgsea and fry on every gene set; fgsea collapse | `03_set_tests.rds`, `03_set_contrasts.xlsx` |
+| `code/04_module_contrasts.R` | limma on eigengenes, fry on modules, membership against protein change | `04_module_contrasts.xlsx` |
+| `code/05_classification.R` | single-feature AUC with DeLong and bootstrap intervals, five tasks, three feature types | `05_{protein,set,module}_classification.xlsx` |
+| `code/06_trait_associations.R` | Spearman within each group; limma group × trait slope difference | `06_trait_associations.xlsx` |
+| `code/07_module_preservation.R` | HRvLR only: WGCNA preservation of each group's modules in the other | `07_module_preservation.xlsx` |
+| `code/07_proteome_clusters.R` | `Proteome_clusters` only: do the proteome clusters differ in size or strength? Then every proteome result stacked | `07_cluster_phenotype.xlsx`, `*_all_inputs.xlsx` |
 
-The Proteome grouping runs each walkthrough once per clustering input (T1, T2, T3, training,
-acute) into `Proteome/<step>/<input>/`, then stacks the five workbooks into
-`Proteome/<step>/c_data/*_all_inputs.xlsx` with a `validity` column: `circular` when a comparison
-uses exactly the clustering's time points, `caution` when it shares one, `clean` otherwise.
+Each script is also its report: Quarto renders it, prose and output together, to
+`<grouping>/b_reports/<script>.pdf`. Steps run in order; each reads the design (`01`), and sets and
+modules also read the protein fit (`02`).
+
+`Proteome_clusters` reads the five proteome groupings. Its stacked workbooks carry an `input` column
+and a `validity` column: `circular` when a comparison uses exactly the time points the clustering was
+built on, `caution` when it shares one, `clean` otherwise.
 
 Every clustering found K = 1 (no natural groups); K = 2 was imposed, so every clustered comparison
 is exploratory. HR and LR are extreme groups (top and bottom 8 of 25), so growth differences between
@@ -33,23 +40,15 @@ them are built in.
 
 ## Run
 
-```sh
-Rscript run_all.R 03_Group_comparisons
-```
-
-or one walkthrough for one grouping, from the project root:
+From the project root:
 
 ```sh
-quarto render 03_Group_comparisons/a_script/02_protein_contrasts.qmd -P grouping:HRvLR \
-  --output-dir ../HRvLR/02_Protein_Contrasts/b_reports
-quarto render 03_Group_comparisons/a_script/02_protein_contrasts.qmd -P grouping:Proteome \
-  -P input:T1 --output-dir ../Proteome/02_Protein_Contrasts/T1/b_reports
+Rscript run_all.R 03_Group_comparisons                          # every grouping
+Rscript 03_Group_comparisons/HRvLR/a_script/run_comparisons.R   # one grouping
 ```
-
-Steps run in order: each reads the design (`01`) and, for sets and modules, the protein fit (`02`).
 
 ## Outputs
 
-`<grouping>/<NN_Step>/b_reports/<walkthrough>.html` is the rendered walkthrough;
-`<grouping>/<NN_Step>/c_data/` holds the workbooks and `.rds` files above. Every workbook opens with
-`read_me` and `columns` and closes with `input_manifest` and `package_versions`.
+`<grouping>/b_reports/NN_<step>.pdf`, one per step, and `<grouping>/c_data/`, the files in the table
+above. Every workbook opens with `read_me` and `columns` and closes with `input_manifest` and
+`package_versions`.

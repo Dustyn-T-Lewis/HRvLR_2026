@@ -11,7 +11,7 @@ Supplement: which proteins move in each within-group and interaction contrast, a
 
 | | |
 |---|---|
-| Reads | `03_Group_comparisons/HRvLR/03_Set_Contrasts/c_data/set_tests.rds` (`protein_results`, `set_tests`) |
+| Reads | `03_Group_comparisons/HRvLR/c_data/03_set_tests.rds` (`protein_results`, `set_tests`) |
 | Writes | `b_reports/s01_volcano.pdf`, `c_data/s01_volcano.xlsx` |
 | Run | `Rscript 05_Figures/HRvLR/S01_Volcano/a_script/s01_volcano.R` |
 

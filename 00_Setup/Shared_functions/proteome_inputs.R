@@ -33,20 +33,19 @@ validity <- function(input, name) {
   })
 }
 
-# One workbook, <content>_all_inputs.xlsx, from the five per-input workbooks of a stage: every
-# result sheet stacked with an input column, and a validity column wherever a contrast, task or
-# window names the comparison.
+# One workbook, <root>/Proteome_clusters/c_data/<file>_all_inputs.xlsx, from the same workbook of
+# the five proteome groupings under root: every result sheet stacked with an input column, and a
+# validity column wherever a contrast, task or window names the comparison.
 # Sheets are read as text and typed after stacking, since an empty sheet reads as logical. Sheets in
 # leave_out stay in the per-input workbooks only (xlsx caps a sheet at 1,048,576 rows).
-stack_inputs <- function(stage, leave_out = character()) {
-  files <- purrr::map_chr(inputs_used, \(input) {
-    list.files(file.path(stage, input, "c_data"), "\\.xlsx$", full.names = TRUE)
-  })
+stack_inputs <- function(file, leave_out = character(),
+                         root = here::here("03_Group_comparisons")) {
+  files <- file.path(root, paste0("Proteome_", inputs_used), "c_data", file)
   skip <- c("read_me", "columns", "input_manifest", "package_versions", "plot_index", leave_out)
   sheets <- setdiff(readxl::excel_sheets(files[1]), skip)
   stacked <- purrr::map(rlang::set_names(sheets), \(sheet) {
-    purrr::map2(files, inputs_used, \(file, input) {
-      readxl::read_excel(file, sheet, col_types = "text") |>
+    purrr::map2(files, inputs_used, \(path, input) {
+      readxl::read_excel(path, sheet, col_types = "text") |>
         dplyr::mutate(input = input, .before = 1)
     }) |>
       purrr::list_rbind() |>
@@ -59,14 +58,15 @@ stack_inputs <- function(stage, leave_out = character()) {
       }
       dplyr::mutate(d, validity = validity(input[1], .data[[key]]), .by = input, .after = input)
     })
-  dir.create(file.path(stage, "c_data"), showWarnings = FALSE)
+  out <- file.path(root, "Proteome_clusters", "c_data")
+  dir.create(out, recursive = TRUE, showWarnings = FALSE)
   write_workbook(
     stacked,
     paste(
       "Sheet", names(stacked), "from every clustering input, stacked; validity is circular,",
       "caution or clean against that input."
     ),
-    file.path(stage, "c_data", sub("[.]xlsx$", "_all_inputs.xlsx", basename(files[1]))),
+    file.path(out, sub("[.]xlsx$", "_all_inputs.xlsx", file)),
     rlang::set_names(sub(paste0(here::here(), "/"), "", files), inputs_used), files,
     note = if (length(leave_out)) {
       paste("Not stacked:", paste(leave_out, collapse = ", "), "- see each input's own workbook.")

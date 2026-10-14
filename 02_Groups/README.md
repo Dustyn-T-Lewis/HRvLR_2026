@@ -11,6 +11,8 @@ Decides who is compared, before any comparison runs. Eight parallel groupings, e
 | `Proteome_T1`, `_T2`, `_T3` | C1, C2 | PAM on the module eigengenes at that time point |
 | `Proteome_training`, `_acute` | C1, C2 | PAM on the change in module eigengenes over training or the bout |
 
+![The eight parallel groupings, each writing one groups.rds with the same fields](schematic.png)
+
 The gap statistic picks K = 1 for every clustering: the data hold no natural groups. K = 2 is
 imposed on purpose, so every clustered comparison downstream is exploratory.
 

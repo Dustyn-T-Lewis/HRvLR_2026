@@ -2,7 +2,7 @@
 
 Parked draft: the script runs and its outputs are rebuilt, but the figure is not final.
 
-Figure 3: can one feature tell the groups apart, and does a protein's link to strength gain differ between them? Panel a reads `06_Classification`; panels b to d follow the protein with the smallest group-by-trait p in `07_Trait_Associations`.
+Figure 3: can one feature tell the groups apart, and does a protein's link to strength gain differ between them? Panel a reads `05_classification`; panels b to d follow the protein with the smallest group-by-trait p in `06_trait_associations`.
 
 | Panel | Draws | Rule that picks the rows |
 |---|---|---|
@@ -13,7 +13,7 @@ Figure 3: can one feature tell the groups apart, and does a protein's link to st
 
 | | |
 |---|---|
-| Reads | `03_Group_comparisons/HRvLR/05_Classification/01_Proteins/c_data/protein_classification.xlsx`, `03_Group_comparisons/HRvLR/05_Classification/02_Sets/c_data/set_classification.xlsx`, `03_Group_comparisons/HRvLR/05_Classification/03_Modules/c_data/module_classification.xlsx` (each `auc`, `counts`), `03_Group_comparisons/HRvLR/06_Trait_Associations/c_data/trait_associations.xlsx` (`group_difference`, `within_group`), `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx` (`interaction`), `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Setup/Input/phenotype.csv` |
+| Reads | `03_Group_comparisons/HRvLR/c_data/05_protein_classification.xlsx`, `03_Group_comparisons/HRvLR/c_data/05_set_classification.xlsx`, `03_Group_comparisons/HRvLR/c_data/05_module_classification.xlsx` (each `auc`, `counts`), `03_Group_comparisons/HRvLR/c_data/06_trait_associations.xlsx` (`group_difference`, `within_group`), `04_Continuous_no_group/01_Trait_Associations/01_Proteins/c_data/protein_trait_associations.xlsx` (`interaction`), `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `b_reports/f3_people.pdf`, `c_data/f3_people.xlsx` |
 | Run | `Rscript 05_Figures/HRvLR/F3_People/a_script/f3_people.R` |
 
