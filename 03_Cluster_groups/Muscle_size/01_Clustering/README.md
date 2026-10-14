@@ -4,7 +4,7 @@ Do people fall into groups by how much their muscle grew, and if two groups are 
 
 | | |
 |---|---|
-| Reads | `00_Input/phenotype.csv` |
+| Reads | `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/clustering.xlsx`, `c_data/groups.rds`, `b_reports/clustering_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/01_Clustering/a_script/clustering.R` |
 

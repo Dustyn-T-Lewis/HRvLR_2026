@@ -19,7 +19,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(WGCNA)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 stage <- here("02_HRvLR_groups", "05_Module_Preservation")
 out <- file.path(stage, "c_data")

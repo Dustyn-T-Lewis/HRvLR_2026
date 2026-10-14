@@ -4,7 +4,7 @@ Which groups of proteins count as one biological process, decided once for every
 
 | | |
 |---|---|
-| Reads | `01_Processing/02_Normalisation/c_data/DAList_normalized.rds`, `00_Input/msigdb_2026.1.Hs.rds`, `00_Input/goslim_generic.obo` |
+| Reads | `01_Processing/02_Normalisation/c_data/DAList_normalized.rds`, `01_Processing/04_Gene_Sets/references/msigdb_2026.1.Hs.rds`, `01_Processing/04_Gene_Sets/references/goslim_generic.obo` |
 | Writes | `c_data/gene_sets.rds`, `c_data/gene_sets.xlsx` |
 | Run | `Rscript 01_Processing/04_Gene_Sets/a_script/gene_sets.R` |
 
@@ -15,7 +15,7 @@ Which groups of proteins count as one biological process, decided once for every
 
 ## Method
 
-- MSigDB 2026.1.Hs (Hallmark, Reactome, KEGG Legacy, GO:BP) from the snapshot in `00_Input`, plus GO Slim terms built from the GO:BP hierarchy (`GSEABase`, `GO.db`).
+- MSigDB 2026.1.Hs (Hallmark, Reactome, KEGG Legacy, GO:BP) from the snapshot in `references/`, plus GO Slim terms built from the GO:BP hierarchy (`GSEABase`, `GO.db`).
 - One protein per gene symbol: the one observed in the most samples. Proteins with no symbol or several are left out.
 - A set is tested when it holds 15 to 500 genes in the source and at least 15 measured here (GO Slim: 15 to 500 measured).
 

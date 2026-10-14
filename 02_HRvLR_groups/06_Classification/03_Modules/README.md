@@ -7,7 +7,7 @@ Can a single module eigengene tell one group from the other?
 | Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/06_Module_Building/c_data/modules.rds` |
 | Writes | `c_data/module_classification.xlsx`, `b_reports/module_classification_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/06_Classification/03_Modules/a_script/module_classification.R` |
-| Code | `R/classify.R`, shared with the cluster groupings |
+| Code | `00_Setup/Shared_analyses/run_feature_discrimination.R`, shared with the cluster groupings |
 
 ## Key result
 
@@ -18,7 +18,7 @@ Can a single module eigengene tell one group from the other?
 
 - Five tasks: the groups compared at T1, T2 and T3, and on the training and acute changes.
 - AUC is the Mann-Whitney W / (n1 n2), above 0.5 when the module is higher in the first group; Wilcoxon p, BH and Storey q within task.
-- DeLong 95% interval for every AUC; stratified bootstrap (2,000 resamples) for the drawn modules (`classify_step()` in `R/classify.R`).
+- DeLong 95% interval for every AUC; stratified bootstrap (2,000 resamples) for the drawn modules (`run_feature_discrimination()` in `00_Setup/Shared_analyses/run_feature_discrimination.R`).
 
 ## Read with care
 

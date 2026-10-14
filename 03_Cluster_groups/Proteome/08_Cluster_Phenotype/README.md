@@ -4,7 +4,7 @@ Do people the proteome put in different clusters differ in muscle size or streng
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Proteome/01_Clustering/c_data/clustering.xlsx`, `00_Input/phenotype.csv` |
+| Reads | `03_Cluster_groups/Proteome/01_Clustering/c_data/clustering.xlsx`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/cluster_phenotype.xlsx`, `b_reports/cluster_phenotype_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Proteome/08_Cluster_Phenotype/a_script/cluster_phenotype.R` |
 

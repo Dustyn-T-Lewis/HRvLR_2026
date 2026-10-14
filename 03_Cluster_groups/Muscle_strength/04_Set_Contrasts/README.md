@@ -4,14 +4,14 @@ Which gene sets shift in each of the nine contrasts?
 
 Groups: Hi and Lo, the strength clusters.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/03_Set_Contrasts`](../../../02_HRvLR_groups/03_Set_Contrasts/README.md)), run through the same function in `R/set_contrasts.R`.
+The method is the HR/LR step's ([`02_HRvLR_groups/03_Set_Contrasts`](../../../02_HRvLR_groups/03_Set_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_set_contrasts.R`.
 
 | | |
 |---|---|
-| Reads | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Muscle_strength/03_Protein_Contrasts/c_data/fit.rds`, `03_Cluster_groups/Muscle_strength/02_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `01_Processing/05_Set_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `03_Cluster_groups/Muscle_strength/03_Protein_Contrasts/c_data/fit.rds`, `03_Cluster_groups/Muscle_strength/02_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `01_Processing/05_Set_Scores/c_data/singscore.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/set_contrasts.xlsx`, `c_data/set_tests.rds`, `b_reports/set_contrasts_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_strength/04_Set_Contrasts/a_script/set_contrasts.R` |
-| Code | `R/set_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_set_contrasts.R` |
 
 ## Key result
 

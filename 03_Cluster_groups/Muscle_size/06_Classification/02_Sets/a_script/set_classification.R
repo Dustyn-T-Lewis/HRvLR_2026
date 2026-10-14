@@ -1,5 +1,5 @@
 # The muscle-size clusters Hi and Lo: how well each gene-set score separates the groups. The
-# analysis is set_classification() in R/classify.R, shared by every grouping.
+# analysis is run_set_discrimination() in 00_Setup/Shared_analyses/run_feature_discrimination.R, shared by every grouping.
 
 suppressPackageStartupMessages({
   library(here)
@@ -11,10 +11,10 @@ suppressPackageStartupMessages({
   library(grid)
   library(ComplexHeatmap)
 })
-source(here("R", "helpers.R"))
-source(here("R", "classify.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_feature_discrimination.R"))
 
-set_classification(
+run_set_discrimination(
   stage = "03_Cluster_groups/Muscle_size/06_Classification/02_Sets",
   design_file = "03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds"
 )

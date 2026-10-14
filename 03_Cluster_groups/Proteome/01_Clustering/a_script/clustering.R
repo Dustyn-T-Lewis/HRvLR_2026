@@ -15,7 +15,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(cluster)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 source(here("03_Cluster_groups", "Proteome", "R", "inputs.R"))
 
 imposed_k <- set_names(rep(2L, 5), inputs_used)
@@ -33,7 +33,7 @@ figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
   modules = "01_Processing/06_Module_Building/c_data/modules.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -44,10 +44,10 @@ phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 arm_of <- set_names(phenotype$arm, phenotype$subject)
 values <- modules$eigengenes
 by_input <- list(
-  T1 = subject_values(values, meta, "T1"), T2 = subject_values(values, meta, "T2"),
-  T3 = subject_values(values, meta, "T3"),
-  training = subject_change(values, meta, "T1", "T2"),
-  acute = subject_change(values, meta, "T2", "T3")
+  T1 = values_at_timepoint(values, meta, "T1"), T2 = values_at_timepoint(values, meta, "T2"),
+  T3 = values_at_timepoint(values, meta, "T3"),
+  training = within_subject_change(values, meta, "T1", "T2"),
+  acute = within_subject_change(values, meta, "T2", "T3")
 )
 
 pam1 <- \(x, k) list(cluster = pam(x, k, cluster.only = TRUE))

@@ -4,7 +4,7 @@ Do people fall into groups by how much their strength rose, and if two groups ar
 
 | | |
 |---|---|
-| Reads | `00_Input/phenotype.csv` |
+| Reads | `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/clustering.xlsx`, `c_data/groups.rds`, `b_reports/clustering_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_strength/01_Clustering/a_script/clustering.R` |
 

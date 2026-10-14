@@ -4,7 +4,7 @@ Shared code for the proteome groupings: which clusterings exist, how far each co
 against them, and how their five workbooks become one.
 
 `inputs.R` is sourced by stages `02_Design_Contrasts` to `07_Trait_Associations` and by
-`Figures/F1_Overview`, after `R/helpers.R`. `01_Clustering` and `08_Cluster_Phenotype` do not
+`Figures/F1_Overview`, after `00_Setup/Shared_functions/analysis_reporting_helpers.R`. `01_Clustering` and `08_Cluster_Phenotype` do not
 source it.
 
 | Object | What it provides |

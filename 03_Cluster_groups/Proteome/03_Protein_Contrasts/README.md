@@ -4,14 +4,14 @@ Which proteins change between time points, and which differ between the groups?
 
 Groups: C1 and C2, the proteome clusters at each input.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/02_Protein_Contrasts`](../../../02_HRvLR_groups/02_Protein_Contrasts/README.md)), run through the same function in `R/protein_contrasts.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
+The method is the HR/LR step's ([`02_HRvLR_groups/02_Protein_Contrasts`](../../../02_HRvLR_groups/02_Protein_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_protein_contrasts.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `01_Processing/03_Quantification/c_data/proteins.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `01_Processing/03_Quantification/c_data/proteins.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `<input>/c_data/fit.rds`, `<input>/c_data/protein_contrasts.xlsx`, `<input>/b_reports/protein_contrasts_report.pdf`, `c_data/protein_contrasts_all_inputs.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/03_Protein_Contrasts/a_script/protein_contrasts.R` |
-| Code | `R/protein_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_protein_contrasts.R` |
 
 ## Key result
 

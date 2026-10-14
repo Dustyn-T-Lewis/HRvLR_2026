@@ -15,9 +15,9 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
-source(here("R", "figure_theme.R"))
-source(here("R", "figure_panels.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "figure_style.R"))
+source(here("00_Setup", "Shared_functions", "figure_panels.R"))
 
 folder <- "04_Continuous_no_group"
 stage <- here(folder, "Figures", "F1_Overview")
@@ -31,7 +31,7 @@ inputs <- c(
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   profiles = file.path(folder, "03_Profile_Clusters/c_data/profile_clusters.xlsx"),
   corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

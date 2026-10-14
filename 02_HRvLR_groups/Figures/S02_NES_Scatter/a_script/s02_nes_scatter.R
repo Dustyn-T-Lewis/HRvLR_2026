@@ -11,7 +11,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 stage <- here("02_HRvLR_groups", "Figures", "S02_NES_Scatter")
 figure_dir <- file.path(stage, "b_reports")

@@ -12,9 +12,9 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
-source(here("R", "figure_theme.R"))
-source(here("R", "figure_panels.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "figure_style.R"))
+source(here("00_Setup", "Shared_functions", "figure_panels.R"))
 
 stage <- here("02_HRvLR_groups", "Figures", "S03_Signatures")
 figure_dir <- file.path(stage, "b_reports")

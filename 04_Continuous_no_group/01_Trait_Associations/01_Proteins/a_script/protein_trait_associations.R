@@ -1,4 +1,4 @@
-# Ties each protein to phenotype by the sample model and the change scores in R/associate.R.
+# Ties each protein to phenotype by the sample model and the change scores in 00_Setup/Shared_analyses/run_continuous_associations.R.
 
 suppressPackageStartupMessages({
   library(here)
@@ -11,13 +11,13 @@ suppressPackageStartupMessages({
   library(grid)
   library(ComplexHeatmap)
 })
-source(here("R", "helpers.R"))
-source(here("R", "associate.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_continuous_associations.R"))
 
 inputs <- c(
   corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
   limpa = "01_Processing/03_Quantification/c_data/DAList_limpa.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -30,7 +30,7 @@ stopifnot(!anyNA(feature_label), !anyDuplicated(feature_label))
 # Display order for the overviews: average-linkage clustering on 1 - Pearson r of limpa's matrix.
 complete <- readRDS(paths[["limpa"]])$data
 
-associate_step(
+run_continuous_associations(
   stage = here("04_Continuous_no_group", "01_Trait_Associations", "01_Proteins"),
   name = "protein_trait_associations",
   inputs = inputs, paths = paths,

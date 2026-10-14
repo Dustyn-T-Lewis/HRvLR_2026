@@ -4,14 +4,14 @@ Which comparisons does every later model make, and how is that model built?
 
 Groups: C1 and C2, the proteome clusters at each input.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/01_Design_Contrasts`](../../../02_HRvLR_groups/01_Design_Contrasts/README.md)), run through the same function in `R/design_contrasts.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
+The method is the HR/LR step's ([`02_HRvLR_groups/01_Design_Contrasts`](../../../02_HRvLR_groups/01_Design_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_design_contrasts.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
 
 | | |
 |---|---|
 | Reads | `01_Processing/03_Quantification/c_data/proteins.rds`, `03_Cluster_groups/Proteome/01_Clustering/c_data/groups/<input>.rds` |
 | Writes | `<input>/c_data/design_contrasts.xlsx`, `<input>/c_data/design.rds`, `c_data/design_contrasts_all_inputs.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/02_Design_Contrasts/a_script/design_contrasts.R` |
-| Code | `R/design_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_design_contrasts.R` |
 
 ## Key result
 

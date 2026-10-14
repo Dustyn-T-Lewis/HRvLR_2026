@@ -4,14 +4,14 @@ Which proteins change between time points, and which differ between the groups?
 
 Groups: Hi and Lo, the muscle-size clusters.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/02_Protein_Contrasts`](../../../02_HRvLR_groups/02_Protein_Contrasts/README.md)), run through the same function in `R/protein_contrasts.R`.
+The method is the HR/LR step's ([`02_HRvLR_groups/02_Protein_Contrasts`](../../../02_HRvLR_groups/02_Protein_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_protein_contrasts.R`.
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/proteins.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/proteins.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/fit.rds`, `c_data/protein_contrasts.xlsx`, `b_reports/protein_contrasts_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/03_Protein_Contrasts/a_script/protein_contrasts.R` |
-| Code | `R/protein_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_protein_contrasts.R` |
 
 ## Key result
 

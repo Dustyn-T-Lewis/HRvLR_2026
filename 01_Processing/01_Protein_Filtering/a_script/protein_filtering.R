@@ -16,17 +16,17 @@ suppressPackageStartupMessages({
   library(forcats)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 out <- here("01_Processing", "01_Protein_Filtering", "c_data")
 figures <- here("01_Processing", "01_Protein_Filtering", "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
-  report = "00_Input/HRvLR_raw.xlsx",
-  samples = "00_Input/metadata.csv",
-  blood = "00_Input/blood_contaminants.csv",
-  hpa = "00_Input/HPA_annotations_full.tsv",
-  rbc = "00_Input/RBC_proteome_reference.tsv"
+  report = "00_Setup/Input/HRvLR_raw.xlsx",
+  samples = "00_Setup/Input/metadata.csv",
+  blood = "01_Processing/01_Protein_Filtering/references/blood_contaminants.csv",
+  hpa = "01_Processing/01_Protein_Filtering/references/HPA_annotations_full.tsv",
+  rbc = "01_Processing/01_Protein_Filtering/references/RBC_proteome_reference.tsv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))

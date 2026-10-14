@@ -18,6 +18,6 @@ is not final.
   (F1's phenotype PCA, F3's Spearman across proteins, S02's Spearman of NES across sets).
 - Each writes `b_reports/<name>.pdf` and `c_data/<name>.xlsx` with the numbers each panel draws;
   F2 and F3 add `panel_sources`, naming the file, sheet and rule behind every panel.
-- Colours, the contrast palette and panel builders come from `R/figure_theme.R`,
-  `R/figure_panels.R` and `R/figure_overview.R`, which the cluster folders' F1 scripts share.
+- Colours, the contrast palette and panel builders come from `00_Setup/Shared_functions/figure_style.R`,
+  `00_Setup/Shared_functions/figure_panels.R` and `00_Setup/Shared_functions/group_overview_figure.R`, which the cluster folders' F1 scripts share.
 - F3 reads `04_Continuous_no_group`, so `run_all.R` runs these figures last.

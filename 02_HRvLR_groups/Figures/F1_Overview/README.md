@@ -14,7 +14,7 @@ only computation is the phenotype PCA, a projection with no test.
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`contrast_summary`, `pca`, `pca_variance`, `permanova`, `fry_concordance`), `02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set members, for pruning), `00_Input/phenotype.csv`, `assets/design.png` |
+| Reads | `02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx` (`contrast_summary`, `pca`, `pca_variance`, `permanova`, `fry_concordance`), `02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` (set members, for pruning), `00_Setup/Input/phenotype.csv`, `assets/design.png` |
 | Writes | `b_reports/f1_overview.pdf`, `c_data/f1_overview.xlsx` |
 | Run | `Rscript 02_HRvLR_groups/Figures/F1_Overview/a_script/f1_overview.R` |
 

@@ -33,8 +33,8 @@ exploratory.
 
 `01_Clustering` writes `groups.rds` (one per input for `Proteome`): who is in each group, the two
 group names and the traits that defined them. `02_Design_Contrasts` reads it and records the
-groups in `design.rds`; every later step reads the 01_Processing files through `for_design()` in
-`R/helpers.R`, which keeps the grouped people's samples and puts the cluster names in `arm` and
+groups in `design.rds`; every later step reads the 01_Processing files through `subset_for_design()` in
+`00_Setup/Shared_functions/analysis_reporting_helpers.R`, which keeps the grouped people's samples and puts the cluster names in `arm` and
 `group`. The steps are the same functions `02_HRvLR_groups` calls, so the files, sheets and
 columns match. The contrasts keep their shape: `Training_Hi`, `Baseline_HivLo`,
 `Training_Interaction`.

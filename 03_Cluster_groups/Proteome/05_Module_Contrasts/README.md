@@ -4,14 +4,14 @@ Which co-expression modules shift in each of the nine contrasts?
 
 Groups: C1 and C2, the proteome clusters at each input.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md)), run through the same function in `R/module_contrasts.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
+The method is the HR/LR step's ([`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_module_contrasts.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `03_Cluster_groups/Proteome/03_Protein_Contrasts/<input>/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `03_Cluster_groups/Proteome/03_Protein_Contrasts/<input>/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `<input>/c_data/module_contrasts.xlsx`, `<input>/b_reports/module_contrasts_report.pdf`, `c_data/module_contrasts_all_inputs.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/05_Module_Contrasts/a_script/module_contrasts.R` |
-| Code | `R/module_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_module_contrasts.R` |
 
 ## Key result
 

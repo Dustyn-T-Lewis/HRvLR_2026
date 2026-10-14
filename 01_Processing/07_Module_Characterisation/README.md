@@ -4,7 +4,7 @@ What is each module: which gene sets it holds, which proteins lead it, and do it
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/STRING/9606.protein.links.v12.0.min700.txt.gz`, `00_Input/STRING/9606.protein.aliases.v12.0.txt.gz`, `00_Input/STRING/9606.protein.info.v12.0.txt.gz` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `01_Processing/07_Module_Characterisation/references/STRING/9606.protein.links.v12.0.min700.txt.gz`, `01_Processing/07_Module_Characterisation/references/STRING/9606.protein.aliases.v12.0.txt.gz`, `01_Processing/07_Module_Characterisation/references/STRING/9606.protein.info.v12.0.txt.gz` |
 | Writes | `c_data/module_characterisation.xlsx`, `b_reports/module_characterisation_report.pdf` |
 | Run | `Rscript 01_Processing/07_Module_Characterisation/a_script/module_characterisation.R` |
 
@@ -17,7 +17,7 @@ What is each module: which gene sets it holds, which proteins lead it, and do it
 
 - Over-representation of every gene set in each module (`clusterProfiler::compareCluster(fun = "enricher")`), against the measured genes as universe, BH within module.
 - Top members: each module's ten highest-kME proteins.
-- STRING v12 edges at combined score 700 or more (`STRINGdb`, files in `00_Input/STRING`): observed against expected edges per module, with the mapped measured proteins as background.
+- STRING v12 edges at combined score 700 or more (`STRINGdb`, files in `01_Processing/07_Module_Characterisation/references/STRING`): observed against expected edges per module, with the mapped measured proteins as background.
 
 ## Read with care
 

@@ -11,17 +11,17 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
-source(here("R", "figure_theme.R"))
-source(here("R", "figure_panels.R"))
-source(here("R", "figure_overview.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "figure_style.R"))
+source(here("00_Setup", "Shared_functions", "figure_panels.R"))
+source(here("00_Setup", "Shared_functions", "group_overview_figure.R"))
 
 
 inputs <- c(
   contrasts = "02_HRvLR_groups/02_Protein_Contrasts/c_data/protein_contrasts.xlsx",
   set_tests = "02_HRvLR_groups/03_Set_Contrasts/c_data/set_tests.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  phenotype = "00_Input/phenotype.csv",
+  phenotype = "00_Setup/Input/phenotype.csv",
   design = "02_HRvLR_groups/Figures/F1_Overview/assets/design.png"
 )
 paths <- map_chr(inputs, here)
@@ -45,7 +45,7 @@ panel_design <- ggplot() +
     plot.title.position = "plot"
   )
 
-figure_overview(
+build_group_overview(
   panel_design, inputs, paths,
   groups = c("HR", "LR"), out_dir = here("02_HRvLR_groups", "Figures", "F1_Overview"),
   stem = "f1_overview",

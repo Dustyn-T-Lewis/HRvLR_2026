@@ -1,6 +1,6 @@
 # F1_Overview
 
-Figure 1 for the muscle-size grouping: who is in Hi and Lo, then the whole-proteome picture with Hi and Lo in place of HR and LR. Panels b to f are the HR/LR Figure 1 builders in `R/figure_overview.R`; panel a maps the clustering in place of the design drawing.
+Figure 1 for the muscle-size grouping: who is in Hi and Lo, then the whole-proteome picture with Hi and Lo in place of HR and LR. Panels b to f are the HR/LR Figure 1 builders in `00_Setup/Shared_functions/group_overview_figure.R`; panel a maps the clustering in place of the design drawing.
 
 | Panel | Shows | Built by | Source |
 |---|---|---|---|
@@ -12,7 +12,7 @@ Figure 1 for the muscle-size grouping: who is in Hi and Lo, then the whole-prote
 
 | | |
 |---|---|
-| Reads | `03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/protein_contrasts.xlsx`, `03_Cluster_groups/Muscle_size/04_Set_Contrasts/c_data/set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/phenotype.csv`, `03_Cluster_groups/Muscle_size/01_Clustering/c_data/clustering.xlsx`, `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds` |
+| Reads | `03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/protein_contrasts.xlsx`, `03_Cluster_groups/Muscle_size/04_Set_Contrasts/c_data/set_tests.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Setup/Input/phenotype.csv`, `03_Cluster_groups/Muscle_size/01_Clustering/c_data/clustering.xlsx`, `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds` |
 | Writes | `b_reports/f1_overview.pdf` (300 x 175 mm, cairo PDF), `c_data/f1_overview.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/Figures/F1_Overview/a_script/f1_overview.R`, or `run_all.R` after the folder's last step |
 

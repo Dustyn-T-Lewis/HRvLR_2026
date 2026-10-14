@@ -4,7 +4,7 @@ Does the proteome alone, with no phenotype or group label, split these people in
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/clustering.xlsx`, `b_reports/clustering_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Proteome/01_Clustering/a_script/clustering.R` |
 

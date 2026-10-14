@@ -5,7 +5,7 @@ and each trait stays a number?
 
 The other folders split people into groups and compare the groups. Here all 16 people are pooled,
 no group label enters any model, and each trait is used as measured (`phenotype_tables()` in
-`R/helpers.R`): fibre area (mixed, type I, type II), muscle area and two 1RMs as levels at T1 and T2
+`00_Setup/Shared_functions/analysis_reporting_helpers.R`): fibre area (mixed, type I, type II), muscle area and two 1RMs as levels at T1 and T2
 and as % change, plus the composite hypertrophy score and total volume load as one value per
 person. T3 has no phenotype.
 
@@ -26,7 +26,7 @@ A change window needs both of its biopsies; a person missing one drops out of th
 
 | Step | Asks | Method |
 |---|---|---|
-| [`01_Trait_Associations`](01_Trait_Associations/README.md) | which proteins, set scores and eigengenes track each trait | `associate_step()` in `R/associate.R` |
+| [`01_Trait_Associations`](01_Trait_Associations/README.md) | which proteins, set scores and eigengenes track each trait | `run_continuous_associations()` in `00_Setup/Shared_analyses/run_continuous_associations.R` |
 | [`02_Trait_Pathways`](02_Trait_Pathways/README.md) | which gene sets lead each trait's protein ranking | fgsea on the limma t from `01_Proteins` |
 | [`03_Profile_Clusters`](03_Profile_Clusters/README.md) | which proteins share a pattern of trait links | clustering of each protein's t across the 42 screens |
 | [`Figures/F1_Overview`](Figures/F1_Overview/README.md) | the folder on one page | saved outputs, plus a proteome PCA |

@@ -1,5 +1,5 @@
 # The muscle-size clusters Hi and Lo: the design, the two groups and the nine contrasts. The
-# analysis is design_contrasts() in R/design_contrasts.R, shared by every grouping.
+# analysis is run_design_contrasts() in 00_Setup/Shared_analyses/run_design_contrasts.R, shared by every grouping.
 
 suppressPackageStartupMessages({
   library(here)
@@ -8,10 +8,10 @@ suppressPackageStartupMessages({
   library(purrr)
   library(tibble)
 })
-source(here("R", "helpers.R"))
-source(here("R", "design_contrasts.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_design_contrasts.R"))
 
-design_contrasts(
+run_design_contrasts(
   stage = "03_Cluster_groups/Muscle_size/02_Design_Contrasts",
   groups = "03_Cluster_groups/Muscle_size/01_Clustering/c_data/groups.rds"
 )

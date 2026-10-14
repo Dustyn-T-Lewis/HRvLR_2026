@@ -4,10 +4,10 @@ Which co-expression modules shift in each of the nine contrasts?
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/module_contrasts.xlsx`, `b_reports/module_contrasts_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/04_Module_Contrasts/a_script/module_contrasts.R` |
-| Code | `R/module_contrasts.R`, shared with the cluster groupings |
+| Code | `00_Setup/Shared_analyses/run_module_contrasts.R`, shared with the cluster groupings |
 
 ## Key result
 

@@ -4,10 +4,10 @@ Which proteins change between time points, and which differ between the groups?
 
 | | |
 |---|---|
-| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/proteins.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/proteins.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/fit.rds`, `c_data/protein_contrasts.xlsx`, `b_reports/protein_contrasts_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/02_Protein_Contrasts/a_script/protein_contrasts.R` |
-| Code | `R/protein_contrasts.R`, shared with the cluster groupings |
+| Code | `00_Setup/Shared_analyses/run_protein_contrasts.R`, shared with the cluster groupings |
 
 ## Key result
 
@@ -18,7 +18,7 @@ Which proteins change between time points, and which differ between the groups?
 
 ## Method
 
-- `fit_limpa()` (`R/helpers.R`): `limpa::dpcDE()` with person as a random block and limpa's standard errors as weights, then `contrasts.fit()` and `eBayes(robust = TRUE)`.
+- `fit_limpa_contrasts()` (`00_Setup/Shared_functions/analysis_reporting_helpers.R`): `limpa::dpcDE()` with person as a random block and limpa's standard errors as weights, then `contrasts.fit()` and `eBayes(robust = TRUE)`.
 - Each logFC with its 95% interval (`topTable(confint = TRUE)`), BH within contrast, Storey's q.
 - Checks: the same fit without the blood term (`unadjusted`), null calibration, the effect detectable at 80% power.
 - `fry` tests one group's p < 0.05 proteins in the other group's contrast (`fry_concordance`).

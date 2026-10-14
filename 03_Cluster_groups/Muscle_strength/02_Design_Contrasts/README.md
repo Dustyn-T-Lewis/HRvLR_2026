@@ -4,14 +4,14 @@ Which comparisons does every later model make, and how is that model built?
 
 Groups: Hi and Lo, the strength clusters.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/01_Design_Contrasts`](../../../02_HRvLR_groups/01_Design_Contrasts/README.md)), run through the same function in `R/design_contrasts.R`.
+The method is the HR/LR step's ([`02_HRvLR_groups/01_Design_Contrasts`](../../../02_HRvLR_groups/01_Design_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_design_contrasts.R`.
 
 | | |
 |---|---|
 | Reads | `01_Processing/03_Quantification/c_data/proteins.rds`, `03_Cluster_groups/Muscle_strength/01_Clustering/c_data/groups.rds` |
 | Writes | `c_data/design_contrasts.xlsx`, `c_data/design.rds` |
 | Run | `Rscript 03_Cluster_groups/Muscle_strength/02_Design_Contrasts/a_script/design_contrasts.R` |
-| Code | `R/design_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_design_contrasts.R` |
 
 ## Key result
 

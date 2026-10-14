@@ -8,15 +8,15 @@ suppressPackageStartupMessages({
   library(tibble)
   library(purrr)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 out <- here("01_Processing", "04_Gene_Sets", "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
 inputs <- c(
   proteins = "01_Processing/02_Normalisation/c_data/DAList_normalized.rds",
-  msigdb = "00_Input/msigdb_2026.1.Hs.rds",
-  goslim = "00_Input/goslim_generic.obo"
+  msigdb = "01_Processing/04_Gene_Sets/references/msigdb_2026.1.Hs.rds",
+  goslim = "01_Processing/04_Gene_Sets/references/goslim_generic.obo"
 )
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {

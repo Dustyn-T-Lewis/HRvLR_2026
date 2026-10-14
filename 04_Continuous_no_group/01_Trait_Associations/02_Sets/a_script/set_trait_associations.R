@@ -1,5 +1,5 @@
 # Ties each gene set's singscore to phenotype by the sample model and the change scores in
-# R/associate.R. Each collection is its own screen: BH runs within collection.
+# 00_Setup/Shared_analyses/run_continuous_associations.R. Each collection is its own screen: BH runs within collection.
 
 suppressPackageStartupMessages({
   library(here)
@@ -12,14 +12,14 @@ suppressPackageStartupMessages({
   library(grid)
   library(ComplexHeatmap)
 })
-source(here("R", "helpers.R"))
-source(here("R", "associate.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_continuous_associations.R"))
 
 inputs <- c(
   singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   proteins = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -28,7 +28,7 @@ values <- readRDS(paths[["singscore"]])$scores[catalog$set_id, ]
 meta <- as_tibble(readRDS(paths[["proteins"]])$metadata)
 stopifnot(identical(colnames(values), meta$sample_id))
 
-associate_step(
+run_continuous_associations(
   stage = here("04_Continuous_no_group", "01_Trait_Associations", "02_Sets"),
   name = "set_trait_associations",
   inputs = inputs, paths = paths,

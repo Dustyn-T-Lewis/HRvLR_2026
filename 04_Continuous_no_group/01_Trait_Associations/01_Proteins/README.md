@@ -4,10 +4,10 @@ Which proteins track each size and strength trait, with every person pooled?
 
 | | |
 |---|---|
-| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/associate.rds`, `c_data/protein_trait_associations.xlsx`, `b_reports/protein_trait_associations_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/01_Proteins/a_script/protein_trait_associations.R` |
-| Code | `R/associate.R` |
+| Code | `00_Setup/Shared_analyses/run_continuous_associations.R` |
 
 ## Key result
 
@@ -20,7 +20,7 @@ Which proteins track each size and strength trait, with every person pooled?
 
 - Sample model: limma on every T1 and T2 biopsy with person blocked; `within` (a biopsy's trait against that person's mean) and `between` (the person's mean) slopes with 95% intervals.
 - Change score: one value per person and window; limma slope with its interval, Spearman rho with a Fisher-z interval, and bicor.
-- Two predictor (`~ growth + strength`) and interaction (`~ growth * strength`) per change window and 1RM. All in `associate_step()` (`R/associate.R`); BH within each screen.
+- Two predictor (`~ growth + strength`) and interaction (`~ growth * strength`) per change window and 1RM. All in `run_continuous_associations()` (`00_Setup/Shared_analyses/run_continuous_associations.R`); BH within each screen.
 
 ## Read with care
 

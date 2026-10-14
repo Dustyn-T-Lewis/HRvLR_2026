@@ -4,14 +4,14 @@ Can a single protein tell one group from the other?
 
 Groups: Hi and Lo, the strength clusters.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/06_Classification/01_Proteins`](../../../../02_HRvLR_groups/06_Classification/01_Proteins/README.md)), run through the same function in `R/classify.R`.
+The method is the HR/LR step's ([`02_HRvLR_groups/06_Classification/01_Proteins`](../../../../02_HRvLR_groups/06_Classification/01_Proteins/README.md)), run through the same function in `00_Setup/Shared_analyses/run_feature_discrimination.R`.
 
 | | |
 |---|---|
 | Reads | `03_Cluster_groups/Muscle_strength/02_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds` |
 | Writes | `c_data/protein_classification.xlsx`, `b_reports/protein_classification_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_strength/06_Classification/01_Proteins/a_script/protein_classification.R` |
-| Code | `R/classify.R` |
+| Code | `00_Setup/Shared_analyses/run_feature_discrimination.R` |
 
 ## Key result
 

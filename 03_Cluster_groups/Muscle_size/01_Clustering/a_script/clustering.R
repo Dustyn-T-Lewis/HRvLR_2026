@@ -15,7 +15,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(cluster)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 family <- "Muscle_size"
 traits <- c("pct_fcsa_mixed", "pct_fcsa_type1", "pct_fcsa_type2", "pct_mcsa")
@@ -31,7 +31,7 @@ stage <- here("03_Cluster_groups", family, "01_Clustering")
 out <- file.path(stage, "c_data")
 figures <- file.path(stage, "b_reports")
 walk(c(out, figures), dir.create, recursive = TRUE, showWarnings = FALSE)
-inputs <- c(phenotype = "00_Input/phenotype.csv")
+inputs <- c(phenotype = "00_Setup/Input/phenotype.csv")
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 

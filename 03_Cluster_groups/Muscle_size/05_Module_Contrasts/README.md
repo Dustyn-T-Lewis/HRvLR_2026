@@ -4,14 +4,14 @@ Which co-expression modules shift in each of the nine contrasts?
 
 Groups: Hi and Lo, the muscle-size clusters.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md)), run through the same function in `R/module_contrasts.R`.
+The method is the HR/LR step's ([`02_HRvLR_groups/04_Module_Contrasts`](../../../02_HRvLR_groups/04_Module_Contrasts/README.md)), run through the same function in `00_Setup/Shared_analyses/run_module_contrasts.R`.
 
 | | |
 |---|---|
-| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds`, `03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/06_Module_Building/c_data/modules.rds`, `03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds`, `03_Cluster_groups/Muscle_size/03_Protein_Contrasts/c_data/fit.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/module_contrasts.xlsx`, `b_reports/module_contrasts_report.pdf` |
 | Run | `Rscript 03_Cluster_groups/Muscle_size/05_Module_Contrasts/a_script/module_contrasts.R` |
-| Code | `R/module_contrasts.R` |
+| Code | `00_Setup/Shared_analyses/run_module_contrasts.R` |
 
 ## Key result
 

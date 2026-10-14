@@ -1,5 +1,5 @@
 # Ties each module eigengene to phenotype by the sample model and the change scores that
-# R/associate.R defines.
+# 00_Setup/Shared_analyses/run_continuous_associations.R defines.
 
 suppressPackageStartupMessages({
   library(here)
@@ -12,12 +12,12 @@ suppressPackageStartupMessages({
   library(grid)
   library(ComplexHeatmap)
 })
-source(here("R", "helpers.R"))
-source(here("R", "associate.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_continuous_associations.R"))
 
 inputs <- c(
   modules = "01_Processing/06_Module_Building/c_data/modules.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -26,7 +26,7 @@ values <- modules$eigengenes
 meta <- as_tibble(modules$meta)
 stopifnot(identical(colnames(values), meta$sample_id))
 
-associate_step(
+run_continuous_associations(
   stage = here("04_Continuous_no_group", "01_Trait_Associations", "03_Modules"),
   name = "module_trait_associations",
   inputs = inputs, paths = paths,

@@ -7,7 +7,7 @@ Which comparisons does every later model make, and how is that model built?
 | Reads | `01_Processing/03_Quantification/c_data/proteins.rds` |
 | Writes | `c_data/design_contrasts.xlsx`, `c_data/design.rds` |
 | Run | `Rscript 02_HRvLR_groups/01_Design_Contrasts/a_script/design_contrasts.R` |
-| Code | `R/design_contrasts.R`, shared with the cluster groupings |
+| Code | `00_Setup/Shared_analyses/run_design_contrasts.R`, shared with the cluster groupings |
 
 ## Key result
 

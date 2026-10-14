@@ -12,7 +12,7 @@ Figure 1 for the proteome grouping, once per clustering input (T1, T2, T3, train
 
 | | |
 |---|---|
-| Reads | per input: `03_Cluster_groups/Proteome/03_Protein_Contrasts/<input>/c_data/protein_contrasts.xlsx`, `03_Cluster_groups/Proteome/04_Set_Contrasts/<input>/c_data/set_tests.rds`, `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`; shared: `03_Cluster_groups/Proteome/01_Clustering/c_data/clustering.xlsx`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Input/phenotype.csv` |
+| Reads | per input: `03_Cluster_groups/Proteome/03_Protein_Contrasts/<input>/c_data/protein_contrasts.xlsx`, `03_Cluster_groups/Proteome/04_Set_Contrasts/<input>/c_data/set_tests.rds`, `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`; shared: `03_Cluster_groups/Proteome/01_Clustering/c_data/clustering.xlsx`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | per input: `b_reports/f1_overview_<input>.pdf` (300 x 175 mm, cairo PDF), `c_data/f1_overview_<input>.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/Figures/F1_Overview/a_script/f1_overview.R`, or `run_all.R` after the folder's last step |
 

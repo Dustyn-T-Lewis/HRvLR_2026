@@ -4,14 +4,14 @@ Can a single module eigengene tell one group from the other?
 
 Groups: C1 and C2, the proteome clusters at each input.
 
-The method is the HR/LR step's ([`02_HRvLR_groups/06_Classification/03_Modules`](../../../../02_HRvLR_groups/06_Classification/03_Modules/README.md)), run through the same function in `R/classify.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
+The method is the HR/LR step's ([`02_HRvLR_groups/06_Classification/03_Modules`](../../../../02_HRvLR_groups/06_Classification/03_Modules/README.md)), run through the same function in `00_Setup/Shared_analyses/run_feature_discrimination.R`. It runs once per clustering input, each into its own `<input>/` folder; `stack_inputs()` (`../R/inputs.R`) then joins the five workbooks into one, adding `input` and `validity` (circular, caution or clean) to every row.
 
 | | |
 |---|---|
 | Reads | `03_Cluster_groups/Proteome/02_Design_Contrasts/<input>/c_data/design.rds`, `01_Processing/06_Module_Building/c_data/modules.rds` |
 | Writes | `<input>/c_data/module_classification.xlsx`, `<input>/b_reports/module_classification_report.pdf`, `c_data/module_classification_all_inputs.xlsx` |
 | Run | `Rscript 03_Cluster_groups/Proteome/06_Classification/03_Modules/a_script/module_classification.R` |
-| Code | `R/classify.R` |
+| Code | `00_Setup/Shared_analyses/run_feature_discrimination.R` |
 
 ## Key result
 

@@ -14,7 +14,7 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(tibble)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 stage <- here("01_Processing", "03_Quantification")
 out <- file.path(stage, "c_data")
@@ -41,7 +41,7 @@ stopifnot(!anyNA(proteins$E), identical(observed, !is.na(values)))
 
 # The blood slope is fitted beside time point only, so no group label shapes the corrected matrix
 # that every analysis reads.
-corrected <- blood_corrected(proteins$E, meta$blood, model.matrix(~ 0 + timepoint, meta))
+corrected <- remove_blood_effect(proteins$E, meta$blood, model.matrix(~ 0 + timepoint, meta))
 as_dalist <- function(data) {
   list(data = data, annotation = dal$annotation, metadata = meta, observed = observed)
 }

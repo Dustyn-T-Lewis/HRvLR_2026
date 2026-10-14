@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
   library(purrr)
   library(ggplot2)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 out <- here("01_Processing", "05_Set_Scores", "c_data")
 figures <- here("01_Processing", "05_Set_Scores", "b_reports")

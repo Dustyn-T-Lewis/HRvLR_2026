@@ -11,17 +11,17 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
-source(here("R", "figure_theme.R"))
-source(here("R", "figure_panels.R"))
-source(here("R", "figure_overview.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "figure_style.R"))
+source(here("00_Setup", "Shared_functions", "figure_panels.R"))
+source(here("00_Setup", "Shared_functions", "group_overview_figure.R"))
 
 folder <- "03_Cluster_groups/Muscle_strength"
 inputs <- c(
   contrasts = file.path(folder, "03_Protein_Contrasts/c_data/protein_contrasts.xlsx"),
   set_tests = file.path(folder, "04_Set_Contrasts/c_data/set_tests.rds"),
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  phenotype = "00_Input/phenotype.csv",
+  phenotype = "00_Setup/Input/phenotype.csv",
   clustering = file.path(folder, "01_Clustering/c_data/clustering.xlsx"),
   design = file.path(folder, "02_Design_Contrasts/c_data/design.rds")
 )
@@ -35,7 +35,7 @@ clustering <- panel_clustering(
   read_clustering("stability"), groups,
   clustered_on = "the % change in leg-press and leg-extension 1RM"
 )
-figure_overview(
+build_group_overview(
   clustering$plot, inputs, paths,
   groups = groups, out_dir = here(folder, "Figures", "F1_Overview"), stem = "f1_overview",
   a_sheets = list(clustering = clustering$data),

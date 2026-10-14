@@ -1,7 +1,7 @@
 # 01_Trait_Associations
 
 Which proteins, gene-set scores and module eigengenes track each size and strength trait, with
-every person pooled? The three levels call `associate_step()` in `R/associate.R`.
+every person pooled? The three levels call `run_continuous_associations()` in `00_Setup/Shared_analyses/run_continuous_associations.R`.
 
 | Step | Values | Differs from the others |
 |---|---|---|

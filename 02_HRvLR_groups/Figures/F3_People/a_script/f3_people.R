@@ -16,9 +16,9 @@ suppressPackageStartupMessages({
   library(ggh4x)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
-source(here("R", "figure_theme.R"))
-source(here("R", "figure_panels.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "figure_style.R"))
+source(here("00_Setup", "Shared_functions", "figure_panels.R"))
 
 groups <- c("HR", "LR")
 stage <- here("02_HRvLR_groups", "Figures", "F3_People")
@@ -34,7 +34,7 @@ inputs <- c(
     "c_data/protein_trait_associations.xlsx"
   ),
   corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds",
-  phenotype = "00_Input/phenotype.csv"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
@@ -53,7 +53,7 @@ dal <- readRDS(paths[["corrected"]])
 lead <- group_difference |>
   filter(level == "proteins") |>
   slice_min(p, n = 1, with_ties = FALSE)
-change <- subject_change(dal$data, as_tibble(dal$metadata), "T1", "T2")[lead$feature, ]
+change <- within_subject_change(dal$data, as_tibble(dal$metadata), "T1", "T2")[lead$feature, ]
 trait_table <- phenotype_tables(phenotype)$pairings[[lead$window]]
 trait <- set_names(trait_table[[lead$trait]], trait_table$subject)
 

@@ -1,5 +1,5 @@
-# HR and LR: the design, the two groups and the nine contrasts. The analysis is design_contrasts()
-# in R/design_contrasts.R, shared by every grouping.
+# HR and LR: the design, the two groups and the nine contrasts. The analysis is run_design_contrasts()
+# in 00_Setup/Shared_analyses/run_design_contrasts.R, shared by every grouping.
 
 suppressPackageStartupMessages({
   library(here)
@@ -8,9 +8,9 @@ suppressPackageStartupMessages({
   library(purrr)
   library(tibble)
 })
-source(here("R", "helpers.R"))
-source(here("R", "design_contrasts.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_design_contrasts.R"))
 
-design_contrasts(
+run_design_contrasts(
   stage = "02_HRvLR_groups/01_Design_Contrasts"
 )

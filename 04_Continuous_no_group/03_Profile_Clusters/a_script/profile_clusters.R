@@ -17,7 +17,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(cluster)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 stage <- here("04_Continuous_no_group", "03_Profile_Clusters")
 out <- file.path(stage, "c_data")
@@ -97,8 +97,8 @@ profile_means <- as_tibble(profiles[names(profile_cut$groups), ], rownames = "fe
   summarise(mean_t = mean(t), .by = c(group, screen))
 
 matrix_of <- list(
-  training = subject_change(dal$data, meta, "T1", "T2"),
-  baseline_level = subject_values(dal$data, meta, "T1")
+  training = within_subject_change(dal$data, meta, "T1", "T2"),
+  baseline_level = values_at_timepoint(dal$data, meta, "T1")
 )
 trait_groups <- observed_t |>
   filter(window %in% names(matrix_of), p < 0.05) |>

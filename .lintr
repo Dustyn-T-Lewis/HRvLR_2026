@@ -1,5 +1,0 @@
-linters: linters_with_defaults(
-    line_length_linter(100L),
-    object_usage_linter = NULL
-  )
-exclusions: list("renv", "packrat", "archive")

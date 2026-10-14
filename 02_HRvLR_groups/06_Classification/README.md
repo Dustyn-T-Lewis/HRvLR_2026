@@ -4,7 +4,7 @@ Can a single protein, gene-set score or module eigengene tell one group from the
 
 The contrast steps ask whether a group's average moved. These steps ask about people: knowing one
 feature's value for a person, how well can you say which group they are in? All three levels call
-`classify_step()` in `R/classify.R`.
+`run_feature_discrimination()` in `00_Setup/Shared_analyses/run_feature_discrimination.R`.
 
 | Step | Feature | Value per biopsy |
 |---|---|---|

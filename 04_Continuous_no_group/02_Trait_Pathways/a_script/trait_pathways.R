@@ -11,7 +11,7 @@ suppressPackageStartupMessages({
   library(tibble)
   library(ggplot2)
 })
-source(here("R", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 stage <- here("04_Continuous_no_group", "02_Trait_Pathways")
 out <- file.path(stage, "c_data")

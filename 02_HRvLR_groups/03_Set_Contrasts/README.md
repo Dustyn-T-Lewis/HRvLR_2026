@@ -4,10 +4,10 @@ Which gene sets shift in each of the nine contrasts?
 
 | | |
 |---|---|
-| Reads | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `01_Processing/05_Set_Scores/c_data/singscore.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `02_HRvLR_groups/02_Protein_Contrasts/c_data/fit.rds`, `02_HRvLR_groups/01_Design_Contrasts/c_data/design.rds`, `01_Processing/03_Quantification/c_data/DAList_limpa.rds`, `01_Processing/05_Set_Scores/c_data/singscore.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/set_contrasts.xlsx`, `c_data/set_tests.rds`, `b_reports/set_contrasts_report.pdf` |
 | Run | `Rscript 02_HRvLR_groups/03_Set_Contrasts/a_script/set_contrasts.R` |
-| Code | `R/set_contrasts.R`, shared with the cluster groupings |
+| Code | `00_Setup/Shared_analyses/run_set_contrasts.R`, shared with the cluster groupings |
 
 ## Key result
 

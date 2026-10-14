@@ -1,5 +1,5 @@
 # The muscle-size clusters Hi and Lo: the nine contrasts on every protein. The analysis is
-# protein_contrasts() in R/protein_contrasts.R, shared by every grouping.
+# run_protein_contrasts() in 00_Setup/Shared_analyses/run_protein_contrasts.R, shared by every grouping.
 
 suppressPackageStartupMessages({
   library(here)
@@ -12,10 +12,10 @@ suppressPackageStartupMessages({
   library(grid)
   library(ComplexHeatmap)
 })
-source(here("R", "helpers.R"))
-source(here("R", "protein_contrasts.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_analyses", "run_protein_contrasts.R"))
 
-protein_contrasts(
+run_protein_contrasts(
   stage = "03_Cluster_groups/Muscle_size/03_Protein_Contrasts",
   design_file = "03_Cluster_groups/Muscle_size/02_Design_Contrasts/c_data/design.rds"
 )

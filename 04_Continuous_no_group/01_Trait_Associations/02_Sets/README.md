@@ -4,10 +4,10 @@ Which gene-set scores track each size and strength trait, with every person pool
 
 | | |
 |---|---|
-| Reads | `01_Processing/05_Set_Scores/c_data/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Input/phenotype.csv` |
+| Reads | `01_Processing/05_Set_Scores/c_data/singscore.rds`, `01_Processing/04_Gene_Sets/c_data/gene_sets.rds`, `01_Processing/03_Quantification/c_data/DAList_corrected.rds`, `00_Setup/Input/phenotype.csv` |
 | Writes | `c_data/set_trait_associations.xlsx`, `b_reports/set_trait_associations_report.pdf` |
 | Run | `Rscript 04_Continuous_no_group/01_Trait_Associations/02_Sets/a_script/set_trait_associations.R` |
-| Code | `R/associate.R` |
+| Code | `00_Setup/Shared_analyses/run_continuous_associations.R` |
 
 ## Key result
 
@@ -20,7 +20,7 @@ Which gene-set scores track each size and strength trait, with every person pool
 
 - Sample model: limma on every T1 and T2 biopsy with person blocked; `within` (a biopsy's trait against that person's mean) and `between` (the person's mean) slopes with 95% intervals.
 - Change score: one value per person and window; limma slope with its interval, Spearman rho with a Fisher-z interval, and bicor.
-- Two predictor (`~ growth + strength`) and interaction (`~ growth * strength`) per change window and 1RM. All in `associate_step()` (`R/associate.R`); BH within each screen, and within collection.
+- Two predictor (`~ growth + strength`) and interaction (`~ growth * strength`) per change window and 1RM. All in `run_continuous_associations()` (`00_Setup/Shared_analyses/run_continuous_associations.R`); BH within each screen, and within collection.
 
 ## Read with care
 

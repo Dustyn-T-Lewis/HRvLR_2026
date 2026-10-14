@@ -14,9 +14,9 @@ suppressPackageStartupMessages({
   library(ggh4x)
   library(patchwork)
 })
-source(here("R", "helpers.R"))
-source(here("R", "figure_theme.R"))
-source(here("R", "figure_panels.R"))
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "figure_style.R"))
+source(here("00_Setup", "Shared_functions", "figure_panels.R"))
 
 groups <- c("HR", "LR")
 stage <- here("02_HRvLR_groups", "Figures", "F2_Programmes")

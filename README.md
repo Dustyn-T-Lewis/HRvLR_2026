@@ -9,20 +9,15 @@ The study split the sixteen at the median of a composite hypertrophy score into 
 Responders (HR, LR). The repository asks its questions three ways: with that split, with groups
 found by clustering, and with no groups at all.
 
-![Pipeline: every step and what it reads](pipeline.png)
-
 ## Folders
 
 | Folder | Holds |
 |---|---|
-| [`00_Input`](00_Input/README.md) | study data and reference files; no code |
+| [`00_Setup`](00_Setup/README.md) | study inputs, shared helpers and explicitly named shared analyses |
 | [`01_Processing`](01_Processing/README.md) | the shared steps: filtering, normalisation, quantification, gene sets, set scores, modules |
 | [`02_HRvLR_groups`](02_HRvLR_groups/README.md) | HR against LR: contrasts, gene sets, modules, classification, trait links, figures |
 | [`03_Cluster_groups`](03_Cluster_groups/README.md) | the same steps on groups found by clustering size, strength or the proteome |
 | [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
-| [`R`](R/README.md) | shared functions the step scripts call |
-| [`docs`](docs/README.md) | decisions log, concept images, and the scripts that write the step READMEs and `pipeline.png` |
-| [`tests`](tests/README.md) | tests of the shared functions and checks on the saved outputs |
 
 The three analysis folders read `01_Processing` and never each other, except the parked HR/LR
 Figure 3, which also reads `04_Continuous_no_group`.
@@ -38,24 +33,29 @@ NN_Step_Name/
 ```
 
 Every workbook opens with `read_me` (one line per sheet) and `columns` (every column defined, from
-`R/column_dictionary.csv`), and closes with `input_manifest` (every file read, with its md5) and
+`00_Setup/Shared_functions/workbook_columns.csv`), and closes with `input_manifest` (every file read, with its md5) and
 `package_versions`. A step reads only files earlier steps saved, so any step reruns alone.
 
 ## Run
 
 ```sh
 Rscript -e 'renv::restore()'
-Rscript run_all.R            # every step in order, then the step READMEs, pipeline.png and tests
-Rscript run_all.R 01 02      # only the folders starting 01 or 02
-Rscript -e 'testthat::test_dir("tests/testthat")'   # the tests alone, about 40 s
+Rscript run_all.R            # every analysis step in order
+Rscript run_all.R 01         # processing only
 ```
 
-A full run rewrites each step README's files, key result and sheets from that step's outputs
-(`docs/readmes.R`), so the numbers in them follow the latest run. Edit a step's question, method
-or cautions in `docs/readme_text.R`; edit folder and figure READMEs directly.
+Run commands from the repository root. Each stage runs in a separate R session; the runner
+stops at the first failure. Logs go to the ignored `Scratch/runlogs/` directory. Selected
+folders require their upstream outputs to exist already.
 
-Every input, including the STRING, MSigDB and GO Slim files, is in `00_Input`; no step downloads
-anything. Random steps are seeded.
+Stage READMEs are maintained manually. Reports and workbooks contain the analysis results;
+the runner does not rewrite documentation or run development tests.
+
+Study inputs are in `00_Setup/Input`. Shared helpers are in `00_Setup/Shared_functions`;
+reused analysis implementations are in `00_Setup/Shared_analyses`. Stage entry scripts load
+these explicitly and select their own inputs and output locations. Each processing stage keeps
+its reference files in its own `references/` directory; no step downloads them. Random steps
+are seeded.
 
 ## Terms
 
@@ -92,4 +92,4 @@ anything. Random steps are seeded.
 ## Dependencies
 
 `renv.lock` pins every package the code loads. `enrichVolcano` comes from GitHub, pinned to commit
-`d3fed631f4`. Decisions and their reasons are in `docs/decisions.md`.
+`d3fed631f4`. Stage READMEs describe the methods and their limitations.
