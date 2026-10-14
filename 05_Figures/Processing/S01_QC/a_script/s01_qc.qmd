@@ -1,9 +1,40 @@
-# Supplement to Figure 1: data and analysis quality. The top row asks whether the samples held up
-# (filtering, detection, intensity before and after normalisation, dynamic range, missingness);
-# the bottom row whether the analysis behaves (sample correlation, blood, blood adjustment, p-value
-# calibration, power). Reads saved outputs only; the summaries here (ordering, within- and
-# between-subject correlation, histograms) describe them and test nothing.
+---
+title: "Data and analysis quality"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
 
+Supplement to Figure 1: data and analysis quality. The top row asks whether the samples held up:
+filtering, detection, intensity before and after normalisation, dynamic range and missingness. The
+bottom row asks whether the analysis behaves: sample correlation, blood, blood adjustment, p-value
+calibration and power. The figure reads saved outputs only; the summaries here (ordering, within-
+and between-subject correlation, histograms) describe them and test nothing.
+
+| panel | shows |
+|---|---|
+| a | proteins left after each filtering step |
+| b | share of proteins missing in each of the 48 runs |
+| c | each sample's intensity quantiles before and after cyclic loess |
+| d | dynamic range, with abundant muscle proteins named |
+| e | share missing against mean observed abundance, with limpa's detection curve |
+| f | correlation between the 45 samples |
+| g | blood index per sample, by arm and time |
+| h | each protein's log2 FC with and without the blood covariate |
+| i | p-value histograms per contrast |
+| j | observed effects in the primary contrast against the effect detectable at 80% power |
+
+## Packages
+
+`figure_theme`, `figure_tags`, the colour sets and `save_figure()` come from the shared helpers in
+`00_Setup/Shared_functions/`.
+
+```{r}
+#| label: packages
 suppressPackageStartupMessages({
   library(here)
   library(dplyr)
@@ -16,7 +47,16 @@ suppressPackageStartupMessages({
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 source(here("00_Setup", "Shared_functions", "figure_style.R"))
 source(here("00_Setup", "Shared_functions", "figure_panels.R"))
+```
 
+## Inputs
+
+Four workbooks: protein filtering, normalisation, quantification and the HR/LR protein contrasts.
+The chunk creates `b_reports/` and `c_data/`, stops if any input is missing, and sets the contrast
+labels and families used by panels h and i.
+
+```{r}
+#| label: inputs
 stage <- here("05_Figures", "Processing", "S01_QC")
 figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
@@ -45,8 +85,14 @@ contrast_family <- c(
   Training_Interaction = "Interaction", Acute_Interaction = "Interaction"
 )
 time_axis <- scale_colour_manual(values = time_colours, name = NULL)
+```
 
-# a: proteins left after each filtering step.
+## a: filtering
+
+Proteins left after each filtering step, from the filtering log.
+
+```{r}
+#| label: panel-filter
 filter_log <- read_sheet("filter", "filter_log") |>
   mutate(step = factor(step, rev(step)))
 panel_filter <- ggplot(filter_log, aes(n_after, step)) +
@@ -58,9 +104,15 @@ panel_filter <- ggplot(filter_log, aes(n_after, step)) +
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())
+```
 
-# b: share of proteins missing in each of the 48 runs. The three runs not carried forward are the
-# ones absent from the 45-sample blood table that 03_Quantification writes.
+## b: detection per run
+
+Share of proteins missing in each of the 48 runs. The three runs not carried forward are the ones
+absent from the 45-sample blood table that `03_Quantification` writes.
+
+```{r}
+#| label: panel-detection
 kept_samples <- read_sheet("quantify", "blood")$sample_id
 detection <- read_sheet("filter", "outlier_diagnostics") |>
   mutate(
@@ -81,8 +133,15 @@ panel_detection <- ggplot(detection, aes(sample_id, pct_missing, colour = timepo
   ) +
   figure_theme +
   theme(axis.text.x = element_blank(), panel.grid.major.x = element_blank())
+```
 
-# c: each sample's intensity quantiles before and after cyclic loess.
+## c: intensity per sample
+
+Each sample's intensity quantiles (5, 25, 50, 75 and 95%) before and after cyclic loess, from the
+normalisation workbook.
+
+```{r}
+#| label: panel-intensity
 quantiles <- read_sheet("normalize", "intensity_quantiles") |>
   mutate(
     stage = factor(stage, c("before", "after"), c("before normalisation", "after")),
@@ -100,8 +159,15 @@ panel_intensity <- ggplot(quantiles, aes(sample_id, colour = timepoint)) +
   ) +
   figure_theme +
   theme(axis.text.x = element_blank(), panel.grid.major.x = element_blank())
+```
 
-# d: dynamic range, with abundant muscle proteins named.
+## d: dynamic range
+
+Proteins ranked by mean log2 abundance over the complete matrix, with ten abundant muscle
+proteins named.
+
+```{r}
+#| label: panel-range
 protein_table <- read_sheet("quantify", "proteins") |>
   arrange(desc(mean_complete)) |>
   mutate(rank = row_number())
@@ -122,8 +188,16 @@ panel_range <- ggplot(protein_table, aes(rank, mean_complete)) +
     )
   ) +
   figure_theme
+```
 
-# e: share missing against mean observed abundance, with limpa's detection probability curve.
+## e: missing because faint
+
+Share missing against mean observed abundance. The line is limpa's detection probability curve: a
+logistic fit of the chance a value is observed against its abundance, drawn from the intercept and
+slope that `03_Quantification` saved.
+
+```{r}
+#| label: panel-missing
 curve <- read_sheet("quantify", "curve")
 dpc <- tibble(mean_observed = seq(
   min(protein_table$mean_observed), max(protein_table$mean_observed),
@@ -143,8 +217,16 @@ panel_missing <- ggplot(protein_table, aes(mean_observed, 1 - prop_observed)) +
     )
   ) +
   figure_theme
+```
 
-# f: correlation between the 45 samples, each protein centred, ordered by clustering.
+## f: sample correlation
+
+Correlation between the 45 samples, each protein centred, ordered by average-linkage clustering on
+1 - r. The chunk also takes the median r for pairs from the same person and from different people.
+The diagonal (r = 1) is left blank so it does not set the colour range.
+
+```{r}
+#| label: panel-correlation
 correlation <- read_sheet("quantify", "sample_correlation")
 r <- as.matrix(column_to_rownames(correlation, "sample_id"))
 ordering <- rownames(r)[hclust(as.dist(1 - r), method = "average")$order]
@@ -156,7 +238,6 @@ pairs <- as_tibble(r, rownames = "a") |>
 within_between <- summarise(pairs, r = median(r), .by = same)
 cells <- as_tibble(r, rownames = "a") |>
   pivot_longer(-a, names_to = "b", values_to = "r") |>
-  # The diagonal (r = 1) is left blank so it does not set the colour range.
   mutate(r = if_else(a == b, NA_real_, r), a = factor(a, ordering), b = factor(b, ordering))
 panel_correlation <- ggplot(cells, aes(a, b, fill = r)) +
   geom_tile() +
@@ -173,8 +254,15 @@ panel_correlation <- ggplot(cells, aes(a, b, fill = r)) +
   ) +
   figure_theme +
   theme(axis.text = element_blank(), panel.grid = element_blank())
+```
 
-# g: blood index per sample, by arm and time.
+## g: blood
+
+Blood index per sample, by arm and time. The subtitle carries the LR - HR difference at T3 and its
+permutation p from `01_Protein_Filtering`.
+
+```{r}
+#| label: panel-blood
 blood <- read_sheet("quantify", "blood") |>
   mutate(arm = sub("_.*", "", group), timepoint = sub(".*_", "", group))
 blood_test <- filter(read_sheet("filter", "blood_by_arm"), scale == "log2_index")
@@ -190,9 +278,15 @@ panel_blood <- ggplot(blood, aes(timepoint, blood_rel, colour = timepoint, shape
     )
   ) +
   figure_theme
+```
 
-# h: each protein's log2 FC with and without the blood covariate, every contrast pooled.
-# One row per protein, logFC and p per contrast, as the unadjusted sheet is laid out.
+## h: blood adjustment
+
+Each protein's log2 FC with and without the blood covariate, every contrast pooled. `dep` holds
+one row per protein with logFC and p per contrast, as the unadjusted sheet is laid out.
+
+```{r}
+#| label: panel-blood-fit
 dep <- read_sheet("contrasts", "protein_by_contrast") |>
   pivot_wider(
     id_cols = uniprot_id, names_from = contrast, values_from = c(logFC, p),
@@ -219,8 +313,16 @@ panel_blood_fit <- ggplot(blood_effect, aes(unadjusted, adjusted, colour = famil
     title = "Blood adjustment", subtitle = sprintf("nine contrasts pooled, r = %.3f", blood_r)
   ) +
   figure_theme
+```
 
-# i: p-value histograms; the dashed line is a flat null.
+## i: p-value calibration
+
+p-value histograms per contrast. The dashed line is a flat null: the count each 0.05-wide bin holds
+if no protein changes. Each facet also gives the contrast's median |t|, which is 0.67 under the
+null.
+
+```{r}
+#| label: panel-p
 calibration <- read_sheet("contrasts", "null_calibration")
 p_values <- names(contrast_family) |>
   map(\(cn) tibble(contrast = cn, family = contrast_family[[cn]], p = dep[[paste0(cn, "_p")]])) |>
@@ -246,8 +348,15 @@ panel_p <- ggplot(p_values, aes(p, fill = family)) +
     strip.text = element_text(size = 5), panel.grid.minor = element_blank(),
     panel.spacing.x = unit(2.5, "mm")
   )
+```
 
-# j: observed effects in the primary contrast against the effect it can detect at 80% power.
+## j: power
+
+Observed |log2 FC| in the primary contrast, the training interaction, against the effect it can
+detect at 80% power for the median protein and the 90th percentile protein.
+
+```{r}
+#| label: panel-power
 detectable <- read_sheet("contrasts", "detectable_effect")
 observed <- tibble(effect = abs(dep$Training_Interaction_logFC))
 panel_power <- ggplot(observed, aes(effect)) +
@@ -270,8 +379,16 @@ panel_power <- ggplot(observed, aes(effect)) +
   ) +
   figure_theme +
   theme(legend.position = "bottom", legend.title.position = "top")
+```
 
-# Every plotted number traces to its source table before anything is written.
+## Validation
+
+Every plotted number traces to its source table before anything is written. The chunk stops if the
+filtered protein count, the run and sample counts, the correlation matrix shape, the blood
+matching, or the calibration and power tables differ from what the panels assume.
+
+```{r}
+#| label: validation
 stopifnot(
   min(filter_log$n_after) == nrow(protein_table),
   nrow(detection) == 48, sum(!detection$kept) == 3, length(kept_samples) == 45,
@@ -279,7 +396,18 @@ stopifnot(
   all(!is.na(blood_effect$unadjusted)), nrow(p_values) == 9 * nrow(dep),
   nrow(calibration) == 9, nrow(detectable) == 2
 )
+```
 
+## Figure
+
+The chunk assembles the ten panels in two rows, writes `b_reports/s01_qc.pdf` at 300 by 190 mm,
+and prints the figure.
+
+```{r}
+#| label: fig-qc
+#| fig-cap: "Data and analysis quality."
+#| fig-width: 11.8
+#| fig-height: 7.5
 figure <- wrap_plots(
   panel_filter, panel_detection, panel_intensity, panel_range, panel_missing,
   panel_correlation, panel_blood, panel_blood_fit, panel_p, panel_power,
@@ -289,7 +417,16 @@ figure <- wrap_plots(
   figure_tags &
   theme(legend.position = "bottom", legend.key.size = unit(2.5, "mm"))
 save_figure(figure, figure_dir, "s01_qc", width = 300, height = 190)
+print(figure)
+```
 
+## Save
+
+`c_data/s01_qc.xlsx` holds the numbers behind each panel, one sheet per panel, with the input
+manifest.
+
+```{r}
+#| label: save
 sheets <- list(
   filter_log = select(filter_log, step, n_removed, n_after),
   detection = select(detection, sample_id, subject, arm, timepoint, pct_missing, kept),
@@ -315,3 +452,4 @@ holds <- c(
   "Panel j: log2 FC the training interaction detects at 80% power."
 )
 write_workbook(sheets, holds, file.path(out, "s01_qc.xlsx"), inputs, paths)
+```

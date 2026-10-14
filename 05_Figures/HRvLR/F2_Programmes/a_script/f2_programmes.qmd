@@ -1,9 +1,36 @@
-# Figure 2: which co-expression programmes move with training and the bout, and do HR and LR
-# differ in them? Reads saved outputs only; each panel's rows come from the rule its builder states.
-#   a  what each module is            b  each module on the nine contrasts
-#   c  gene sets called per contrast, fgsea and fry
-#   d  the module with the smallest interaction p, person by person
+---
+title: "Figure 2: programmes"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
 
+Figure 2 asks which co-expression programmes (WGCNA modules) move with training and the bout, and
+whether HR and LR differ in them. It reads saved outputs only; each panel's rows come from the rule
+its builder states.
+
+| panel | shows |
+|---|---|
+| a | what each module is |
+| b | each module on the nine contrasts |
+| c | gene sets called per contrast, fgsea and fry |
+| d | the module with the smallest interaction p, person by person |
+
+A module eigengene is the first principal component of a module's proteins: one value per sample
+that summarises the module. fgsea ranks a gene set against all other proteins and returns a
+normalised enrichment score (NES); fry tests whether a set's proteins move together across people.
+
+## Packages
+
+The panel builders and `save_figure()` come from the shared helpers in
+`00_Setup/Shared_functions/`.
+
+```{r}
+#| label: packages
 suppressPackageStartupMessages({
   library(here)
   library(dplyr)
@@ -17,7 +44,16 @@ suppressPackageStartupMessages({
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 source(here("00_Setup", "Shared_functions", "figure_style.R"))
 source(here("00_Setup", "Shared_functions", "figure_panels.R"))
+```
 
+## Inputs
+
+Six saved outputs: the contrast order, the module tests, the set tests and their summary, the
+modules and the module labels. The chunk creates `b_reports/` and `c_data/`, stops if any input is
+missing, and reads each table. Labels are sorted largest module first.
+
+```{r}
+#| label: inputs
 groups <- c("HR", "LR")
 stage <- here("05_Figures", "HRvLR", "F2_Programmes")
 walk(file.path(stage, c("b_reports", "c_data")), dir.create, recursive = TRUE, showWarnings = FALSE)
@@ -39,11 +75,29 @@ set_tests <- readRDS(paths[["set_tests"]])$set_tests
 modules <- readRDS(paths[["modules"]])
 labels <- readxl::read_excel(paths[["module_labels"]], "labels") |>
   arrange(desc(n_proteins))
+```
 
+## Lead module
+
+Panel d shows one module: the one with the smallest eigengene p in either interaction contrast.
+Picking the smallest p inflates that module's difference; the panel shows how it spreads across
+people.
+
+```{r}
+#| label: lead
 lead <- eigengene_tests |>
   filter(grepl("Interaction", contrast)) |>
   slice_min(p, n = 1, with_ties = FALSE)
+lead
+```
 
+## Panels
+
+Each builder takes its tables and returns `list(plot, data, source)`: the plot, the numbers it
+draws, and one row naming the file and rule behind them.
+
+```{r}
+#| label: panels
 panels <- list(
   a = panel_module_identity(labels, inputs[["module_labels"]]),
   b = panel_module_contrasts(
@@ -56,8 +110,16 @@ panels <- list(
     "smallest eigengene p in either interaction contrast"
   )
 )
+```
 
-# Plotted numbers against their source tables.
+## Validation
+
+Plotted numbers against their source tables. The chunk stops if a module lacks eigengene tests,
+panel b is missing a module-contrast cell, a panel c count differs from `set_summary`, or panel d
+drops a person.
+
+```{r}
+#| label: validation
 set_summary <- readxl::read_excel(paths[["set_summary"]], "set_summary")
 fgsea_totals <- panels$c$data |>
   filter(startsWith(as.character(call), "fgsea")) |>
@@ -71,7 +133,18 @@ stopifnot(
   all(fry_totals$n == fry_totals$n_fdr_fry),
   n_distinct(panels$d$data$subject) == n_distinct(modules$meta$subject)
 )
+```
 
+## Figure
+
+The chunk assembles the four panels, writes `b_reports/f2_programmes.pdf` at 300 by 175 mm, and
+prints the figure.
+
+```{r}
+#| label: fig-programmes
+#| fig-cap: "Figure 2, programmes."
+#| fig-width: 11.8
+#| fig-height: 6.9
 top <- (panels$a$plot | panels$b$plot) + plot_layout(widths = c(1, 1.35))
 right <- (panels$c$plot / panels$d$plot) + plot_layout(heights = c(1.3, 1))
 figure <- (free(top) | right) +
@@ -79,7 +152,16 @@ figure <- (free(top) | right) +
   plot_annotation(tag_levels = "a") &
   figure_tags
 save_figure(figure, file.path(stage, "b_reports"), "f2_programmes", width = 300, height = 175)
+print(figure)
+```
 
+## Save
+
+`c_data/f2_programmes.xlsx` holds one sheet per panel's numbers, a sheet naming each panel's
+source and rule, and the input manifest with md5 sums.
+
+```{r}
+#| label: save
 write_workbook(
   c(
     list(panel_sources = list_rbind(map(panels, "source"))),
@@ -94,3 +176,4 @@ write_workbook(
   ),
   file.path(stage, "c_data", "f2_programmes.xlsx"), inputs, paths
 )
+```
