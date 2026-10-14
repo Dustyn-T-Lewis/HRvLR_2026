@@ -201,7 +201,8 @@ The curated list names 30 accessions in the code below (keratins and other skin 
 immunoglobulin constant regions, complement) and 95 more in `references/blood_contaminants.csv`,
 each with its class and reason (`references/README.md`). Matching is by accession only. Matching by
 gene symbol or description fails here: cRAP, the common Repository of Adventitious Proteins
-used to screen laboratory contaminants, lists ALDOA_RABIT, which collides with muscle ALDOA, and a trypsin or albumin pattern catches parvalbumin. Only cRAP's dust-and-contact section is
+used to screen laboratory contaminants, lists ALDOA_RABIT, which collides with muscle ALDOA, and
+a trypsin or albumin pattern catches parvalbumin. Only cRAP's dust-and-contact section is
 used, because its UPS1 standard section holds myoglobin and creatine kinase M, both muscle proteins.
 
 ```{r}

@@ -26,7 +26,7 @@ Run from the project root, so R starts with the project's renv library.
 | `c_data/proteins.rds` | limpa's fit with standard errors; read by the protein-level contrasts |
 | `c_data/DAList_limpa.rds` | the complete matrix |
 | `c_data/DAList_corrected.rds` | the complete matrix with blood slopes removed; read by set, module, classification and trait steps |
-| `c_data/quantification.xlsx` | curve, per-protein summaries, blood index, run correlations; read by `Figures/S01_QC` |
+| `c_data/quantification.xlsx` | curve, per-protein summaries, blood index, run correlations; read by `05_Figures/Processing/S01_QC` |
 
 The blood removal raises, rather than lowers, the blood correlation of the 85 proteins measured in
 20 or fewer runs. The walkthrough shows the numbers; the fix is pending.

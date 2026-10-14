@@ -2412,7 +2412,7 @@ Figure 1: Runs on the first two principal components after normalisation, gaps 
 </section>
 <section id="save" class="level2">
 <h2 class="anchored" data-anchor-id="save">Save</h2>
-<p><code>DAList_normalized.rds</code> is the input to <code>03_Quantification</code> and <code>04_Gene_Sets</code>; the workbook is read by <code>Figures/S01_QC</code>.</p>
+<p><code>DAList_normalized.rds</code> is the input to <code>03_Quantification</code> and <code>04_Gene_Sets</code>; the workbook is read by <code>05_Figures/Processing/S01_QC</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(dal, <span class="fu">file.path</span>(out, <span class="st">&quot;DAList_normalized.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>

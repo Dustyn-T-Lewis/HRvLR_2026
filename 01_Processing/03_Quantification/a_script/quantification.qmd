@@ -16,9 +16,9 @@ a small standard error; values the curve had to estimate get a wide one, so late
 less. Nothing is filled in as if it had been measured.
 
 This step writes three objects. `proteins.rds` holds limpa's fit for the protein-level models,
-which carry blood as a covariate. `DAList_limpa.rds` holds the complete matrix. `DAList_corrected.rds`
-holds the same matrix with each protein's blood slope removed, for methods that cannot carry a
-covariate.
+which carry blood as a covariate. `DAList_limpa.rds` holds the complete matrix.
+`DAList_corrected.rds` holds the same matrix with each protein's blood slope removed, for methods
+that cannot carry a covariate.
 
 ## Packages
 
@@ -177,7 +177,7 @@ c(median_se_observed = se_observed, median_se_missing = se_missing)
 ## Save
 
 `proteins.rds` feeds the protein-level contrasts. `DAList_limpa.rds` and `DAList_corrected.rds`
-feed the set, module, classification and trait steps. `Figures/S01_QC` reads the workbook. The
+feed the set, module, classification and trait steps. `05_Figures/Processing/S01_QC` reads the workbook. The
 `sample_correlation` sheet centres each protein on its mean first, so the correlation reflects how
 runs differ rather than the abundance order every run shares.
 

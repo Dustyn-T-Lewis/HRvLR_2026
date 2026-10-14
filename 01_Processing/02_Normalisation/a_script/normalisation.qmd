@@ -180,7 +180,7 @@ of the variance.
 ## Save
 
 `DAList_normalized.rds` is the input to `03_Quantification` and `04_Gene_Sets`; the workbook is read
-by `Figures/S01_QC`.
+by `05_Figures/Processing/S01_QC`.
 
 ```{r}
 #| label: save

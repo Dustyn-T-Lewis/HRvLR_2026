@@ -2265,7 +2265,7 @@ vertical-align: -.125em;
 </section>
 <section id="inputs" class="level2">
 <h2 class="anchored" data-anchor-id="inputs">Inputs</h2>
-<p>The raw report is DIA-NN’s protein matrix: one row per protein group (proteins the measured peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps each run to a person (<code>subject</code>), a responder group (<code>arm</code>), a biopsy time (<code>timepoint</code>: T1 before training, T2 after it, T3 24 h after the final session) and their combination (<code>group</code>). Three reference tables, kept beside this script in <code>references/</code>, describe what each protein is.</p>
+<p>The raw report is DIA-NN’s protein matrix: one row per protein group (proteins the measured peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps each run to a person (<code>subject</code>), a responder group (<code>arm</code>), a biopsy time (<code>timepoint</code>: T1 before training, T2 96 h after the last session, T3 24 h after one further session) and their combination (<code>group</code>). Three reference tables, kept beside this script in <code>references/</code>, describe what each protein is.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Processing&quot;</span>, <span class="st">&quot;01_Protein_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
@@ -2849,7 +2849,7 @@ Figure 3: Proteins removed at each filtering step, and the number left after it
 </section>
 <section id="save" class="level2">
 <h2 class="anchored" data-anchor-id="save">Save</h2>
-<p><code>DAList_filtered.rds</code> is the input to normalisation. The workbook keeps every table above; <code>01_Processing/Figures/S01_QC</code> reads it.</p>
+<p><code>DAList_filtered.rds</code> is the input to normalisation. The workbook keeps every table above; <code>05_Figures/Processing/S01_QC</code> reads it.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(dal, <span class="fu">file.path</span>(out, <span class="st">&quot;DAList_filtered.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>

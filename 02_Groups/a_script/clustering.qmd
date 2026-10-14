@@ -172,7 +172,8 @@ map(fits, \(fit) select(fit$diagnostics, k, gap, SE.sim, mean_silhouette, sizes,
 
 The gap statistic picks K = `r paste(unique(map_int(fits, "k_gap")), collapse = " or ")` here
 (`r paste(names(fits), map_int(fits, "k_gap"), sep = ": ", collapse = "; ")`). K = 1 means
-the data show no natural groups, and that is a result in its own right. K = 2 is then imposed by decision (decisions log, 2026-10-06) so the
+the data show no natural groups, and that is a result in its own right. K = 2 is then imposed by
+decision (decisions log, 2026-10-06) so the
 exploratory comparisons can ask what separates the two halves the data suggest. Every result
 downstream of an imposed split is exploratory; read each split with its bootstrap Jaccard.
 

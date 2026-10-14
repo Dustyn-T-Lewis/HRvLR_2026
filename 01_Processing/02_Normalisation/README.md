@@ -25,4 +25,4 @@ Run from the project root, so R starts with the project's renv library.
 | `b_reports/norm_comparison.pdf` | proteoDA's comparison of every normalisation method |
 | `b_reports/qc_pre.pdf`, `b_reports/qc_post.pdf` | proteoDA's run-level QC before and after |
 | `c_data/DAList_normalized.rds` | normalised log2 abundance; read by `03_Quantification` and `04_Gene_Sets` |
-| `c_data/normalisation.xlsx` | normalised matrix, PCA, eta squared, intensity quantiles; read by `Figures/S01_QC` |
+| `c_data/normalisation.xlsx` | normalised matrix, PCA, eta squared, intensity quantiles; read by `05_Figures/Processing/S01_QC` |
