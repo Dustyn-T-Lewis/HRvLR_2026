@@ -76,9 +76,9 @@ only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[rowSums(outer(stages, only, startsWith)) > 0]
 dir.create("Scratch/runlogs", recursive = TRUE, showWarnings = FALSE)
 # A stage is a step folder holding one script in a_script/, or "<walkthrough>.qmd@<grouping>",
-# optionally "@<grouping>/<input>": one walkthrough rendered with params$grouping (and $input) set. A numbered walkthrough
-# (02_protein_contrasts.qmd) writes its report into its step folder (02_Protein_Contrasts) under
-# the grouping; an unnumbered one into the grouping folder itself.
+# optionally "@<grouping>/<input>": one walkthrough rendered with params$grouping (and $input)
+# set. A numbered walkthrough (02_protein_contrasts.qmd) writes its report into its step folder
+# (02_Protein_Contrasts) under the grouping; an unnumbered one into the grouping folder itself.
 render_args <- function(stage) {
   if (grepl("@", stage)) {
     script <- sub("@.*", "", stage)
