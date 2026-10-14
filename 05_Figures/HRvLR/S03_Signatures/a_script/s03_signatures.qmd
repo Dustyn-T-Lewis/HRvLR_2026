@@ -1,21 +1,50 @@
-# Supplement to Figure 1. a, b: the training and acute signature ranks repeated with the smaller
-# Pi < 0.05 sets. c: each arm's p < 0.05 training sets followed through T1, T2 and T3 in both
-# arms, which adds the bout step that a single-window ranking cannot show. Reads saved outputs
-# only.
+---
+title: "S03: signatures with stricter sets"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tidyr)
-  library(purrr)
-  library(tibble)
-  library(ggplot2)
-  library(patchwork)
-})
+Supplement to Figure 1. Panels a and b repeat the training and acute signature ranks with the
+smaller Π < 0.05 sets. Π is p raised to the power |logFC| (Xiao et al. 2014). Panel c follows each
+arm's p < 0.05 training sets through T1, T2 and T3 in both arms, which adds the bout step that a
+single-window ranking cannot show. The figure reads saved outputs only.
+
+fry is limma's rotation gene set test: it asks whether a set's proteins move together in one
+contrast, and here gives the share moving the same way and an FDR.
+
+## Packages
+
+`analysis_reporting_helpers.R` supplies `write_workbook()`; `figure_style.R` the theme, tags and
+colours; `figure_panels.R` `signature_barcode()` and `save_figure()`.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+library(patchwork)
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 source(here("00_Setup", "Shared_functions", "figure_style.R"))
 source(here("00_Setup", "Shared_functions", "figure_panels.R"))
+```
 
+## Inputs
+
+The protein contrast workbook from `02_Protein_Contrasts` and the set tests from
+`03_Set_Contrasts`. The chunk creates the output folders, stops if an input is missing, and reads
+the per-protein results and the fry rows.
+
+```{r}
+#| label: inputs
 stage <- here("05_Figures", "HRvLR", "S03_Signatures")
 figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
@@ -32,18 +61,35 @@ if (!all(file.exists(paths))) {
 read_sheet <- \(sheet) readxl::read_excel(paths[["contrasts"]], sheet)
 proteins <- readRDS(paths[["set_tests"]])$protein_results
 fry_rows <- read_sheet("fry_concordance")
+```
 
-# Panels a and b.
+## Panels a and b
+
+`signature_barcode()` places each arm's Π < 0.05 sets for one window in the other arm's ranking
+for the same window, drawn as limma's barcode (Wu & Smyth 2012). It returns the plot and the
+numbers it labels.
+
+```{r}
+#| label: panels-ab
 barcodes <- map(
   set_names(c("Training", "Acute")),
   \(window) signature_barcode(proteins, fry_rows, window, set_level = "pi")
 )
+```
 
-# Panel c: mean change from each person's T1 (02_Protein_Contrasts, set_trajectory). In the arm that
-# chose a set, the training window is where it was selected, so it carries no test, and the bout
-# window shares T2 with the selection: a protein high at T2 by chance reads as up, then down. Those
-# cells are faded and the bout result marked with a dagger. Each window reports the share of
-# proteins moving as they did in training and fry's FDR on that window's contrast.
+## Panel c
+
+Panel c is the mean change from each person's T1 (`02_Protein_Contrasts`, `set_trajectory`). In
+the arm that chose a set, the training window is where it was selected, so it carries no test, and
+the bout window shares T2 with the selection: a protein high at T2 by chance reads as up, then
+down. Those cells are faded and the bout result marked with a dagger. Each window reports the
+share of proteins moving as they did in training and fry's FDR on that window's contrast.
+
+`trajectory` holds the plotted means; `window_stats` the fry result per cell and window;
+`window_labels` the text drawn in each window.
+
+```{r}
+#| label: panel-c-data
 trajectory <- read_sheet("set_trajectory") |>
   filter(startsWith(set, "nominal_")) |>
   mutate(
@@ -66,6 +112,13 @@ window_labels <- bind_rows(window_stats, selection_windows) |>
     x = if_else(window == "Training", 1.5, 2.5),
     y = if_else(direction == "up", Inf, -Inf), vjust = if_else(direction == "up", 1.4, -0.5)
   )
+```
+
+Rows are the arm that chose the sets, columns the arm they are measured in. The training window
+is shaded in the training tint and the bout window in the acute tint.
+
+```{r}
+#| label: panel-c-plot
 cell_names <- c(
   chosen_HR = "Changed by training in HR", chosen_LR = "Changed by training in LR",
   in_HR = "Measured in HR", in_LR = "Measured in LR"
@@ -118,8 +171,16 @@ panel_trajectory <- ggplot(
     legend.position = "bottom", strip.placement = "outside",
     strip.text = element_text(size = 6), panel.spacing = unit(2, "mm")
   )
+```
 
-# Every plotted number traces to its source table before anything is written.
+## Validation
+
+Every plotted number traces to its source table before anything is written: eight barcode labels,
+4 cells by 2 directions by 3 time points of trajectory, and 12 window results (the other arm's
+training window, plus both arms' bout windows, per set). Each cell and direction gets two labels.
+
+```{r}
+#| label: validate
 pi_numbers <- map(barcodes, "labels") |> list_rbind()
 stopifnot(
   nrow(pi_numbers) == 8,
@@ -128,7 +189,17 @@ stopifnot(
   nrow(window_stats) == 12,
   all(count(window_labels, chosen, arm, direction)$n == 2)
 )
+```
 
+## Figure
+
+The three panels side by side, saved to `b_reports/s03_signatures.pdf` at 300 by 110 mm.
+
+```{r}
+#| label: fig-signatures
+#| fig-cap: "Signature ranks at Π < 0.05 (a, b) and training sets followed through the bout (c)."
+#| fig-width: 11.8
+#| fig-height: 4.3
 figure <- wrap_plots(
   barcodes$Training$plot, barcodes$Acute$plot, panel_trajectory,
   nrow = 1
@@ -136,7 +207,15 @@ figure <- wrap_plots(
   plot_annotation(tag_levels = "a") &
   figure_tags
 save_figure(figure, figure_dir, "s03_signatures", width = 300, height = 110)
+print(figure)
+```
 
+## Save
+
+`c_data/s03_signatures.xlsx` holds every number the panels draw.
+
+```{r}
+#| label: save
 sheets <- list(
   pi_barcode = select(pi_numbers, window, chosen, ranked_in, direction, n, same_sign_share, fdr),
   trajectory = select(trajectory, set_from, set, n_proteins, arm, timepoint, mean_change, se),
@@ -150,3 +229,4 @@ holds <- c(
   "Panel c: per cell and window, share of proteins moving as in training and fry FDR."
 )
 write_workbook(sheets, holds, file.path(out, "s03_signatures.xlsx"), inputs, paths)
+```

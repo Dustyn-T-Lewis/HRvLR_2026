@@ -1,24 +1,58 @@
-# Figure 1 for the continuous analysis: every person pooled and each trait kept as a number. Reads
-# saved outputs only; the one computation is the proteome PCA, a projection with no test.
-#   a  each person's training response, trait by trait
-#   b  share of features linked to each trait (p < 0.05) per window and level, against chance
-#   c  the proteome PCA, coloured by growth and by strength gain
-#   d  gene sets leading each trait's protein ranking over training (fgsea)
-#   e  groups of proteins sharing a pattern of trait links (profile clusters)
+---
+title: "Figure 1: continuous overview"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tidyr)
-  library(purrr)
-  library(tibble)
-  library(ggplot2)
-  library(patchwork)
-})
+Figure 1 for the continuous analysis: every person pooled and each trait kept as a number. It
+reads saved outputs only; the one computation is the proteome PCA (principal component analysis),
+a projection with no test.
+
+| panel | shows |
+|---|---|
+| a | each person's training response, trait by trait |
+| b | share of features linked to each trait (p < 0.05) per window and level, against chance |
+| c | the proteome PCA, coloured by growth and by strength gain |
+| d | gene sets leading each trait's protein ranking over training (fgsea) |
+| e | groups of proteins sharing a pattern of trait links (profile clusters) |
+
+The figure goes to `b_reports/f1_overview.pdf` and every number it draws to
+`c_data/f1_overview.xlsx`.
+
+## Packages
+
+`analysis_reporting_helpers.R` supplies `write_workbook()` and `phenotype_tables()`;
+`figure_style.R` the theme, tags, thresholds and label helpers; `figure_panels.R`
+`prune_overlapping()` and `save_figure()`.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+library(patchwork)
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 source(here("00_Setup", "Shared_functions", "figure_style.R"))
 source(here("00_Setup", "Shared_functions", "figure_panels.R"))
+```
 
+## Inputs
+
+The three trait-association workbooks (proteins, gene sets, modules), the trait pathways, the gene
+set members, the profile clusters, the blood-corrected protein matrix and the phenotype table. The
+chunk creates the output folders and stops if any input is missing.
+
+```{r}
+#| label: inputs
 folder <- "04_Continuous_no_group"
 stage <- here("05_Figures", "Continuous", "F1_Overview")
 walk(file.path(stage, c("b_reports", "c_data")), dir.create, recursive = TRUE, showWarnings = FALSE)
@@ -35,15 +69,30 @@ inputs <- c(
 )
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
+```
 
+## Phenotype
+
+`phenotype_tables()` returns one row per person with their training change scores. The seven
+change traits are the four size measures, the two strength measures and composite hypertrophy.
+
+```{r}
+#| label: phenotype
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 training <- phenotype_tables(phenotype)$pairings$training
 change_traits <- c(
   "pct_fcsa_mixed", "pct_fcsa_type1", "pct_fcsa_type2", "pct_mcsa", "pct_leg_press_1rm",
   "pct_leg_ext_1rm", "comp_hypertrophy"
 )
+```
 
-# Panel a: each person's % change per trait, scaled within trait, people ordered by growth.
+## Panel a: each person's response
+
+Each person's % change per trait, scaled to a z score within trait, people ordered by composite
+hypertrophy.
+
+```{r}
+#| label: panel-a
 people <- training |>
   select(subject, all_of(change_traits)) |>
   pivot_longer(-subject, names_to = "trait") |>
@@ -67,8 +116,16 @@ panel_people <- ggplot(people, aes(subject, trait, fill = z)) +
   ) +
   figure_theme +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, size = 5), panel.grid = element_blank())
+```
 
-# Panel b: share of features at p < 0.05 per change-score window and trait, at each level.
+## Panel b: how many features track each trait
+
+The share of features at p < 0.05 per change-score window and trait, at each level (proteins, gene
+sets, modules). Counts are summed within analysis and trait before the share is taken. The colour
+scale is white at 5%, the share chance gives.
+
+```{r}
+#| label: panel-b
 level_names <- c(proteins = "Proteins", sets = "Gene sets", modules = "Modules")
 windows <- c(
   training = "training change", baseline = "T1 level", acute = "acute change"
@@ -103,9 +160,15 @@ panel_links <- ggplot(links, aes(window, trait, fill = share)) +
   ) +
   figure_theme +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), panel.grid = element_blank())
+```
 
-# Panel c: proteome PCA (complete blood-corrected matrix, proteins scaled), coloured by each
-# person's growth and strength gain.
+## Panel c: proteome PCA
+
+PCA of the complete blood-corrected matrix, proteins scaled, coloured by each person's growth and
+strength gain. The two traits sit on different scales, so each is coloured by rank within itself.
+
+```{r}
+#| label: panel-c
 dal <- readRDS(paths[["corrected"]])
 pcs <- prcomp(t(dal$data), scale. = TRUE)
 variance <- summary(pcs)$importance[2, 1:2]
@@ -113,7 +176,6 @@ pca <- as_tibble(pcs$x[, 1:2], rownames = "sample_id") |>
   inner_join(select(as_tibble(dal$metadata), sample_id, subject, timepoint), by = "sample_id") |>
   left_join(select(training, subject, comp_hypertrophy, pct_leg_press_1rm), by = "subject") |>
   pivot_longer(c(comp_hypertrophy, pct_leg_press_1rm), names_to = "trait") |>
-  # The two traits sit on different scales, so each is coloured by rank within itself.
   mutate(trait = trait_label(trait), rank = percent_rank(value), .by = trait)
 panel_pca <- ggplot(pca, aes(PC1, PC2, colour = rank, shape = timepoint)) +
   geom_point(size = 1.3) +
@@ -130,9 +192,18 @@ panel_pca <- ggplot(pca, aes(PC1, PC2, colour = rank, shape = timepoint)) +
   ) +
   figure_theme +
   theme(legend.position = "bottom", legend.key.width = unit(8, "mm"))
+```
 
-# Panel d: sets at fgsea FDR < 0.05 for at least two traits over training, overlapping sets
-# pruned, the 20 strongest shown in every trait.
+## Panel d: gene sets leading each trait
+
+fgsea (fast gene set enrichment analysis) ranks proteins by the limma t and gives each set an NES
+(normalised enrichment score) and an FDR. Panel d keeps training-window sets at FDR < 0.05 for at
+least two traits (GO Slim out), ranked by that count and total |NES|. `prune_overlapping()` drops
+any set sharing half its measured proteins with a stronger one, and the first 20 are shown in every
+trait.
+
+```{r}
+#| label: panel-d
 gene_sets <- readRDS(paths[["gene_sets"]])
 members <- gene_sets$sets
 fgsea <- readxl::read_excel(paths[["pathways"]], "pathways") |>
@@ -167,9 +238,16 @@ panel_sets <- ggplot(grid, aes(trait, set)) +
   ) +
   figure_theme +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), axis.text.y = element_text(size = 5))
+```
 
-# Panel e: the twelve largest profile groups' mean t per trait over training; every group and
-# window is in the workbook.
+## Panel e: profile groups
+
+A profile group is a cluster of proteins that share a pattern of trait links
+(`03_Profile_Clusters`). Panel e draws the twelve largest groups' mean t per trait over training;
+every group and window is in the workbook. Rows read group number (proteins, main module).
+
+```{r}
+#| label: panel-e
 profile_means <- readxl::read_excel(paths[["profiles"]], "profile_means")
 profile_groups <- readxl::read_excel(paths[["profiles"]], "profile_groups")
 profiles <- profile_means |>
@@ -196,7 +274,14 @@ panel_profiles <- ggplot(drawn, aes(trait, row, fill = mean_t)) +
   ) +
   figure_theme +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), panel.grid = element_blank())
+```
 
+## Figure
+
+Panels a to c on the top row, d and e below.
+
+```{r}
+#| label: assemble
 figure <- wrap_plots(
   (panel_people | panel_links | panel_pca) + plot_layout(widths = c(1.2, 1.5, 1.3)),
   (panel_sets | panel_profiles) + plot_layout(widths = c(1, 1.2)),
@@ -204,9 +289,32 @@ figure <- wrap_plots(
 ) +
   plot_annotation(tag_levels = "a") &
   figure_tags
-# Every selected set is drawn in every trait.
+```
+
+Every selected set is drawn in every trait.
+
+```{r}
+#| label: validate
 stopifnot(nrow(grid) == length(kept) * n_distinct(fgsea$trait))
+```
+
+`save_figure()` writes `b_reports/f1_overview.pdf` at 300 by 175 mm.
+
+```{r}
+#| label: fig-overview
+#| fig-cap: "Figure 1 for the continuous analysis."
+#| fig-width: 11.8
+#| fig-height: 6.9
 save_figure(figure, file.path(stage, "b_reports"), "f1_overview", width = 300, height = 175)
+print(figure)
+```
+
+## Save
+
+One sheet per panel.
+
+```{r}
+#| label: save
 write_workbook(
   list(
     people = select(people, subject, trait, value, z),
@@ -224,3 +332,4 @@ write_workbook(
   ),
   file.path(stage, "c_data", "f1_overview.xlsx"), inputs, paths
 )
+```

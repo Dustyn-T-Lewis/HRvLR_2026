@@ -1,18 +1,48 @@
-# Put HR and LR on one pair of axes, once for training and once for the acute bout. fgsea scores
-# each set once per contrast, so one arm's NES against the other's compares the arms set by set.
-# No new test; it reshapes 03_Set_Contrasts output.
+---
+title: "S02: NES concordance, HR against LR"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tidyr)
-  library(tibble)
-  library(purrr)
-  library(ggplot2)
-  library(patchwork)
-})
+The figure puts HR and LR on one pair of axes, once for training and once for the acute bout. Each
+point is a gene set: its x is the set's NES in one arm, its y the NES in the other. NES is the
+normalised enrichment score from fgsea (fast gene set enrichment analysis): its sign says which way
+the set's proteins moved, its size how strongly. fgsea scores each set once per contrast, so one
+arm's NES against the other's compares the arms set by set. There is no new test; the figure
+reshapes `03_Set_Contrasts` output.
+
+Each pair gets two pages: all collections, then Hallmark and GO Slim alone. Four pages in total go
+to `b_reports/s02_nes_scatter.pdf`, and the numbers to `c_data/s02_nes_scatter.xlsx`.
+
+## Packages
+
+`analysis_reporting_helpers.R` supplies `write_workbook()`.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(purrr)
+library(ggplot2)
+library(patchwork)
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+```
 
+## Inputs
+
+The one input is the set test table from `03_Set_Contrasts`. The chunk creates the output folders,
+stops if the input is missing and reads it.
+
+```{r}
+#| label: inputs
 stage <- here("05_Figures", "HRvLR", "S02_NES_Scatter")
 figure_dir <- file.path(stage, "b_reports")
 out <- file.path(stage, "c_data")
@@ -24,7 +54,27 @@ if (!all(file.exists(paths))) {
   stop("Run 03_Set_Contrasts first. Missing: ", inputs[["set_tests"]])
 }
 fg <- readRDS(paths[["set_tests"]])
+```
 
+## One pair of contrasts
+
+`run_pair()` takes two contrast names and a tag, and returns a concordance summary, an export table
+and two composite figures. Inside it:
+
+- `paired` holds one row per set scored in both contrasts, with both NES and both FDR (BH within
+  contrast). A set is significant in an arm at FDR < 0.05. It is discordant when its NES has
+  opposite signs in the two arms, and a collapse survivor when either arm flags it `main`.
+- `concordance()` gives the Spearman rho of x NES against y NES, its 95% CI by the Fisher z
+  transform (`DescTools::CorCI()`), and the significant and discordant counts.
+- `nes_panel()` draws one scatter. The dashed line is identity; grey points are significant in
+  neither arm.
+- `composite_all` is every collection, the collapse survivors, and the discordant sets on their
+  own axes.
+- `composite_curated` is Hallmark and GO Slim, the two collections whose members do not nest, then
+  each concordant quadrant scaled to its own points so every set can be named.
+
+```{r}
+#| label: run-pair
 run_pair <- function(x_contrast, y_contrast, tag) {
   paired <- fg$set_tests |>
     filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
@@ -202,14 +252,31 @@ run_pair <- function(x_contrast, y_contrast, tag) {
     figures = list(composite_all, composite_curated)
   )
 }
+```
 
+## Training and acute
+
+Training pairs `Training_HR` with `Training_LR`; acute pairs `Acute_HR` with `Acute_LR`. The two
+pairs' summaries and export rows are stacked into one table each.
+
+```{r}
+#| label: pairs
 pairs <- list(
   run_pair("Training_HR", "Training_LR", "training"),
   run_pair("Acute_HR", "Acute_LR", "acute")
 )
 summary_table <- list_rbind(map(pairs, "summary"))
 export <- list_rbind(map(pairs, "export"))
+summary_table
+```
 
+## Save
+
+The PDF gets four pages, one per composite. The workbook holds the concordance summary and one
+row per set per pair.
+
+```{r}
+#| label: save
 pdf(file.path(figure_dir, "s02_nes_scatter.pdf"), width = 11, height = 8.5)
 walk(list_flatten(map(pairs, "figures")), print)
 invisible(dev.off())
@@ -222,3 +289,17 @@ holds <- c(
   "One row per set scored in both arms: both NES, both FDR, significance and discordance."
 )
 write_workbook(sheets, holds, file.path(out, "s02_nes_scatter.xlsx"), inputs, paths)
+```
+
+## Figure
+
+The same four pages, drawn again for this page, in PDF order: training all collections, training
+Hallmark and GO Slim, acute all collections, acute Hallmark and GO Slim.
+
+```{r}
+#| label: fig-nes-scatter
+#| fig-cap: "NES of HR against LR, training then acute."
+#| fig-width: 11
+#| fig-height: 8.5
+walk(list_flatten(map(pairs, "figures")), print)
+```
