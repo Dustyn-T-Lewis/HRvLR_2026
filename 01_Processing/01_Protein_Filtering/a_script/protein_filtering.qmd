@@ -9,7 +9,7 @@ execute:
   warning: false
 ---
 
-Which proteins and which runs are fit to analyse? Three rules decide it, in this order:
+Three rules decide which proteins and runs are fit to analyse, applied in this order:
 contaminants go by identity, outlier runs go by a consensus of four checks, and proteins go when
 too few of the remaining runs detected them. No rule reads abundance differences between groups.
 
@@ -39,8 +39,9 @@ source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 ## Inputs
 
-The raw report is DIA-NN's protein matrix: one row per protein group, one column per run, MaxLFQ
-intensities. The sample sheet maps each run to a person (`subject`), a responder group (`arm`), a
+The raw report is DIA-NN's protein matrix: one row per protein group (proteins the measured
+peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities
+built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps each run to a person (`subject`), a responder group (`arm`), a
 biopsy time (`timepoint`: T1 before training, T2 after it, T3 24 h after the final session) and
 their combination (`group`). Three reference tables, kept beside this script in `references/`,
 describe what each protein is.
@@ -198,8 +199,8 @@ it is.
 The curated list names 30 accessions in the code below (keratins and other skin proteins, globins,
 immunoglobulin constant regions, complement) and 95 more in `references/blood_contaminants.csv`,
 each with its class and reason (`references/README.md`). Matching is by accession only. Matching by
-gene symbol or description fails here: the cRAP contaminant list's ALDOA_RABIT collides with muscle
-ALDOA, and a trypsin or albumin pattern catches parvalbumin. Only cRAP's dust-and-contact section is
+gene symbol or description fails here: cRAP, the common Repository of Adventitious Proteins
+used to screen laboratory contaminants, lists ALDOA_RABIT, which collides with muscle ALDOA, and a trypsin or albumin pattern catches parvalbumin. Only cRAP's dust-and-contact section is
 used, because its UPS1 standard section holds myoglobin and creatine kinase M, both muscle proteins.
 
 ```{r}
@@ -411,7 +412,7 @@ c(runs_removed = length(outlier_ids), runs_kept = ncol(dal$data))
 at least `min_groups` of the six group-by-time cells. Here a protein needs 5 detections in one
 cell. This is the one step in 01_Processing that reads the HR/LR label; it counts detections and
 never compares abundance. It runs after the outlier removal so that no discarded run counts toward
-a detection. The floor of 5 has no recorded evidence beyond being a majority of a cell of 7 or 8.
+a detection. The floor of 5, in cells of 7 or 8 runs, has no recorded evidence.
 
 ```{r}
 #| label: detection
