@@ -16,7 +16,7 @@ stages <- c(
   "02_Groups/a_script/clustering.qmd@Muscle_size",
   "02_Groups/a_script/clustering.qmd@Muscle_strength",
   "02_Groups/a_script/clustering.qmd@Proteome",
-  "03_Group_comparisons/HRvLR/01_Design_Contrasts",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@HRvLR",
   "03_Group_comparisons/HRvLR/02_Protein_Contrasts",
   "03_Group_comparisons/HRvLR/03_Set_Contrasts",
   "03_Group_comparisons/HRvLR/04_Module_Contrasts",
@@ -25,7 +25,7 @@ stages <- c(
   "03_Group_comparisons/HRvLR/05_Classification/03_Modules",
   "03_Group_comparisons/HRvLR/06_Trait_Associations",
   "03_Group_comparisons/HRvLR/07_Module_Preservation",
-  "03_Group_comparisons/Muscle_size/01_Design_Contrasts",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Muscle_size",
   "03_Group_comparisons/Muscle_size/02_Protein_Contrasts",
   "03_Group_comparisons/Muscle_size/03_Set_Contrasts",
   "03_Group_comparisons/Muscle_size/04_Module_Contrasts",
@@ -33,7 +33,7 @@ stages <- c(
   "03_Group_comparisons/Muscle_size/05_Classification/02_Sets",
   "03_Group_comparisons/Muscle_size/05_Classification/03_Modules",
   "03_Group_comparisons/Muscle_size/06_Trait_Associations",
-  "03_Group_comparisons/Muscle_strength/01_Design_Contrasts",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Muscle_strength",
   "03_Group_comparisons/Muscle_strength/02_Protein_Contrasts",
   "03_Group_comparisons/Muscle_strength/03_Set_Contrasts",
   "03_Group_comparisons/Muscle_strength/04_Module_Contrasts",
@@ -41,7 +41,11 @@ stages <- c(
   "03_Group_comparisons/Muscle_strength/05_Classification/02_Sets",
   "03_Group_comparisons/Muscle_strength/05_Classification/03_Modules",
   "03_Group_comparisons/Muscle_strength/06_Trait_Associations",
-  "03_Group_comparisons/Proteome/01_Design_Contrasts",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Proteome/T1",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Proteome/T2",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Proteome/T3",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Proteome/training",
+  "03_Group_comparisons/a_script/01_design_contrasts.qmd@Proteome/acute",
   "03_Group_comparisons/Proteome/02_Protein_Contrasts",
   "03_Group_comparisons/Proteome/03_Set_Contrasts",
   "03_Group_comparisons/Proteome/04_Module_Contrasts",
@@ -71,16 +75,20 @@ stages <- c(
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[rowSums(outer(stages, only, startsWith)) > 0]
 dir.create("Scratch/runlogs", recursive = TRUE, showWarnings = FALSE)
-# A stage is a step folder holding one script in a_script/, or "<walkthrough>.qmd@<grouping>": one
-# walkthrough rendered with params$grouping set, its report written to <grouping>/b_reports.
+# A stage is a step folder holding one script in a_script/, or "<walkthrough>.qmd@<grouping>",
+# optionally "@<grouping>/<input>": one walkthrough rendered with params$grouping (and $input) set. A numbered walkthrough
+# (02_protein_contrasts.qmd) writes its report into its step folder (02_Protein_Contrasts) under
+# the grouping; an unnumbered one into the grouping folder itself.
 render_args <- function(stage) {
   if (grepl("@", stage)) {
     script <- sub("@.*", "", stage)
-    grouping <- sub(".*@", "", stage)
-    return(c(
-      "render", script, "-P", paste0("grouping:", grouping),
-      "--output-dir", file.path("..", grouping, "b_reports")
-    ))
+    target <- strsplit(sub(".*@", "", stage), "/")[[1]]
+    stem <- tools::file_path_sans_ext(basename(script))
+    step <- if (grepl("^[0-9]", stem)) gsub("_([a-z])", "_\\U\\1", stem, perl = TRUE)
+    params <- c("-P", paste0("grouping:", target[1]))
+    if (length(target) > 1) params <- c(params, "-P", paste0("input:", target[2]))
+    out <- do.call(file.path, as.list(c("..", target[1], step, target[-1], "b_reports")))
+    return(c("render", script, params, "--output-dir", out))
   }
   script <- list.files(file.path(stage, "a_script"), pattern = "\\.(R|qmd)$", full.names = TRUE)
   stopifnot(length(script) == 1)
