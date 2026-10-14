@@ -1,36 +1,29 @@
 # 06_Module_Building
 
-Which proteins rise and fall together within a person, and how does each such group move in each biopsy?
+Finds co-expression modules with WGCNA on person-centred abundance, then scores each module's
+eigengene on the uncentred matrix so differences between people stay testable. No label or
+phenotype enters construction.
 
-| | |
+## Inputs
+
+| File | Holds |
 |---|---|
-| Reads | `01_Processing/03_Quantification/c_data/DAList_corrected.rds` |
-| Writes | `c_data/module_building.xlsx`, `c_data/modules.rds`, `b_reports/module_building_report.pdf` |
-| Run | `Rscript 01_Processing/06_Module_Building/a_script/module_building.R` |
+| `01_Processing/03_Quantification/c_data/DAList_corrected.rds` | limpa's complete matrix with blood slopes removed |
 
-## Key result
+## Run
 
-- 15 modules of 41 to 285 proteins; 304 proteins fit no module (`grey`).
-- Soft power 11 (scale-free fit R² 0.86).
+```sh
+quarto render 01_Processing/06_Module_Building/a_script/module_building.qmd --output-dir ../b_reports
+```
 
-## Method
+Run from the project root, so R starts with the project's renv library.
 
-- WGCNA (`blockwiseModules()`): signed network, bicor, `deepSplit = 2`, `minModuleSize = 30`, `mergeCutHeight = 0.15`, `randomSeed = 54321`; soft power from `pickSoftThreshold()` (R² 0.85).
-- Modules are defined on abundance centred within each person, so they describe co-movement within people rather than differences between them.
-- Eigengenes (`moduleEigengenes()`) are scored on uncentred abundance in all 45 biopsies; kME (`signedKME()`) is each protein's correlation with its module's eigengene. `grey` holds proteins in no module.
-- `icc` is how much of an eigengene's variance lies between people (`lme4::lmer`).
+## Outputs
 
-## Read with care
-
-- Module colours are names, not ranks, and change when 01_Processing is rebuilt; compare modules by membership.
-
-## Sheets
-
-`module_building.xlsx` opens with `read_me` and `columns` (every column defined) and closes with `input_manifest` and `package_versions`.
-
-| Sheet | Holds |
+| File | Holds |
 |---|---|
-| `module_summary` | Proteins per module and the subject ICC of its eigengene. |
-| `membership` | Every protein's module and its kME in that module. |
-| `eigengenes` | Module eigengene per sample, scored on raw abundance. |
-| `soft_threshold` | pickSoftThreshold fit indices per power; chosen marks the power used. |
+| `b_reports/module_building.html` | the walkthrough: centring, soft power, modules, kME, person ICC, trajectories |
+| `c_data/modules.rds` | eigengenes, membership with kME, module summary; read by every module-level step |
+| `c_data/module_building.xlsx` | the same tables and the soft-power fit indices |
+
+Module colours are labels only. They change if `01_Processing` is rebuilt.

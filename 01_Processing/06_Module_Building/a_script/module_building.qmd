@@ -1,0 +1,310 @@
+---
+title: "Module building"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+A co-expression module is a group of proteins whose abundances rise and fall together across
+biopsies. WGCNA (Langfelder and Horvath 2008) finds them, and each module is then summarised by
+its eigengene: one number per biopsy that follows the module's shared pattern. Later steps test
+eigengenes instead of hundreds of single proteins. Module construction never sees a group label or
+a phenotype.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(purrr)
+library(ggplot2)
+library(WGCNA)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+disableWGCNAThreads()
+```
+
+## Input
+
+limpa's complete matrix with each protein's blood slope removed. WGCNA takes no covariate and no
+missing values, so this is the matrix it can use. It inherits the blood-removal problem shown in
+`03_Quantification` for the 85 proteins measured in 20 or fewer runs.
+
+```{r}
+#| label: input
+stage <- here("01_Processing", "06_Module_Building")
+out <- file.path(stage, "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+inputs <- c(corrected = "01_Processing/03_Quantification/c_data/DAList_corrected.rds")
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+corrected <- readRDS(paths[["corrected"]])
+abund <- as.matrix(corrected$data)
+meta <- as_tibble(corrected$metadata) |>
+  select(sample_id, subject, arm, timepoint)
+stopifnot(identical(colnames(abund), meta$sample_id))
+dim(abund)
+count(count(meta, subject, name = "biopsies"), biopsies, name = "people")
+```
+
+## Define modules on within-person variation
+
+WGCNA treats every biopsy as an independent sample. These 45 biopsies come from 16 people
+measured up to three times, and person identity drives the leading components of the abundance
+matrix. Left alone, modules would mostly group proteins that differ between people. So the
+modules are defined on person-centred abundance: each protein's value minus that person's mean.
+A person with a single biopsy centres to zeros and adds nothing, so they are left out of the
+definition and kept for scoring.
+
+```{r}
+#| label: centre
+repeated <- meta |>
+  add_count(subject) |>
+  filter(n > 1)
+centred <- t(apply(abund[, repeated$sample_id], 1, \(x) x - ave(x, repeated$subject)))
+expr <- t(centred)
+one <- repeated$sample_id[repeated$subject == repeated$subject[1]]
+rbind(raw = round(abund[1, one], 2), centred = round(centred[1, one], 2))
+c(runs_defining = nrow(expr), runs_scored = ncol(abund))
+```
+
+## Soft power
+
+WGCNA turns each pair's correlation into a connection strength by raising it to a power (the soft
+power): higher powers keep strong links and shrink weak ones. The chosen power is the lowest whose
+network looks scale-free, meaning a few proteins carry many connections and most carry few, by a
+fit R² of at least 0.85 (`pickSoftThreshold()`'s estimate). The WGCNA FAQ's table for signed
+networks (12 for over 40 samples) is the fallback if no power reaches it.
+
+Two settings depart from the package defaults, both recommended in the WGCNA FAQ:
+
+- a signed network, so proteins that move in opposite directions are not linked;
+- biweight midcorrelation (bicor), a correlation that down-weights outlying values, with
+  `maxPOutliers = 0.05` (the default of 1 switches that guard off). `pearsonFallback` uses an
+  ordinary correlation for a protein with zero spread.
+
+```{r}
+#| label: soft-power
+bicor_args <- list(corType = "bicor", maxPOutliers = 0.05, pearsonFallback = "individual")
+sft <- pickSoftThreshold(expr,
+  powerVector = 1:20, networkType = "signed",
+  corFnc = "bicor", corOptions = list(maxPOutliers = 0.05), verbose = 0
+)
+faq_power <- c(18L, 16L, 14L, 12L)[findInterval(nrow(expr), c(20, 31, 41)) + 1]
+power <- coalesce(sft$powerEstimate, faq_power)
+fit_indices <- as_tibble(sft$fitIndices) |>
+  mutate(signed_r2 = -sign(slope) * SFT.R.sq, chosen = Power == power)
+filter(fit_indices, Power %in% (power + -2:2)) |>
+  select(Power, signed_r2, mean.k., chosen)
+```
+
+```{r}
+#| label: fig-soft-power
+#| fig-cap: "Connectivity and signed scale-free fit by soft power; dashed 0.85, red chosen."
+#| fig-width: 8
+#| fig-height: 3.5
+fit_indices |>
+  select(Power, `signed scale-free R2` = signed_r2, `mean connectivity` = mean.k.) |>
+  pivot_longer(-Power) |>
+  ggplot(aes(Power, value)) +
+  geom_line(colour = "grey60") +
+  geom_point(aes(colour = Power == power), size = 2) +
+  geom_hline(
+    data = tibble(name = "signed scale-free R2", y = 0.85), aes(yintercept = y),
+    linetype = "dashed"
+  ) +
+  facet_wrap(~name, scales = "free_y") +
+  scale_colour_manual(values = c(`FALSE` = "grey30", `TRUE` = "#B2182B"), guide = "none") +
+  labs(x = "soft power", y = NULL) +
+  theme_minimal(base_size = 10)
+```
+
+## Modules
+
+`blockwiseModules()` builds the network, measures how many neighbours each pair shares (the
+topological overlap, TOM), clusters proteins on it, and merges modules whose eigengenes correlate
+above 0.85 (`mergeCutHeight = 0.15`). Proteins that fit no module go to `grey`. Settings that are
+not package defaults: `minModuleSize = 30` (default `min(20, n/2)`; no recorded evidence for 30)
+and `maxBlockSize = 2500`, which keeps all 1,900 proteins in one block. `randomSeed` seeds the
+clustering inside the function; a `set.seed()` outside it would be overridden.
+
+```{r}
+#| label: modules
+net <- do.call(blockwiseModules, c(
+  list(expr,
+    power = power, networkType = "signed", TOMType = "signed",
+    deepSplit = 2, minModuleSize = 30, mergeCutHeight = 0.15,
+    pamStage = TRUE, pamRespectsDendro = TRUE, maxBlockSize = 2500,
+    numericLabels = FALSE, randomSeed = 54321, verbose = 0
+  ),
+  bicor_args
+))
+colours <- set_names(net$colors, colnames(expr))
+sort(table(colours), decreasing = TRUE)
+```
+
+## Eigengenes and membership
+
+The eigengene is the first principal component of a module's proteins, scored here on the
+uncentred matrix so that differences between people, and so between HR and LR, stay testable.
+`moduleEigengenes()` flips each eigengene's sign to follow the module's average abundance (package
+default).
+
+```{r}
+#| label: eigengenes
+me <- moduleEigengenes(t(abund), colors = colours, excludeGrey = TRUE)$eigengenes
+rownames(me) <- colnames(abund)
+eigengenes <- t(as.matrix(me))
+rownames(eigengenes) <- sub("^ME", "", rownames(eigengenes))
+round(eigengenes[1:3, 1:4], 3)
+```
+
+A protein's kME is its correlation with its module's eigengene: near 1 means it follows the module
+closely. kME is read on the person-centred data that defined the modules, because on uncentred
+data the differences between people dilute it.
+
+```{r}
+#| label: kme
+centred_me <- moduleEigengenes(expr, colors = colours, excludeGrey = TRUE)$eigengenes
+kme <- signedKME(expr, centred_me,
+  corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'"
+)
+colnames(kme) <- sub("^kME", "", colnames(kme))
+gene_of <- set_names(corrected$annotation$gene, corrected$annotation$uniprot_id)
+membership <- tibble(
+  uniprot_id = names(colours), gene = unname(gene_of[names(colours)]), module = unname(colours)
+) |>
+  mutate(kme = map2_dbl(uniprot_id, module, \(id, m) if (m == "grey") NA_real_ else kme[id, m]))
+membership |>
+  filter(module != "grey") |>
+  slice_max(kme, n = 2, by = module) |>
+  arrange(module) |>
+  head(6)
+```
+
+## How much each eigengene still depends on the person
+
+The intraclass correlation (ICC) is the share of an eigengene's variance that lies between people
+rather than between one person's biopsies, from a mixed model with time point fitted (lme4,
+`eigengene ~ timepoint + (1 | subject)`), so time effects do not count as noise.
+
+```{r}
+#| label: icc
+eigengene_long <- as_tibble(t(eigengenes), rownames = "sample_id") |>
+  pivot_longer(-sample_id, names_to = "module", values_to = "eigengene") |>
+  left_join(meta, by = "sample_id")
+subject_icc <- eigengene_long |>
+  summarise(
+    icc = {
+      v <- as.data.frame(lme4::VarCorr(suppressMessages(
+        lme4::lmer(eigengene ~ timepoint + (1 | subject))
+      )))$vcov
+      v[1] / (v[1] + v[2])
+    },
+    .by = module
+  )
+module_summary <- count(filter(membership, module != "grey"), module, name = "n_proteins") |>
+  left_join(subject_icc, by = "module") |>
+  arrange(desc(n_proteins))
+module_summary
+```
+
+```{r}
+#| label: fig-sizes
+#| fig-cap: "Proteins per module, labelled with the eigengene's person ICC."
+#| fig-width: 6
+#| fig-height: 4.5
+module_colours <- set_names(module_summary$module, module_summary$module)
+module_summary |>
+  mutate(module = factor(module, levels = rev(module))) |>
+  ggplot(aes(n_proteins, module, fill = module)) +
+  geom_col(colour = "grey30", linewidth = 0.2) +
+  geom_text(aes(label = sprintf("ICC %.2f", icc)), hjust = -0.15, size = 3) +
+  scale_fill_manual(values = module_colours, guide = "none") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.2))) +
+  labs(x = "proteins", y = NULL) +
+  theme_minimal(base_size = 10)
+```
+
+```{r}
+#| label: fig-trajectories
+#| fig-cap: "Eigengene per biopsy. Thin lines: one person. Thick line and range: group mean ± SE."
+#| fig-width: 10
+#| fig-height: 6
+trajectory <- eigengene_long |>
+  summarise(
+    mean = mean(eigengene), se = sd(eigengene) / sqrt(n()),
+    .by = c(module, arm, timepoint)
+  )
+ggplot(trajectory, aes(timepoint, mean, colour = arm, group = arm)) +
+  geom_line(
+    data = eigengene_long, aes(y = eigengene, group = subject),
+    alpha = 0.2, linewidth = 0.3
+  ) +
+  geom_line(linewidth = 0.8) +
+  geom_pointrange(aes(ymin = mean - se, ymax = mean + se), size = 0.25) +
+  facet_wrap(~ factor(module, levels = module_summary$module), nrow = 3) +
+  scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), name = NULL) +
+  labs(x = NULL, y = "eigengene") +
+  theme_minimal(base_size = 10)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  identical(colnames(eigengenes), meta$sample_id),
+  setequal(rownames(eigengenes), setdiff(unique(colours), "grey")),
+  all(abs(membership$kme[membership$module != "grey"]) <= 1),
+  sum(module_summary$n_proteins) + sum(colours == "grey") == nrow(abund)
+)
+```
+
+## Summary
+
+```{r}
+#| label: summary
+at_power <- filter(fit_indices, Power == power)
+```
+
+Soft power `r power` (signed R² `r round(at_power$signed_r2, 3)`, mean connectivity
+`r round(at_power$mean.k., 1)`). `r nrow(eigengenes)` modules of `r min(module_summary$n_proteins)`
+to `r max(module_summary$n_proteins)` proteins; `r sum(colours == "grey")` of `r length(colours)`
+proteins fit no module. `r nrow(expr)` of `r ncol(abund)` runs defined the modules. Module colours
+are labels only and change if `01_Processing` is rebuilt.
+
+## Save
+
+`modules.rds` is read by module characterisation, module contrasts and preservation,
+classification, the trait steps, proteome clustering and the F2 figure.
+
+```{r}
+#| label: save
+saveRDS(
+  list(
+    eigengenes = eigengenes, membership = membership, meta = meta, module_summary = module_summary
+  ),
+  file.path(out, "modules.rds"),
+  compress = "xz"
+)
+sheets <- list(
+  module_summary = module_summary, membership = membership,
+  eigengenes = as_tibble(t(eigengenes), rownames = "sample_id"),
+  soft_threshold = fit_indices
+)
+holds <- c(
+  "Proteins per module and the subject ICC of its eigengene.",
+  "Every protein's module and its kME in that module.",
+  "Module eigengene per sample, scored on raw abundance.",
+  "pickSoftThreshold fit indices per power; chosen marks the power used."
+)
+write_workbook(sheets, holds, file.path(out, "module_building.xlsx"), inputs, paths)
+```
