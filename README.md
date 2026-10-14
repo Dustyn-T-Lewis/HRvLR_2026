@@ -11,6 +11,9 @@ eight as lower responders (LR); the middle nine were not profiled. The repositor
 questions three ways: with those groups, with groups found by clustering, and with no groups at
 all.
 
+![The pipeline: processing, group definitions, the shared comparison workflow and the continuous
+arm](pipeline.png)
+
 ## Folders, in run order
 
 | Folder | Holds |
