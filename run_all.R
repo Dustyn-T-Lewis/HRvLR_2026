@@ -71,15 +71,15 @@ stages <- c(
   "04_Continuous_no_group/03_Profile_Clusters",
   # Figures read saved results only, so they run last.
   "05_Figures/Processing/S01_QC",
-  "05_Figures/HRvLR/F1_Overview",
+  "05_Figures/a_script/F1_Overview.qmd@HRvLR",
   "05_Figures/HRvLR/F2_Programmes",
   "05_Figures/HRvLR/F3_People",
   "05_Figures/HRvLR/S01_Volcano",
   "05_Figures/HRvLR/S02_NES_Scatter",
   "05_Figures/HRvLR/S03_Signatures",
-  "05_Figures/Muscle_size/F1_Overview",
-  "05_Figures/Muscle_strength/F1_Overview",
-  "05_Figures/Proteome/F1_Overview",
+  "05_Figures/a_script/F1_Overview.qmd@Muscle_size",
+  "05_Figures/a_script/F1_Overview.qmd@Muscle_strength",
+  "05_Figures/a_script/F1_Overview.qmd@Proteome",
   "05_Figures/Continuous/F1_Overview"
 )
 only <- commandArgs(trailingOnly = TRUE)
@@ -88,13 +88,18 @@ dir.create("Scratch/runlogs", recursive = TRUE, showWarnings = FALSE)
 # A stage is a step folder holding one script in a_script/, or "<walkthrough>.qmd@<grouping>",
 # optionally "@<grouping>/<input>": one walkthrough rendered with params$grouping (and $input)
 # set. A numbered walkthrough (02_protein_contrasts.qmd) writes its report into its step folder
-# (02_Protein_Contrasts) under the grouping; an unnumbered one into the grouping folder itself.
+# (02_Protein_Contrasts) under the grouping, a capitalised one (F1_Overview.qmd) into the folder of
+# its own name, and any other into the grouping folder itself.
 render_args <- function(stage) {
   if (grepl("@", stage)) {
     script <- sub("@.*", "", stage)
     target <- strsplit(sub(".*@", "", stage), "/")[[1]]
     stem <- tools::file_path_sans_ext(basename(script))
-    step <- if (grepl("^[0-9]", stem)) gsub("_([a-z])", "_\\U\\1", stem, perl = TRUE)
+    step <- if (grepl("^[0-9]", stem)) {
+      gsub("_([a-z])", "_\\U\\1", stem, perl = TRUE)
+    } else if (grepl("^[A-Z]", stem)) {
+      stem
+    }
     params <- c("-P", paste0("grouping:", target[1]))
     if (length(target) > 1) params <- c(params, "-P", paste0("input:", target[2]))
     out <- do.call(file.path, as.list(c("..", target[1], step, target[-1], "b_reports")))

@@ -356,6 +356,7 @@ build_group_overview <- function(panel_a, inputs, paths, groups, out_dir, stem, 
     sheets, holds, file.path(out_dir, "c_data", paste0(stem, ".xlsx")), inputs, paths,
     note = note
   )
+  invisible(figure)
 }
 
 # Panel a for a cluster grouping: each person on the first two components of what they were
