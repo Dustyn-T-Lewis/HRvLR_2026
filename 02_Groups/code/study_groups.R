@@ -1,28 +1,28 @@
----
-title: "Study groups: HR and LR"
-params:
-  grouping: HRvLR
-format:
-  html:
-    embed-resources: true
-    toc: true
-execute:
-  echo: true
-  warning: false
----
+#' ---
+#' title: "Study groups: HR and LR"
+#' params:
+#'   grouping: HRvLR
+#' format:
+#'   typst:
+#'     toc: true
+#'     margin:
+#'       x: 1.6cm
+#' execute:
+#'   echo: true
+#'   warning: false
+#' ---
+#'
+#' The study's own grouping. 25 people trained; each got a composite hypertrophy score; the 8 with
+#' the highest scores were profiled as higher responders (HR) and the 8 with the lowest as lower
+#' responders (LR). The middle 9 were not profiled. This is an extreme-groups design: the two groups
+#' sit far apart by construction, which makes a difference easier to see and makes any correlation
+#' computed across these 16 people stronger than it would be across all 25.
+#'
+#' This step checks the labels against the phenotype and writes them in the same form as the
+#' clustering groupings, so every comparison downstream reads one kind of groups file.
+#'
+#' ## Packages
 
-The study's own grouping. 25 people trained; each got a composite hypertrophy score; the 8 with the
-highest scores were profiled as higher responders (HR) and the 8 with the lowest as lower responders
-(LR). The middle 9 were not profiled. This is an extreme-groups design: the two groups sit far
-apart by construction, which makes a difference easier to see and makes any correlation computed
-across these 16 people stronger than it would be across all 25.
-
-This step checks the labels against the phenotype and writes them in the same form as the
-clustering groupings, so every comparison downstream reads one kind of groups file.
-
-## Packages
-
-```{r}
 #| label: packages
 #| message: false
 library(here)
@@ -31,15 +31,13 @@ library(tibble)
 library(purrr)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
-```
 
-## Inputs
+#' ## Inputs
+#'
+#' `phenotype.csv` holds one row per person: muscle and fibre cross-sectional area (mCSA, fCSA) and
+#' 1RM strength before and after training, the composite score and the training volume.
+#' `metadata.csv` maps each biopsy run to its person.
 
-`phenotype.csv` holds one row per person: muscle and fibre cross-sectional area (mCSA, fCSA) and
-1RM strength before and after training, the composite score and the training volume. `metadata.csv`
-maps each biopsy run to its person.
-
-```{r}
 #| label: inputs
 out <- here("02_Groups", params$grouping, "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
@@ -52,15 +50,13 @@ stopifnot(file.exists(paths))
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 samples <- readr::read_csv(paths[["samples"]], show_col_types = FALSE)
 count(phenotype, arm)
-```
 
-## The composite score
+#' ## The composite score
+#'
+#' The manuscript defines the composite as (2 × %ΔmCSA + %ΔfCSA) / 3, weighting whole-muscle growth
+#' twice as heavily as mixed fibre growth. Recomputed from the pre and post columns, it must match
+#' the `comp_hypertrophy` column the source supplied, up to the source's rounding to two decimals.
 
-The manuscript defines the composite as (2 × %ΔmCSA + %ΔfCSA) / 3, weighting whole-muscle growth
-twice as heavily as mixed fibre growth. Recomputed from the pre and post columns, it must match the
-`comp_hypertrophy` column the source supplied, up to the source's rounding to two decimals.
-
-```{r}
 #| label: composite
 composite <- phenotype |>
   transmute(
@@ -76,9 +72,8 @@ composite |>
     people = n(), mean = mean(comp_hypertrophy), sd = sd(comp_hypertrophy),
     lowest = min(comp_hypertrophy), highest = max(comp_hypertrophy), .by = arm
   )
-```
 
-```{r}
+
 #| label: fig-composite
 #| fig-cap: "Composite score per person. The 9 unprofiled people sat in the gap."
 #| fig-width: 5
@@ -89,13 +84,11 @@ ggplot(composite, aes(arm, comp_hypertrophy, colour = arm)) +
   scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), guide = "none") +
   labs(x = NULL, y = "composite hypertrophy (%)") +
   theme_minimal(base_size = 10)
-```
 
-## Labels against the sample sheet
+#' ## Labels against the sample sheet
+#'
+#' Every person in the phenotype table must carry the same label in the sample sheet.
 
-Every person in the phenotype table must carry the same label in the sample sheet.
-
-```{r}
 #| label: labels
 labels_in_samples <- distinct(samples, subject, arm)
 arm_in_phenotype <- with(phenotype, set_names(arm, subject))
@@ -106,24 +99,22 @@ stopifnot(
 )
 group_of <- with(labels_in_samples, set_names(arm, subject))
 table(group_of)
-```
 
-## Summary
+#' ## Summary
+#'
+#' `r sum(group_of == "HR")` HR and `r sum(group_of == "LR")` LR people. HR's composite runs from
+#' `r round(min(composite$comp_hypertrophy[composite$arm == "HR"]), 2)` to
+#' `r round(max(composite$comp_hypertrophy[composite$arm == "HR"]), 2)`%, LR's from
+#' `r round(min(composite$comp_hypertrophy[composite$arm == "LR"]), 2)` to
+#' `r round(max(composite$comp_hypertrophy[composite$arm == "LR"]), 2)`%. Because the composite
+#' defines the groups, a difference in muscle or fibre growth between HR and LR is built in and is
+#' not a finding; `comp_hypertrophy` stays out of the group-by-trait tests.
+#'
+#' ## Save
+#'
+#' `groups.rds` holds who is in each group, the group order (the first group comes first in every
+#' contrast) and the traits that defined the groups.
 
-`r sum(group_of == "HR")` HR and `r sum(group_of == "LR")` LR people. HR's composite runs from
-`r round(min(composite$comp_hypertrophy[composite$arm == "HR"]), 2)` to
-`r round(max(composite$comp_hypertrophy[composite$arm == "HR"]), 2)`%, LR's from
-`r round(min(composite$comp_hypertrophy[composite$arm == "LR"]), 2)` to
-`r round(max(composite$comp_hypertrophy[composite$arm == "LR"]), 2)`%. Because the composite
-defines the groups, a difference in muscle or fibre growth between HR and LR is built in and is
-not a finding; `comp_hypertrophy` stays out of the group-by-trait tests.
-
-## Save
-
-`groups.rds` holds who is in each group, the group order (the first group comes first in every
-contrast) and the traits that defined the groups.
-
-```{r}
 #| label: save
 saveRDS(
   list(group_of = group_of, arms = c("HR", "LR"), defining_traits = "comp_hypertrophy"),
@@ -134,4 +125,3 @@ write_workbook(
   "Per person: % change in mCSA and mixed fCSA, the recomputed composite and the source's.",
   file.path(out, "study_groups.xlsx"), inputs, paths
 )
-```

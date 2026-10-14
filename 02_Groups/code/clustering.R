@@ -1,34 +1,35 @@
----
-title: "Clustering"
-params:
-  grouping: Muscle_size
-format:
-  html:
-    embed-resources: true
-    toc: true
-execute:
-  echo: true
-  warning: false
----
+#' ---
+#' title: "Clustering"
+#' params:
+#'   grouping: Muscle_size
+#' format:
+#'   typst:
+#'     toc: true
+#'     margin:
+#'       x: 1.6cm
+#' execute:
+#'   echo: true
+#'   warning: false
+#' ---
+#'
+#' The HR/LR labels come from one outcome chosen in advance. Clustering asks the data instead: if
+#' people are grouped by how they responded, do natural groups appear? This script runs for seven
+#' groupings, set by the `grouping` parameter:
+#'
+#' | grouping | people clustered on |
+#' |---|---|
+#' | `Muscle_size` | % change over training in fibre area (mixed, type I, type II) and muscle area |
+#' | `Muscle_strength` | % change over training in leg-press and leg-extension 1RM |
+#' | `Proteome_T1`, `_T2`, `_T3` | the module eigengenes at that time point |
+#' | `Proteome_training`, `_acute` | the change in module eigengenes over training or the bout |
+#'
+#' No step here reads a protein contrast.
+#'
+#' ## Packages
+#'
+#' cluster supplies PAM and the gap statistic; fpc the bootstrap stability; mclust the adjusted Rand
+#' index. fpc and mclust are called with `::`.
 
-The HR/LR labels come from one outcome chosen in advance. Clustering asks the data instead: if
-people are grouped by how they responded, do natural groups appear? This walkthrough runs for three
-groupings, set by the `grouping` parameter:
-
-| grouping | people clustered on |
-|---|---|
-| `Muscle_size` | % change over training in fibre area (mixed, type I, type II) and muscle area |
-| `Muscle_strength` | % change over training in leg-press and leg-extension 1RM |
-| `Proteome` | the module eigengenes, separately at T1, T2, T3, over training and after the bout |
-
-No step here reads a protein contrast.
-
-## Packages
-
-cluster supplies PAM and the gap statistic; fpc the bootstrap stability; mclust the adjusted Rand
-index. fpc and mclust are called with `::`.
-
-```{r}
 #| label: packages
 #| message: false
 library(here)
@@ -40,17 +41,15 @@ library(ggplot2)
 library(cluster)
 source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 params$grouping
-```
 
-## What gets clustered
+#' ## What gets clustered
+#'
+#' Each grouping becomes one or more people-by-feature matrices. Every feature is z-scored (centred
+#' and divided by its standard deviation) so no trait or module dominates by its scale. People
+#' missing any feature are left out of that matrix.
 
-Each grouping becomes one or more people-by-feature matrices. Every feature is z-scored (centred
-and divided by its standard deviation) so no trait or module dominates by its scale. People missing
-any feature are left out of that matrix.
-
-```{r}
 #| label: inputs
-is_proteome <- params$grouping == "Proteome"
+is_proteome <- startsWith(params$grouping, "Proteome_")
 out <- here("02_Groups", params$grouping, "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 inputs <- c(
@@ -61,11 +60,9 @@ paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 arm_of <- set_names(phenotype$arm, phenotype$subject)
-```
 
-For the two phenotype groupings the features are the training % changes of the chosen traits.
+#' For the two phenotype groupings the features are the training % changes of the chosen traits.
 
-```{r}
 #| label: phenotype-matrix
 #| eval: !expr '!is_proteome'
 traits <- list(
@@ -80,12 +77,11 @@ x <- scale(as.matrix(select(complete, -subject)))
 rownames(x) <- complete$subject
 matrices <- set_names(list(x), params$grouping)
 head(round(x, 2), 4)
-```
 
-For the proteome the features are the 15 module eigengenes, as levels at each time point and as
-within-person change over training (T2 − T1) and after the bout (T3 − T2).
+#' For the proteome the features are the 15 module eigengenes, as levels at each time point and as
+#' within-person change over training (T2 − T1) and after the bout (T3 − T2). All five matrices are
+#' built; the grouping keeps its own.
 
-```{r}
 #| label: proteome-matrices
 #| eval: !expr is_proteome
 source(here("00_Setup", "Shared_functions", "proteome_inputs.R"))
@@ -100,31 +96,31 @@ matrices <- list(
 ) |>
   map(\(m) scale(t(m)))
 stopifnot(identical(names(matrices), inputs_used))
+matrices <- matrices[sub("Proteome_", "", params$grouping)]
 map(matrices, dim)
-```
 
-## How many groups
+#' ## How many groups
+#'
+#' PAM (partitioning around medoids) picks K real people as group centres and assigns everyone to
+#' the nearest centre. PAM always returns K groups, so three diagnostics judge whether they are
+#' real:
+#'
+#' - Gap statistic (Tibshirani, Walther and Hastie 2001): compares how tight the K groups are with
+#'   how tight they would be in 500 reference data sets with no group structure. The
+#'   one-standard-error rule (`maxSE(method = "Tibs2001SEmax")`) picks the smallest K whose gap is
+#'   within one standard error of the best. K = 1, no groups, is a possible answer.
+#' - Mean silhouette: how much closer people sit to their own group than to the next, from −1 to 1.
+#' - Bootstrap Jaccard (Hennig 2007, `fpc::clusterboot`, 500 resamples): how often each group comes
+#'   back when people are resampled. Hennig reads 0.75 or more as stable, 0.6 to 0.75 as doubtful
+#'   and below 0.6 as not to be trusted.
+#'
+#' The adjusted Rand index (ARI) against HR/LR describes agreement with the study's labels; 0 is
+#' chance agreement, 1 identical. It decides nothing.
+#'
+#' `cluster_people()` takes one z-scored matrix and returns the gap table, the K the gap statistic
+#' picks, the PAM fits for K = 2 and 3, their stability, and the diagnostics table. It is applied to
+#' each matrix of the grouping.
 
-PAM (partitioning around medoids) picks K real people as group centres and assigns everyone to the
-nearest centre. PAM always returns K groups, so three diagnostics judge whether they are real:
-
-- Gap statistic (Tibshirani, Walther and Hastie 2001): compares how tight the K groups are with
-  how tight they would be in 500 reference data sets with no group structure. The one-standard-error
-  rule (`maxSE(method = "Tibs2001SEmax")`) picks the smallest K whose gap is within one standard
-  error of the best. K = 1, no groups, is a possible answer.
-- Mean silhouette: how much closer people sit to their own group than to the next, from −1 to 1.
-- Bootstrap Jaccard (Hennig 2007, `fpc::clusterboot`, 500 resamples): how often each group comes
-  back when people are resampled. Hennig reads 0.75 or more as stable, 0.6 to 0.75 as doubtful and
-  below 0.6 as not to be trusted.
-
-The adjusted Rand index (ARI) against HR/LR describes agreement with the study's labels; 0 is
-chance agreement, 1 identical. It decides nothing.
-
-`cluster_people()` takes one z-scored matrix and returns the gap table, the K the gap statistic
-picks, the PAM fits for K = 2 and 3, their stability, and the diagnostics table. It is applied to
-each matrix of the grouping.
-
-```{r}
 #| label: cluster-people
 pam1 <- \(x, k) list(cluster = pam(x, k, cluster.only = TRUE))
 cluster_people <- function(x, k_max = 3, n_boot = 500) {
@@ -166,18 +162,16 @@ cluster_people <- function(x, k_max = 3, n_boot = 500) {
 }
 fits <- map(matrices, cluster_people)
 map(fits, \(fit) select(fit$diagnostics, k, gap, SE.sim, mean_silhouette, sizes, jaccard))
-```
 
-## K = 1, and K = 2 by decision
+#' ## K = 1, and K = 2 by decision
+#'
+#' The gap statistic picks K = `r paste(unique(map_int(fits, "k_gap")), collapse = " or ")` here
+#' (`r paste(names(fits), map_int(fits, "k_gap"), sep = ": ", collapse = "; ")`). K = 1 means
+#' the data show no natural groups, and that is a result in its own right. K = 2 is then imposed by
+#' decision (decisions log, 2026-10-06) so the
+#' exploratory comparisons can ask what separates the two halves the data suggest. Every result
+#' downstream of an imposed split is exploratory; read each split with its bootstrap Jaccard.
 
-The gap statistic picks K = `r paste(unique(map_int(fits, "k_gap")), collapse = " or ")` here
-(`r paste(names(fits), map_int(fits, "k_gap"), sep = ": ", collapse = "; ")`). K = 1 means
-the data show no natural groups, and that is a result in its own right. K = 2 is then imposed by
-decision (decisions log, 2026-10-06) so the
-exploratory comparisons can ask what separates the two halves the data suggest. Every result
-downstream of an imposed split is exploratory; read each split with its bootstrap Jaccard.
-
-```{r}
 #| label: choice
 imposed_k <- 2L
 imposed_reason <- list(
@@ -194,20 +188,18 @@ imposed_reason <- list(
     "by decision (2026-10-06) so the exploratory grouping can compare the two halves the proteome",
     "suggests. Read each split with its bootstrap Jaccard."
   )
-)[[params$grouping]]
+)[[if (is_proteome) "Proteome" else params$grouping]]
 k_used <- map_int(fits, \(fit) coalesce(imposed_k, fit$k_gap))
 stopifnot(k_used == 2)
 map_int(fits, "k_gap")
-```
 
-## Groups and tables
+#' ## Groups and tables
+#'
+#' The phenotype groupings name their two groups `Hi` and `Lo` by the mean of the first trait. The
+#' proteome groups keep PAM's numbering, `C1` and `C2`; the number carries no meaning. The traits a
+#' phenotype grouping was built on stay out of its group-by-trait tests; for `Muscle_size` so does
+#' the composite, since these clusters reproduce HR/LR.
 
-The phenotype groupings name their two groups `Hi` and `Lo` by the mean of the first trait. The
-proteome groups keep PAM's numbering, `C1` and `C2`; the number carries no meaning. The traits a
-phenotype grouping was built on stay out of its group-by-trait tests; for `Muscle_size` so does
-the composite, since these clusters reproduce HR/LR.
-
-```{r}
 #| label: phenotype-tables
 #| eval: !expr '!is_proteome'
 fit <- fits[[1]]
@@ -248,9 +240,8 @@ sheets <- list(
   )
 )
 table(group = group_of, hr_lr = arm_of[names(group_of)])
-```
 
-```{r}
+
 #| label: proteome-tables
 #| eval: !expr is_proteome
 per_input <- imap(fits, \(fit, input) {
@@ -282,21 +273,16 @@ per_input <- imap(fits, \(fit, input) {
   )
 })
 sheets <- map(set_names(names(per_input[[1]])), \(sheet) list_rbind(map(per_input, sheet)))
-dir.create(file.path(out, "groups"), showWarnings = FALSE)
-walk(inputs_used, \(input) {
-  used <- filter(sheets$assignments, input == .env$input)
-  saveRDS(
-    list(
-      group_of = set_names(paste0("C", used$cluster), used$subject),
-      arms = c("C1", "C2"), defining_traits = character(0)
-    ),
-    file.path(out, "groups", paste0(input, ".rds"))
-  )
-})
+saveRDS(
+  list(
+    group_of = with(sheets$assignments, set_names(paste0("C", cluster), subject)),
+    arms = c("C1", "C2"), defining_traits = character(0)
+  ),
+  file.path(out, "groups.rds")
+)
 count(sheets$assignments, input, cluster, arm)
-```
 
-```{r}
+
 #| label: fig-gap
 #| fig-cap: "Gap statistic by K, ± one standard error. Dashed: the K the one-SE rule picks."
 #| fig-width: 8
@@ -311,9 +297,8 @@ imap(fits, \(fit, input) mutate(fit$gap_table, input = input, k_gap = fit$k_gap)
   scale_x_continuous(breaks = 1:3) +
   labs(x = "K", y = "gap") +
   theme_bw(base_size = 10)
-```
 
-```{r}
+
 #| label: fig-space
 #| fig-cap: "People on the first two principal components of what they were clustered on."
 #| fig-width: 8
@@ -325,31 +310,27 @@ sheets$space |>
   facet_wrap(~input, nrow = 1) +
   labs(colour = "cluster", shape = NULL) +
   theme_bw(base_size = 10)
-```
 
-## Validation
+#' ## Validation
 
-```{r}
 #| label: validate
 stopifnot(
   all(map_lgl(fits, \(fit) fit$k_gap %in% 1:3)),
   all(sheets$stability$jaccard >= 0 & sheets$stability$jaccard <= 1),
   !anyNA(sheets$space$cluster[!is.na(sheets$space$PC1)])
 )
-```
 
-## Summary
+#' ## Summary
+#'
+#' The gap statistic picks K = `r paste(unique(map_int(fits, "k_gap")), collapse = " or ")` for
+#' `r params$grouping`. The imposed K = 2 split has bootstrap Jaccard
+#' `r paste(sprintf("%.2f", range(filter(sheets$stability, k == 2)$jaccard)), collapse = " to ")`
+#' across its groups and matrices; `r sum(filter(sheets$stability, k == 2)$jaccard < 0.6)` of
+#' `r nrow(filter(sheets$stability, k == 2))` groups fall below 0.6, Hennig's line for a group not
+#' to be trusted.
+#'
+#' ## Save
 
-The gap statistic picks K = `r paste(unique(map_int(fits, "k_gap")), collapse = " or ")` for
-`r params$grouping`. The imposed K = 2 split has bootstrap Jaccard
-`r paste(sprintf("%.2f", range(filter(sheets$stability, k == 2)$jaccard)), collapse = " to ")`
-across its groups and matrices; `r sum(filter(sheets$stability, k == 2)$jaccard < 0.6)` of
-`r nrow(filter(sheets$stability, k == 2))` groups fall below 0.6, Hennig's line for a group not
-to be trusted.
-
-## Save
-
-```{r}
 #| label: save
 holds <- if (is_proteome) {
   c(
@@ -374,4 +355,3 @@ write_workbook(
   sheets[c("choice", "diagnostics", "stability", "assignments", "space", "space_variance")],
   holds, file.path(out, "clustering.xlsx"), inputs, paths
 )
-```
