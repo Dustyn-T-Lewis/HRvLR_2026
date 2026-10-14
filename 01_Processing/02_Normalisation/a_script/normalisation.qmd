@@ -1,0 +1,206 @@
+---
+title: "Normalisation"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Runs differ in how much protein was loaded and how well the instrument ran that day. Cyclic loess
+removes those intensity-dependent differences so the 45 runs can be compared protein by protein.
+Missing values stay missing: `03_Quantification` models them, and blood enters every later model as
+a covariate.
+
+## Packages
+
+proteoDA supplies the normalisation and its standard reports. limma supplies the linear model used
+for the variance check.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(proteoDA)
+library(dplyr)
+library(tibble)
+library(limma)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+```
+
+## Input
+
+The input is the filtered `DAList` from `01_Protein_Filtering`: raw intensities with `NA` where a
+protein was not detected.
+
+```{r}
+#| label: input
+inputs <- c(filtered = "01_Processing/01_Protein_Filtering/c_data/DAList_filtered.rds")
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["filtered"]])
+out <- here("01_Processing", "02_Normalisation", "c_data")
+reports <- here("01_Processing", "02_Normalisation", "b_reports")
+for (path in c(out, reports)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
+
+dim(dal$data)
+dal$data[1:3, 1:4]
+```
+
+## Cyclic loess
+
+Cyclic loess (Bolstad et al. 2003) takes every pair of runs, plots their log2 difference against
+their mean intensity, fits a smooth curve through that cloud, and subtracts the curve. After a few
+cycles no pair of runs differs systematically at any intensity. This is limma's
+`normalizeCyclicLoess()`, called by proteoDA with `method = "fast"` (each run against the average
+run) and limma's default adaptive span, so the curve's smoothness follows the protein count
+(package behaviour). `normalize_data()` log2-transforms the raw intensities first; the `before`
+matrix is logged here so the two can be compared on one scale.
+
+proteoDA's reports go to `b_reports/`: `norm_comparison.pdf` scores every normalisation method it
+offers, and `qc_pre.pdf` and `qc_post.pdf` show run-level QC before and after. The functions also
+draw to the screen; a null device swallows that copy so it does not land in `Rplots.pdf`.
+
+Choosing cyclic loess is a project decision. The manuscript's pipeline chose it independently,
+after comparing eight methods on pooled coefficient of variation, median absolute deviation and
+inter-run correlation. This repository holds no record of its own comparison beyond
+`norm_comparison.pdf`.
+
+```{r}
+#| label: normalise
+pdf(NULL)
+write_norm_report(dal,
+  grouping_column = "group", output_dir = reports,
+  filename = "norm_comparison.pdf", overwrite = TRUE
+)
+write_qc_report(dal,
+  color_column = "group", output_dir = reports,
+  filename = "qc_pre.pdf", overwrite = TRUE
+)
+before <- log2(as.matrix(dal$data))
+dal <- normalize_data(dal, norm_method = "cycloess")
+write_qc_report(dal,
+  color_column = "group", output_dir = reports,
+  filename = "qc_post.pdf", overwrite = TRUE
+)
+invisible(dev.off())
+stopifnot(identical(dal$metadata$sample_id, colnames(dal$data)))
+```
+
+The same three proteins in the same four runs, before and after. Missing cells stay missing.
+
+```{r}
+#| label: before-after
+round(before[1:3, 1:4], 2)
+round(as.matrix(dal$data)[1:3, 1:4], 2)
+```
+
+Each run's intensity quantiles (5, 25, 50, 75 and 95%) before and after. Normalisation should pull
+the run medians together.
+
+```{r}
+#| label: quantiles
+intensity_quantiles <- function(values, stage) {
+  probs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
+  qs <- apply(values, 2, quantile, probs = probs, na.rm = TRUE)
+  tibble(
+    stage = stage, sample_id = colnames(values),
+    q05 = qs[1, ], q25 = qs[2, ], q50 = qs[3, ], q75 = qs[4, ], q95 = qs[5, ]
+  )
+}
+stopifnot(identical(colnames(before), colnames(dal$data)))
+quantiles <- bind_rows(
+  intensity_quantiles(before, "before"), intensity_quantiles(as.matrix(dal$data), "after")
+) |>
+  left_join(select(dal$metadata, sample_id, arm, timepoint), by = "sample_id")
+quantiles |>
+  group_by(stage) |>
+  summarise(median_of_run_medians = median(q50), spread_of_run_medians = diff(range(q50)))
+```
+
+## How much of each protein's variance the design explains
+
+Eta squared is the share of a protein's variance that the six group-by-time cells (HR or LR at T1,
+T2, T3) explain: 0 means the cells explain nothing, 1 means they explain everything. It is computed
+from a limma fit of `~ group` per protein, needs at least 4 observed runs, and is descriptive.
+Nothing downstream reads it.
+
+```{r}
+#| label: eta-squared
+cell_fit <- lmFit(dal$data, model.matrix(~group, dal$metadata))
+total_ss <- apply(dal$data, 1, \(x) sum((x - mean(x, na.rm = TRUE))^2, na.rm = TRUE))
+eta2 <- 1 - cell_fit$sigma^2 * cell_fit$df.residual / total_ss
+eta2[rowSums(!is.na(dal$data)) < 4] <- NA
+summary(eta2)
+```
+
+## Runs after normalisation
+
+Principal component analysis (PCA) needs a complete matrix, so each run's gaps are filled with that
+run's median, for this picture only. The saved matrix keeps them missing.
+
+```{r}
+#| label: pca
+filled <- apply(dal$data, 2, \(x) replace(x, is.na(x), median(x, na.rm = TRUE)))
+pca <- prcomp(t(filled), center = TRUE, scale. = TRUE)
+components <- tibble(
+  component = paste0("PC", 1:4),
+  variance_explained = round(summary(pca)$importance[2, 1:4], 3)
+)
+pca_scores <- as_tibble(pca$x[, 1:2], rownames = "sample_id") |>
+  left_join(dal$metadata, by = "sample_id")
+components
+```
+
+```{r}
+#| label: fig-pca
+#| fig-cap: "Runs on the first two principal components after normalisation, gaps median-filled."
+#| fig-width: 6
+#| fig-height: 4.5
+ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm)) +
+  geom_point(size = 2.2) +
+  scale_colour_manual(values = c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")) +
+  labs(
+    x = sprintf("PC1 (%.1f%%)", 100 * components$variance_explained[1]),
+    y = sprintf("PC2 (%.1f%%)", 100 * components$variance_explained[2])
+  ) +
+  theme_minimal(base_size = 10)
+```
+
+## Summary
+
+`r nrow(dal$data)` proteins in `r ncol(dal$data)` runs were normalised. The six group-by-time cells
+explain a median `r round(100 * median(eta2, na.rm = TRUE))`% of a protein's variance. PC1 and PC2
+carry `r 100 * components$variance_explained[1]`% and `r 100 * components$variance_explained[2]`%
+of the variance.
+
+## Save
+
+`DAList_normalized.rds` is the input to `03_Quantification` and `04_Gene_Sets`; the workbook is read
+by `Figures/S01_QC`.
+
+```{r}
+#| label: save
+saveRDS(dal, file.path(out, "DAList_normalized.rds"), compress = "xz")
+sheets <- list(
+  normalized = bind_cols(
+    as_tibble(dal$annotation) |> select(uniprot_id, protein, gene, description),
+    as_tibble(dal$data)
+  ),
+  components = components,
+  pca_scores = select(pca_scores, sample_id, subject, arm, timepoint, PC1, PC2),
+  eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2)),
+  intensity_quantiles = quantiles
+)
+holds <- c(
+  "Cyclic-loess log2 abundance, one row per protein.",
+  "Variance explained by the first four principal components.",
+  "Each sample's PC1 and PC2 score.",
+  "Share of each protein's variance explained by the six group cells.",
+  "Each sample's log2 intensity quantiles (5, 25, 50, 75, 95%) before and after cyclic loess."
+)
+write_workbook(sheets, holds, file.path(out, "normalisation.xlsx"), inputs, paths)
+```
