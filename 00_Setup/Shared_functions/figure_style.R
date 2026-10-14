@@ -1,5 +1,5 @@
 # Colours and theme shared by every figure in every folder. The contrast palette is sampled from the
-# design panel (02_HRvLR_groups/Figures/F1_Overview/assets/design.png), so a contrast family looks
+# design panel (05_Figures/HRvLR/F1_Overview/assets/design.png), so a contrast family looks
 # the same in the schematic and in every plot.
 #
 # Each family has three tones: line is the panel's own colour, for marks; fill is the panel's

@@ -17,8 +17,8 @@ all.
 |---|---|
 | [`00_Setup`](00_Setup/README.md) | study inputs, shared helpers and explicitly named shared analyses |
 | [`01_Processing`](01_Processing/README.md) | the shared steps: filtering, normalisation, quantification, gene sets, set scores, modules |
-| [`02_HRvLR_groups`](02_HRvLR_groups/README.md) | HR against LR: contrasts, gene sets, modules, classification, trait links, figures |
-| [`03_Cluster_groups`](03_Cluster_groups/README.md) | the same steps on groups found by clustering size, strength or the proteome |
+| [`03_Group_comparisons/HRvLR`](03_Group_comparisons/HRvLR/README.md) | HR against LR: contrasts, gene sets, modules, classification, trait links, figures |
+| [`03_Group_comparisons`](03_Group_comparisons/README.md) | the same steps on groups found by clustering size, strength or the proteome |
 | [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
 
 The three analysis folders read `01_Processing` and never each other, except the parked HR/LR

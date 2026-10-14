@@ -41,9 +41,10 @@ source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 
 The raw report is DIA-NN's protein matrix: one row per protein group (proteins the measured
 peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities
-built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps each run to a person (`subject`), a responder group (`arm`), a
-biopsy time (`timepoint`: T1 before training, T2 after it, T3 24 h after the final session) and
-their combination (`group`). Three reference tables, kept beside this script in `references/`,
+built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps
+each run to a person (`subject`), a responder group (`arm`), a biopsy time (`timepoint`: T1 before
+training, T2 96 h after the last session, T3 24 h after one further session) and their combination
+(`group`). Three reference tables, kept beside this script in `references/`,
 describe what each protein is.
 
 ```{r}
@@ -549,7 +550,7 @@ detection filter, leaving `r nrow(dal$data)` proteins. `r length(outlier_ids)` r
 ## Save
 
 `DAList_filtered.rds` is the input to normalisation. The workbook keeps every table above;
-`01_Processing/Figures/S01_QC` reads it.
+`05_Figures/Processing/S01_QC` reads it.
 
 ```{r}
 #| label: save

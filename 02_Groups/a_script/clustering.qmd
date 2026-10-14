@@ -88,7 +88,7 @@ within-person change over training (T2 − T1) and after the bout (T3 − T2).
 ```{r}
 #| label: proteome-matrices
 #| eval: !expr is_proteome
-source(here("03_Cluster_groups", "Proteome", "R", "inputs.R"))
+source(here("00_Setup", "Shared_functions", "proteome_inputs.R"))
 modules <- readRDS(paths[["modules"]])
 meta <- as_tibble(modules$meta)
 values <- modules$eigengenes

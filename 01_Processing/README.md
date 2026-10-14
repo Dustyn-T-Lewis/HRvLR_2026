@@ -27,7 +27,7 @@ The three matrices from `03_Quantification` differ in one way each:
 | `DAList_limpa.rds` | the same values, no blood correction | fry set tests, which carry blood in their design |
 | `DAList_corrected.rds` | each protein's blood slope removed against time point | methods that take no covariate: ranks, WGCNA, correlations, PCA |
 
-`Figures/S01_QC` also reads `02_HRvLR_groups/02_Protein_Contrasts`, so `run_all.R` runs it last.
+`Figures/S01_QC` also reads `03_Group_comparisons/HRvLR/02_Protein_Contrasts`, so `run_all.R` runs it last.
 
 ```sh
 Rscript run_all.R 01                                                  # every step here
