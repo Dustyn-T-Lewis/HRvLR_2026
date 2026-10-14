@@ -14,6 +14,21 @@ all.
 ![The pipeline: processing, eight parallel groupings, the shared comparison workflow, the
 continuous analysis and the figures](pipeline.png)
 
+## This branch
+
+`dustyn/trimmed-scope-limpa` rebuilds a trimmed version of this analysis. The eight-grouping
+version stays on `main`.
+
+- Groups: HRvLR only; the clustered groupings are dropped.
+- Input: `00_Setup/Input/report.parquet`, the DIA-NN precursor report, quantified with limpa from
+  precursors (`readDIANN()`, `dpcCN()`, `dpcQuant()`, `dpcDE()`). The analysis keeps the current 16
+  people, with one injection per biopsy chosen by a written rule.
+- Kept: the continuous analysis.
+- Figures: F1 (design, PCA, proteins at Π, p and FDR, fry sets), F2 (pathways), and the
+  continuous overview.
+
+Until the rebuild lands, everything below describes the code as it is.
+
 ## Folders, in run order
 
 | Folder | Holds |

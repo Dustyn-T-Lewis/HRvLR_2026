@@ -8,6 +8,7 @@ not modified by it. Biological reference files live in the processing stages tha
 | File | Contents | Used by |
 |---|---|---|
 | `HRvLR_raw.xlsx` | Protein quantities from a DIA-NN `pg.matrix` export: five annotation columns (`uniprot_id`, `protein`, `gene`, `description`, `n_seq`) and 48 MS-run columns | `01_Processing/01_Protein_Filtering` |
+| `report.parquet` | DIA-NN 2 precursor report: 703,314 rows, 71 columns, 57 runs from 18 people, 2,729 protein groups; precursors at run q ≤ 0.01. Holds re-injections (`_4`, `r`, `rr`, `_r` suffixes) and one failed run (S13-T1, 255 precursors). Run names read `JBBC_CL_S03-T1` | the trimmed-scope rebuild on this branch (not yet read by any step) |
 | `metadata.csv` | One row per MS run: `sample_id`, `subject`, `group`, `timepoint`, `group_time` | `01_Processing/01_Protein_Filtering` |
 | `phenotype.csv` | One row per participant: pre/post muscle size and strength, fibre counts, composite hypertrophy score and training volume | Grouped and continuous analyses |
 
