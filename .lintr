@@ -1,5 +1,6 @@
 linters: linters_with_defaults(
-    line_length_linter(100L),
+    line_length_linter = line_length_linter(100),
     object_usage_linter = NULL
   )
-exclusions: list("renv", "packrat", "archive")
+encoding: "UTF-8"
+exclusions: list("renv", "Scratch")

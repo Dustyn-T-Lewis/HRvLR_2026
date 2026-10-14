@@ -1,0 +1,316 @@
+# Helpers every stage script sources after its library() calls: the statistics written for this
+# study, and the heatmap, page and workbook plumbing the contrasts, classify and associate steps
+# share.
+
+# Blood-corrected values for the methods that cannot carry a covariate: each feature's blood slope,
+# fitted beside the given design, is removed (limma::removeBatchEffect). The design protects what
+# the analysis compares; pass one without group when the labels must not inform the correction.
+remove_blood_effect <- function(values, blood, design) {
+  limma::removeBatchEffect(values, covariates = blood, design = design)
+}
+
+# limpa's fit on its row-wise quantification: precision weights from the standard errors, subject
+# blocked, then the contrasts with robust moderation. Every protein-level contrast uses it.
+fit_limpa_contrasts <- function(proteins, design, contrasts, subject) {
+  limpa::dpcDE(proteins, design, block = subject, plot = FALSE) |>
+    contrasts.fit(contrasts) |>
+    eBayes(robust = TRUE)
+}
+
+# Storey's q-value within one screen, beside BH as an exploratory correction: BH scaled by the
+# estimated share of true nulls (pi0, bootstrap estimate, which copes with discrete p-values). A
+# screen of fewer than 100 tests cannot estimate pi0, so there pi0 is 1 and q equals BH; so is a
+# screen whose p-values qvalue cannot fit (it stops on some heavily tied distributions).
+storey_q <- function(p) {
+  q <- rep(NA_real_, length(p))
+  tested <- !is.na(p)
+  bh <- p.adjust(p[tested], "BH")
+  q[tested] <- if (sum(tested) < 100) {
+    bh
+  } else {
+    tryCatch(
+      qvalue::qvalue(p[tested], pi0.method = "bootstrap")$qvalues,
+      error = \(e) bh
+    )
+  }
+  q
+}
+
+# A grouping on a sample table: only the people it groups, with its labels in group and
+# group_time (group and time point, e.g. HR_T1).
+relabel_samples <- function(meta, group_of) {
+  meta <- meta[meta$subject %in% names(group_of), , drop = FALSE]
+  meta$group <- unname(group_of[meta$subject])
+  meta$group_time <- factor(paste(meta$group, meta$timepoint, sep = "_"))
+  meta
+}
+
+# A 01_Processing object as a grouping sees it: relabelled by its design.rds and cut to the
+# samples left, so every grouping reads the same processing files.
+subset_for_design <- function(x, design) {
+  samples <- design$dal$metadata$sample_id
+  meta_field <- intersect(c("metadata", "meta"), names(x))
+  if (length(meta_field)) {
+    x[[meta_field]] <- relabel_samples(x[[meta_field]], design$group_of)
+    samples <- x[[meta_field]]$sample_id
+  }
+  for (field in intersect(c("proteins", "data", "observed", "scores", "eigengenes"), names(x))) {
+    x[[field]] <- x[[field]][, samples]
+  }
+  x
+}
+
+# One column per subject at a time point, and the change between two time points over the
+# subjects sampled at both.
+values_at_timepoint <- function(values, meta, timepoint) {
+  rows <- filter(meta, timepoint == .env$timepoint)
+  set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
+}
+within_subject_change <- function(values, meta, from, to) {
+  before <- values_at_timepoint(values, meta, from)
+  after <- values_at_timepoint(values, meta, to)
+  both <- intersect(colnames(before), colnames(after))
+  after[, both, drop = FALSE] - before[, both, drop = FALSE]
+}
+
+# Permutation p that is never zero: (b + 1) / (m + 1) (Phipson & Smyth 2010).
+permutation_p <- function(observed, null) (sum(null >= observed) + 1) / (length(null) + 1)
+
+observed_comparison_values <- function(spec, id) {
+  pos <- spec$positive[id, ]
+  neg <- spec$negative[id, ]
+  list(pos = pos[!is.na(pos)], neg = neg[!is.na(neg)])
+}
+# A feature needs three observations per side. Ties push wilcox.test to its normal approximation
+# and it warns on every call.
+test_feature_discrimination <- function(spec, id) {
+  s <- observed_comparison_values(spec, id)
+  n <- c(n_positive = length(s$pos), n_negative = length(s$neg))
+  if (min(n) < 3) {
+    return(c(auc = NA, auc_lower = NA, auc_upper = NA, p = NA, n))
+  }
+  test <- suppressWarnings(wilcox.test(s$pos, s$neg))
+  w <- unname(test$statistic)
+  # direction = "<" pins the first group as the higher side; pROC otherwise flips any AUC below
+  # 0.5. At perfect separation DeLong's variance is zero and the interval collapses, so none is
+  # given.
+  interval <- if (w %in% c(0, prod(n))) {
+    c(NA, NA)
+  } else {
+    pROC::roc(controls = s$neg, cases = s$pos, direction = "<", quiet = TRUE) |>
+      pROC::ci.auc(method = "delong") |>
+      as.numeric() |>
+      _[c(1, 3)]
+  }
+  c(
+    auc = w / prod(n), auc_lower = interval[1], auc_upper = interval[2], p = test$p.value, n
+  )
+}
+
+# The phenotype as the association steps use it, one row per subject per table. Size and strength
+# traits only (the MyoVision fibre counts stay out). pairings maps each window to the table it is
+# tested against: % change, composite and volume for the change windows and for the T1 level
+# ("baseline"), the trait levels at the same biopsy for baseline_level and post_level, and the T2
+# levels for post_bout_level, since T3 follows the same training.
+phenotype_tables <- function(phenotype) {
+  traits <- c("fcsa_mixed", "fcsa_type1", "fcsa_type2", "mcsa", "leg_press_1rm", "leg_ext_1rm")
+  biopsy <- phenotype |>
+    select(subject, group, matches("_(pre|post)_")) |>
+    tidyr::pivot_longer(-c(subject, group),
+      names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*"
+    ) |>
+    tidyr::pivot_wider(names_from = trait) |>
+    mutate(timepoint = if_else(when == "pre", "T1", "T2")) |>
+    select(subject, group, timepoint, all_of(traits))
+  change <- biopsy |>
+    tidyr::pivot_longer(all_of(traits), names_to = "trait") |>
+    tidyr::pivot_wider(names_from = timepoint) |>
+    transmute(subject, trait, pct = 100 * (T2 - T1) / T1) |>
+    tidyr::pivot_wider(names_from = trait, values_from = pct, names_prefix = "pct_") |>
+    left_join(select(phenotype, subject, comp_hypertrophy, volume_load_total_kg), by = "subject")
+  level <- \(tp) filter(biopsy, timepoint == tp) |> select(subject, all_of(traits))
+  list(
+    traits = traits, biopsy = biopsy,
+    pairings = list(
+      training = change, baseline = change, acute = change,
+      baseline_level = level("T1"), post_level = level("T2"), post_bout_level = level("T2")
+    )
+  )
+}
+pairing_value <- \(pairings, window, name, subjects) {
+  set_names(pairings[[window]][[name]], pairings[[window]]$subject)[subjects]
+}
+
+# Spearman rho and p per row from cor.test, with a 95% interval from Fisher's z transform
+# (DescTools::CorCI), approximate at this n. exact = TRUE gives the exact permutation p, which
+# cor.test computes for nine subjects or fewer (the within-group tests); with ties it falls back to
+# the normal approximation.
+spearman_by_row <- function(x, outcome, exact = FALSE) {
+  usable <- !is.na(outcome)
+  x <- x[, usable, drop = FALSE]
+  tests <- map(seq_len(nrow(x)), \(i) {
+    suppressWarnings(cor.test(x[i, ], outcome[usable], method = "spearman", exact = exact))
+  })
+  n <- unname(rowSums(!is.na(x)))
+  rho <- map_dbl(tests, \(r) unname(r$estimate))
+  interval <- map2(rho, n, \(r, k) {
+    if (is.na(r) || k < 4) c(NA, NA) else unname(DescTools::CorCI(r, k)[2:3])
+  })
+  tibble(
+    feature = rownames(x), n_subjects = n, rho = rho,
+    rho_lower = map_dbl(interval, 1), rho_upper = map_dbl(interval, 2),
+    p = map_dbl(tests, "p.value")
+  )
+}
+
+# limma on one value per subject: each chosen term's estimate with its 95% interval, t and p
+# (topTable, confint = TRUE).
+fit_subject_model <- function(x, predictors, formula, terms) {
+  ok <- complete.cases(predictors)
+  x <- x[, ok, drop = FALSE]
+  fit <- lmFit(x, model.matrix(formula, predictors[ok, , drop = FALSE])) |>
+    eBayes(robust = TRUE)
+  n <- set_names(unname(rowSums(!is.na(x))), rownames(x))
+  map(terms, \(term) {
+    topTable(fit, coef = term, number = Inf, sort.by = "none", confint = TRUE) |>
+      as_tibble(rownames = "feature") |>
+      transmute(
+        feature,
+        coefficient = term, n_subjects = n[feature], estimate = logFC,
+        estimate_lower = CI.L, estimate_upper = CI.R, t, p = P.Value
+      )
+  }) |>
+    list_rbind() |>
+    filter(!is.na(p))
+}
+
+# Display only: row order, colour limits and centring touch no test.
+ComplexHeatmap::ht_opt(message = FALSE)
+diverging <- c("#5E3C99", "white", "#E66101")
+status_colours <- c("not significant" = "white", "p < 0.05" = "#35978F", "BH < 0.05" = "black")
+status_legend <- ComplexHeatmap::Legend(
+  labels = c(names(status_colours), "not tested"), title = "status",
+  legend_gp = grid::gpar(fill = c(status_colours, "grey80"))
+)
+status_of <- \(p, fdr) {
+  case_when(fdr < 0.05 ~ "BH < 0.05", p < 0.05 ~ "p < 0.05", !is.na(p) ~ "not significant")
+}
+# Colours stop at the 99th percentile of |x| so a few extremes do not wash out the rest.
+cap <- \(x) unname(quantile(abs(x), 0.99, na.rm = TRUE))
+# Long results to a feature-by-column matrix; untested cells stay NA and draw grey.
+results_to_matrix <- function(d, rows, cols, col, value) {
+  m <- matrix(NA, length(rows), length(cols), dimnames = list(rows, cols))
+  d <- filter(d, feature %in% rows, .data[[col]] %in% cols)
+  m[cbind(d$feature, d[[col]])] <- value(d)
+  m
+}
+# An effect map on a diverging scale when breaks are given, otherwise a status map; labels name
+# the rows.
+make_report_heatmap <- function(m, title, breaks = NULL, legend = title, row_names = FALSE,
+                                column_title = title, column_names_gp = gpar(fontsize = 7),
+                                labels, ...) {
+  rows <- rownames(m)
+  Heatmap(m,
+    name = title, na_col = "grey80",
+    col = if (is.null(breaks)) status_colours else circlize::colorRamp2(breaks, diverging),
+    show_heatmap_legend = !is.null(breaks) && !is.null(legend),
+    heatmap_legend_param = list(title = legend, at = if (!is.null(breaks)) signif(breaks, 2)),
+    cluster_rows = FALSE, cluster_columns = FALSE, column_title = column_title,
+    column_title_gp = gpar(fontsize = 8), column_names_gp = column_names_gp,
+    show_row_names = row_names && length(rows) <= 80,
+    row_labels = gsub("\n", " ", labels[rows]),
+    row_names_gp = gpar(fontsize = if (length(rows) <= 40) 7 else 5),
+    use_raster = length(rows) > 200, ...
+  )
+}
+heatmap_page <- function(maps, title, caption, legends = list(status_legend)) {
+  list(title = title, draw = function() {
+    draw(maps,
+      column_title = title, column_title_gp = gpar(fontsize = 11, fontface = "bold"),
+      merge_legend = TRUE, heatmap_legend_list = legends, padding = unit(c(14, 4, 4, 4), "mm")
+    )
+    grid.text(stringr::str_wrap(caption, 190),
+      x = unit(4, "mm"), y = unit(3, "mm"), just = c("left", "bottom"), gp = gpar(fontsize = 7)
+    )
+  })
+}
+
+# Twelve panels to a page; blank slots keep a short last page at the same panel size.
+slots <- \(panels) c(panels, strrep(" ", seq_len(12 - length(panels))))
+# Report PDFs draw at most hit_cap hits per page group (rows arrive sorted by p); the workbooks
+# keep every row.
+hit_cap <- 24
+capped_count <- \(d, by) sum(pmin(count(d, across(all_of(by)))$n, hit_cap))
+paginate_report_features <- function(hits, by) {
+  hits |>
+    filter(row_number() <= hit_cap, .by = all_of(by)) |>
+    mutate(
+      page = (row_number() - 1) %/% 12 + 1, n_pages = max(page),
+      position = (row_number() - 1) %% 12 + 1, .by = all_of(by)
+    ) |>
+    mutate(pdf_page = consecutive_id(pick(all_of(by)), page))
+}
+page_theme <- ggplot2::theme_minimal(base_size = 9) +
+  ggplot2::theme(
+    strip.text = ggplot2::element_text(size = 7),
+    plot.title = ggplot2::element_text(face = "bold"),
+    plot.caption = ggplot2::element_text(hjust = 0), legend.position = "top"
+  )
+counts_line <- \(info, noun, hits) {
+  sprintf(
+    "%d of %d %s at p < 0.05, %d at BH < 0.05. Page %d of %d.", info$n_nominal, info$n_tested,
+    noun, info$n_fdr_05, hits$page[1], hits$n_pages[1]
+  )
+}
+
+# What every column in every workbook holds, from 00_Setup/Shared_functions/workbook_columns.csv:
+# a name (or a pattern starting with ^) and, where one name means different things, the sheets it
+# applies to. The columns sheet lists each sheet's columns with their meaning; a column the
+# dictionary does not describe stops the run, so no workbook ships an unexplained column.
+column_dictionary <- readr::read_csv(
+  here::here("00_Setup", "Shared_functions", "workbook_columns.csv"),
+  col_types = "ccc", na = ""
+)
+describe_columns <- function(sheets) {
+  rows <- purrr::imap(sheets, \(d, sheet) tibble(sheet = sheet, column = names(d))) |>
+    purrr::list_rbind()
+  meaning <- purrr::map2_chr(rows$sheet, rows$column, \(sheet, column) {
+    fits <- column_dictionary |>
+      filter(
+        is.na(.data$sheet) | stringr::str_detect(.env$sheet, coalesce(.data$sheet, "^$")),
+        if_else(startsWith(.data$column, "^"),
+          stringr::str_detect(.env$column, .data$column), .data$column == .env$column
+        )
+      ) |>
+      arrange(is.na(sheet))
+    if (nrow(fits)) fits$meaning[1] else NA_character_
+  })
+  missing <- unique(rows$column[is.na(meaning)])
+  if (length(missing)) {
+    stop(
+      "00_Setup/Shared_functions/workbook_columns.csv does not describe: ",
+      paste(missing, collapse = ", ")
+    )
+  }
+  mutate(rows, meaning = meaning)
+}
+
+# Every workbook opens on read_me and columns and ends with the inputs' md5 and the loaded packages;
+# note, when given, is one more read_me row.
+write_workbook <- function(sheets, holds, file, inputs, paths, note = NULL) {
+  sheets <- c(sheets, list(
+    input_manifest = tibble(
+      input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+    ),
+    package_versions = sessioninfo::package_info("loaded", dependencies = FALSE) |>
+      as_tibble() |>
+      select(package, version = loadedversion, source)
+  ))
+  holds <- c(holds, "Files read, with md5.", "Packages loaded at run time.")
+  read_me <- tibble(sheet = c("columns", names(sheets)), holds = c(
+    "Every column of every sheet below, with what it holds.", holds
+  ))
+  if (!is.null(note)) read_me <- add_row(read_me, sheet = "note", holds = note)
+  columns <- describe_columns(sheets)
+  writexl::write_xlsx(c(list(read_me = read_me, columns = columns), sheets), file)
+}

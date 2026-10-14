@@ -1,0 +1,225 @@
+---
+title: "Quantification"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+A missing value in this data usually means the protein was too faint to detect, not that it was
+absent at random. limpa turns that into a model: one detection probability curve for the whole
+experiment, then a value and a standard error for every protein in every run. Observed values keep
+a small standard error; values the curve had to estimate get a wide one, so later fits weight them
+less. Nothing is filled in as if it had been measured.
+
+This step writes three objects. `proteins.rds` holds limpa's fit for the protein-level models,
+which carry blood as a covariate. `DAList_limpa.rds` holds the complete matrix.
+`DAList_corrected.rds` holds the same matrix with each protein's blood slope removed, for methods
+that cannot carry a covariate.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(limpa)
+library(dplyr)
+library(tibble)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+```
+
+## Input
+
+The input is the normalised `DAList`: log2 abundance with `NA` where a protein went undetected.
+`blood_rel`, the run's haemoglobin signal relative to its median intensity, comes from
+`01_Protein_Filtering`. Centring it (`blood`) makes the model intercepts refer to a run of average
+blood content.
+
+```{r}
+#| label: input
+stage <- here("01_Processing", "03_Quantification")
+out <- file.path(stage, "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+inputs <- c(normalized = "01_Processing/02_Normalisation/c_data/DAList_normalized.rds")
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+dal <- readRDS(paths[["normalized"]])
+values <- as.matrix(dal$data)
+stopifnot(identical(dal$metadata$sample_id, colnames(values)))
+
+group_time_levels <- c("HR_T1", "HR_T2", "HR_T3", "LR_T1", "LR_T2", "LR_T3")
+meta <- as_tibble(dal$metadata) |>
+  mutate(group_time = factor(group_time, group_time_levels), blood = blood_rel - mean(blood_rel))
+dim(values)
+c(pct_missing = round(100 * mean(is.na(values)), 1))
+head(select(meta, sample_id, subject, group_time, blood_rel, blood))
+```
+
+## Detection probability curve
+
+`dpc()` fits the chance that a value is detected as a logistic function of its log2 intensity: the
+intercept sets where detection starts, the slope how fast it rises. A slope near 0 would mean
+values go missing at random; a steep slope means faint proteins go missing first.
+
+Evidence for this route (decisions log, 2026-10-01): missingness here tracks intensity (Spearman
+rho -0.77), and the earlier pipeline's imputation (missForest) filled mid-range values and shrank
+the variance. 17 of 49 earlier interaction hits rested on a group cell with 3 or fewer observed
+values.
+
+```{r}
+#| label: dpc
+curve <- dpc(values)
+curve$dpc
+```
+
+```{r}
+#| label: fig-dpc
+#| fig-cap: "Detection probability against log2 intensity. The curve is limpa's fit."
+#| fig-width: 6
+#| fig-height: 4.5
+plotDPC(curve)
+```
+
+## A value and a standard error for every protein
+
+The input is already summarised to proteins, so each row is its own feature. `dpcQuantByRow()` is
+the route the limpa vignette gives for protein-level input, and Gordon Smyth confirmed on the
+Bioconductor support site (support.bioconductor.org/p/9163224) that it needs intensity-based log
+values, which this matrix is.
+
+```{r}
+#| label: quantify
+proteins <- dpcQuantByRow(values, dpc = curve, verbose = FALSE)
+observed <- proteins$other$n.observations > 0
+stopifnot(!anyNA(proteins$E), identical(observed, !is.na(values)))
+standard_error <- proteins$other$standard.error
+```
+
+One protein with gaps, before and after. Observed runs keep their value and a small standard
+error; the missing runs get an estimate from the curve and a wide standard error.
+
+```{r}
+#| label: before-after
+example <- which(rowSums(!observed) >= 3)[1]
+tibble(
+  sample_id = colnames(values)[1:8],
+  observed = round(values[example, 1:8], 2),
+  limpa = round(proteins$E[example, 1:8], 2),
+  standard_error = round(standard_error[example, 1:8], 2)
+) |>
+  print(n = 8)
+c(protein = dal$annotation$gene[example], runs_missing = sum(!observed[example, ]))
+```
+
+## Blood-corrected matrix
+
+Some methods (gene-set scores, co-expression modules, clustering) take no covariate. For them, each
+protein's slope on the blood index is removed with `limma::removeBatchEffect()`. The slope is fitted
+beside time point only, `~ 0 + timepoint`, so no HR or LR label shapes the matrix every later
+analysis reads. Models that can carry blood as a covariate use `proteins.rds` instead (decisions
+log, 2026-10-01).
+
+```{r}
+#| label: blood-correct
+corrected <- remove_blood_effect(proteins$E, meta$blood, model.matrix(~ 0 + timepoint, meta))
+```
+
+Each protein's Spearman correlation with the blood index, before and after removal, split by how
+many of the 45 runs measured the protein.
+
+```{r}
+#| label: blood-check
+blood_rho <- \(m) as.vector(cor(t(m), meta$blood, method = "spearman"))
+tibble(
+  runs_measured = cut(rowSums(observed), c(0, 10, 20, 39, 45)),
+  before = abs(blood_rho(proteins$E)), after = abs(blood_rho(corrected))
+) |>
+  group_by(runs_measured) |>
+  summarise(proteins = n(), median_rho_before = median(before), median_rho_after = median(after))
+```
+
+Removal works for well-measured proteins and fails for sparse ones: it raises their correlation
+with blood. The likely cause is that `removeBatchEffect()` fits one slope across measured and
+curve-estimated values, then subtracts slope × blood from both, stamping blood onto estimates that
+never carried it. This is an open methodological problem, not yet fixed. Every analysis that reads
+`DAList_corrected.rds` inherits it for proteins measured in few runs.
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  identical(dim(proteins$E), dim(values)),
+  identical(dim(corrected), dim(values)),
+  !anyNA(corrected),
+  all(standard_error > 0),
+  identical(meta$sample_id, colnames(corrected))
+)
+se_observed <- median(standard_error[observed])
+se_missing <- median(standard_error[!observed])
+c(median_se_observed = se_observed, median_se_missing = se_missing)
+```
+
+## Summary
+
+`r round(100 * mean(!observed), 1)`% of values are missing. The detection curve has intercept
+`r round(curve$dpc[1], 2)` and slope `r round(curve$dpc[2], 2)` on the logit scale.
+`r nrow(values)` proteins now have a value in all `r ncol(values)` runs;
+`r sum(rowSums(observed) == ncol(values))` were measured in every run, and the median protein in
+`r median(rowSums(observed))`. A missing value's median standard error is
+`r round(se_missing / se_observed, 1)` times an observed one's.
+
+## Save
+
+`proteins.rds` feeds the protein-level contrasts. `DAList_limpa.rds` and `DAList_corrected.rds`
+feed the set, module, classification and trait steps. `05_Figures/Processing/S01_QC` reads the workbook. The
+`sample_correlation` sheet centres each protein on its mean first, so the correlation reflects how
+runs differ rather than the abundance order every run shares.
+
+```{r}
+#| label: save
+as_dalist <- function(data) {
+  list(data = data, annotation = dal$annotation, metadata = meta, observed = observed)
+}
+saveRDS(
+  list(proteins = proteins, metadata = meta, annotation = dal$annotation),
+  file.path(out, "proteins.rds"),
+  compress = "xz"
+)
+saveRDS(as_dalist(proteins$E), file.path(out, "DAList_limpa.rds"), compress = "xz")
+saveRDS(as_dalist(corrected), file.path(out, "DAList_corrected.rds"), compress = "xz")
+
+write_workbook(
+  list(
+    curve = tibble(
+      term = names(curve$dpc), estimate = unname(curve$dpc),
+      pct_missing = 100 * mean(!observed)
+    ),
+    proteins = tibble(
+      uniprot_id = rownames(values), gene = dal$annotation$gene,
+      n_observed = rowSums(observed), prop_observed = rowMeans(observed),
+      mean_observed = rowMeans(values, na.rm = TRUE), mean_complete = rowMeans(proteins$E),
+      median_se_observed = apply(ifelse(observed, standard_error, NA), 1, median, na.rm = TRUE),
+      median_se_missing = apply(ifelse(observed, NA, standard_error), 1, median, na.rm = TRUE)
+    ),
+    blood = select(meta, sample_id, subject, group_time, blood_rel, blood),
+    sample_correlation = as_tibble(cor(corrected - rowMeans(corrected)), rownames = "sample_id")
+  ),
+  c(
+    "DPC intercept and slope on the logit scale, and the share of values missing.",
+    paste(
+      "Per protein: values observed, mean log2 abundance where observed and over the complete",
+      "matrix, and the median standard error where observed and where missing."
+    ),
+    "Per sample: blood index (HBB and HBA1 against the sample median) and its centred value.",
+    "Pearson correlation between samples, each protein centred, on the blood-corrected matrix."
+  ),
+  file.path(out, "quantification.xlsx"),
+  inputs, paths
+)
+```

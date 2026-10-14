@@ -1,103 +1,121 @@
 # HRvLR Proteomics
 
-DIA mass-spectrometry proteomics of skeletal muscle from a resistance training study. Sixteen
-subjects were biopsied at baseline (T1), after the training programme (T2) and after an acute bout
-at the end of it (T3). They were labelled High or Low Responder by a median split of a composite
-hypertrophy score, eight each. 48 MS runs; three are dropped as outliers, leaving 45.
+DIA mass-spectrometry proteomics of skeletal muscle from a resistance-training study. Sixteen
+people were biopsied before training (T1), 96 h after the last of 16 sessions (T2), and 24 h after
+one further standardised session (T3). Of 48 runs, 45 pass quality control, and 1,900 of 2,400
+proteins are analysed.
 
-The primary comparison is the training interaction: whether the proteome changed differently over
-training in HR than in LR. The study also asks which proteins, pathways and co-expression modules
-separate the groups, and which track the phenotype measured on each biopsy.
+Twenty-five people trained. The study ranked them on a composite hypertrophy score,
+(2 × %ΔmCSA + %ΔfCSA) / 3, and profiled the top eight as higher responders (HR) and the bottom
+eight as lower responders (LR); the middle nine were not profiled. The repository asks its
+questions three ways: with those groups, with groups found by clustering, and with no groups at
+all.
 
-## Every level runs contrasts, classify and associate
+![The pipeline: processing, eight parallel groupings, the shared comparison workflow, the
+continuous analysis and the figures](pipeline.png)
 
-| Stage | Runs | Writes |
+## Folders, in run order
+
+| Folder | Holds |
+|---|---|
+| [`00_Setup`](00_Setup/README.md) | study inputs and the helpers every walkthrough sources |
+| [`01_Processing`](01_Processing/README.md) | filtering, normalisation, limpa quantification, gene sets, set scores, modules |
+| [`02_Groups`](02_Groups/README.md) | who is compared: eight parallel groupings, from the study labels and from clustering |
+| [`03_Group_comparisons`](03_Group_comparisons/README.md) | how two groups differ: contrasts, sets, modules, classification, trait links, for every grouping |
+| [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
+| [`05_Figures`](05_Figures/README.md) | figures drawn from saved results only |
+
+The eight groupings run side by side through the same steps:
+
+| Grouping | Groups | Defined by |
 |---|---|---|
-| [`00_Input/`](00_Input/README.md) | study data, no code | |
-| [`01_Preprocess/`](01_Preprocess/README.md) | filtering, cyclic loess, missForest | `DAList_normalized.rds`, `DAList_imputed.rds` |
-| [`02_Differential_Expression/`](02_Differential_Expression/README.md) | the protein level | `design.rds`, `fit.rds`, `associate.rds` |
-| [`03_Pathway_Enrichment/`](03_Pathway_Enrichment/README.md) | the pathway level: gene sets, singscore | `gene_sets.rds`, `singscore.rds`, `set_tests.rds` |
-| [`04_Network/`](04_Network/README.md) | the module level: WGCNA eigengenes | `modules.rds` |
-| [`05_Summary/`](05_Summary/README.md) | planned, no code yet | |
+| `HRvLR` | HR, LR | the study: top and bottom 8 of 25 on the composite hypertrophy score |
+| `Muscle_size` | HR, LR | clustering on % change in fibre and muscle area |
+| `Muscle_strength` | HR, LR | clustering on % change in leg-press and leg-extension 1RM |
+| `Proteome_T1`, `_T2`, `_T3`, `_training`, `_acute` | C1, C2 | clustering on module eigengenes at a time point, or their change |
 
-Stages 02 to 04 share one layout. Step `02_Contrasts` tests the nine contrasts, `03_Classify`
-scores eight classification tasks by AUC, and `04_Associate` ties each feature to phenotype by a
-sample-level limma model and by change-score correlation. Each level adds its own steps around
-them. Every nominal result gets a panel in its step's PDF, and every table reports the count chance
-predicts beside the count observed.
+## Every step
 
-Each sub-stage holds `a_script/` (one R script), `b_reports/` (`<step>_figures.pdf`, 11 × 8.5 in),
-`c_data/` (one workbook, plus the `.rds` a later step reads) and a README. Every workbook opens on a
-`read_me` sheet and ends with `input_manifest` and `package_versions`. Data passes through disk, so
-any sub-stage re-runs on its own once its inputs exist.
+Each analysis loads packages, reads its inputs, checks them, runs the analysis, validates the
+result, summarises and saves, explaining each step beside the code.
 
-## One command per step, in order
+```
+01_Processing/NN_Step/            04_Continuous_no_group/NN_Step/
+├── a_script/   the walkthrough (.qmd)
+├── b_reports/  the rendered walkthrough (.html)
+└── c_data/     workbooks, plus any .rds a later step reads
+
+02_Groups/, 03_Group_comparisons/
+├── code/       each step written once, as an R script that is also its report
+└── <grouping>/
+    ├── a_script/  run_groups.R or run_comparisons.R: runs every step for this grouping
+    ├── b_reports/ one PDF per step
+    └── c_data/    files numbered by step
+
+05_Figures/<grouping or phase>/<Figure>/
+├── a_script/   a plain R script (F1's comes from 05_Figures/code/)
+├── b_reports/  the figure PDF
+└── c_data/     the numbers each panel draws
+```
+
+Every workbook opens with `read_me` (one line per sheet) and `columns` (every column defined, from
+`00_Setup/Shared_functions/workbook_columns.csv`), and closes with `input_manifest` (every file
+read, with its md5) and `package_versions`. A step reads only files earlier steps saved, so any
+step reruns alone.
+
+## Run
 
 ```sh
 Rscript -e 'renv::restore()'
-
-for s in 01_Filtering/a_script/01_filter 02_Normalization/a_script/02_normalize \
-         03_Imputation/a_script/03_impute; do
-  Rscript 01_Preprocess/$s.R
-done
-
-for s in 01_Design/a_script/01_design 02_Contrasts/a_script/02_contrasts \
-         03_Classify/a_script/03_classify 04_Associate/a_script/04_associate; do
-  Rscript 02_Differential_Expression/$s.R
-done
-
-for s in 00_Gene_Sets/a_script/00_gene_sets 01_Scores/a_script/01_scores \
-         02_Contrasts/a_script/02_contrasts 03_Classify/a_script/03_classify \
-         04_Associate/a_script/04_associate 05_Volcano/a_script/05_volcano \
-         06_NES_Scatter/a_script/06_nes_scatter; do
-  Rscript 03_Pathway_Enrichment/$s.R
-done
-
-for s in 01_Build_Modules/a_script/01_build_modules 02_Contrasts/a_script/02_contrasts \
-         03_Classify/a_script/03_classify 04_Associate/a_script/04_associate \
-         05_Characterise/a_script/05_characterise 06_Preserve/a_script/06_preserve; do
-  Rscript 04_Network/$s.R
-done
+Rscript run_all.R                       # every step in order
+Rscript run_all.R 01_Processing 02      # stages whose path starts with these prefixes
+Rscript 03_Group_comparisons/HRvLR/a_script/run_comparisons.R   # one grouping
 ```
 
-The run takes about 20 minutes, most of it the three associate steps and the preservation
-permutations. `04_Network/05_Characterise` needs the STRING files; `00_Input/README.md` has the
-download command.
+Run from the project root, so Quarto's R sessions start with the project's renv library. The
+runner stops at the first failure; logs go to the untracked `Scratch/runlogs/`. Every reference
+file sits in the `references/` folder of the step that reads it; nothing downloads at run time.
+Random steps are seeded.
 
-## proteoDA fits the unimputed matrix; BH never pools across screens
+## Terms
 
-Preprocessing and the fit use proteoDA: `DAList`, `zero_to_missing`, `filter_proteins_by_group`,
-`filter_samples`, `normalize_data("cycloess")`, then `add_design`, `add_contrasts`,
-`fit_limma_model` and `extract_DA_results`. The design is six cell means with subject as a random
-effect.
+| Term | Meaning here |
+|---|---|
+| contrast | one comparison of group means, e.g. `Training_HR` (HR's T2 minus T1) or `Training_Interaction` (HR's training change minus LR's) |
+| logFC, `_lower`, `_upper` | the contrast on the log2 scale (+1 is twice as much) and its 95% interval; every estimate's interval is named after it (`slope_lower`, `rho_upper`) |
+| `p`, `fdr`, `qvalue` | nominal p; Benjamini-Hochberg within the screen the sheet names; Storey's q over the same screen |
+| Π | p^\|logFC\| (Xiao et al. 2014), the manuscript's nominal score |
+| limpa | gives every protein a value and a standard error in every biopsy from a detection-probability curve, so missing values are modelled rather than filled |
+| fgsea, fry | two gene-set tests: fgsea asks whether a set ranks high against other proteins; fry asks whether its proteins move consistently across people |
+| module, eigengene, kME | a WGCNA group of co-varying proteins, its one-number summary per biopsy, and a protein's correlation with that summary |
+| singscore | one score per gene set per biopsy, from the set's rank within that biopsy |
+| AUC | the chance a random person from the first group has a higher value than one from the second |
+| baseline_reference | the baseline contrast: the groups come from an outcome, so a T1 difference shows how far the split separates people before training |
+| `group`, `group_time`, `hr_lr` | the two groups a grouping compares; a group-by-time cell such as `HR_T1`; the study's HR/LR label where it sits beside a clustering's own groups |
+| `feature_type` | proteins, gene sets or modules |
+| `window` | the time span a test covers: training (T2 − T1), acute (T3 − T2), or a single time point |
 
-The fitted matrix stays unimputed: limma fits each protein on the samples where it was seen. A
-missForest copy is read only by the methods that need a complete matrix: `fry`, singscore and
-WGCNA.
+## Conventions
 
-BH runs within each contrast, task, trait and term, or window and outcome. Set tests pool the five
-collections within a contrast; set classification and association split by collection.
+- Blood: an index (mean log2 HBB and HBA1 against the sample median) is a covariate in every
+  limma model. Tests that take no covariate read a copy with each protein's blood slope removed
+  against time point only.
+- People: each person gives up to three biopsies, so person is a random block in biopsy-level
+  models; change scores carry one value per person.
+- Reporting: nothing is filtered on a threshold before it is written. Reports draw at most 12 to
+  24 features per screen; the workbooks keep every row.
+- Identifiers: proteins by UniProt accession, gene sets by `collection|name`, modules by colour.
+  Module colours change if `01_Processing` is rebuilt.
 
-## renv.lock pins every package
+## Limits
 
-Stages 01 and 02: `proteoDA`, `limma`, `missForest`, `ranger`, `lme4`, `callr`,
-`here`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr`, `forcats`, `readr`, `readxl`, `ggplot2`,
-`patchwork`, `pROC`, `ggpubr`, `writexl`, `sessioninfo`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`,
-`GO.db`, `GSEABase`, `AnnotationDbi`, `ggrepel` and `enrichVolcano`. Stage 04 adds `WGCNA`,
-`clusterProfiler`, `enrichplot`, `STRINGdb`, `tidygraph`, `ggraph` and `igraph`.
+- A needle biopsy holds a varying share of fibre, connective tissue and fat; no covariate adjusts
+  for it.
+- Removing each protein's blood slope raises, rather than lowers, the blood correlation of the 85
+  proteins measured in 20 or fewer runs (`01_Processing/03_Quantification`). Every method that
+  reads the blood-corrected matrix inherits this; the fix is pending.
 
-`enrichVolcano` 0.3.0.9000 is recorded in `renv.lock` without a remote, so `renv::restore()`
-cannot fetch it. To move to the GitHub release, install it and snapshot, then rerun stage 03 and
-check its figures:
+## Dependencies
 
-```r
-renv::install("Dustyn-T-Lewis/enrichVolcano")
-renv::snapshot()
-```
-
-The code calls only its exported `volcano_ring()`, `volcano_ring_theme()` and `ev_clean_label()`.
-
-## Version 1 is the tag legacy-v1
-
-The first version of this project, with its prediction screen (F06), `functions/`, `tests/` and
-`archive/`, is the git tag `legacy-v1`.
+`renv.lock` pins every package the code loads. `enrichVolcano` comes from GitHub, pinned to commit
+`d3fed631f4`.
