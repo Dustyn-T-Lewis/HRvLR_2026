@@ -2267,14 +2267,18 @@ vertical-align: -.125em;
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(<span class="st">&quot;02_Groups&quot;</span>, params<span class="sc">$</span>grouping, <span class="st">&quot;c_data/groups.rds&quot;</span>)</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;03_Group_comparisons&quot;</span>, params<span class="sc">$</span>grouping, <span class="st">&quot;01_Design_Contrasts&quot;</span>, params<span class="sc">$</span>input)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">proteins =</span> <span class="st">&quot;01_Processing/03_Quantification/c_data/proteins.rds&quot;</span>, <span class="at">groups =</span> groups_file)</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">map_chr</span>(inputs, here)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(paths))</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>quantified <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;proteins&quot;</span>]])</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>grouping <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;groups&quot;</span>]])</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>arms <span class="ot">&lt;-</span> grouping<span class="sc">$</span>arms</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(grouping<span class="sc">$</span>group_of)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>input <span class="ot">&lt;-</span> params<span class="sc">$</span>input[<span class="fu">nzchar</span>(params<span class="sc">$</span>input)]</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">paste</span>(</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;03_Group_comparisons&quot;</span>, params<span class="sc">$</span>grouping, <span class="st">&quot;01_Design_Contrasts&quot;</span>, input),</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">collapse =</span> <span class="st">&quot;/&quot;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">proteins =</span> <span class="st">&quot;01_Processing/03_Quantification/c_data/proteins.rds&quot;</span>, <span class="at">groups =</span> groups_file)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">map_chr</span>(inputs, here)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(paths))</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>quantified <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;proteins&quot;</span>]])</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>grouping <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;groups&quot;</span>]])</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>arms <span class="ot">&lt;-</span> grouping<span class="sc">$</span>arms</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(grouping<span class="sc">$</span>group_of)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 HR LR 

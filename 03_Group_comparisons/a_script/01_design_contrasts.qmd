@@ -46,7 +46,11 @@ groups_file <- if (params$grouping == "Proteome") {
 } else {
   file.path("02_Groups", params$grouping, "c_data/groups.rds")
 }
-stage <- file.path("03_Group_comparisons", params$grouping, "01_Design_Contrasts", params$input)
+input <- params$input[nzchar(params$input)]
+stage <- paste(
+  c("03_Group_comparisons", params$grouping, "01_Design_Contrasts", input),
+  collapse = "/"
+)
 inputs <- c(proteins = "01_Processing/03_Quantification/c_data/proteins.rds", groups = groups_file)
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
