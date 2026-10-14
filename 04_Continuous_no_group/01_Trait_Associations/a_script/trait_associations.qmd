@@ -15,7 +15,7 @@ split, not confounding: a feature that tracks growth may track anything that tra
 across these 16 people, and HR and LR are extreme groups, so correlations across them run stronger
 than they would across all 25 trained people.
 
-Four analyses, each at three levels (proteins, gene sets, modules):
+Four analyses, each for three feature types (proteins, gene sets, modules):
 
 - Sample model. Every T1 and T2 biopsy carries that person's trait values at that time. Per trait,
   limma fits feature ~ timepoint + between + within with person as a block, where `between` is the
@@ -98,7 +98,7 @@ associate_level <- function(stage, name, inputs, paths, values, meta, feature_la
   samples <- meta |>
     filter(timepoint %in% c("T1", "T2")) |>
     select(sample_id, subject, timepoint) |>
-    left_join(select(biopsy, -arm), by = c("subject", "timepoint"))
+    left_join(select(biopsy, -group), by = c("subject", "timepoint"))
   model <- map(set_names(traits), \(trait) {
     s <- samples |>
       filter(!is.na(.data[[trait]])) |>
@@ -269,7 +269,7 @@ associate_level <- function(stage, name, inputs, paths, values, meta, feature_la
       d <- filter(change_score, window == w)
       maps <- labelled_heat(
         results_to_matrix(d, rows, pairing_outcomes[[w]], "trait", \(d) d$rho),
-        "Spearman rho, both arms pooled", c(-1, 0, 1), "rho"
+        "Spearman rho, both groups pooled", c(-1, 0, 1), "rho"
       ) +
         labelled_heat(
           results_to_matrix(d, rows, pairing_outcomes[[w]], "trait", \(d) status_of(d$p, d$fdr)),
@@ -600,7 +600,9 @@ Tests and calls per analysis and level, summed over traits and windows:
 
 ```{r}
 #| label: summary
-bind_rows(proteins = protein_counts, sets = set_counts, modules = module_counts, .id = "level") |>
+bind_rows(
+  proteins = protein_counts, sets = set_counts, modules = module_counts, .id = "feature_type"
+) |>
   mutate(analysis = sub(":.*", "", analysis)) |>
-  summarise(across(c(n_tested, n_nominal, n_fdr_05), sum), .by = c(level, analysis))
+  summarise(across(c(n_tested, n_nominal, n_fdr_05), sum), .by = c(feature_type, analysis))
 ```

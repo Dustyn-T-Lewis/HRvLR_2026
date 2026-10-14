@@ -45,7 +45,7 @@ paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 quantified <- readRDS(paths[["proteins"]])
 grouping <- readRDS(paths[["groups"]])
-arms <- grouping$arms
+groups <- grouping$groups
 table(grouping$group_of)
 
 #' Each run takes its person's group label. People the grouping leaves out (for example a person a
@@ -55,15 +55,15 @@ table(grouping$group_of)
 #| label: relabel
 meta <- relabel_samples(quantified$metadata, grouping$group_of) |>
   mutate(
-    arm = factor(arm, levels = arms),
+    group = factor(group, levels = groups),
     timepoint = factor(timepoint, levels = c("T1", "T2", "T3"))
   )
 proteins <- quantified$proteins[, meta$sample_id]
 stopifnot(
-  identical(meta$sample_id, colnames(proteins$E)), !anyNA(meta$group),
+  identical(meta$sample_id, colnames(proteins$E)), !anyNA(meta$group_time),
   !any(is.na(meta$subject) | meta$subject == "")
 )
-count(meta, group)
+count(meta, group_time)
 
 #' ## The model
 #'
@@ -74,8 +74,8 @@ count(meta, group)
 #' are.
 
 #| label: design
-design <- model.matrix(~ 0 + group + blood, meta)
-colnames(design) <- sub("^group", "", colnames(design))
+design <- model.matrix(~ 0 + group_time + blood, meta)
+colnames(design) <- sub("^group_time", "", colnames(design))
 rownames(design) <- meta$sample_id
 stopifnot(
   qr(design)$rank == ncol(design),
@@ -101,8 +101,9 @@ head(design, 3)
 #' | `Acute_Interaction` | A's acute change − B's | after the bout |
 #'
 #' The training interaction is the primary contrast and the acute interaction the secondary.
-#' `Baseline_AvB` is the floor, not a negative control: the groups come from an outcome or from the
-#' data, so a difference before training shows how far apart the split puts people to begin with.
+#' `Baseline_AvB` is the baseline reference, not a negative control: the groups come from an outcome
+#' or from the data, so a difference before training shows how far apart the split puts people to
+#' begin with.
 
 #| label: contrasts
 contrast_vector <- stringr::str_replace_all(
@@ -117,18 +118,18 @@ contrast_vector <- stringr::str_replace_all(
     "Training_Interaction = ({a}_T2 - {a}_T1) - ({b}_T2 - {b}_T1)",
     "Acute_Interaction = ({a}_T3 - {a}_T2) - ({b}_T3 - {b}_T2)"
   ),
-  c("\\{a\\}" = arms[1], "\\{b\\}" = arms[2])
+  c("\\{a\\}" = groups[1], "\\{b\\}" = groups[2])
 )
 contrast_matrix <- makeContrasts(contrasts = sub(".*= ", "", contrast_vector), levels = design)
 contrast_names <- sub(" =.*", "", contrast_vector)
 colnames(contrast_matrix) <- contrast_names
-floor <- paste0("Baseline_", arms[1], "v", arms[2])
+baseline_reference <- paste0("Baseline_", groups[1], "v", groups[2])
 roles <- tibble(
   contrast = contrast_names,
   role = case_when(
     contrast == "Training_Interaction" ~ "primary",
     contrast == "Acute_Interaction" ~ "secondary",
-    contrast == floor ~ "floor",
+    contrast == baseline_reference ~ "baseline_reference",
     TRUE ~ "descriptive"
   )
 )
@@ -142,7 +143,7 @@ roles
 
 #| label: correlation
 strata <- tibble(
-  level = "within subject, from limpa's dpcDE fit with subject blocked",
+  scope = "within subject, from limpa's dpcDE fit with subject blocked",
   correlation = limpa::dpcDE(proteins, design, block = meta$subject, plot = FALSE)$correlation
 )
 strata
@@ -154,13 +155,13 @@ stopifnot(
   ncol(contrast_matrix) == 9,
   all(colSums(abs(contrast_matrix[rownames(contrast_matrix) != "blood", ])) > 0),
   all(contrast_matrix["blood", ] == 0),
-  setequal(unique(meta$arm), arms)
+  setequal(unique(meta$group), groups)
 )
 
 #' ## Summary
 #'
 #' `r params$grouping`: `r length(unique(meta$subject))` people,
-#' `r nrow(meta)` runs, groups `r paste(arms, collapse = " and ")`. Within-person correlation
+#' `r nrow(meta)` runs, groups `r paste(groups, collapse = " and ")`. Within-person correlation
 #' `r round(strata$correlation, 3)`.
 #'
 #' ## Save
@@ -177,8 +178,8 @@ out <- here(data_dir)
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 saveRDS(
   list(
-    dal = dal, contrasts = contrast_vector, roles = roles, floor = floor,
-    group_of = grouping$group_of, arms = arms, defining_traits = grouping$defining_traits
+    dal = dal, contrasts = contrast_vector, roles = roles, baseline_reference = baseline_reference,
+    group_of = grouping$group_of, groups = groups, defining_traits = grouping$defining_traits
   ),
   file.path(out, "01_design.rds"),
   compress = "xz"

@@ -42,7 +42,7 @@ source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
 The raw report is DIA-NN's protein matrix: one row per protein group (proteins the measured
 peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities
 built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps
-each run to a person (`subject`), a responder group (`arm`), a biopsy time (`timepoint`: T1 before
+each run to a person (`subject`), a responder group (`group`), a biopsy time (`timepoint`: T1 before
 training, T2 96 h after the last session, T3 24 h after one further session) and their combination
 (`group`). Three reference tables, kept beside this script in `references/`,
 describe what each protein is.
@@ -63,13 +63,13 @@ stopifnot(file.exists(paths))
 
 raw <- read_excel(paths[["report"]])
 metadata <- read_csv(paths[["samples"]], show_col_types = FALSE) |>
-  select(sample_id, subject, arm, timepoint, group) |>
+  select(sample_id, subject, group, timepoint, group_time) |>
   as.data.frame()
 rownames(metadata) <- metadata$sample_id
 
 dim(raw)
 head(metadata)
-count(metadata, arm, timepoint)
+count(metadata, group, timepoint)
 ```
 
 Every run column must match a row of the sample sheet. A run missing from either side would drop
@@ -172,7 +172,7 @@ qc_index <- imap(qc_panels, \(genes, panel) {
   )
 }) |>
   list_rbind() |>
-  left_join(select(metadata, sample_id, subject, arm, timepoint), by = "sample_id")
+  left_join(select(metadata, sample_id, subject, group, timepoint), by = "sample_id")
 ```
 
 ```{r}
@@ -184,7 +184,7 @@ qc_index |>
   filter(panel != "myofibre") |>
   ggplot(aes(timepoint, pct_signal, fill = timepoint)) +
   geom_boxplot(outlier.shape = NA, width = 0.6, alpha = 0.75) +
-  geom_point(aes(shape = arm), position = position_jitter(width = 0.15, seed = 42), size = 1.4) +
+  geom_point(aes(shape = group), position = position_jitter(width = 0.15, seed = 42), size = 1.4) +
   facet_wrap(~panel, scales = "free_y", nrow = 1) +
   scale_fill_brewer(palette = "Blues", guide = "none") +
   scale_shape_manual(values = c(HR = 16, LR = 1), name = NULL) +
@@ -367,7 +367,7 @@ hampel <- function(x) abs(x - median(x)) > 3 * mad(x)
 tukey <- function(x) x > quantile(x, 0.75) + 1.5 * IQR(x)
 
 outlier_diag <- dal$metadata |>
-  select(sample_id, subject, arm, timepoint) |>
+  select(sample_id, subject, group, timepoint) |>
   mutate(
     pct_missing = colMeans(is.na(dal$data))[sample_id] * 100,
     delta_missing = ave(pct_missing, subject, FUN = \(x) pmax(x - min(x), max(x) - x)),
@@ -419,38 +419,38 @@ a detection. The floor of 5, in cells of 7 or 8 runs, has no recorded evidence.
 ```{r}
 #| label: detection
 n_before <- nrow(dal$data)
-dal <- filter_proteins_by_group(dal, min_reps = 5, min_groups = 1, grouping_column = "group")
+dal <- filter_proteins_by_group(dal, min_reps = 5, min_groups = 1, grouping_column = "group_time")
 c(before = n_before, after = nrow(dal$data))
 ```
 
-## Blood by arm at T3
+## Blood by group at T3
 
-If one arm's T3 biopsies carried more blood, the acute interaction contrasts would partly measure
-blood. A mixed model (arm × timepoint, a random intercept per person, fitted with lme4) estimates
+If one group's T3 biopsies carried more blood, the acute interaction contrasts would partly measure
+blood. A mixed model (group × timepoint, a random intercept per person, fitted with lme4) estimates
 the LR-minus-HR difference at T3 on two scales: the log2 blood index and the blood panel's share of
-signal. The permutation p shuffles the arm label across people 999 times and asks how often a
+signal. The permutation p shuffles the group label across people 999 times and asks how often a
 shuffled t is at least as large as the observed one.
 
 ```{r}
-#| label: blood-by-arm
+#| label: blood-by-group
 blood_data <- dal$metadata |>
-  select(sample_id, subject, arm, timepoint) |>
-  mutate(arm = factor(arm, c("HR", "LR")), log2_index = unname(blood_index[sample_id])) |>
+  select(sample_id, subject, group, timepoint) |>
+  mutate(group = factor(group, c("HR", "LR")), log2_index = unname(blood_index[sample_id])) |>
   left_join(filter(qc_index, panel == "blood") |> select(sample_id, pct_signal), by = "sample_id")
-arm_by_t3 <- function(data, response) {
+group_by_t3 <- function(data, response) {
   fit <- suppressMessages(lme4::lmer(
-    reformulate(c("arm * timepoint", "(1 | subject)"), response),
+    reformulate(c("group * timepoint", "(1 | subject)"), response),
     data = data
   ))
-  coef(summary(fit))["armLR:timepointT3", c("Estimate", "t value")]
+  coef(summary(fit))["groupLR:timepointT3", c("Estimate", "t value")]
 }
 set.seed(42)
-arms <- distinct(blood_data, subject, arm)
-blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
-  observed <- arm_by_t3(blood_data, response)
+groups <- distinct(blood_data, subject, group)
+blood_by_group <- map(set_names(c("log2_index", "pct_signal")), \(response) {
+  observed <- group_by_t3(blood_data, response)
   null_t <- replicate(999, {
-    shuffled <- set_names(sample(arms$arm), arms$subject)
-    arm_by_t3(mutate(blood_data, arm = shuffled[subject]), response)[["t value"]]
+    shuffled <- set_names(sample(groups$group), groups$subject)
+    group_by_t3(mutate(blood_data, group = shuffled[subject]), response)[["t value"]]
   })
   tibble(
     scale = response, lr_minus_hr_at_t3 = round(observed[["Estimate"]], 3),
@@ -459,7 +459,7 @@ blood_by_arm <- map(set_names(c("log2_index", "pct_signal")), \(response) {
   )
 }) |>
   list_rbind()
-blood_by_arm
+blood_by_group
 ```
 
 ## Why no single blood_cor cut
@@ -567,7 +567,7 @@ sheets <- list(
     blood_rel = unname(blood_rel)
   ),
   outlier_diagnostics = outlier_diag,
-  blood_by_arm = blood_by_arm,
+  blood_by_group = blood_by_group,
   blood_cor_null = blood_null
 )
 holds <- c(
@@ -578,7 +578,7 @@ holds <- c(
   "Share of each sample's signal per contamination panel, before removal.",
   "Mean log2 haemoglobin per sample, raw and relative to the sample's median log2 intensity.",
   "The four outlier flags per sample.",
-  "Arm by T3 blood term on two scales, with a permutation p.",
+  "Group by T3 blood term on two scales, with a permutation p.",
   "99.9th percentile of the blood_cor permutation null, by observation count."
 )
 write_workbook(sheets, holds, file.path(out, "protein_filtering.xlsx"), inputs, paths)

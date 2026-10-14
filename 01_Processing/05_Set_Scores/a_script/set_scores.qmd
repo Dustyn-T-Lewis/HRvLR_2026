@@ -139,12 +139,13 @@ ggplot(set_spread, aes(score, dispersion, colour = collection)) +
 #| fig-width: 6
 #| fig-height: 4
 tibble(
-  group = rep(proteins$metadata$group[match(colnames(scores), proteins$metadata$sample_id)],
+  group_time = rep(
+    proteins$metadata$group_time[match(colnames(scores), proteins$metadata$sample_id)],
     each = nrow(scores)
   ),
   score = as.vector(scores)
 ) |>
-  ggplot(aes(score, group)) +
+  ggplot(aes(score, group_time)) +
   geom_violin(fill = "grey85", colour = NA) +
   geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.3) +
   labs(x = "singscore", y = NULL) +

@@ -23,8 +23,8 @@
 #' people held out of the comparison (decisions log, 2026-09-29).
 #'
 #' Five tasks compare the groups: the T1, T2 and T3 levels, and the change over training (T2 − T1)
-#' and after the bout (T3 − T2). Each runs at three levels: proteins, gene-set scores and module
-#' eigengenes.
+#' and after the bout (T3 − T2). Each runs for three feature types: proteins, gene-set scores and
+#' module eigengenes.
 #'
 #' ## Packages
 #'
@@ -45,7 +45,7 @@ params$grouping
 data_dir <- file.path("03_Group_comparisons", params$grouping, "c_data")
 design_file <- file.path(data_dir, "01_design.rds")
 d <- readRDS(here(design_file))
-d$arms
+d$groups
 
 #' ## The classification helper
 #'
@@ -72,7 +72,7 @@ d$arms
 classify_level <- function(out, name, inputs, paths, values, meta, feature_label, feature_noun,
                            feature_unit, row_groups, row_order, collection_of = NULL,
                            panel_name = \(label, collection) label, observed_share = NULL,
-                           groups = d$arms, boot_n = 2000) {
+                           groups = d$groups, boot_n = 2000) {
   dir.create(out, recursive = TRUE, showWarnings = FALSE)
   workbook <- paste0(name, ".xlsx")
   by_collection <- if (is.null(collection_of)) character(0) else "collection"
@@ -87,9 +87,9 @@ classify_level <- function(out, name, inputs, paths, values, meta, feature_label
     mutate(x, observed_share = observed_share[feature], .after = label)
   }
 
-  arm_of <- set_names(as.character(meta$arm), meta$subject)
+  group_of <- set_names(as.character(meta$group), meta$subject)
   by_subject <- function(timepoint) {
-    rows <- filter(meta, timepoint == .env$timepoint, arm %in% groups)
+    rows <- filter(meta, timepoint == .env$timepoint, group %in% groups)
     set_names(as.data.frame(values[, rows$sample_id, drop = FALSE]), rows$subject) |> as.matrix()
   }
   change <- function(from, to) {
@@ -99,7 +99,7 @@ classify_level <- function(out, name, inputs, paths, values, meta, feature_label
     after[, both, drop = FALSE] - before[, both, drop = FALSE]
   }
   split_groups <- function(level, label) {
-    first <- arm_of[colnames(level)] == groups[1]
+    first <- group_of[colnames(level)] == groups[1]
     list(
       positive = level[, first, drop = FALSE], negative = level[, !first, drop = FALSE],
       label = label
@@ -334,7 +334,7 @@ bind_rows(
   proteins = summarise(protein_counts, n_nominal = sum(n_nominal), n_fdr_05 = sum(n_fdr_05)),
   sets = summarise(set_counts, n_nominal = sum(n_nominal), n_fdr_05 = sum(n_fdr_05)),
   modules = summarise(module_counts, n_nominal = sum(n_nominal), n_fdr_05 = sum(n_fdr_05)),
-  .id = "level"
+  .id = "feature_type"
 )
 
 #' Across the five tasks, `r sum(protein_counts$n_fdr_05)` proteins, `r sum(set_counts$n_fdr_05)`

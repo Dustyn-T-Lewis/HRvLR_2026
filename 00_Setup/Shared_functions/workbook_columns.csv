@@ -12,15 +12,17 @@ sheet,column,meaning
 ,module,WGCNA module colour.
 ,sample_id,One biopsy: subject_timepoint.
 ,subject,Participant identifier.
-,arm,"Study group of the participant (HR or LR), or the cluster that replaces it in a cluster grouping."
-,group,"Group the row belongs to (HR, LR, Hi, Lo, C1, C2), or a group cell such as HR_T1."
+,hr_lr,"The study's HR or LR label, shown beside a cluster grouping's own group."
+,group,"Group the row belongs to: HR or LR, or C1 or C2 in a proteome grouping."
+,group_time,"Group-by-time cell, such as HR_T1."
 ,timepoint,"T1 baseline, T2 after training, T3 after the acute bout at the end of training."
-,level,"Feature level: proteins, sets or modules."
+,feature_type,"Feature type: proteins, sets or modules."
+,scope,What a correlation is estimated within.
 ,input,"Proteome clustering input: T1, T2, T3, training change or acute change."
 ,validity,"How far the comparison can be trusted against this clustering: circular (built from the same time points), caution (shares a time point) or clean."
 ,contrast,"Comparison from the design: Training_<group> (T2 - T1), Acute_<group> (T3 - T2), Baseline/Trained/Acute_<G1>v<G2> (group difference at T1, T2, T3), Training/Acute_Interaction (difference in change)."
 ,definition,The contrast written as cell means.
-,role,"How the contrast is read: primary, secondary, descriptive, or floor (the baseline group difference)."
+,role,"How the contrast is read: primary, secondary, descriptive, or baseline_reference (the baseline group difference)."
 ,window,"Time window or pairing: training (T2 - T1), acute (T3 - T2), baseline (T1 level against later change), baseline_level, post_level, post_bout_level (a level against trait levels); all or a time point in PERMANOVA."
 ,trait,"Phenotype trait: pct_ = percent change over training; fcsa = fibre cross-sectional area (mixed, type I, type II), mcsa = muscle cross-sectional area, leg_press/leg_ext_1rm = one-repetition maximum, comp_hypertrophy = composite hypertrophy score, volume_load_total_kg = training volume."
 ,task,Classification task: Baseline_/Trained_/Acute_ = group difference in level at T1/T2/T3; Training_change_/Acute_change_ = group difference in change.
@@ -202,7 +204,7 @@ soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThres
 ,mean_change,Mean change from each person's T1.
 ,se,Standard error of the mean change.
 ,data,Data the PERMANOVA ran on: proteome or phenotype.
-,arms,Groups included in the test.
+,groups,Groups included in the test.
 ,r2,Share of distance variation the term explains (PERMANOVA R squared).
 ,f,Pseudo-F statistic.
 ,n_tested_fry,Sets fry tested.

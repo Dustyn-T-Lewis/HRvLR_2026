@@ -68,7 +68,7 @@ group_difference <- read_sheet("associate", "group_difference")
 within_group <- read_sheet("associate", "within_group")
 interaction <- read_sheet("continuous", "interaction")
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
-group_of <- set_names(phenotype$arm, phenotype$subject)
+group_of <- set_names(phenotype$group, phenotype$subject)
 dal <- readRDS(paths[["corrected"]])
 
 # Lead protein
@@ -77,7 +77,7 @@ dal <- readRDS(paths[["corrected"]])
 # change per person from the corrected matrix and the trait it was tested against, per person.
 
 lead <- group_difference |>
-  filter(level == "proteins") |>
+  filter(feature_type == "proteins") |>
   slice_min(p, n = 1, with_ties = FALSE)
 change <- within_subject_change(dal$data, as_tibble(dal$metadata), "T1", "T2")[lead$feature, ]
 trait_table <- phenotype_tables(phenotype)$pairings[[lead$window]]
@@ -102,22 +102,22 @@ panels <- list(
 
 # Validation
 #
-# Plotted numbers against their source tables. The chunk stops if panel a lacks a row per level and
-# task or its tested counts differ from the classification counts, panel b drops a protein, or the
-# Spearman rho recomputed from panel d's people differs from the saved within-group rho.
+# Plotted numbers against their source tables. The chunk stops if panel a lacks a row per feature
+# type and task or its tested counts differ from the classification counts, panel b drops a protein,
+# or the Spearman rho recomputed from panel d's people differs from the saved within-group rho.
 
 lead_rho <- filter(
   within_group,
   feature == lead$feature, window == lead$window, trait == lead$trait
 )
 tested <- imap(classify_counts, \(counts, level) {
-  summarise(counts, n_tested = sum(n_tested), .by = task) |> mutate(level = level)
+  summarise(counts, n_tested = sum(n_tested), .by = task) |> mutate(feature_type = level)
 }) |>
   list_rbind() |>
-  inner_join(panels$a$data, by = c("level", "task"))
+  inner_join(panels$a$data, by = c("feature_type", "task"))
 person_rho <- panels$d$data |>
-  summarise(rho = cor(value, trait, method = "spearman"), n = n(), .by = arm) |>
-  inner_join(lead_rho, by = c(arm = "group"))
+  summarise(rho = cor(value, trait, method = "spearman"), n = n(), .by = group) |>
+  inner_join(lead_rho, by = "group")
 stopifnot(
   nrow(panels$a$data) == length(feature_levels) * 5,
   nrow(tested) == nrow(panels$a$data), all(tested$n_tested.x == tested$n_tested.y),
@@ -151,7 +151,7 @@ write_workbook(
   ),
   c(
     "Per panel: what it shows, the file and sheet it reads, and the rule that picks its rows.",
-    "a: best feature per task and level: AUC, DeLong and bootstrap CIs, p, counts at p < 0.05.",
+    "a: best feature per task and feature type: AUC, DeLong and bootstrap CIs, p, n at p < 0.05.",
     "b: per protein, group-difference t and continuous growth x strength t, with p and FDR.",
     "c: per protein, Spearman rho in each group, and the group-difference evidence.",
     "d: the lead protein's training change and the trait, per person."

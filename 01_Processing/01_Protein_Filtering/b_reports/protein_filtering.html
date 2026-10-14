@@ -2215,7 +2215,7 @@ vertical-align: -.125em;
   <li><a href="#contaminants-by-identity" id="toc-contaminants-by-identity" class="nav-link" data-scroll-target="#contaminants-by-identity">Contaminants, by identity</a></li>
   <li><a href="#outlier-runs" id="toc-outlier-runs" class="nav-link" data-scroll-target="#outlier-runs">Outlier runs</a></li>
   <li><a href="#detection-filter" id="toc-detection-filter" class="nav-link" data-scroll-target="#detection-filter">Detection filter</a></li>
-  <li><a href="#blood-by-arm-at-t3" id="toc-blood-by-arm-at-t3" class="nav-link" data-scroll-target="#blood-by-arm-at-t3">Blood by arm at T3</a></li>
+  <li><a href="#blood-by-group-at-t3" id="toc-blood-by-group-at-t3" class="nav-link" data-scroll-target="#blood-by-group-at-t3">Blood by group at T3</a></li>
   <li><a href="#why-no-single-blood_cor-cut" id="toc-why-no-single-blood_cor-cut" class="nav-link" data-scroll-target="#why-no-single-blood_cor-cut">Why no single blood_cor cut</a></li>
   <li><a href="#validation" id="toc-validation" class="nav-link" data-scroll-target="#validation">Validation</a></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
@@ -2265,7 +2265,7 @@ vertical-align: -.125em;
 </section>
 <section id="inputs" class="level2">
 <h2 class="anchored" data-anchor-id="inputs">Inputs</h2>
-<p>The raw report is DIA-NN’s protein matrix: one row per protein group (proteins the measured peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps each run to a person (<code>subject</code>), a responder group (<code>arm</code>), a biopsy time (<code>timepoint</code>: T1 before training, T2 96 h after the last session, T3 24 h after one further session) and their combination (<code>group</code>). Three reference tables, kept beside this script in <code>references/</code>, describe what each protein is.</p>
+<p>The raw report is DIA-NN’s protein matrix: one row per protein group (proteins the measured peptides cannot tell apart), one column per run. Values are MaxLFQ intensities, protein quantities built from the peptide ratios each pair of runs shares (Cox et al. 2014). The sample sheet maps each run to a person (<code>subject</code>), a responder group (<code>group</code>), a biopsy time (<code>timepoint</code>: T1 before training, T2 96 h after the last session, T3 24 h after one further session) and their combination (<code>group</code>). Three reference tables, kept beside this script in <code>references/</code>, describe what each protein is.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Processing&quot;</span>, <span class="st">&quot;01_Protein_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
@@ -2281,7 +2281,7 @@ vertical-align: -.125em;
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>raw <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(paths[[<span class="st">&quot;report&quot;</span>]])</span>
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(paths[[<span class="st">&quot;samples&quot;</span>]], <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, arm, timepoint, group) <span class="sc">|&gt;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, group, timepoint, group_time) <span class="sc">|&gt;</span></span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.data.frame</span>()</span>
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(metadata) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
@@ -2291,23 +2291,23 @@ vertical-align: -.125em;
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(metadata)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       sample_id subject arm timepoint group
-S03_T1    S03_T1  HR_S03  HR        T1 HR_T1
-S10_T1    S10_T1  HR_S10  HR        T1 HR_T1
-S16_T1    S16_T1  HR_S16  HR        T1 HR_T1
-S22_T1    S22_T1  HR_S22  HR        T1 HR_T1
-S24_T1    S24_T1  HR_S24  HR        T1 HR_T1
-S27_T1    S27_T1  HR_S27  HR        T1 HR_T1</code></pre>
+<pre><code>       sample_id subject group timepoint group_time
+S03_T1    S03_T1  HR_S03    HR        T1      HR_T1
+S10_T1    S10_T1  HR_S10    HR        T1      HR_T1
+S16_T1    S16_T1  HR_S16    HR        T1      HR_T1
+S22_T1    S22_T1  HR_S22    HR        T1      HR_T1
+S24_T1    S24_T1  HR_S24    HR        T1      HR_T1
+S27_T1    S27_T1  HR_S27    HR        T1      HR_T1</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(metadata, arm, timepoint)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(metadata, group, timepoint)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  arm timepoint n
-1  HR        T1 8
-2  HR        T2 8
-3  HR        T3 8
-4  LR        T1 8
-5  LR        T2 8
-6  LR        T3 8</code></pre>
+<pre><code>  group timepoint n
+1    HR        T1 8
+2    HR        T2 8
+3    HR        T3 8
+4    LR        T1 8
+5    LR        T2 8
+6    LR        T3 8</code></pre>
 </div>
 </div>
 <p>Every run column must match a row of the sample sheet. A run missing from either side would drop out silently or come back all-NA, so the check stops the script.</p>
@@ -2413,14 +2413,14 @@ S27_T1    S27_T1  HR_S27  HR        T1 HR_T1</code></pre>
 <span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
 <span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(metadata, sample_id, subject, arm, timepoint), <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(metadata, sample_id, subject, group, timepoint), <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>qc_index <span class="sc">|&gt;</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(panel <span class="sc">!=</span> <span class="st">&quot;myofibre&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(timepoint, pct_signal, <span class="at">fill =</span> timepoint)) <span class="sc">+</span></span>
 <span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">outlier.shape =</span> <span class="cn">NA</span>, <span class="at">width =</span> <span class="fl">0.6</span>, <span class="at">alpha =</span> <span class="fl">0.75</span>) <span class="sc">+</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">shape =</span> arm), <span class="at">position =</span> <span class="fu">position_jitter</span>(<span class="at">width =</span> <span class="fl">0.15</span>, <span class="at">seed =</span> <span class="dv">42</span>), <span class="at">size =</span> <span class="fl">1.4</span>) <span class="sc">+</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">shape =</span> group), <span class="at">position =</span> <span class="fu">position_jitter</span>(<span class="at">width =</span> <span class="fl">0.15</span>, <span class="at">seed =</span> <span class="dv">42</span>), <span class="at">size =</span> <span class="fl">1.4</span>) <span class="sc">+</span></span>
 <span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>, <span class="at">nrow =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
 <span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Blues&quot;</span>, <span class="at">guide =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span></span>
 <span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_shape_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="at">HR =</span> <span class="dv">16</span>, <span class="at">LR =</span> <span class="dv">1</span>), <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
@@ -2624,7 +2624,7 @@ Figure 1: Each run’s signal share per contamination panel, before removal; fi
 <span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>tukey <span class="ot">&lt;-</span> <span class="cf">function</span>(x) x <span class="sc">&gt;</span> <span class="fu">quantile</span>(x, <span class="fl">0.75</span>) <span class="sc">+</span> <span class="fl">1.5</span> <span class="sc">*</span> <span class="fu">IQR</span>(x)</span>
 <span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>outlier_diag <span class="ot">&lt;-</span> dal<span class="sc">$</span>metadata <span class="sc">|&gt;</span></span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, arm, timepoint) <span class="sc">|&gt;</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, group, timepoint) <span class="sc">|&gt;</span></span>
 <span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_missing =</span> <span class="fu">colMeans</span>(<span class="fu">is.na</span>(dal<span class="sc">$</span>data))[sample_id] <span class="sc">*</span> <span class="dv">100</span>,</span>
 <span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">delta_missing =</span> <span class="fu">ave</span>(pct_missing, subject, <span class="at">FUN =</span> \(x) <span class="fu">pmax</span>(x <span class="sc">-</span> <span class="fu">min</span>(x), <span class="fu">max</span>(x) <span class="sc">-</span> x)),</span>
@@ -2694,7 +2694,7 @@ Figure 2: Runs flagged by at least one outlier check. Three or more flags remov
 <p><code>filter_proteins_by_group()</code> (proteoDA) keeps a protein detected in at least <code>min_reps</code> runs of at least <code>min_groups</code> of the six group-by-time cells. Here a protein needs 5 detections in one cell. This is the one step in 01_Processing that reads the HR/LR label; it counts detections and never compares abundance. It runs after the outlier removal so that no discarded run counts toward a detection. The floor of 5, in cells of 7 or 8 runs, has no recorded evidence.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>n_before <span class="ot">&lt;-</span> <span class="fu">nrow</span>(dal<span class="sc">$</span>data)</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>dal <span class="ot">&lt;-</span> <span class="fu">filter_proteins_by_group</span>(dal, <span class="at">min_reps =</span> <span class="dv">5</span>, <span class="at">min_groups =</span> <span class="dv">1</span>, <span class="at">grouping_column =</span> <span class="st">&quot;group&quot;</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>dal <span class="ot">&lt;-</span> <span class="fu">filter_proteins_by_group</span>(dal, <span class="at">min_reps =</span> <span class="dv">5</span>, <span class="at">min_groups =</span> <span class="dv">1</span>, <span class="at">grouping_column =</span> <span class="st">&quot;group_time&quot;</span>)</span>
 <span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">before =</span> n_before, <span class="at">after =</span> <span class="fu">nrow</span>(dal<span class="sc">$</span>data))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>before  after 
@@ -2702,28 +2702,28 @@ Figure 2: Runs flagged by at least one outlier check. Three or more flags remov
 </div>
 </div>
 </section>
-<section id="blood-by-arm-at-t3" class="level2">
-<h2 class="anchored" data-anchor-id="blood-by-arm-at-t3">Blood by arm at T3</h2>
-<p>If one arm’s T3 biopsies carried more blood, the acute interaction contrasts would partly measure blood. A mixed model (arm × timepoint, a random intercept per person, fitted with lme4) estimates the LR-minus-HR difference at T3 on two scales: the log2 blood index and the blood panel’s share of signal. The permutation p shuffles the arm label across people 999 times and asks how often a shuffled t is at least as large as the observed one.</p>
+<section id="blood-by-group-at-t3" class="level2">
+<h2 class="anchored" data-anchor-id="blood-by-group-at-t3">Blood by group at T3</h2>
+<p>If one group’s T3 biopsies carried more blood, the acute interaction contrasts would partly measure blood. A mixed model (group × timepoint, a random intercept per person, fitted with lme4) estimates the LR-minus-HR difference at T3 on two scales: the log2 blood index and the blood panel’s share of signal. The permutation p shuffles the group label across people 999 times and asks how often a shuffled t is at least as large as the observed one.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>blood_data <span class="ot">&lt;-</span> dal<span class="sc">$</span>metadata <span class="sc">|&gt;</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, arm, timepoint) <span class="sc">|&gt;</span></span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">arm =</span> <span class="fu">factor</span>(arm, <span class="fu">c</span>(<span class="st">&quot;HR&quot;</span>, <span class="st">&quot;LR&quot;</span>)), <span class="at">log2_index =</span> <span class="fu">unname</span>(blood_index[sample_id])) <span class="sc">|&gt;</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, group, timepoint) <span class="sc">|&gt;</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">group =</span> <span class="fu">factor</span>(group, <span class="fu">c</span>(<span class="st">&quot;HR&quot;</span>, <span class="st">&quot;LR&quot;</span>)), <span class="at">log2_index =</span> <span class="fu">unname</span>(blood_index[sample_id])) <span class="sc">|&gt;</span></span>
 <span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">filter</span>(qc_index, panel <span class="sc">==</span> <span class="st">&quot;blood&quot;</span>) <span class="sc">|&gt;</span> <span class="fu">select</span>(sample_id, pct_signal), <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>)</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>arm_by_t3 <span class="ot">&lt;-</span> <span class="cf">function</span>(data, response) {</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>group_by_t3 <span class="ot">&lt;-</span> <span class="cf">function</span>(data, response) {</span>
 <span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(lme4<span class="sc">::</span><span class="fu">lmer</span>(</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">reformulate</span>(<span class="fu">c</span>(<span class="st">&quot;arm * timepoint&quot;</span>, <span class="st">&quot;(1 | subject)&quot;</span>), response),</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">reformulate</span>(<span class="fu">c</span>(<span class="st">&quot;group * timepoint&quot;</span>, <span class="st">&quot;(1 | subject)&quot;</span>), response),</span>
 <span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> data</span>
 <span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  ))</span>
-<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coef</span>(<span class="fu">summary</span>(fit))[<span class="st">&quot;armLR:timepointT3&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;Estimate&quot;</span>, <span class="st">&quot;t value&quot;</span>)]</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coef</span>(<span class="fu">summary</span>(fit))[<span class="st">&quot;groupLR:timepointT3&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;Estimate&quot;</span>, <span class="st">&quot;t value&quot;</span>)]</span>
 <span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
-<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>arms <span class="ot">&lt;-</span> <span class="fu">distinct</span>(blood_data, subject, arm)</span>
-<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>blood_by_arm <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;log2_index&quot;</span>, <span class="st">&quot;pct_signal&quot;</span>)), \(response) {</span>
-<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>  observed <span class="ot">&lt;-</span> <span class="fu">arm_by_t3</span>(blood_data, response)</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>groups <span class="ot">&lt;-</span> <span class="fu">distinct</span>(blood_data, subject, group)</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>blood_by_group <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;log2_index&quot;</span>, <span class="st">&quot;pct_signal&quot;</span>)), \(response) {</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>  observed <span class="ot">&lt;-</span> <span class="fu">group_by_t3</span>(blood_data, response)</span>
 <span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>  null_t <span class="ot">&lt;-</span> <span class="fu">replicate</span>(<span class="dv">999</span>, {</span>
-<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>    shuffled <span class="ot">&lt;-</span> <span class="fu">set_names</span>(<span class="fu">sample</span>(arms<span class="sc">$</span>arm), arms<span class="sc">$</span>subject)</span>
-<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arm_by_t3</span>(<span class="fu">mutate</span>(blood_data, <span class="at">arm =</span> shuffled[subject]), response)[[<span class="st">&quot;t value&quot;</span>]]</span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>    shuffled <span class="ot">&lt;-</span> <span class="fu">set_names</span>(<span class="fu">sample</span>(groups<span class="sc">$</span>group), groups<span class="sc">$</span>subject)</span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by_t3</span>(<span class="fu">mutate</span>(blood_data, <span class="at">group =</span> shuffled[subject]), response)[[<span class="st">&quot;t value&quot;</span>]]</span>
 <span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>  })</span>
 <span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
 <span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">scale =</span> response, <span class="at">lr_minus_hr_at_t3 =</span> <span class="fu">round</span>(observed[[<span class="st">&quot;Estimate&quot;</span>]], <span class="dv">3</span>),</span>
@@ -2732,7 +2732,7 @@ Figure 2: Runs flagged by at least one outlier check. Three or more flags remov
 <span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb37-25"><a href="#cb37-25" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
 <span id="cb37-26"><a href="#cb37-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb37-27"><a href="#cb37-27" aria-hidden="true" tabindex="-1"></a>blood_by_arm</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb37-27"><a href="#cb37-27" aria-hidden="true" tabindex="-1"></a>blood_by_group</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 2 × 4
   scale      lr_minus_hr_at_t3     t permutation_p
@@ -2863,7 +2863,7 @@ Figure 3: Proteins removed at each filtering step, and the number left after it
 <span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">blood_rel =</span> <span class="fu">unname</span>(blood_rel)</span>
 <span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">outlier_diagnostics =</span> outlier_diag,</span>
-<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">blood_by_arm =</span> blood_by_arm,</span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">blood_by_group =</span> blood_by_group,</span>
 <span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">blood_cor_null =</span> blood_null</span>
 <span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>holds <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
@@ -2874,7 +2874,7 @@ Figure 3: Proteins removed at each filtering step, and the number left after it
 <span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Share of each sample&#39;s signal per contamination panel, before removal.&quot;</span>,</span>
 <span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Mean log2 haemoglobin per sample, raw and relative to the sample&#39;s median log2 intensity.&quot;</span>,</span>
 <span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;The four outlier flags per sample.&quot;</span>,</span>
-<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Arm by T3 blood term on two scales, with a permutation p.&quot;</span>,</span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Group by T3 blood term on two scales, with a permutation p.&quot;</span>,</span>
 <span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;99.9th percentile of the blood_cor permutation null, by observation count.&quot;</span></span>
 <span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb45-27"><a href="#cb45-27" aria-hidden="true" tabindex="-1"></a><span class="fu">write_workbook</span>(sheets, holds, <span class="fu">file.path</span>(out, <span class="st">&quot;protein_filtering.xlsx&quot;</span>), inputs, paths)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>

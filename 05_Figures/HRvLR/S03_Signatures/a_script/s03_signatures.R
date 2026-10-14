@@ -2,8 +2,8 @@
 #
 # Supplement to Figure 1. Panels a and b repeat the training and acute signature ranks with the
 # smaller Π < 0.05 sets. Π is p raised to the power |logFC| (Xiao et al. 2014). Panel c follows each
-# arm's p < 0.05 training sets through T1, T2 and T3 in both arms, which adds the bout step that a
-# single-window ranking cannot show. The figure reads saved outputs only.
+# group's p < 0.05 training sets through T1, T2 and T3 in both groups, which adds the bout step that
+# a single-window ranking cannot show. The figure reads saved outputs only.
 #
 # fry is limma's rotation gene set test: it asks whether a set's proteins move together in one
 # contrast, and here gives the share moving the same way and an FDR.
@@ -49,9 +49,9 @@ fry_rows <- read_sheet("fry_concordance")
 
 # Panels a and b
 #
-# `signature_barcode()` places each arm's Π < 0.05 sets for one window in the other arm's ranking
-# for the same window, drawn as limma's barcode (Wu & Smyth 2012). It returns the plot and the
-# numbers it labels.
+# `signature_barcode()` places each group's Π < 0.05 sets for one window in the other group's
+# ranking for the same window, drawn as limma's barcode (Wu & Smyth 2012). It returns the plot and
+# the numbers it labels.
 
 barcodes <- map(
   set_names(c("Training", "Acute")),
@@ -61,8 +61,8 @@ barcodes <- map(
 # Panel c
 #
 # Panel c is the mean change from each person's T1 (`02_Protein_Contrasts`, `set_trajectory`). In
-# the arm that chose a set, the training window is where it was selected, so it carries no test, and
-# the bout window shares T2 with the selection: a protein high at T2 by chance reads as up, then
+# the group that chose a set, the training window is where it was selected, so it carries no test,
+# and the bout window shares T2 with the selection: a protein high at T2 by chance reads as up, then
 # down. Those cells are faded and the bout result marked with a dagger. Each window reports the
 # share of proteins moving as they did in training and fry's FDR on that window's contrast.
 #
@@ -72,34 +72,34 @@ barcodes <- map(
 trajectory <- read_sheet("set_trajectory") |>
   filter(startsWith(set, "nominal_")) |>
   mutate(
-    chosen = sub(".*_", "", set_from), direction = sub(".*_", "", set), own = chosen == arm
+    chosen = sub(".*_", "", set_from), direction = sub(".*_", "", set), own = chosen == group
   )
 window_stats <- fry_rows |>
   filter(startsWith(set_from, "Training"), startsWith(set, "nominal_")) |>
   transmute(
-    chosen = sub(".*_", "", set_from), arm = sub(".*_", "", ranked_on),
+    chosen = sub(".*_", "", set_from), group = sub(".*_", "", ranked_on),
     window = sub("_.*", "", ranked_on), direction = sub(".*_", "", set),
     n_proteins, same_sign_share, fdr,
     label = sprintf("%.0f%% same way\nFDR %.2g", 100 * same_sign_share, fdr)
   )
-selection_windows <- distinct(trajectory, chosen, arm, direction) |>
-  filter(chosen == arm) |>
+selection_windows <- distinct(trajectory, chosen, group, direction) |>
+  filter(chosen == group) |>
   mutate(window = "Training", label = "selection\nwindow")
 window_labels <- bind_rows(window_stats, selection_windows) |>
   mutate(
-    label = if_else(window == "Acute" & chosen == arm, paste0(label, " \u2020"), label),
+    label = if_else(window == "Acute" & chosen == group, paste0(label, " \u2020"), label),
     x = if_else(window == "Training", 1.5, 2.5),
     y = if_else(direction == "up", Inf, -Inf), vjust = if_else(direction == "up", 1.4, -0.5)
   )
 
-# Rows are the arm that chose the sets, columns the arm they are measured in. The training window
-# is shaded in the training tint and the bout window in the acute tint.
+# Rows are the group that chose the sets, columns the group they are measured in. The training
+# window is shaded in the training tint and the bout window in the acute tint.
 
 cell_names <- c(
   chosen_HR = "Changed by training in HR", chosen_LR = "Changed by training in LR",
   in_HR = "Measured in HR", in_LR = "Measured in LR"
 )
-as_cells <- \(d) mutate(d, chosen = paste0("chosen_", chosen), arm = paste0("in_", arm))
+as_cells <- \(d) mutate(d, chosen = paste0("chosen_", chosen), group = paste0("in_", group))
 shade_window <- \(from, to, family) {
   annotate(
     "rect",
@@ -131,7 +131,7 @@ panel_trajectory <- ggplot(
   scale_x_discrete(expand = expansion(add = 0.04)) +
   scale_y_continuous(expand = expansion(mult = 0.45)) +
   ggh4x::facet_grid2(
-    chosen ~ arm,
+    chosen ~ group,
     scales = "free_y", independent = "y", switch = "y",
     labeller = as_labeller(cell_names)
   ) +
@@ -151,16 +151,17 @@ panel_trajectory <- ggplot(
 # Validation
 #
 # Every plotted number traces to its source table before anything is written: eight barcode labels,
-# 4 cells by 2 directions by 3 time points of trajectory, and 12 window results (the other arm's
-# training window, plus both arms' bout windows, per set). Each cell and direction gets two labels.
+# 4 cells by 2 directions by 3 time points of trajectory, and 12 window results (the other group's
+# training window, plus both groups' bout windows, per set). Each cell and direction gets two
+# labels.
 
 pi_numbers <- map(barcodes, "labels") |> list_rbind()
 stopifnot(
   nrow(pi_numbers) == 8,
   nrow(trajectory) == 4 * 2 * 3,
-  # Other arm's training window, plus both arms' bout windows, per set.
+  # Other group's training window, plus both groups' bout windows, per set.
   nrow(window_stats) == 12,
-  all(count(window_labels, chosen, arm, direction)$n == 2)
+  all(count(window_labels, chosen, group, direction)$n == 2)
 )
 
 # Figure
@@ -181,14 +182,14 @@ save_figure(figure, figure_dir, "s03_signatures", width = 300, height = 110)
 
 sheets <- list(
   pi_barcode = select(pi_numbers, window, chosen, ranked_in, direction, n, same_sign_share, fdr),
-  trajectory = select(trajectory, set_from, set, n_proteins, arm, timepoint, mean_change, se),
+  trajectory = select(trajectory, set_from, set, n_proteins, group, timepoint, mean_change, se),
   window_stats = select(
-    window_stats, chosen, arm, window, direction, n_proteins, same_sign_share, fdr
+    window_stats, chosen, group, window, direction, n_proteins, same_sign_share, fdr
   )
 )
 holds <- c(
-  "Panels a, b: each arm's Pi < 0.05 sets in the other arm's ranking: n, % same way, fry FDR.",
-  "Panel c: mean change from each subject's T1 (and SE) per training set, arm and time point.",
+  "Panels a, b: each group's Pi < 0.05 sets in the other group's ranking: n, % same way, fry FDR.",
+  "Panel c: mean change from each subject's T1 (and SE) per training set, group and time point.",
   "Panel c: per cell and window, share of proteins moving as in training and fry FDR."
 )
 write_workbook(sheets, holds, file.path(out, "s03_signatures.xlsx"), inputs, paths)

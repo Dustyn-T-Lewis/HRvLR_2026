@@ -98,9 +98,9 @@ panel_people <- ggplot(people, aes(subject, trait, fill = z)) +
 
 # Panel b: how many features track each trait
 #
-# The share of features at p < 0.05 per change-score window and trait, at each level (proteins, gene
-# sets, modules). Counts are summed within analysis and trait before the share is taken. The colour
-# scale is white at 5%, the share chance gives.
+# The share of features at p < 0.05 per change-score window and trait, for each feature type
+# (proteins, gene sets, modules). Counts are summed within analysis and trait before the share is
+# taken. The colour scale is white at 5%, the share chance gives.
 
 level_names <- c(proteins = "Proteins", sets = "Gene sets", modules = "Modules")
 windows <- c(
@@ -110,18 +110,18 @@ links <- imap(level_names, \(name, level) {
   readxl::read_excel(paths[[level]], "counts") |>
     filter(analysis %in% paste("change score:", names(windows))) |>
     summarise(across(c(n_tested, n_nominal), sum), .by = c(analysis, comparison)) |>
-    mutate(level = name)
+    mutate(feature_type = name)
 }) |>
   list_rbind() |>
   mutate(
     window = factor(windows[sub("change score: ", "", analysis)], windows),
     trait = trait_label(comparison), share = n_nominal / n_tested,
-    level = factor(level, level_names)
+    feature_type = factor(feature_type, level_names)
   )
 panel_links <- ggplot(links, aes(window, trait, fill = share)) +
   geom_tile(colour = "white", linewidth = 0.3) +
   geom_text(aes(label = scales::percent(share, accuracy = 1)), size = 1.7) +
-  facet_wrap(~level, nrow = 1) +
+  facet_wrap(~feature_type, nrow = 1) +
   scale_fill_gradient2(
     low = "#2166AC", mid = "white", high = "#B2182B", midpoint = alpha_nominal,
     labels = scales::label_percent(), name = "p < 0.05"
@@ -269,14 +269,14 @@ save_figure(figure, file.path(stage, "b_reports"), "f1_overview", width = 300, h
 write_workbook(
   list(
     people = select(people, subject, trait, value, z),
-    links = select(links, level, window, trait, n_tested, n_nominal, share),
+    links = select(links, feature_type, window, trait, n_tested, n_nominal, share),
     pca = select(pca, sample_id, subject, timepoint, PC1, PC2, trait, value, rank),
     sets = select(grid, set_id, collection, pathway, trait, nes, fdr),
     profiles = select(profiles, group, n_proteins, main_module, screen, mean_t)
   ),
   c(
     "Panel a: each person's % change per trait, and its z score within the trait.",
-    "Panel b: features tested and at p < 0.05 per level, change-score window and trait.",
+    "Panel b: features tested and at p < 0.05 per feature type, change-score window and trait.",
     "Panel c: PC1 and PC2 per biopsy, with the person's growth and strength gain.",
     "Panel d: each selected set in every trait over training: NES and fgsea FDR.",
     "Panel e: each profile group's mean t per window and trait (the figure draws twelve)."

@@ -36,7 +36,7 @@ only computation is the phenotype PCA, a projection with no test.
 
 ## Read with care
 
-- Read the floor (`Baseline_HRvLR`) in panel b before any other count.
+- Read the baseline reference (`Baseline_HRvLR`) in panel b before any other count.
 - fgsea in panel d treats proteins as independent draws, so a large co-regulated set is easy to
   call; `03_set_contrasts` reports fry beside it.
 - Carry-over in one direction only (e, f) can come from unequal power as well as biology.
@@ -48,7 +48,7 @@ only computation is the phenotype PCA, a projection with no test.
 |---|---|---|
 | `protein_counts` | a contrast and direction (panel b) | `group`, `label`, `pi`, `nominal`, `fdr` |
 | `pca_proteome` | a biopsy (panel c, left) | `PC1`, `PC2` |
-| `pca_phenotype` | a biopsy with all six traits (panel c, right) | `subject`, `arm`, `timepoint`, `PC1`, `PC2` |
-| `permanova` | a test (panel c) | `data`, `term`, `window`, `arms`, `r2`, `f`, `p` |
+| `pca_phenotype` | a biopsy with all six traits (panel c, right) | `subject`, `group`, `timepoint`, `PC1`, `PC2` |
+| `permanova` | a test (panel c) | `data`, `term`, `window`, `groups`, `r2`, `f`, `p` |
 | `pathways` | a selected set in a contrast (panel d) | `selected_in`, `window`, `column`, `collection`, `label`, `nes`, `fdr` |
 | `barcode` | a lane and direction (panels e, f) | `window`, `chosen`, `ranked_in`, `direction`, `n`, `same_sign_share`, `fdr` |

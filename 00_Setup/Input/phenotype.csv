@@ -1,4 +1,4 @@
-subject,arm,fcsa_mixed_pre_um2,fcsa_mixed_post_um2,fcsa_type1_pre_um2,fcsa_type1_post_um2,fcsa_type2_pre_um2,fcsa_type2_post_um2,fibres_mixed_pre_n,fibres_mixed_post_n,fibres_type1_pre_n,fibres_type1_post_n,mcsa_pre_cm2,mcsa_post_cm2,leg_press_1rm_pre_kg,leg_press_1rm_post_kg,leg_ext_1rm_pre_kg,leg_ext_1rm_post_kg,comp_hypertrophy,volume_load_total_kg
+subject,group,fcsa_mixed_pre_um2,fcsa_mixed_post_um2,fcsa_type1_pre_um2,fcsa_type1_post_um2,fcsa_type2_pre_um2,fcsa_type2_post_um2,fibres_mixed_pre_n,fibres_mixed_post_n,fibres_type1_pre_n,fibres_type1_post_n,mcsa_pre_cm2,mcsa_post_cm2,leg_press_1rm_pre_kg,leg_press_1rm_post_kg,leg_ext_1rm_pre_kg,leg_ext_1rm_post_kg,comp_hypertrophy,volume_load_total_kg
 HR_S03,HR,5357.53,6009.13,5358.74,6233.05,5356.65,5873.99,582,364,246,137,21.178,22.884,50,104,29,34,9.43,71412
 HR_S10,HR,5412.54,7133.88,4753.38,6511.09,5762.25,7280.1,401,142,139,27,27.766,31.984,137,220,71,85,20.73,104501
 HR_S16,HR,8193.44,10696.49,6770.53,8695.3,8950.31,11741.14,144,242,50,83,30.012,31.59,190,280,120,124,13.69,152817

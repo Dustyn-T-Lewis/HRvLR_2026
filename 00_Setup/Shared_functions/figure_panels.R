@@ -3,14 +3,14 @@
 # theme come from figure_theme.R, which must be sourced first.
 
 # PCA scores with a shaded 95% t-ellipse per time point and a test summary in the top-left corner.
-pca_panel <- function(scores, variance, title, subtitle, stats, shapes = arm_shapes) {
+pca_panel <- function(scores, variance, title, subtitle, stats, shapes = group_shapes) {
   axis <- \(i) sprintf("PC%d (%.1f%%)", i, 100 * variance[i])
   ggplot2::ggplot(scores, ggplot2::aes(PC1, PC2)) +
     ggplot2::stat_ellipse(
       ggplot2::aes(colour = timepoint, fill = timepoint),
       geom = "polygon", type = "t", level = 0.95, linewidth = 0.3, alpha = 0.12
     ) +
-    ggplot2::geom_point(ggplot2::aes(colour = timepoint, shape = arm), size = 1.3) +
+    ggplot2::geom_point(ggplot2::aes(colour = timepoint, shape = group), size = 1.3) +
     ggplot2::annotate(
       "text",
       x = -Inf, y = Inf, label = stats, hjust = -0.05, vjust = 1.3,
@@ -305,20 +305,20 @@ panel_module_contrasts <- function(eigengene_tests, fry_tests, module_levels, gr
 # the subtitle gives the module's eigengene test in each interaction contrast.
 panel_module_people <- function(eigengenes, meta, module, tests, identity, groups, file, rule) {
   d <- tibble::tibble(sample_id = colnames(eigengenes), value = eigengenes[module, ]) |>
-    inner_join(select(meta, sample_id, subject, arm, timepoint), by = "sample_id") |>
-    mutate(arm = factor(arm, groups))
-  means <- summarise(d, value = mean(value), .by = c(arm, timepoint))
+    inner_join(select(meta, sample_id, subject, group, timepoint), by = "sample_id") |>
+    mutate(group = factor(group, groups))
+  means <- summarise(d, value = mean(value), .by = c(group, timepoint))
   stats <- tests |>
     filter(.data$module == .env$module, grepl("Interaction", contrast)) |>
     with(paste(sprintf("%s logFC %.2f, %s", contrast_label(contrast), logFC, label_p(p)),
       collapse = "; "
     ))
-  plot <- ggplot(d, aes(timepoint, value, colour = arm)) +
+  plot <- ggplot(d, aes(timepoint, value, colour = group)) +
     geom_hline(yintercept = 0, linewidth = 0.2, colour = "grey70") +
     geom_line(aes(group = subject), alpha = 0.5, linewidth = 0.25) +
-    geom_line(aes(group = arm), data = means, linewidth = 1) +
+    geom_line(aes(group = group), data = means, linewidth = 1) +
     geom_point(data = means, size = 1.4) +
-    facet_wrap(~arm, nrow = 1) +
+    facet_wrap(~group, nrow = 1) +
     scale_colour_manual(values = group_colours(groups), guide = "none") +
     scale_x_discrete(expand = expansion(add = 0.2)) +
     labs(
@@ -329,7 +329,7 @@ panel_module_people <- function(eigengenes, meta, module, tests, identity, group
     figure_theme +
     theme(strip.text = element_text(face = "bold", size = 6.5))
   list(
-    plot = plot, data = select(d, subject, arm, timepoint, value) |> mutate(module = module),
+    plot = plot, data = select(d, subject, group, timepoint, value) |> mutate(module = module),
     source = panel_source("d", "eigengene per person", file, "eigengenes", rule)
   )
 }
@@ -429,7 +429,7 @@ panel_auc_top <- function(auc_by_level, counts_by_level, groups, file) {
       filter(!is.na(p)) |>
       arrange(p, desc(abs(auc - 0.5))) |>
       slice_head(n = 1, by = task) |>
-      mutate(level = level)
+      mutate(feature_type = level)
   }) |>
     list_rbind() |>
     mutate(
@@ -438,14 +438,14 @@ panel_auc_top <- function(auc_by_level, counts_by_level, groups, file) {
     )
   counts <- imap(counts_by_level, \(counts, level) {
     summarise(counts, n_nominal = sum(n_nominal), n_tested = sum(n_tested), .by = task) |>
-      mutate(level = level)
+      mutate(feature_type = level)
   }) |>
     list_rbind()
-  d <- inner_join(best, counts, by = c("level", "task")) |>
+  d <- inner_join(best, counts, by = c("feature_type", "task")) |>
     mutate(
-      level = factor(level, names(auc_by_level)), family = task_panel(task),
+      feature_type = factor(feature_type, names(auc_by_level)), family = task_panel(task),
       row = factor(task_short(task), rev(task_short(unique(task)))),
-      name = if_else(level == "sets", pathway_label(sub(".*[|]", "", feature), 18), label),
+      name = if_else(feature_type == "sets", pathway_label(sub(".*[|]", "", feature), 18), label),
       tally = sprintf("%s  %d / %d", name, n_nominal, round(n_tested * alpha_nominal))
     )
   plot <- ggplot(d, aes(auc, row)) +
@@ -457,13 +457,13 @@ panel_auc_top <- function(auc_by_level, counts_by_level, groups, file) {
     geom_point(aes(colour = auc > 0.5), size = 1.5) +
     geom_text(aes(x = 1.05, label = tally), hjust = 0, size = 1.7, colour = "grey20") +
     facet_grid2(
-      family ~ level,
+      family ~ feature_type,
       scales = "free_y", space = "free_y", switch = "y",
       strip = contrast_strips(y = levels(d$family)),
-      labeller = labeller(level = stringr::str_to_sentence)
+      labeller = labeller(feature_type = stringr::str_to_sentence)
     ) +
     scale_colour_manual(
-      values = set_names(unname(arm_colours), c("TRUE", "FALSE")), breaks = c("TRUE", "FALSE"),
+      values = set_names(unname(group_greys), c("TRUE", "FALSE")), breaks = c("TRUE", "FALSE"),
       labels = paste("higher in", groups), name = NULL
     ) +
     scale_linetype_manual(values = c(bootstrap = "solid", DeLong = "dotted"), name = "95% CI") +
@@ -489,12 +489,12 @@ panel_auc_top <- function(auc_by_level, counts_by_level, groups, file) {
   list(
     plot = plot,
     data = select(
-      d, level, task, feature, label, auc, auc_lower, auc_upper, boot_lower, boot_upper, p, fdr,
-      n_positive, n_negative, n_nominal, n_tested
+      d, feature_type, task, feature, label, auc, auc_lower, auc_upper, boot_lower, boot_upper,
+      p, fdr, n_positive, n_negative, n_nominal, n_tested
     ),
     source = panel_source(
       "a", "best single feature per task", file, "auc, counts",
-      "smallest p per task and level, then AUC furthest from 0.5"
+      "smallest p per task and feature type, then AUC furthest from 0.5"
     )
   )
 }
@@ -505,7 +505,7 @@ panel_auc_top <- function(auc_by_level, counts_by_level, groups, file) {
 panel_group_vs_continuous <- function(group_difference, interaction, window, outcome, groups,
                                       file, n_label = 8) {
   d <- group_difference |>
-    filter(level == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
+    filter(feature_type == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
     select(feature, label, t_group = t, p_group = p, fdr_group = fdr) |>
     inner_join(
       filter(interaction, .data$window == .env$window, strength_test == outcome) |>
@@ -557,10 +557,10 @@ panel_group_vs_continuous <- function(group_difference, interaction, window, out
 # with the group-difference hits marked. Within-group rho is descriptive at six to eight people.
 panel_within_rho <- function(within_group, group_difference, window, outcome, groups, file) {
   hits <- group_difference |>
-    filter(level == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
+    filter(feature_type == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
     transmute(feature, hit = evidence_level(p, fdr))
   d <- within_group |>
-    filter(level == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
+    filter(feature_type == "proteins", .data$window == .env$window, .data$trait == .env$outcome) |>
     select(feature, label, group, rho) |>
     pivot_wider(names_from = group, values_from = rho) |>
     rename(first = all_of(groups[1]), second = all_of(groups[2])) |>
@@ -607,13 +607,13 @@ panel_group_slope <- function(row, values, outcome, group_of, within, groups, fi
     with(set_names(sprintf("%s: rho %.2f (n = %d)", group, rho, n_subjects), group))
   d <- tibble::tibble(subject = names(values), value = values, trait = outcome[names(values)]) |>
     filter(!is.na(trait), !is.na(value), subject %in% names(group_of)) |>
-    mutate(arm = factor(group_of[subject], groups))
-  plot <- ggplot(d, aes(value, trait, colour = arm)) +
+    mutate(group = factor(group_of[subject], groups))
+  plot <- ggplot(d, aes(value, trait, colour = group)) +
     geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.6) +
-    geom_point(aes(shape = arm), size = 1.4) +
+    geom_point(aes(shape = group), size = 1.4) +
     scale_colour_manual(values = group_colours(groups), labels = rho[groups], name = NULL) +
     scale_shape_manual(
-      values = set_names(unname(arm_shapes), groups), labels = rho[groups], name = NULL
+      values = set_names(unname(group_shapes), groups), labels = rho[groups], name = NULL
     ) +
     labs(
       title = sprintf("%s, person by person", row$label),

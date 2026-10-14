@@ -85,9 +85,9 @@ head(tests)
 #| label: hr-lr
 hr_lr <- assignments |>
   summarise(
-    hr_in_1 = sum(arm == "HR" & cluster == 1), lr_in_1 = sum(arm == "LR" & cluster == 1),
-    hr_in_2 = sum(arm == "HR" & cluster == 2), lr_in_2 = sum(arm == "LR" & cluster == 2),
-    fisher_p = fisher.test(table(arm, cluster))$p.value,
+    hr_in_1 = sum(hr_lr == "HR" & cluster == 1), lr_in_1 = sum(hr_lr == "LR" & cluster == 1),
+    hr_in_2 = sum(hr_lr == "HR" & cluster == 2), lr_in_2 = sum(hr_lr == "LR" & cluster == 2),
+    fisher_p = fisher.test(table(hr_lr, cluster))$p.value,
     .by = input
   )
 hr_lr

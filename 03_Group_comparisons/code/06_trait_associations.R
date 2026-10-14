@@ -58,7 +58,7 @@ stopifnot(file.exists(paths))
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 d <- readRDS(paths[["design"]])
 group_of <- d$group_of
-group_levels <- rev(d$arms)
+group_levels <- rev(d$groups)
 defining_outcomes <- d$defining_traits
 dal <- subset_for_design(readRDS(paths[["corrected"]]), d)
 catalog <- readRDS(paths[["gene_sets"]])$set_catalog |> filter(qualifies)
@@ -110,12 +110,12 @@ window_of <- \(values) {
 enough <- \(subjects, outcome) min(table(group_of[subjects][!is.na(outcome)])) >= 5
 lengths(outcomes_of)
 
-#' ## Tests per level
+#' ## Tests per feature type
 #'
-#' For each level: every window-by-trait screen, Spearman within each group (`spearman_by_row()`,
-#' exact p), then the group-by-trait limma fit (`fit_subject_model()`, robust empirical Bayes) on
-#' the traits that did not define the grouping and have five people per group. BH and Storey's q run
-#' within level, window, trait (and group, and collection for sets).
+#' For each feature type: every window-by-trait screen, Spearman within each group
+#' (`spearman_by_row()`, exact p), then the group-by-trait limma fit (`fit_subject_model()`, robust
+#' empirical Bayes) on the traits that did not define the grouping and have five people per group.
+#' BH and Storey's q run within level, window, trait (and group, and collection for sets).
 
 #| label: tests
 per_level <- imap(feature_levels, \(feature_level, level_name) {
@@ -166,7 +166,7 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
   tidy <- \(x) {
     x |>
       mutate(
-        level = level_name, label = feature_level$label[feature],
+        feature_type = level_name, label = feature_level$label[feature],
         collection = if (is.null(feature_level$collection)) {
           NA_character_
         } else {
@@ -176,7 +176,7 @@ per_level <- imap(feature_levels, \(feature_level, level_name) {
       ) |>
       mutate(
         fdr = p.adjust(p, "BH"), qvalue = storey_q(p),
-        .by = c(level, window, trait, any_of("group"), collection)
+        .by = c(feature_type, window, trait, any_of("group"), collection)
       )
   }
   list(
@@ -195,7 +195,7 @@ map_int(results, nrow)
 counts <- imap(results, \(x, test) {
   summarise(x,
     n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
-    .by = c(level, window, trait, any_of("group"))
+    .by = c(feature_type, window, trait, any_of("group"))
   ) |>
     mutate(test = test, .before = 1)
 }) |>
@@ -218,7 +218,7 @@ counts |>
   ggplot(aes(n_nominal / n_tested, trait, fill = test)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.75) +
   geom_vline(xintercept = 0.05, linetype = "dashed", linewidth = 0.3) +
-  facet_grid(level ~ window, scales = "free_y", space = "free_y") +
+  facet_grid(feature_type ~ window, scales = "free_y", space = "free_y") +
   scale_x_continuous(labels = scales::label_percent()) +
   labs(x = "Features at p < 0.05", y = NULL, fill = NULL) +
   theme_bw(base_size = 8) +
@@ -251,9 +251,9 @@ within <- tally("within_group")
 out <- here(data_dir)
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 write_workbook(
-  c(list(counts = counts), map(results, \(x) arrange(x, level, window, trait, p))),
+  c(list(counts = counts), map(results, \(x) arrange(x, feature_type, window, trait, p))),
   c(
-    "Tested, p < 0.05 and BH < 0.05 per test, level, window, trait and group.",
+    "Tested, p < 0.05 and BH < 0.05 per test, feature type, window, trait and group.",
     "Spearman rho with its Fisher-z 95% CI and exact p in each group, every feature and trait.",
     sprintf(
       paste(

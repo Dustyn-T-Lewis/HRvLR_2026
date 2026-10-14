@@ -48,7 +48,7 @@ stopifnot(file.exists(paths))
 corrected <- readRDS(paths[["corrected"]])
 abund <- as.matrix(corrected$data)
 meta <- as_tibble(corrected$metadata) |>
-  select(sample_id, subject, arm, timepoint)
+  select(sample_id, subject, group, timepoint)
 stopifnot(identical(colnames(abund), meta$sample_id))
 dim(abund)
 count(count(meta, subject, name = "biopsies"), biopsies, name = "people")
@@ -241,9 +241,9 @@ module_summary |>
 trajectory <- eigengene_long |>
   summarise(
     mean = mean(eigengene), se = sd(eigengene) / sqrt(n()),
-    .by = c(module, arm, timepoint)
+    .by = c(module, group, timepoint)
   )
-ggplot(trajectory, aes(timepoint, mean, colour = arm, group = arm)) +
+ggplot(trajectory, aes(timepoint, mean, colour = group, group = group)) +
   geom_line(
     data = eigengene_long, aes(y = eigengene, group = subject),
     alpha = 0.2, linewidth = 0.3

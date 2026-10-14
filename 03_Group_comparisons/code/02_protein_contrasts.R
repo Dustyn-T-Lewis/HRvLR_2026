@@ -50,7 +50,7 @@ inputs <- c(
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 d <- readRDS(paths[["design"]])
-arms <- d$arms
+groups <- d$groups
 dal <- d$dal
 contrast_names <- colnames(dal$design$contrast_matrix)
 stopifnot(identical(rownames(dal$design$design_matrix), colnames(dal$data)))
@@ -236,8 +236,8 @@ member_rows <- function(cn, criterion, direction) {
   )
   which(rownames(abundance) %in% r$uniprot_id[hit])
 }
-training <- paste0("Training_", arms)
-acute <- paste0("Acute_", arms)
+training <- paste0("Training_", groups)
+acute <- paste0("Acute_", groups)
 pairings <- tribble(
   ~set_from, ~ranked_on,
   training[1], training[2],
@@ -306,7 +306,7 @@ contrast_results <- transmute(results, feature = uniprot_id, contrast, effect = 
 row_groups <- list(
   proteins = rownames(abundance)[hclust(as.dist(1 - cor(t(abundance))), "average")$order]
 )
-report_arm_colours <- set_names(c("#2166AC", "#B2182B"), arms)
+report_group_colours <- set_names(c("#2166AC", "#B2182B"), groups)
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -317,14 +317,14 @@ biopsy_traits <- trait_table |>
     timepoint = if_else(when == "pre", "T1", "T2"), fcsa_mixed, mcsa, leg_press_1rm
   )
 columns <- as_tibble(meta) |>
-  transmute(sample_id, subject, arm = as.character(arm), timepoint = as.character(timepoint)) |>
-  mutate(group = factor(
-    paste(arm, timepoint, sep = "_"),
-    paste(rep(arms, each = 3), c("T1", "T2", "T3"), sep = "_")
+  transmute(sample_id, subject, group = as.character(group), timepoint = as.character(timepoint)) |>
+  mutate(group_time = factor(
+    paste(group, timepoint, sep = "_"),
+    paste(rep(groups, each = 3), c("T1", "T2", "T3"), sep = "_")
   )) |>
   left_join(biopsy_traits, by = c("subject", "timepoint")) |>
   left_join(select(trait_table, subject, comp_hypertrophy), by = "subject") |>
-  arrange(group, subject)
+  arrange(group_time, subject)
 stopifnot(!anyDuplicated(columns$sample_id), setequal(columns$sample_id, colnames(sample_values)))
 
 #| label: fig-overviews
@@ -338,9 +338,11 @@ tracks <- list(
   "comp_hypertrophy, per subject" = columns$comp_hypertrophy
 )
 sample_annotation <- HeatmapAnnotation(
-  df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
+  df = data.frame(
+    group = columns$group, timepoint = columns$timepoint, tracks, check.names = FALSE
+  ),
   col = c(
-    list(arm = report_arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    list(group = report_group_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
     map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
@@ -354,7 +356,7 @@ overviews <- imap(row_groups, \(rows, group) {
   labelled_heat <- \(...) make_report_heatmap(..., labels = feature_label)
   biopsy_map <- labelled_heat(m, "biopsies", c(-limit, 0, limit), "log2 abundance, centred",
     row_names = TRUE, column_title = character(0), top_annotation = sample_annotation,
-    column_split = columns$group, cluster_column_slices = FALSE,
+    column_split = columns$group_time, cluster_column_slices = FALSE,
     column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
   )
   contrast_grid <- \(value) {
@@ -399,12 +401,12 @@ set_trajectory <- results |>
       sample_id = colnames(corrected$data),
       value = colMeans(corrected$data[members, , drop = FALSE])
     ) |>
-      left_join(select(sample_meta, sample_id, subject, arm, timepoint), by = "sample_id") |>
+      left_join(select(sample_meta, sample_id, subject, group, timepoint), by = "sample_id") |>
       filter("T1" %in% timepoint, .by = subject) |>
       mutate(change = value - value[timepoint == "T1"], .by = subject) |>
       summarise(
         mean_change = mean(change), se = sd(change) / sqrt(n()), n_subjects = n(),
-        .by = c(arm, timepoint)
+        .by = c(group, timepoint)
       ) |>
       mutate(set_from = set_from, set = set, n_proteins = length(members), .before = 1)
   }) |>
@@ -427,7 +429,7 @@ pca_variance <- tibble(
   variance_explained = round(summary(pca)$importance[2, 1:4], 3)
 )
 pca_scores <- as_tibble(pca$x[, 1:2], rownames = "sample_id") |>
-  left_join(select(sample_meta, sample_id, subject, arm, timepoint), by = "sample_id")
+  left_join(select(sample_meta, sample_id, subject, group, timepoint), by = "sample_id")
 pca_variance
 
 #' `permanova()` takes a row selection, the term to test and whether permutations stay within a
@@ -439,7 +441,7 @@ permanova <- function(rows, term, within_subject) {
   data <- sample_meta[rows, ]
   if (!within_subject && anyDuplicated(data$subject)) {
     x <- rowsum(x, data$subject) / as.vector(table(data$subject))
-    data <- distinct(data, subject, arm)[match(rownames(x), unique(data$subject)), ]
+    data <- distinct(data, subject, group)[match(rownames(x), unique(data$subject)), ]
   }
   control <- if (within_subject) {
     permute::how(blocks = factor(data$subject), nperm = 9999)
@@ -453,18 +455,18 @@ permanova <- function(rows, term, within_subject) {
 time_pairs <- list(all = c("T1", "T2", "T3"), training = c("T1", "T2"), acute = c("T2", "T3"))
 global_tests <- bind_rows(
   imap(time_pairs, \(times, window) {
-    map(c("both", arms), \(who) {
-      rows <- sample_meta$timepoint %in% times & (who == "both" | sample_meta$arm == who)
+    map(c("both", groups), \(who) {
+      rows <- sample_meta$timepoint %in% times & (who == "both" | sample_meta$group == who)
       permanova(rows, "timepoint", within_subject = TRUE) |>
-        mutate(term = "time", window = window, arms = who, .before = 1)
+        mutate(term = "time", window = window, groups = who, .before = 1)
     })
   }) |>
     list_flatten() |>
     list_rbind(),
   map(c("subject mean", "T1", "T2", "T3"), \(when) {
     rows <- when == "subject mean" | sample_meta$timepoint == when
-    permanova(rows, "arm", within_subject = FALSE) |>
-      mutate(term = "arm", window = when, arms = "both", .before = 1)
+    permanova(rows, "group", within_subject = FALSE) |>
+      mutate(term = "group", window = when, groups = "both", .before = 1)
   }) |>
     list_rbind()
 )
@@ -485,7 +487,7 @@ trait_fit <- vegan::adonis2(
 global_tests <- global_tests |>
   mutate(data = "proteome", .before = 1) |>
   add_row(
-    data = "phenotype", term = "time", window = "all", arms = "both",
+    data = "phenotype", term = "time", window = "all", groups = "both",
     n_samples = nrow(trait_rows), r2 = trait_fit$R2[1], f = trait_fit$F[1],
     p = trait_fit$`Pr(>F)`[1]
   )
@@ -495,7 +497,7 @@ global_tests
 #| fig-cap: "Runs on the blood-corrected matrix, proteins scaled."
 #| fig-width: 6
 #| fig-height: 4.5
-ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm)) +
+ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = group)) +
   geom_point(size = 2) +
   scale_colour_manual(values = c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")) +
   labs(
@@ -518,8 +520,8 @@ stopifnot(
 
 #| label: summary
 time_all <- global_tests |>
-  filter(data == "proteome", term == "time", window == "all", arms == "both")
-group_mean <- filter(global_tests, term == "arm", window == "subject mean")
+  filter(data == "proteome", term == "time", window == "all", groups == "both")
+group_mean <- filter(global_tests, term == "group", window == "subject mean")
 
 #' `r nrow(proteins$E)` proteins were tested in each of the nine contrasts;
 #' `r sum(contrast_summary$n_fdr_05)` calls at BH < 0.05 across all nine (lowest BH
@@ -577,15 +579,15 @@ write_workbook(
     "propTrueNull, median |t| and share of p below 0.2 per contrast.",
     "log2 effect the primary contrast detects at 80% power, median and 90th percentile.",
     paste(
-      "fry: one arm's responders tested in the other arm's contrast, and training sets on each",
-      "arm's acute contrast; with mixed p, mean log2 FC in both contrasts and sign kept."
+      "fry: one group's responders tested in the other group's contrast, and training sets on each",
+      "group's acute contrast; with mixed p, mean log2 FC in both contrasts and sign kept."
     ),
-    "Training p < 0.05 sets: mean change from each subject's T1 (and SE) per arm and time point.",
+    "Training p < 0.05 sets: mean change from each subject's T1 (and SE) per group and time point.",
     "logFC and p per protein and contrast before blood adjustment, for sensitivity.",
     "PC1 and PC2 per sample, from the complete blood-corrected matrix with proteins scaled.",
     "Share of variance on the first four components.",
     paste(
-      "PERMANOVA (9,999 permutations): proteome time per window and arm, arm per time point;",
+      "PERMANOVA (9,999 permutations): proteome time per window and group, group per time point;",
       "phenotype time."
     )
   ),

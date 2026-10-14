@@ -59,7 +59,7 @@ inputs <- c(
 paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
-arm_of <- set_names(phenotype$arm, phenotype$subject)
+hr_lr_of <- set_names(phenotype$group, phenotype$subject)
 
 #' For the two phenotype groupings the features are the training % changes of the chosen traits.
 
@@ -143,7 +143,7 @@ cluster_people <- function(x, k_max = 3, n_boot = 500) {
         tibble(
           k = as.integer(k), mean_silhouette = fit$silinfo$avg.width,
           sizes = paste(table(fit$clustering), collapse = "/"),
-          hr_lr_ari = mclust::adjustedRandIndex(fit$clustering, arm_of[rownames(x)])
+          hr_lr_ari = mclust::adjustedRandIndex(fit$clustering, hr_lr_of[rownames(x)])
         )
       }) |>
         list_rbind(),
@@ -195,7 +195,8 @@ map_int(fits, "k_gap")
 
 #' ## Groups and tables
 #'
-#' The phenotype groupings name their two groups `Hi` and `Lo` by the mean of the first trait. The
+#' The phenotype groupings name their two groups `HR` and `LR`, higher and lower responder, by the
+#' mean of the first trait. The folder name keeps them apart from the study's HR and LR. The
 #' proteome groups keep PAM's numbering, `C1` and `C2`; the number carries no meaning. The traits a
 #' phenotype grouping was built on stay out of its group-by-trait tests; for `Muscle_size` so does
 #' the composite, since these clusters reproduce HR/LR.
@@ -219,14 +220,14 @@ assignments <- complete |>
 label_of <- assignments |>
   filter(!is.na(cluster)) |>
   summarise(lead = mean(.data[[traits[1]]]), .by = cluster) |>
-  mutate(label = if_else(lead == max(lead), "Hi", "Lo")) |>
+  mutate(label = if_else(lead == max(lead), "HR", "LR")) |>
   select(cluster, label)
 group_of <- assignments |>
   inner_join(label_of, by = "cluster") |>
   with(set_names(label, subject))
 defining_traits <- if (params$grouping == "Muscle_size") c(traits, "comp_hypertrophy") else traits
 saveRDS(
-  list(group_of = group_of, arms = c("Hi", "Lo"), defining_traits = defining_traits),
+  list(group_of = group_of, groups = c("HR", "LR"), defining_traits = defining_traits),
   file.path(out, "groups.rds")
 )
 sheets <- list(
@@ -234,12 +235,12 @@ sheets <- list(
   assignments = assignments,
   space = as_tibble(fit$pcs$x[, 1:2], rownames = "subject") |>
     left_join(select(assignments, subject, cluster), by = "subject") |>
-    mutate(arm = arm_of[subject], group = unname(group_of[subject]), .after = subject),
+    mutate(hr_lr = hr_lr_of[subject], group = unname(group_of[subject]), .after = subject),
   space_variance = tibble(
     component = c("PC1", "PC2"), variance_explained = summary(fit$pcs)$importance[2, 1:2]
   )
 )
-table(group = group_of, hr_lr = arm_of[names(group_of)])
+table(group = group_of, hr_lr = hr_lr_of[names(group_of)])
 
 
 #| label: proteome-tables
@@ -258,12 +259,12 @@ per_input <- imap(fits, \(fit, input) {
     stability = mutate(fit$stability, input = input, .before = 1),
     assignments = tibble(
       input,
-      subject = rownames(x), arm = unname(arm_of[rownames(x)]),
+      subject = rownames(x), hr_lr = unname(hr_lr_of[rownames(x)]),
       k2 = fit$solutions[["2"]]$clustering, k3 = fit$solutions[["3"]]$clustering, cluster
     ),
     space = tibble(
       input,
-      subject = rownames(x), arm = unname(arm_of[rownames(x)]),
+      subject = rownames(x), hr_lr = unname(hr_lr_of[rownames(x)]),
       cluster, PC1 = fit$pcs$x[, 1], PC2 = fit$pcs$x[, 2]
     ),
     space_variance = tibble(
@@ -276,11 +277,11 @@ sheets <- map(set_names(names(per_input[[1]])), \(sheet) list_rbind(map(per_inpu
 saveRDS(
   list(
     group_of = with(sheets$assignments, set_names(paste0("C", cluster), subject)),
-    arms = c("C1", "C2"), defining_traits = character(0)
+    groups = c("C1", "C2"), defining_traits = character(0)
   ),
   file.path(out, "groups.rds")
 )
-count(sheets$assignments, input, cluster, arm)
+count(sheets$assignments, input, cluster, hr_lr)
 
 
 #| label: fig-gap
@@ -305,7 +306,7 @@ imap(fits, \(fit, input) mutate(fit$gap_table, input = input, k_gap = fit$k_gap)
 #| fig-height: 3.5
 sheets$space |>
   mutate(input = if (is_proteome) input else params$grouping) |>
-  ggplot(aes(PC1, PC2, colour = factor(cluster), shape = arm)) +
+  ggplot(aes(PC1, PC2, colour = factor(cluster), shape = hr_lr)) +
   geom_point(size = 2) +
   facet_wrap(~input, nrow = 1) +
   labs(colour = "cluster", shape = NULL) +
@@ -347,7 +348,7 @@ holds <- if (is_proteome) {
     "Per K: gap, SE, mean silhouette, group sizes, HR/LR adjusted Rand index, bootstrap Jaccard.",
     "Per K and cluster: mean bootstrap Jaccard (fpc::clusterboot, PAM).",
     "Per subject: the traits, the K = 2 and K = 3 clusters, and the cluster used downstream.",
-    "Per subject: HR/LR arm, group, cluster, and PC1 and PC2 of the scaled traits.",
+    "Per subject: HR/LR, group, cluster, and PC1 and PC2 of the scaled traits.",
     "Share of variance on PC1 and PC2 of the scaled traits."
   )
 }

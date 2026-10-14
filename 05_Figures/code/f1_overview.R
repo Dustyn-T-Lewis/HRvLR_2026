@@ -80,7 +80,7 @@ f1_overview <- function(grouping) {
   }
   read_clustering <- \(sheet) readxl::read_excel(paths[["clustering"]], sheet)
   is_proteome <- startsWith(grouping, "Proteome_")
-  groups <- if (is_proteome) c("C1", "C2") else c("Hi", "Lo")
+  groups <- if (is_proteome) c("C1", "C2") else c("HR", "LR")
   space <- read_clustering("space")
   if (is_proteome) space <- mutate(space, group = paste0("C", cluster))
   clustering <- panel_clustering(

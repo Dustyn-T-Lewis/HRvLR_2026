@@ -1,4 +1,4 @@
-# Figure 1 panels for any grouping that compares two groups (HR/LR, Hi/Lo, C1/C2). Each builder
+# Figure 1 panels for any grouping that compares two groups (HR/LR or C1/C2). Each builder
 # takes saved outputs and the two group names, and returns list(plot, data). figure_theme.R and
 # figure_panels.R must be sourced first, with dplyr, tidyr, purrr, tibble and ggplot2 attached.
 
@@ -102,19 +102,19 @@ panel_protein_counts <- function(proteins, groups, n_tested, validity = NULL) {
 # split on it. group_of relabels people for a cluster grouping.
 panel_pca_pair <- function(pca, variance, permanova, phenotype, groups, group_of = NULL,
                            n_proteins = NULL) {
-  shapes <- set_names(unname(arm_shapes), groups)
+  shapes <- set_names(unname(group_shapes), groups)
   test_row <- \(data_, term_, window_) {
-    filter(permanova, data == data_, term == term_, window == window_, arms == "both")
+    filter(permanova, data == data_, term == term_, window == window_, groups == "both")
   }
   permanova_text <- \(label, test) sprintf("%s R\u00b2 %.2f, p = %.2g", label, test$r2, test$p)
   time_test <- test_row("proteome", "time", "all")
-  arm_test <- test_row("proteome", "arm", "subject mean")
+  group_test <- test_row("proteome", "group", "subject mean")
   trait_time_test <- test_row("phenotype", "time", "all")
   proteome <- pca_panel(
     pca, variance,
     "Proteome", sprintf("%d biopsies, %s proteins", nrow(pca), scales::comma(n_proteins)),
     paste(
-      "PERMANOVA", permanova_text("time", time_test), permanova_text("group", arm_test),
+      "PERMANOVA", permanova_text("time", time_test), permanova_text("group", group_test),
       sep = "\n"
     ),
     shapes = shapes
@@ -122,10 +122,10 @@ panel_pca_pair <- function(pca, variance, permanova, phenotype, groups, group_of
   tables <- phenotype_tables(phenotype)
   traits <- filter(tables$biopsy, if_all(all_of(tables$traits), \(x) !is.na(x)))
   if (!is.null(group_of)) {
-    traits <- mutate(traits, arm = unname(group_of[subject])) |> filter(!is.na(arm))
+    traits <- mutate(traits, group = unname(group_of[subject])) |> filter(!is.na(group))
   }
   trait_pca <- prcomp(scale(traits[tables$traits]))
-  scores <- bind_cols(select(traits, subject, arm, timepoint), as_tibble(trait_pca$x[, 1:2]))
+  scores <- bind_cols(select(traits, subject, group, timepoint), as_tibble(trait_pca$x[, 1:2]))
   phenotype_panel <- pca_panel(
     scores, summary(trait_pca)$importance[2, ],
     "Phenotype", sprintf("%d biopsies, six size and strength traits", nrow(traits)),
@@ -139,7 +139,7 @@ panel_pca_pair <- function(pca, variance, permanova, phenotype, groups, group_of
     theme(legend.position = "bottom")
   list(
     plot = plot, proteome = pca, phenotype = scores,
-    tests = list(time = time_test, arm = arm_test, trait_time = trait_time_test)
+    tests = list(time = time_test, group = group_test, trait_time = trait_time_test)
   )
 }
 
@@ -193,12 +193,12 @@ panel_pathway_grid <- function(set_tests, gene_sets, groups) {
       )
   }
   columns <- imap(windows, \(contrasts, window) {
-    tibble(window, arm = names(contrasts), contrast = unname(contrasts))
+    tibble(window, group = names(contrasts), contrast = unname(contrasts))
   }) |>
     list_rbind() |>
     mutate(
-      column = factor(paste(window, arm), c(" ", paste(window, arm))),
-      markup = in_colour(arm, arm_shade(window, arm, groups)),
+      column = factor(paste(window, group), c(" ", paste(window, group))),
+      markup = in_colour(group, group_shade(window, group, groups)),
       window = factor(window, c("", names(windows)))
     )
   pathways <- map(names(windows), select_window) |>
@@ -266,7 +266,7 @@ panel_pathway_grid <- function(set_tests, gene_sets, groups) {
     data = transmute(
       pathways,
       selected_in = as.character(facet), window = as.character(window),
-      column = as.character(arm), set_id, collection, label, nes, fdr
+      column = as.character(group), set_id, collection, label, nes, fdr
     ),
     n_columns = nrow(columns)
   )
@@ -364,7 +364,7 @@ build_group_overview <- function(panel_a, inputs, paths, groups, out_dir, stem,
 # gives the K the gap statistic selects, the K used, and each group's size and bootstrap Jaccard.
 panel_clustering <- function(space, variance, choice, stability, groups, clustered_on) {
   d <- space |>
-    mutate(group = factor(group, groups), arm = factor(arm, c("HR", "LR")))
+    mutate(group = factor(group, groups), hr_lr = factor(hr_lr, c("HR", "LR")))
   jaccard <- stability |>
     filter(k == choice$k_used) |>
     inner_join(distinct(filter(d, !is.na(group)), cluster, group), by = "cluster") |>
@@ -374,9 +374,9 @@ panel_clustering <- function(space, variance, choice, stability, groups, cluster
   plot <- ggplot(d, aes(PC1, PC2)) +
     geom_hline(yintercept = 0, linewidth = 0.2, colour = "grey85") +
     geom_vline(xintercept = 0, linewidth = 0.2, colour = "grey85") +
-    geom_point(aes(colour = group, shape = arm), size = 2) +
+    geom_point(aes(colour = group, shape = hr_lr), size = 2) +
     scale_colour_manual(values = group_colours(groups), na.value = "grey80", name = NULL) +
-    scale_shape_manual(values = arm_shapes, name = NULL) +
+    scale_shape_manual(values = group_shapes, name = NULL) +
     labs(
       title = "Who is in each group",
       subtitle = sprintf(
@@ -391,5 +391,5 @@ panel_clustering <- function(space, variance, choice, stability, groups, cluster
     ) +
     figure_theme +
     theme(legend.position = "bottom", legend.box = "vertical", legend.spacing.y = unit(0, "mm"))
-  list(plot = plot, data = select(d, subject, arm, group, cluster, PC1, PC2), jaccard = jaccard)
+  list(plot = plot, data = select(d, subject, hr_lr, group, cluster, PC1, PC2), jaccard = jaccard)
 }

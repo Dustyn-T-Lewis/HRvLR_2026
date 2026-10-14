@@ -24,5 +24,5 @@ Supplement to Figure 1: does the signature carry-over hold with stricter sets, a
 | Sheet | One row is | Key columns |
 |---|---|---|
 | `pi_barcode` | a lane and direction (panels a, b) | `window`, `chosen`, `ranked_in`, `direction`, `n`, `same_sign_share`, `fdr` |
-| `trajectory` | a set, group and time point (panel c) | `set_from`, `set`, `n_proteins`, `arm`, `timepoint`, `mean_change`, `se` |
-| `window_stats` | a set measured in a group over a window (panel c) | `chosen`, `arm`, `window`, `direction`, `n_proteins`, `same_sign_share`, `fdr` |
+| `trajectory` | a set, group and time point (panel c) | `set_from`, `set`, `n_proteins`, `group`, `timepoint`, `mean_change`, `se` |
+| `window_stats` | a set measured in a group over a window (panel c) | `chosen`, `group`, `window`, `direction`, `n_proteins`, `same_sign_share`, `fdr` |

@@ -225,7 +225,7 @@ members |>
 #| fig-height: 8.5
 feature_label <- set_names(module_order)
 contrast_results <- transmute(eigengene_tests, feature = module, contrast, effect = logFC, p, fdr)
-report_arm_colours <- set_names(c("#2166AC", "#B2182B"), d$arms)
+report_group_colours <- set_names(c("#2166AC", "#B2182B"), d$groups)
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -236,14 +236,14 @@ biopsy_traits <- trait_table |>
     timepoint = if_else(when == "pre", "T1", "T2"), fcsa_mixed, mcsa, leg_press_1rm
   )
 columns <- as_tibble(modules$meta) |>
-  transmute(sample_id, subject, arm = as.character(arm), timepoint = as.character(timepoint)) |>
-  mutate(group = factor(
-    paste(arm, timepoint, sep = "_"),
-    paste(rep(d$arms, each = 3), c("T1", "T2", "T3"), sep = "_")
+  transmute(sample_id, subject, group = as.character(group), timepoint = as.character(timepoint)) |>
+  mutate(group_time = factor(
+    paste(group, timepoint, sep = "_"),
+    paste(rep(d$groups, each = 3), c("T1", "T2", "T3"), sep = "_")
   )) |>
   left_join(biopsy_traits, by = c("subject", "timepoint")) |>
   left_join(select(trait_table, subject, comp_hypertrophy), by = "subject") |>
-  arrange(group, subject)
+  arrange(group_time, subject)
 stopifnot(!anyDuplicated(columns$sample_id), setequal(columns$sample_id, colnames(me)))
 grey_ramp <- \(x) circlize::colorRamp2(range(x, na.rm = TRUE), c("#F7F7F7", "#252525"))
 tracks <- list(
@@ -252,9 +252,11 @@ tracks <- list(
   "comp_hypertrophy, per subject" = columns$comp_hypertrophy
 )
 sample_annotation <- HeatmapAnnotation(
-  df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
+  df = data.frame(
+    group = columns$group, timepoint = columns$timepoint, tracks, check.names = FALSE
+  ),
   col = c(
-    list(arm = report_arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    list(group = report_group_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
     map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
@@ -266,7 +268,7 @@ limit <- cap(m)
 labelled_heat <- \(...) make_report_heatmap(..., labels = feature_label)
 biopsy_map <- labelled_heat(m, "biopsies", c(-limit, 0, limit), "eigengene",
   row_names = TRUE, column_title = character(0), top_annotation = sample_annotation,
-  column_split = columns$group, cluster_column_slices = FALSE,
+  column_split = columns$group_time, cluster_column_slices = FALSE,
   column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
 )
 contrast_grid <- \(value) {

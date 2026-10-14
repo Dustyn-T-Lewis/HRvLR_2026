@@ -49,7 +49,7 @@ paths <- map_chr(inputs, here)
 stopifnot(file.exists(paths))
 phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 samples <- readr::read_csv(paths[["samples"]], show_col_types = FALSE)
-count(phenotype, arm)
+count(phenotype, group)
 
 #' ## The composite score
 #'
@@ -60,7 +60,7 @@ count(phenotype, arm)
 #| label: composite
 composite <- phenotype |>
   transmute(
-    subject, arm,
+    subject, group,
     pct_mcsa = 100 * (mcsa_post_cm2 / mcsa_pre_cm2 - 1),
     pct_fcsa = 100 * (fcsa_mixed_post_um2 / fcsa_mixed_pre_um2 - 1),
     recomputed = (2 * pct_mcsa + pct_fcsa) / 3,
@@ -70,7 +70,7 @@ stopifnot(all(abs(composite$recomputed - composite$comp_hypertrophy) < 0.01 + 1e
 composite |>
   summarise(
     people = n(), mean = mean(comp_hypertrophy), sd = sd(comp_hypertrophy),
-    lowest = min(comp_hypertrophy), highest = max(comp_hypertrophy), .by = arm
+    lowest = min(comp_hypertrophy), highest = max(comp_hypertrophy), .by = group
   )
 
 
@@ -78,7 +78,7 @@ composite |>
 #| fig-cap: "Composite score per person. The 9 unprofiled people sat in the gap."
 #| fig-width: 5
 #| fig-height: 3.5
-ggplot(composite, aes(arm, comp_hypertrophy, colour = arm)) +
+ggplot(composite, aes(group, comp_hypertrophy, colour = group)) +
   geom_hline(yintercept = 0, colour = "grey80") +
   geom_point(position = position_jitter(width = 0.1, seed = 1), size = 2) +
   scale_colour_manual(values = c(HR = "#2166AC", LR = "#B2182B"), guide = "none") +
@@ -90,23 +90,23 @@ ggplot(composite, aes(arm, comp_hypertrophy, colour = arm)) +
 #' Every person in the phenotype table must carry the same label in the sample sheet.
 
 #| label: labels
-labels_in_samples <- distinct(samples, subject, arm)
-arm_in_phenotype <- with(phenotype, set_names(arm, subject))
+labels_in_samples <- distinct(samples, subject, group)
+group_in_phenotype <- with(phenotype, set_names(group, subject))
 stopifnot(
   !anyDuplicated(labels_in_samples$subject),
   setequal(labels_in_samples$subject, phenotype$subject),
-  all(labels_in_samples$arm == arm_in_phenotype[labels_in_samples$subject])
+  all(labels_in_samples$group == group_in_phenotype[labels_in_samples$subject])
 )
-group_of <- with(labels_in_samples, set_names(arm, subject))
+group_of <- with(labels_in_samples, set_names(group, subject))
 table(group_of)
 
 #' ## Summary
 #'
 #' `r sum(group_of == "HR")` HR and `r sum(group_of == "LR")` LR people. HR's composite runs from
-#' `r round(min(composite$comp_hypertrophy[composite$arm == "HR"]), 2)` to
-#' `r round(max(composite$comp_hypertrophy[composite$arm == "HR"]), 2)`%, LR's from
-#' `r round(min(composite$comp_hypertrophy[composite$arm == "LR"]), 2)` to
-#' `r round(max(composite$comp_hypertrophy[composite$arm == "LR"]), 2)`%. Because the composite
+#' `r round(min(composite$comp_hypertrophy[composite$group == "HR"]), 2)` to
+#' `r round(max(composite$comp_hypertrophy[composite$group == "HR"]), 2)`%, LR's from
+#' `r round(min(composite$comp_hypertrophy[composite$group == "LR"]), 2)` to
+#' `r round(max(composite$comp_hypertrophy[composite$group == "LR"]), 2)`%. Because the composite
 #' defines the groups, a difference in muscle or fibre growth between HR and LR is built in and is
 #' not a finding; `comp_hypertrophy` stays out of the group-by-trait tests.
 #'
@@ -117,7 +117,7 @@ table(group_of)
 
 #| label: save
 saveRDS(
-  list(group_of = group_of, arms = c("HR", "LR"), defining_traits = "comp_hypertrophy"),
+  list(group_of = group_of, groups = c("HR", "LR"), defining_traits = "comp_hypertrophy"),
   file.path(out, "groups.rds")
 )
 write_workbook(

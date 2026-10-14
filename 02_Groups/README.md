@@ -6,8 +6,8 @@ Decides who is compared, before any comparison runs. Eight parallel groupings, e
 | Grouping | Groups | Defined by |
 |---|---|---|
 | `HRvLR` | HR, LR | the study: top and bottom 8 of 25 on the composite hypertrophy score |
-| `Muscle_size` | Hi, Lo | PAM on % change in fibre and muscle area; reproduces HR/LR |
-| `Muscle_strength` | Hi, Lo | PAM on % change in leg-press and leg-extension 1RM |
+| `Muscle_size` | HR, LR | PAM on % change in fibre and muscle area; reproduces HR/LR |
+| `Muscle_strength` | HR, LR | PAM on % change in leg-press and leg-extension 1RM |
 | `Proteome_T1`, `_T2`, `_T3` | C1, C2 | PAM on the module eigengenes at that time point |
 | `Proteome_training`, `_acute` | C1, C2 | PAM on the change in module eigengenes over training or the bout |
 
@@ -48,7 +48,7 @@ Rscript 02_Groups/Proteome_T1/a_script/run_groups.R  # one grouping
 
 | File | Holds |
 |---|---|
-| `<grouping>/c_data/groups.rds` | `group_of` (person to group), `arms` (the two groups, first one first), `defining_traits` |
+| `<grouping>/c_data/groups.rds` | `group_of` (person to group), `groups` (the two groups, first one first), `defining_traits` |
 | `<grouping>/c_data/clustering.xlsx` | K choice and reason, diagnostics, stability, assignments, cluster space |
 | `HRvLR/c_data/study_groups.xlsx` | the recomputed composite and the labels |
 | `<grouping>/b_reports/*.pdf` | the rendered script |

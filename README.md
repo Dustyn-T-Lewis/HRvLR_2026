@@ -11,8 +11,8 @@ eight as lower responders (LR); the middle nine were not profiled. The repositor
 questions three ways: with those groups, with groups found by clustering, and with no groups at
 all.
 
-![The pipeline: processing, group definitions, the shared comparison workflow and the continuous
-arm](pipeline.png)
+![The pipeline: processing, eight parallel groupings, the shared comparison workflow, the
+continuous analysis and the figures](pipeline.png)
 
 ## Folders, in run order
 
@@ -30,8 +30,8 @@ The eight groupings run side by side through the same steps:
 | Grouping | Groups | Defined by |
 |---|---|---|
 | `HRvLR` | HR, LR | the study: top and bottom 8 of 25 on the composite hypertrophy score |
-| `Muscle_size` | Hi, Lo | clustering on % change in fibre and muscle area |
-| `Muscle_strength` | Hi, Lo | clustering on % change in leg-press and leg-extension 1RM |
+| `Muscle_size` | HR, LR | clustering on % change in fibre and muscle area |
+| `Muscle_strength` | HR, LR | clustering on % change in leg-press and leg-extension 1RM |
 | `Proteome_T1`, `_T2`, `_T3`, `_training`, `_acute` | C1, C2 | clustering on module eigengenes at a time point, or their change |
 
 ## Every step
@@ -90,7 +90,10 @@ Random steps are seeded.
 | module, eigengene, kME | a WGCNA group of co-varying proteins, its one-number summary per biopsy, and a protein's correlation with that summary |
 | singscore | one score per gene set per biopsy, from the set's rank within that biopsy |
 | AUC | the chance a random person from the first group has a higher value than one from the second |
-| floor | the baseline contrast: the groups come from an outcome, so a T1 difference shows how far the split separates people before training |
+| baseline_reference | the baseline contrast: the groups come from an outcome, so a T1 difference shows how far the split separates people before training |
+| `group`, `group_time`, `hr_lr` | the two groups a grouping compares; a group-by-time cell such as `HR_T1`; the study's HR/LR label where it sits beside a clustering's own groups |
+| `feature_type` | proteins, gene sets or modules |
+| `window` | the time span a test covers: training (T2 − T1), acute (T3 − T2), or a single time point |
 
 ## Conventions
 

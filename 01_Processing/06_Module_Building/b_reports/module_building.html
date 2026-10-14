@@ -2269,7 +2269,7 @@ vertical-align: -.125em;
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>corrected <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;corrected&quot;</span>]])</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>abund <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(corrected<span class="sc">$</span>data)</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(corrected<span class="sc">$</span>metadata) <span class="sc">|&gt;</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, arm, timepoint)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(sample_id, subject, group, timepoint)</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">colnames</span>(abund), meta<span class="sc">$</span>sample_id))</span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(abund)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -2534,9 +2534,9 @@ Figure 2: Proteins per module, labelled with the eigengene’s person ICC.
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>trajectory <span class="ot">&lt;-</span> eigengene_long <span class="sc">|&gt;</span></span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
 <span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean =</span> <span class="fu">mean</span>(eigengene), <span class="at">se =</span> <span class="fu">sd</span>(eigengene) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">n</span>()),</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(module, arm, timepoint)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(module, group, timepoint)</span>
 <span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(trajectory, <span class="fu">aes</span>(timepoint, mean, <span class="at">colour =</span> arm, <span class="at">group =</span> arm)) <span class="sc">+</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(trajectory, <span class="fu">aes</span>(timepoint, mean, <span class="at">colour =</span> group, <span class="at">group =</span> group)) <span class="sc">+</span></span>
 <span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
 <span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> eigengene_long, <span class="fu">aes</span>(<span class="at">y =</span> eigengene, <span class="at">group =</span> subject),</span>
 <span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span></span>

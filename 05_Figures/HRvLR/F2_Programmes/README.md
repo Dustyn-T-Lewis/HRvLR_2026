@@ -32,4 +32,4 @@ Figure 2: which co-expression programmes (WGCNA modules) move with training and 
 | `panel_a` | a module | `n_proteins`, `top_set`, `top_set_fdr`, `top_members`, `string_ratio` |
 | `panel_b` | a module in a contrast | `logFC`, `p`, `fdr`, `p_fry`, `fdr_fry`, `family`, `column` |
 | `panel_c` | a call and contrast | `call`, `family`, `row`, `contrast`, `n` |
-| `panel_d` | a biopsy of the drawn module | `subject`, `arm`, `timepoint`, `value`, `module` |
+| `panel_d` | a biopsy of the drawn module | `subject`, `group`, `timepoint`, `value`, `module` |

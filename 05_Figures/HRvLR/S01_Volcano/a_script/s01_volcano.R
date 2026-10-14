@@ -3,8 +3,8 @@
 # Each page is one contrast's protein volcano with the surviving fgsea pathways ringed around it.
 # The figure computes nothing. Two separate claims share a panel: point colour and the count badges
 # read protein-level BH FDR, the ring reads set-level fgsea FDR. Only sets that survived
-# `collapsePathways` are ringed. The floor contrast is not drawn; `03_Set_Contrasts` reports what it
-# returns.
+# `collapsePathways` are ringed. The baseline reference is not drawn; `03_Set_Contrasts` reports
+# what it returns.
 #
 # fgsea ranks a gene set against all other proteins and returns a normalised enrichment score (NES).
 # A set's leading edge is the proteins that drive its score. The pi score is Π = p^|logFC| (Xiao et
@@ -167,7 +167,7 @@ make_volcano <- function(contrast, rank_by = "fdr") {
 
 # All volcanoes
 #
-# The primary and secondary questions come first, then the four within-arm responses. The last two
+# The primary and secondary questions come first, then the four within-group responses. The last two
 # pages repeat Training_HR and Training_LR with pi-ranked labels: same points, colours and rings. A
 # pi label ranks and selects nothing; a protein named on these two panels is not a hit. The chunk
 # writes all eight pages to `b_reports/s01_volcano.pdf`.

@@ -1,11 +1,11 @@
 # S02: NES concordance, HR against LR
 #
 # The figure puts HR and LR on one pair of axes, once for training and once for the acute bout. Each
-# point is a gene set: its x is the set's NES in one arm, its y the NES in the other. NES is the
+# point is a gene set: its x is the set's NES in one group, its y the NES in the other. NES is the
 # normalised enrichment score from fgsea (fast gene set enrichment analysis): its sign says which
 # way the set's proteins moved, its size how strongly. fgsea scores each set once per contrast, so
-# one arm's NES against the other's compares the arms set by set. There is no new test; the figure
-# reshapes `03_Set_Contrasts` output.
+# one group's NES against the other's compares the groups set by set. There is no new test; the
+# figure reshapes `03_Set_Contrasts` output.
 #
 # Each pair gets two pages: all collections, then Hallmark and GO Slim alone. Four pages in total go
 # to `b_reports/s02_nes_scatter.pdf`, and the numbers to `c_data/s02_nes_scatter.xlsx`.
@@ -46,12 +46,12 @@ fg <- readRDS(paths[["set_tests"]])
 # table and two composite figures. Inside it:
 #
 # - `paired` holds one row per set scored in both contrasts, with both NES and both FDR (BH within
-#   contrast). A set is significant in an arm at FDR < 0.05. It is discordant when its NES has
-#   opposite signs in the two arms, and a collapse survivor when either arm flags it `main`.
+#   contrast). A set is significant in an group at FDR < 0.05. It is discordant when its NES has
+#   opposite signs in the two groups, and a collapse survivor when either group flags it `main`.
 # - `concordance()` gives the Spearman rho of x NES against y NES, its 95% CI by the Fisher z
 #   transform (`DescTools::CorCI()`), and the significant and discordant counts.
 # - `nes_panel()` draws one scatter. The dashed line is identity; grey points are significant in
-#   neither arm.
+#   neither group.
 # - `composite_all` is every collection, the collapse survivors, and the discordant sets on their
 #   own axes.
 # - `composite_curated` is Hallmark and GO Slim, the two collections whose members do not nest, then
@@ -73,7 +73,7 @@ run_pair <- function(x_contrast, y_contrast, tag) {
         fdr_y < 0.05 ~ y_contrast,
         .default = "NS"
       ) |> factor(c("Both", x_contrast, y_contrast, "NS")),
-      # Opposite signs in the two arms, whichever arm, if either, is significant.
+      # Opposite signs in the two groups, whichever group, if either, is significant.
       discordant = sign(nes_x) != sign(nes_y),
       survivor = main_x | main_y,
       label = enrichVolcano::ev_clean_label(pathway)
@@ -177,7 +177,7 @@ run_pair <- function(x_contrast, y_contrast, tag) {
       paste(
         "One point per gene set, scored in both", tag, "contrasts. Dashed line is identity;",
         "grey points reach neither threshold. Discordant sets are significant in at least one",
-        "arm and sit on opposite sides of zero. Panel C rescales them.",
+        "group and sit on opposite sides of zero. Panel C rescales them.",
         "Table: c_data/s02_nes_scatter.xlsx, nes_scatter."
       )
     ) +
@@ -207,7 +207,7 @@ run_pair <- function(x_contrast, y_contrast, tag) {
       sprintf("fgsea NES per contrast, %d non-nesting sets, BH within contrast", nrow(curated)),
       paste(
         "Panel A is every Hallmark and GO Slim set; B and C rescale the significant sets with the",
-        "same sign in both arms, so each can be named. Point size is protein count, colour the",
+        "same sign in both groups, so each can be named. Point size is protein count, colour the",
         "contrast a set reached FDR 0.05 in. Table: c_data/s02_nes_scatter.xlsx,",
         "nes_scatter."
       )
@@ -262,6 +262,6 @@ sheets <- list(
 )
 holds <- c(
   "Spearman rho (Fisher-z 95% CI) of HR against LR NES, significant and discordant counts.",
-  "One row per set scored in both arms: both NES, both FDR, significance and discordance."
+  "One row per set scored in both groups: both NES, both FDR, significance and discordance."
 )
 write_workbook(sheets, holds, file.path(out, "s02_nes_scatter.xlsx"), inputs, paths)

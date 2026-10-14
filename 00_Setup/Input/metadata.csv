@@ -1,4 +1,4 @@
-sample_id,subject,arm,timepoint,group
+sample_id,subject,group,timepoint,group_time
 S03_T1,HR_S03,HR,T1,HR_T1
 S10_T1,HR_S10,HR,T1,HR_T1
 S16_T1,HR_S16,HR,T1,HR_T1

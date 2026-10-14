@@ -10,7 +10,7 @@ composite hypertrophy score and total volume load. T3 has no phenotype.
 
 | Walkthrough | Does | Writes |
 |---|---|---|
-| `01_Trait_Associations/a_script/trait_associations.qmd` | sample model, change score, two-predictor and interaction fits at three levels | `01_Proteins/`, `02_Sets/`, `03_Modules/` workbooks; `associate.rds` |
+| `01_Trait_Associations/a_script/trait_associations.qmd` | sample model, change score, two-predictor and interaction fits for three feature types | `01_Proteins/`, `02_Sets/`, `03_Modules/` workbooks; `associate.rds` |
 | `02_Trait_Pathways/a_script/trait_pathways.qmd` | fgsea on each trait's protein ranking | `trait_pathways.xlsx`, `pathways.rds` |
 | `03_Profile_Clusters/a_script/profile_clusters.qmd` | proteins grouped by their pattern of trait links | `profile_clusters.xlsx` |
 

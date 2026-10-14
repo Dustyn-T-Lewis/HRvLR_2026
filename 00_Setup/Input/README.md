@@ -8,7 +8,7 @@ not modified by it. Biological reference files live in the processing stages tha
 | File | Contents | Used by |
 |---|---|---|
 | `HRvLR_raw.xlsx` | Protein quantities from a DIA-NN `pg.matrix` export: five annotation columns (`uniprot_id`, `protein`, `gene`, `description`, `n_seq`) and 48 MS-run columns | `01_Processing/01_Protein_Filtering` |
-| `metadata.csv` | One row per MS run: `sample_id`, `subject`, `arm`, `timepoint`, `group` | `01_Processing/01_Protein_Filtering` |
+| `metadata.csv` | One row per MS run: `sample_id`, `subject`, `group`, `timepoint`, `group_time` | `01_Processing/01_Protein_Filtering` |
 | `phenotype.csv` | One row per participant: pre/post muscle size and strength, fibre counts, composite hypertrophy score and training volume | Grouped and continuous analyses |
 
 ## Samples and participants
@@ -16,7 +16,7 @@ not modified by it. Biological reference files live in the processing stages tha
 Sixteen participants each have three biopsies: T1 at baseline, T2 after training and T3 after
 an acute bout at the end of training. The 48 runs represent repeated measurements of 16 people.
 `sample_id` identifies a run (for example, `S03_T1`), `subject` identifies a participant
-(`HR_S03`), and `group` combines arm and time point (`HR_T1`). Sample IDs connect the workbook's
+(`HR_S03`), and `group_time` combines group and time point (`HR_T1`). Sample IDs connect the workbook's
 measurement columns to metadata; subject IDs connect metadata to phenotype.
 
 All original runs stay here. Filtering decisions and exclusions belong to
@@ -24,10 +24,10 @@ All original runs stay here. Filtering decisions and exclusions belong to
 
 ## HR and LR are the two ends of the composite
 
-25 people trained. `arm` marks the top eight on `comp_hypertrophy` as HR and the bottom eight as
+25 people trained. `group` marks the top eight on `comp_hypertrophy` as HR and the bottom eight as
 LR; the middle nine were not profiled. The composite is (2 × %ΔmCSA + %ΔfCSA) / 3, the
 manuscript's formula, and `02_Groups` recomputes and checks it. Muscle and fibre growth define the
-groups, so a growth difference between arms is built in and is not a finding.
+groups, so a growth difference between groups is built in and is not a finding.
 
 ## phenotype.csv holds pre and post side by side
 

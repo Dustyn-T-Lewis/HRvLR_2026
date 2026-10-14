@@ -4,7 +4,7 @@
 
 # Blood-corrected values for the methods that cannot carry a covariate: each feature's blood slope,
 # fitted beside the given design, is removed (limma::removeBatchEffect). The design protects what
-# the analysis compares; pass one without arm when the labels must not inform the correction.
+# the analysis compares; pass one without group when the labels must not inform the correction.
 remove_blood_effect <- function(values, blood, design) {
   limma::removeBatchEffect(values, covariates = blood, design = design)
 }
@@ -36,12 +36,12 @@ storey_q <- function(p) {
   q
 }
 
-# A grouping on a sample table: only the people it groups, with its labels in arm and
-# group (group is arm and time point, e.g. Hi_T1).
+# A grouping on a sample table: only the people it groups, with its labels in group and
+# group_time (group and time point, e.g. HR_T1).
 relabel_samples <- function(meta, group_of) {
   meta <- meta[meta$subject %in% names(group_of), , drop = FALSE]
-  meta$arm <- unname(group_of[meta$subject])
-  meta$group <- factor(paste(meta$arm, meta$timepoint, sep = "_"))
+  meta$group <- unname(group_of[meta$subject])
+  meta$group_time <- factor(paste(meta$group, meta$timepoint, sep = "_"))
   meta
 }
 
@@ -115,13 +115,13 @@ test_feature_discrimination <- function(spec, id) {
 phenotype_tables <- function(phenotype) {
   traits <- c("fcsa_mixed", "fcsa_type1", "fcsa_type2", "mcsa", "leg_press_1rm", "leg_ext_1rm")
   biopsy <- phenotype |>
-    select(subject, arm, matches("_(pre|post)_")) |>
-    tidyr::pivot_longer(-c(subject, arm),
+    select(subject, group, matches("_(pre|post)_")) |>
+    tidyr::pivot_longer(-c(subject, group),
       names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*"
     ) |>
     tidyr::pivot_wider(names_from = trait) |>
     mutate(timepoint = if_else(when == "pre", "T1", "T2")) |>
-    select(subject, arm, timepoint, all_of(traits))
+    select(subject, group, timepoint, all_of(traits))
   change <- biopsy |>
     tidyr::pivot_longer(all_of(traits), names_to = "trait") |>
     tidyr::pivot_wider(names_from = timepoint) |>

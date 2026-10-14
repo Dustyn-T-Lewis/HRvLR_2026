@@ -69,15 +69,15 @@ centred <- function(subjects) {
     filter(n > 1)
   apply(abund[, kept$sample_id], 1, \(x) x - ave(x, kept$subject))
 }
-expr <- map(set_names(c("HR", "LR")), \(arm) centred(unique(meta$subject[meta$arm == arm])))
+expr <- map(set_names(c("HR", "LR")), \(group) centred(unique(meta$subject[meta$group == group])))
 map_int(expr, nrow)
 
-#' `build_arm()` repeats the module construction of `06_Module_Building` on one group's matrix: soft
-#' power from `pickSoftThreshold()`, the WGCNA FAQ's signed table as the fallback, and the same
+#' `build_group()` repeats the module construction of `06_Module_Building` on one group's matrix:
+#' soft power from `pickSoftThreshold()`, the WGCNA FAQ's signed table as the fallback, and the same
 #' `blockwiseModules()` settings and seed.
 
 #| label: build
-build_arm <- function(data) {
+build_group <- function(data) {
   sft <- pickSoftThreshold(data,
     powerVector = 1:20, networkType = "signed",
     corFnc = "bicor", corOptions = list(maxPOutliers = 0.05), verbose = 0
@@ -97,8 +97,8 @@ build_arm <- function(data) {
   ))
   list(power = power, colours = set_names(net$colors, colnames(data)))
 }
-arm_modules <- map(expr, build_arm)
-map(arm_modules, \(x) c(power = x$power, modules = n_distinct(setdiff(x$colours, "grey"))))
+group_modules <- map(expr, build_group)
+map(group_modules, \(x) c(power = x$power, modules = n_distinct(setdiff(x$colours, "grey"))))
 
 #' ## Preservation
 #'
@@ -108,7 +108,7 @@ map(arm_modules, \(x) c(power = x$power, modules = n_distinct(setdiff(x$colours,
 #| label: preservation
 preservation <- modulePreservation(
   multiData = map(expr, \(data) list(data = data)),
-  multiColor = map(arm_modules, "colours"),
+  multiColor = map(group_modules, "colours"),
   referenceNetworks = 1:2, networkType = "signed",
   corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'",
   nPermutations = permutations, randomSeed = 42, savePermutedStatistics = FALSE,
@@ -120,15 +120,15 @@ preservation <- modulePreservation(
 
 #| label: table
 full <- set_names(modules$membership$module, modules$membership$uniprot_id)
-best_match <- imap(arm_modules, \(built, arm) {
+best_match <- imap(group_modules, \(built, group) {
   tibble(
-    uniprot_id = names(built$colours), arm_module = built$colours, full_module = full[uniprot_id]
+    uniprot_id = names(built$colours), group_module = built$colours, full_module = full[uniprot_id]
   ) |>
-    filter(arm_module != "grey") |>
-    count(arm_module, full_module) |>
-    mutate(share = n / sum(n), .by = arm_module) |>
-    slice_max(n, n = 1, by = arm_module, with_ties = FALSE) |>
-    transmute(reference = arm, module = arm_module, full_module, full_share = round(share, 2))
+    filter(group_module != "grey") |>
+    count(group_module, full_module) |>
+    mutate(share = n / sum(n), .by = group_module) |>
+    slice_max(n, n = 1, by = group_module, with_ties = FALSE) |>
+    transmute(reference = group, module = group_module, full_module, full_share = round(share, 2))
 }) |>
   list_rbind()
 preservation_table <- map(c(HR = "LR", LR = "HR"), \(test) {
@@ -205,20 +205,20 @@ dir.create(out, recursive = TRUE, showWarnings = FALSE)
 write_workbook(
   list(
     preservation = preservation_table,
-    arm_networks = tibble(
-      arm = names(arm_modules), n_samples = map_int(expr, nrow),
-      power = map_int(arm_modules, "power"),
-      n_modules = map_int(arm_modules, \(x) n_distinct(setdiff(x$colours, "grey")))
+    group_networks = tibble(
+      group = names(group_modules), n_samples = map_int(expr, nrow),
+      power = map_int(group_modules, "power"),
+      n_modules = map_int(group_modules, \(x) n_distinct(setdiff(x$colours, "grey")))
     ),
-    arm_membership = imap(arm_modules, \(x, arm) {
-      tibble(arm = arm, uniprot_id = names(x$colours), module = x$colours)
+    group_membership = imap(group_modules, \(x, group) {
+      tibble(group = group, uniprot_id = names(x$colours), module = x$colours)
     }) |>
       list_rbind()
   ),
   c(
-    "Zsummary and median rank of each arm's modules tested in the other arm.",
-    "Samples, soft power and module count of each arm's network.",
-    "Every protein's module in each arm's network."
+    "Zsummary and median rank of each group's modules tested in the other group.",
+    "Samples, soft power and module count of each group's network.",
+    "Every protein's module in each group's network."
   ),
   file.path(out, "07_module_preservation.xlsx"), inputs, paths
 )

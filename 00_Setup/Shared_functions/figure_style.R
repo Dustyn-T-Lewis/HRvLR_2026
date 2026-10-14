@@ -11,7 +11,6 @@ contrast_palette <- tibble::tribble(
   "Training", "#317EC2", "#B9DBF4", "#1F5A8F",
   "Acute", "#E7872B", "#F6BF93", "#A85A0E",
   "HR - LR", "#4F609C", "#E5EBFB", "#36447A",
-  "Hi - Lo", "#4F609C", "#E5EBFB", "#36447A",
   "C1 - C2", "#4F609C", "#E5EBFB", "#36447A",
   "Between groups", "#4F609C", "#E5EBFB", "#36447A",
   "Interaction", "#E9C61D", "#F4E6AA", "#8A7208"
@@ -20,8 +19,8 @@ contrast_tone <- \(tone) tibble::deframe(contrast_palette[c("family", tone)])
 
 # Within Training and Acute, the first group (HR) takes the ink and the second (LR) the line colour,
 # so the first reads darker, as in the design panel, and both stay legible.
-arm_shade <- function(family, arm, groups = c("HR", "LR")) {
-  purrr::map2_chr(family, arm, \(f, a) {
+group_shade <- function(family, group, groups = c("HR", "LR")) {
+  purrr::map2_chr(family, group, \(f, a) {
     row <- contrast_palette[contrast_palette$family == f, ]
     if (!nrow(row) || !a %in% groups) {
       return("grey30")
@@ -36,9 +35,9 @@ time_colours <- c(
   T2 = contrast_palette$line[contrast_palette$family == "Training"],
   T3 = contrast_palette$line[contrast_palette$family == "Acute"]
 )
-arm_shapes <- c(HR = 16, LR = 17)
+group_shapes <- c(HR = 16, LR = 17)
 # HR dark and LR light grey, as the two figures in the design panel.
-arm_colours <- c(HR = "#4D4D4D", LR = "#A6A6A6")
+group_greys <- c(HR = "#4D4D4D", LR = "#A6A6A6")
 direction_colours <- c(Up = "#4D9221", Down = "#C51B7D")
 
 figure_theme <- ggplot2::theme_minimal(base_size = 7) +
@@ -105,7 +104,7 @@ evidence_level <- function(p, fdr) {
 evidence_shapes <- rlang::set_names(c(16, 1, 16), evidence_levels)
 evidence_alpha <- rlang::set_names(c(1, 1, 0.35), evidence_levels)
 
-# Contrast names from a design, for any pair of groups (HR/LR, Hi/Lo, C1/C2): a readable label, the
+# Contrast names from a design, for any pair of groups (HR/LR or C1/C2): a readable label, the
 # family that sets the colour, and the window that groups the rows. A between-group suffix reads
 # "HRvLR"; a within-group suffix is one group's name. The first group takes the darker shade.
 between <- "[A-Za-z0-9]+v[A-Za-z0-9]+$"
@@ -147,7 +146,7 @@ contrast_short <- function(contrast) {
   )
 }
 # The two groups of any grouping in the design panel's HR (dark) and LR (light) greys.
-group_colours <- \(groups) rlang::set_names(unname(arm_colours), groups)
+group_colours <- \(groups) rlang::set_names(unname(group_greys), groups)
 
 # Trait column names as axis text: "pct_leg_press_1rm" reads "leg press 1RM (% change)".
 trait_label <- function(trait) {

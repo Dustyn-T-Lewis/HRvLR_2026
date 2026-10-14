@@ -25,7 +25,7 @@ the contrast palette and panel builders come from `00_Setup/Shared_functions/fig
 `code/f1_overview.R` defines `f1_overview(grouping)`; each `<grouping>/F1_Overview/a_script/` runs
 it for its grouping. HRvLR's panel a is the BioRender design drawing; see
 [`HRvLR/F1_Overview`](HRvLR/F1_Overview/README.md) for its panels in full. For the seven clustered
-groupings panel a maps the clustering instead, and the groups are Hi and Lo (muscle) or C1 and C2
+groupings panel a maps the clustering instead, and the groups are HR and LR (muscle) or C1 and C2
 (proteome).
 
 | Panel | Shows | Built by | Source, in `03_Group_comparisons/<grouping>/c_data/` unless named |
@@ -45,7 +45,7 @@ groupings panel a maps the clustering instead, and the groups are Hi and Lo (mus
   0.6 not to be trusted. Every clustering found K = 1; K = 2 was imposed.
 - Muscle_size and Muscle_strength were split on size or strength change, so the phenotype PCA has no
   group test and a difference in that trait is built in. Muscle_size reproduces the HR/LR split
-  exactly, so its panels b to f repeat the HR/LR figure under new names; Muscle_strength is stable
+  exactly, so its panels b to f repeat the HR/LR figure; Muscle_strength is stable
   and unrelated to HR/LR.
 - Proteome groupings tag each contrast in panel b with its validity against the clustering:
   `(circ.)` circular, built from the same time points; `(caut.)` caution, shares a time point;

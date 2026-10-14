@@ -73,17 +73,17 @@ inter-run correlation. This repository holds no record of its own comparison bey
 #| label: normalise
 pdf(NULL)
 write_norm_report(dal,
-  grouping_column = "group", output_dir = reports,
+  grouping_column = "group_time", output_dir = reports,
   filename = "norm_comparison.pdf", overwrite = TRUE
 )
 write_qc_report(dal,
-  color_column = "group", output_dir = reports,
+  color_column = "group_time", output_dir = reports,
   filename = "qc_pre.pdf", overwrite = TRUE
 )
 before <- log2(as.matrix(dal$data))
 dal <- normalize_data(dal, norm_method = "cycloess")
 write_qc_report(dal,
-  color_column = "group", output_dir = reports,
+  color_column = "group_time", output_dir = reports,
   filename = "qc_post.pdf", overwrite = TRUE
 )
 invisible(dev.off())
@@ -115,7 +115,7 @@ stopifnot(identical(colnames(before), colnames(dal$data)))
 quantiles <- bind_rows(
   intensity_quantiles(before, "before"), intensity_quantiles(as.matrix(dal$data), "after")
 ) |>
-  left_join(select(dal$metadata, sample_id, arm, timepoint), by = "sample_id")
+  left_join(select(dal$metadata, sample_id, group, timepoint), by = "sample_id")
 quantiles |>
   group_by(stage) |>
   summarise(median_of_run_medians = median(q50), spread_of_run_medians = diff(range(q50)))
@@ -130,7 +130,7 @@ Nothing downstream reads it.
 
 ```{r}
 #| label: eta-squared
-cell_fit <- lmFit(dal$data, model.matrix(~group, dal$metadata))
+cell_fit <- lmFit(dal$data, model.matrix(~group_time, dal$metadata))
 total_ss <- apply(dal$data, 1, \(x) sum((x - mean(x, na.rm = TRUE))^2, na.rm = TRUE))
 eta2 <- 1 - cell_fit$sigma^2 * cell_fit$df.residual / total_ss
 eta2[rowSums(!is.na(dal$data)) < 4] <- NA
@@ -160,7 +160,7 @@ components
 #| fig-cap: "Runs on the first two principal components after normalisation, gaps median-filled."
 #| fig-width: 6
 #| fig-height: 4.5
-ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = arm)) +
+ggplot(pca_scores, aes(PC1, PC2, colour = timepoint, shape = group)) +
   geom_point(size = 2.2) +
   scale_colour_manual(values = c(T1 = "#E69F00", T2 = "#0072B2", T3 = "#009E73")) +
   labs(
@@ -191,7 +191,7 @@ sheets <- list(
     as_tibble(dal$data)
   ),
   components = components,
-  pca_scores = select(pca_scores, sample_id, subject, arm, timepoint, PC1, PC2),
+  pca_scores = select(pca_scores, sample_id, subject, group, timepoint, PC1, PC2),
   eta_squared = tibble(uniprot_id = rownames(dal$data), eta2 = unname(eta2)),
   intensity_quantiles = quantiles
 )

@@ -14,7 +14,7 @@
 # | d | dynamic range, with abundant muscle proteins named |
 # | e | share missing against mean observed abundance, with limpa's detection curve |
 # | f | correlation between the 45 samples |
-# | g | blood index per sample, by arm and time |
+# | g | blood index per sample, by group and time |
 # | h | each protein's log2 FC with and without the blood covariate |
 # | i | p-value histograms per contrast |
 # | j | observed effects in the primary contrast against the effect detectable at 80% power |
@@ -97,12 +97,12 @@ kept_samples <- read_sheet("quantify", "blood")$sample_id
 detection <- read_sheet("filter", "outlier_diagnostics") |>
   mutate(
     kept = sample_id %in% kept_samples,
-    sample_id = factor(sample_id, sample_id[order(arm, timepoint, pct_missing)])
+    sample_id = factor(sample_id, sample_id[order(group, timepoint, pct_missing)])
   )
 panel_detection <- ggplot(detection, aes(sample_id, pct_missing, colour = timepoint)) +
   geom_segment(aes(xend = sample_id, y = 0, yend = pct_missing), linewidth = 0.3) +
   geom_point(aes(shape = kept), size = 1.2) +
-  facet_grid(~arm, scales = "free_x", space = "free_x") +
+  facet_grid(~group, scales = "free_x", space = "free_x") +
   scale_shape_manual(
     values = c(`TRUE` = 16, `FALSE` = 4), labels = c("excluded", "kept"), name = NULL
   ) +
@@ -122,7 +122,7 @@ panel_detection <- ggplot(detection, aes(sample_id, pct_missing, colour = timepo
 quantiles <- read_sheet("normalize", "intensity_quantiles") |>
   mutate(
     stage = factor(stage, c("before", "after"), c("before normalisation", "after")),
-    sample_id = factor(sample_id, unique(sample_id[order(arm, timepoint)]))
+    sample_id = factor(sample_id, unique(sample_id[order(group, timepoint)]))
   )
 panel_intensity <- ggplot(quantiles, aes(sample_id, colour = timepoint)) +
   geom_linerange(aes(ymin = q05, ymax = q95), linewidth = 0.25) +
@@ -225,15 +225,15 @@ panel_correlation <- ggplot(cells, aes(a, b, fill = r)) +
 
 # g: blood
 #
-# Blood index per sample, by arm and time. The subtitle carries the LR - HR difference at T3 and its
-# permutation p from `01_Protein_Filtering`.
+# Blood index per sample, by group and time. The subtitle carries the LR - HR difference at T3 and
+# its permutation p from `01_Protein_Filtering`.
 
 blood <- read_sheet("quantify", "blood") |>
-  mutate(arm = sub("_.*", "", group), timepoint = sub(".*_", "", group))
-blood_test <- filter(read_sheet("filter", "blood_by_arm"), scale == "log2_index")
-panel_blood <- ggplot(blood, aes(timepoint, blood_rel, colour = timepoint, shape = arm)) +
+  mutate(group = sub("_.*", "", group_time), timepoint = sub(".*_", "", group_time))
+blood_test <- filter(read_sheet("filter", "blood_by_group"), scale == "log2_index")
+panel_blood <- ggplot(blood, aes(timepoint, blood_rel, colour = timepoint, shape = group)) +
   geom_point(position = position_jitterdodge(jitter.width = 0.15, seed = 1), size = 1.1) +
-  scale_shape_manual(values = arm_shapes, name = NULL) +
+  scale_shape_manual(values = group_shapes, name = NULL) +
   time_axis +
   labs(
     x = NULL, y = "blood index (log2, vs sample median)", title = "Blood in each biopsy",
@@ -372,12 +372,12 @@ save_figure(figure, figure_dir, "s01_qc", width = 300, height = 190)
 
 sheets <- list(
   filter_log = select(filter_log, step, n_removed, n_after),
-  detection = select(detection, sample_id, subject, arm, timepoint, pct_missing, kept),
-  intensity_quantiles = select(quantiles, -arm, -timepoint),
+  detection = select(detection, sample_id, subject, group, timepoint, pct_missing, kept),
+  intensity_quantiles = select(quantiles, -group, -timepoint),
   dynamic_range = select(protein_table, uniprot_id, gene, rank, mean_complete),
   missingness = select(protein_table, uniprot_id, gene, mean_observed, prop_observed),
   correlation_summary = within_between,
-  blood = select(blood, sample_id, subject, arm, timepoint, blood_rel),
+  blood = select(blood, sample_id, subject, group, timepoint, blood_rel),
   blood_adjustment = tibble(r = blood_r, n_points = nrow(blood_effect)),
   calibration = calibration,
   power = detectable

@@ -10,14 +10,14 @@ Did the samples hold up, and does the analysis behave? Ten panels: the top row c
 | d | Proteins ranked by mean abundance over limpa's complete matrix, with muscle landmarks named (MYH7, MYH2, ACTA1, TTN, DES, CKM, MB, ATP5F1A, NDUFA4, PSMA1) | `quantification.xlsx`, `proteins` |
 | e | Share of values missing against mean observed abundance, with limpa's detection curve drawn as 1 minus detection probability | `quantification.xlsx`, `proteins`, `curve` |
 | f | Correlation between the 45 samples (each protein centred, blood-corrected), clustered by average linkage; subtitle gives the median within and between people | `quantification.xlsx`, `sample_correlation`, `blood` |
-| g | Blood index per biopsy by time point and arm, with the arm-by-T3 estimate and permutation p | `quantification.xlsx`, `blood`; `protein_filtering.xlsx`, `blood_by_arm` |
+| g | Blood index per biopsy by time point and group, with the group-by-T3 estimate and permutation p | `quantification.xlsx`, `blood`; `protein_filtering.xlsx`, `blood_by_group` |
 | h | Each protein's log2 FC with and without the blood covariate, nine contrasts pooled, with their correlation | `protein_contrasts.xlsx`, `protein_by_contrast`, `unadjusted` |
 | i | p-value histogram per contrast against a flat null, with median \|t\| | `protein_contrasts.xlsx`, `protein_by_contrast`, `null_calibration` |
 | j | Observed \|log2 FC\| in the training interaction against the detectable effect for the median protein and the 90th percentile | `protein_contrasts.xlsx`, `protein_by_contrast`, `detectable_effect` |
 
 | | |
 |---|---|
-| Reads | `01_Processing/01_Protein_Filtering/c_data/protein_filtering.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_arm`), `01_Processing/02_Normalisation/c_data/normalisation.xlsx` (`intensity_quantiles`), `01_Processing/03_Quantification/c_data/quantification.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `03_Group_comparisons/HRvLR/c_data/02_protein_contrasts.xlsx` (`protein_by_contrast`, `unadjusted`, `null_calibration`, `detectable_effect`) |
+| Reads | `01_Processing/01_Protein_Filtering/c_data/protein_filtering.xlsx` (`filter_log`, `outlier_diagnostics`, `blood_by_group`), `01_Processing/02_Normalisation/c_data/normalisation.xlsx` (`intensity_quantiles`), `01_Processing/03_Quantification/c_data/quantification.xlsx` (`curve`, `proteins`, `blood`, `sample_correlation`), `03_Group_comparisons/HRvLR/c_data/02_protein_contrasts.xlsx` (`protein_by_contrast`, `unadjusted`, `null_calibration`, `detectable_effect`) |
 | Writes | `b_reports/s01_qc.pdf` (300 x 190 mm, cairo PDF), `c_data/s01_qc.xlsx` |
 | Run | `Rscript 05_Figures/Processing/S01_QC/a_script/s01_qc.R`, or `run_all.R` with the figures at the end (it reads the HR/LR protein contrasts) |
 

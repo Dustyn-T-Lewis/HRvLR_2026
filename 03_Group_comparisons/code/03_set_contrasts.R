@@ -81,7 +81,7 @@ stopifnot(
   identical(rownames(complete$data), protein_ids),
   identical(colnames(complete$data), rownames(design)),
   identical(fit$metadata$sample_id, rownames(design)),
-  d$floor %in% contrast_names
+  d$baseline_reference %in% contrast_names
 )
 c(sets = length(sets), proteins = length(protein_ids), runs = ncol(complete$data))
 
@@ -188,7 +188,7 @@ set_tests <- set_tests |>
   ) |>
   relocate(contrast, method, set_id, collection, pathway)
 
-#' The floor contrast sorts first, so the reference for how far apart the groups start opens the
+#' The baseline reference sorts first, so the reference for how far apart the groups start opens the
 #' table.
 
 #| label: set-summary
@@ -201,7 +201,7 @@ set_summary <- set_tests |>
     n_fdr_fry = sum(method == "fry" & fdr < 0.05),
     .by = contrast
   ) |>
-  arrange(contrast != d$floor)
+  arrange(contrast != d$baseline_reference)
 set_summary
 
 #' ## Sets called, one page per contrast and method
@@ -277,7 +277,7 @@ contrast_results <- set_tests |>
   transmute(feature = set_id, contrast, effect = nes, p, fdr)
 row_groups <- split(catalog$set_id, factor(catalog$collection, unique(catalog$collection))) |>
   map(\(ids) ids[hclust(as.dist(1 - cor(t(sample_values[ids, ]))), "average")$order])
-report_arm_colours <- set_names(c("#2166AC", "#B2182B"), d$arms)
+report_group_colours <- set_names(c("#2166AC", "#B2182B"), d$groups)
 trait_table <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
 biopsy_traits <- trait_table |>
   select(subject, matches("_(pre|post)_")) |>
@@ -288,14 +288,14 @@ biopsy_traits <- trait_table |>
     timepoint = if_else(when == "pre", "T1", "T2"), fcsa_mixed, mcsa, leg_press_1rm
   )
 columns <- as_tibble(complete$metadata) |>
-  transmute(sample_id, subject, arm = as.character(arm), timepoint = as.character(timepoint)) |>
-  mutate(group = factor(
-    paste(arm, timepoint, sep = "_"),
-    paste(rep(d$arms, each = 3), c("T1", "T2", "T3"), sep = "_")
+  transmute(sample_id, subject, group = as.character(group), timepoint = as.character(timepoint)) |>
+  mutate(group_time = factor(
+    paste(group, timepoint, sep = "_"),
+    paste(rep(d$groups, each = 3), c("T1", "T2", "T3"), sep = "_")
   )) |>
   left_join(biopsy_traits, by = c("subject", "timepoint")) |>
   left_join(select(trait_table, subject, comp_hypertrophy), by = "subject") |>
-  arrange(group, subject)
+  arrange(group_time, subject)
 stopifnot(!anyDuplicated(columns$sample_id), setequal(columns$sample_id, colnames(sample_values)))
 lengths(row_groups)
 
@@ -310,9 +310,11 @@ tracks <- list(
   "comp_hypertrophy, per subject" = columns$comp_hypertrophy
 )
 sample_annotation <- HeatmapAnnotation(
-  df = data.frame(arm = columns$arm, timepoint = columns$timepoint, tracks, check.names = FALSE),
+  df = data.frame(
+    group = columns$group, timepoint = columns$timepoint, tracks, check.names = FALSE
+  ),
   col = c(
-    list(arm = report_arm_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
+    list(group = report_group_colours, timepoint = c(T1 = "grey85", T2 = "grey55", T3 = "grey25")),
     map(tracks, grey_ramp)
   ),
   na_col = "grey80", annotation_name_gp = gpar(fontsize = 7), annotation_name_side = "left",
@@ -326,7 +328,7 @@ overviews <- imap(row_groups, \(rows, group) {
   labelled_heat <- \(...) make_report_heatmap(..., labels = feature_label)
   biopsy_map <- labelled_heat(m, "biopsies", c(-limit, 0, limit), "singscore, centred",
     row_names = TRUE, column_title = character(0), top_annotation = sample_annotation,
-    column_split = columns$group, cluster_column_slices = FALSE,
+    column_split = columns$group_time, cluster_column_slices = FALSE,
     column_labels = columns$subject, column_names_gp = gpar(fontsize = 5)
   )
   contrast_grid <- \(value) {
@@ -362,12 +364,13 @@ stopifnot(
 #' ## Summary
 
 #| label: summary
-fgsea_calls <- filter(set_summary, contrast != d$floor)$n_fdr_fgsea
+fgsea_calls <- filter(set_summary, contrast != d$baseline_reference)$n_fdr_fgsea
 
 #' `r length(sets)` sets were tested per contrast. fgsea calls
 #' `r min(fgsea_calls)` to `r max(fgsea_calls)` sets at FDR < 0.05 across the contrasts other than
-#' the floor, which calls `r filter(set_summary, contrast == d$floor)$n_fdr_fgsea`. fry calls
-#' `r sum(set_summary$n_fdr_fry)` set-contrast pairs at FDR < 0.05 across all nine.
+#' the baseline reference, which calls `r filter(set_summary, contrast ==
+#' d$baseline_reference)$n_fdr_fgsea`. fry calls `r sum(set_summary$n_fdr_fry)` set-contrast pairs
+#' at FDR < 0.05 across all nine.
 #'
 #' ## Save
 #'
