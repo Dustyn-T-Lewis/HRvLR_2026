@@ -1,0 +1,135 @@
+---
+title: "Proteome clusters against the phenotype"
+params:
+  grouping: Proteome
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Do the people the proteome clustered together differ in muscle size or strength? The phenotype
+played no part in the clustering, so these tests are not circular. Proteome grouping only.
+
+For each clustering input and trait: each cluster's median, the Wilcoxon rank-sum test (exact
+where `wilcox.test()` can compute it) and BH within input. Traits are the % change over training,
+the composite and volume load, and the T1 and T2 levels. The cross-table with HR/LR describes, with
+Fisher's exact p; it decides nothing.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+```
+
+## Inputs
+
+```{r}
+#| label: inputs
+stage <- here("03_Group_comparisons", "Proteome", "07_Cluster_Phenotype")
+inputs <- c(
+  clusters = "02_Groups/Proteome/c_data/clustering.xlsx",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- map_chr(inputs, here)
+stopifnot(file.exists(paths))
+assignments <- readxl::read_excel(paths[["clusters"]], "assignments")
+phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
+pairings <- phenotype_tables(phenotype)$pairings
+traits <- bind_rows(
+  pivot_longer(pairings$training, -subject, names_to = "trait") |> mutate(kind = "change"),
+  pivot_longer(pairings$baseline_level, -subject, names_to = "trait") |> mutate(kind = "T1 level"),
+  pivot_longer(pairings$post_level, -subject, names_to = "trait") |> mutate(kind = "T2 level")
+)
+count(assignments, input, cluster)
+```
+
+## Tests
+
+```{r}
+#| label: tests
+tests <- assignments |>
+  select(input, subject, cluster) |>
+  inner_join(traits, by = "subject", relationship = "many-to-many") |>
+  filter(!is.na(value)) |>
+  nest(.by = c(input, kind, trait)) |>
+  mutate(test = map(data, \(x) {
+    rank_sum <- suppressWarnings(wilcox.test(value ~ cluster, data = x))
+    tibble(
+      n_1 = sum(x$cluster == 1), n_2 = sum(x$cluster == 2),
+      median_1 = median(x$value[x$cluster == 1]), median_2 = median(x$value[x$cluster == 2]),
+      w = unname(rank_sum$statistic), p = rank_sum$p.value
+    )
+  })) |>
+  select(-data) |>
+  unnest(test) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = input) |>
+  arrange(input, p)
+head(tests)
+```
+
+```{r}
+#| label: hr-lr
+hr_lr <- assignments |>
+  summarise(
+    hr_in_1 = sum(arm == "HR" & cluster == 1), lr_in_1 = sum(arm == "LR" & cluster == 1),
+    hr_in_2 = sum(arm == "HR" & cluster == 2), lr_in_2 = sum(arm == "LR" & cluster == 2),
+    fisher_p = fisher.test(table(arm, cluster))$p.value,
+    .by = input
+  )
+hr_lr
+```
+
+```{r}
+#| label: fig-response
+#| fig-cap: "Training response by proteome cluster, per input."
+#| fig-width: 11
+#| fig-height: 8.5
+assignments |>
+  inner_join(filter(traits, kind == "change"), by = "subject", relationship = "many-to-many") |>
+  ggplot(aes(factor(cluster), value)) +
+  geom_boxplot(outlier.shape = NA, width = 0.5) +
+  geom_point(position = position_jitter(width = 0.1, seed = 1), size = 1) +
+  facet_grid(trait ~ input, scales = "free_y") +
+  labs(x = "cluster", y = "value") +
+  theme_bw(base_size = 7)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(all(tests$fdr >= tests$p), all(tests$n_1 >= 1), all(tests$n_2 >= 1))
+```
+
+## Summary
+
+`r nrow(tests)` cluster-against-trait tests over `r n_distinct(tests$input)` inputs:
+`r sum(tests$p < 0.05)` at p < 0.05, `r sum(tests$fdr < 0.05)` at BH < 0.05.
+
+## Save
+
+```{r}
+#| label: save
+out <- file.path(stage, "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+write_workbook(
+  list(tests = tests, hr_lr = hr_lr),
+  c(
+    "Per input, trait kind and trait: n and median per cluster, Wilcoxon W and p, BH within input.",
+    "Per input: HR and LR counts in each cluster, Fisher's exact p (description only)."
+  ),
+  file.path(out, "cluster_phenotype.xlsx"), inputs, paths
+)
+```

@@ -1,42 +1,55 @@
 # 03_Group_comparisons
 
-If the groups came from the data rather than from the study's HR/LR labels, would the results
-change?
+How do two groups of people differ? The same analyses run for every grouping from `02_Groups`:
+the study's HR and LR, and the three clusterings (muscle size, muscle strength, proteome). Each
+analysis is written once in `a_script/` and rendered once per grouping; the grouping folders hold
+results only.
 
-`03_Group_comparisons/HRvLR` compares the study's High and Low Responders. Here the data propose the groups,
-three ways, and the same steps run on each grouping:
-
-| Folder | People clustered on | Groups |
+| Walkthrough | Does | Writes (per grouping) |
 |---|---|---|
-| [`Muscle_size`](Muscle_size/README.md) | % change over training in fibre area (mixed, type I, type II) and muscle area | `Hi`, `Lo` |
-| [`Muscle_strength`](Muscle_strength/README.md) | % change over training in leg-press and leg-extension 1RM | `Hi`, `Lo` |
-| [`Proteome`](Proteome/README.md) | module eigengenes at T1, T2, T3, training change and acute change | `C1`, `C2` per input |
+| `01_design_contrasts.qmd` | cell-means model with blood and person block; nine contrasts and their roles | `design.rds`, `design_contrasts.xlsx` |
+| `02_protein_contrasts.qmd` | limma on limpa values: logFC with 95% CI, BH, Storey q, Π; fry concordance; PCA and PERMANOVA | `fit.rds`, `protein_contrasts.xlsx` |
+| `03_set_contrasts.qmd` | fgsea and fry on every gene set; fgsea collapse | `set_tests.rds`, `set_contrasts.xlsx` |
+| `04_module_contrasts.qmd` | limma on eigengenes, fry on modules, membership against protein change | `module_contrasts.xlsx` |
+| `05_classification.qmd` | single-feature AUC with DeLong and bootstrap intervals, five tasks, three levels | `05_Classification/0{1,2,3}_*/*_classification.xlsx` |
+| `06_trait_associations.qmd` | Spearman within each group; limma group × trait slope difference | `trait_associations.xlsx` |
+| `07_module_preservation.qmd` | HR/LR only: WGCNA preservation of each group's modules in the other | `module_preservation.xlsx` |
+| `07_cluster_phenotype.qmd` | Proteome only: do the proteome clusters differ in size or strength? | `cluster_phenotype.xlsx` |
 
-## Clustering
+The Proteome grouping runs each walkthrough once per clustering input (T1, T2, T3, training,
+acute) into `Proteome/<step>/<input>/`, then stacks the five workbooks into
+`Proteome/<step>/c_data/*_all_inputs.xlsx` with a `validity` column: `circular` when a comparison
+uses exactly the clustering's time points, `caution` when it shares one, `clean` otherwise.
 
-Each trait or eigengene is z-scored across people, then PAM (`cluster::pam`) picks K real people
-as centres and assigns everyone to the nearest. PAM always returns K groups, so three diagnostics
-judge the answer:
+Every clustering found K = 1 (no natural groups); K = 2 was imposed, so every clustered comparison
+is exploratory. HR and LR are extreme groups (top and bottom 8 of 25), so growth differences between
+them are built in.
 
-| Diagnostic | Function | Measures |
-|---|---|---|
-| Gap statistic, one-SE rule | `cluster::clusGap` (K = 1 to 3, 500 reference sets), `cluster::maxSE(method = "Tibs2001SEmax")` | whether K clusters are tighter than in data with no groups; K = 1 is a possible answer |
-| Silhouette | `pam()$silinfo$avg.width` | how much closer people sit to their own cluster than to the next |
-| Bootstrap Jaccard | `fpc::clusterboot`, 500 resamples | how often a cluster comes back when people are resampled: 0.75 or more stable, 0.6 to 0.75 doubtful, below 0.6 not to be trusted |
+## Inputs
 
-The gap statistic selects K = 1 for size, for strength and for the proteome at every input. K = 2
-is then imposed by hand (`imposed_k`), with the reason recorded in each `clustering.xlsx`
-(`choice`). An imposed split cuts one spread of people in two; every result downstream of it is
-exploratory.
+`02_Groups/<grouping>/c_data/groups.rds`, and the `01_Processing` outputs: `proteins.rds`,
+`DAList_limpa.rds`, `DAList_corrected.rds`, `gene_sets.rds`, `singscore.rds`, `modules.rds`; plus
+`00_Setup/Input/phenotype.csv`.
 
-## How the groups reach the shared steps
+## Run
 
-`01_Clustering` writes `groups.rds` (one per input for `Proteome`): who is in each group, the two
-group names and the traits that defined them. `02_Design_Contrasts` reads it and records the
-groups in `design.rds`; every later step reads the 01_Processing files through `subset_for_design()` in
-`00_Setup/Shared_functions/analysis_reporting_helpers.R`, which keeps the grouped people's samples and puts the cluster names in `arm` and
-`group`. The steps are the same functions `03_Group_comparisons/HRvLR` calls, so the files, sheets and
-columns match. The contrasts keep their shape: `Training_Hi`, `Baseline_HivLo`,
-`Training_Interaction`.
+```sh
+Rscript run_all.R 03_Group_comparisons
+```
 
-`05_Module_Preservation` runs only for HR/LR; `08_Cluster_Phenotype` only for `Proteome`.
+or one walkthrough for one grouping, from the project root:
+
+```sh
+quarto render 03_Group_comparisons/a_script/02_protein_contrasts.qmd -P grouping:HRvLR \
+  --output-dir ../HRvLR/02_Protein_Contrasts/b_reports
+quarto render 03_Group_comparisons/a_script/02_protein_contrasts.qmd -P grouping:Proteome \
+  -P input:T1 --output-dir ../Proteome/02_Protein_Contrasts/T1/b_reports
+```
+
+Steps run in order: each reads the design (`01`) and, for sets and modules, the protein fit (`02`).
+
+## Outputs
+
+`<grouping>/<NN_Step>/b_reports/<walkthrough>.html` is the rendered walkthrough;
+`<grouping>/<NN_Step>/c_data/` holds the workbooks and `.rds` files above. Every workbook opens with
+`read_me` and `columns` and closes with `input_manifest` and `package_versions`.
