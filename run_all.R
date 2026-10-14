@@ -1,4 +1,5 @@
-# Run stages in order, each in a separate R session; stop on the first failure.
+# Run stages in order, each in a separate R session (.R by Rscript, .qmd by quarto render);
+# stop on the first failure.
 # Rscript run_all.R          all stages
 # Rscript run_all.R 01 04    selected folders; their prerequisites must already exist
 # Logs are local to Scratch/runlogs/.
@@ -70,11 +71,16 @@ only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[substr(stages, 1, 2) %in% only]
 dir.create("Scratch/runlogs", recursive = TRUE, showWarnings = FALSE)
 for (stage in stages) {
-  script <- list.files(file.path(stage, "a_script"), pattern = "\\.R$", full.names = TRUE)
+  script <- list.files(file.path(stage, "a_script"), pattern = "\\.(R|qmd)$", full.names = TRUE)
   stopifnot(length(script) == 1)
   log <- file.path("Scratch/runlogs", paste0(gsub("/", "_", stage), ".log"))
   started <- Sys.time()
-  status <- system2("Rscript", script, stdout = log, stderr = log)
+  # Called from the project root, quarto's R session loads the renv library before any package.
+  status <- if (endsWith(script, ".qmd")) {
+    system2("quarto", c("render", script, "--output-dir", "../b_reports"), stdout = log, stderr = log)
+  } else {
+    system2("Rscript", script, stdout = log, stderr = log)
+  }
   message(sprintf("%-32s %6.1f min", stage, as.numeric(Sys.time() - started, units = "mins")))
   if (status != 0) stop(stage, " failed; see ", log)
 }

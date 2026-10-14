@@ -12,6 +12,9 @@
 *.tmp
 *.log
 Rplots.pdf
+.quarto/
+*.quarto_ipynb
+**/a_script/.gitignore
 .Rhistory
 .Rapp.history
 .Rproj.user/
