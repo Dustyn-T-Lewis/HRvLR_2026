@@ -1,0 +1,261 @@
+---
+title: "Profile clusters, everyone pooled"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Which proteins relate to the phenotype in the same way? Two groupings, with no group label:
+
+- Profiles: each protein is described by its limma t against every trait in every window (the
+  change scores of `01_Trait_Associations`), and proteins with similar profiles are clustered.
+- Per trait: for each trait's training change and T1 level, the proteins at p < 0.05 are grouped
+  by how they co-vary across people, with each group's direction and main module.
+
+Each group is described by its most over-represented gene set (clusterProfiler's `enricher()`),
+with every protein tested in the window as the universe. The groups come from the same t values
+they summarise, so these descriptions are not tests of the grouping; the mean silhouette reports
+how separate the groups are.
+
+## Packages
+
+dynamicTreeCut cuts the trees and clusterProfiler runs the enrichment; both are called with `::`.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+source(here("02_HRvLR", "helpers.R"))
+inputs <- c(
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  associations = "03_Continuous/01_Trait_Associations/c_data/associations.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+The blood-corrected matrix, the protein change scores, the gene sets and each protein's module.
+
+```{r}
+#| label: input
+corrected <- readRDS(paths[["corrected"]])
+meta <- as_tibble(corrected$targets)
+gs <- readRDS(paths[["gene_sets"]])
+modules <- readRDS(paths[["modules"]])
+gene_of <- with(filter(gs$protein_map, selected), set_names(gene, uniprot_id))
+protein_label <- set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected))
+set_label <- with(gs$set_catalog, set_names(pathway, set_id))
+module_of <- with(modules$membership, set_names(module, uniprot_id))
+observed_t <- readRDS(paths[["associations"]])$change_score |>
+  filter(feature_type == "proteins") |>
+  select(window, trait, feature, t, p)
+term2gene <- tibble(set_id = rep(names(gs$sets), lengths(gs$sets)), gene = unlist(gs$sets))
+count(observed_t, window, name = "protein_trait_pairs")
+```
+
+## Three helpers
+
+`tree_groups()` takes a protein-by-column matrix and a minimum group size, clusters proteins by
+average linkage on 1 − Pearson r, and cuts the tree with `dynamicTreeCut::cutreeDynamic()`, which
+finds branches by shape instead of at one height. Proteins it leaves unassigned (group 0) are
+dropped. It returns each protein's group and the mean silhouette (how much closer proteins sit to
+their own group than to the next, −1 to 1).
+
+```{r}
+#| label: tree-groups
+tree_groups <- function(m, min_size) {
+  d <- as.dist(1 - cor(t(m)))
+  groups <- dynamicTreeCut::cutreeDynamic(hclust(d, "average"),
+    distM = as.matrix(d), minClusterSize = min_size, deepSplit = 2, verbose = 0
+  )
+  kept <- groups != 0
+  silhouette_mean <- if (n_distinct(groups[kept]) < 2) {
+    NA_real_
+  } else {
+    mean(cluster::silhouette(groups[kept], as.dist(as.matrix(d)[kept, kept]))[, "sil_width"])
+  }
+  list(groups = set_names(groups, rownames(m))[kept], silhouette = silhouette_mean)
+}
+```
+
+`describe()` takes a group's proteins and the universe they came from, and returns the most
+over-represented gene set with its p and FDR (across all sets tested for that group).
+
+```{r}
+#| label: describe
+describe <- function(members, universe) {
+  res <- clusterProfiler::enricher(na.omit(unname(gene_of[members])),
+    universe = na.omit(unname(gene_of[universe])), TERM2GENE = term2gene, minGSSize = 15,
+    maxGSSize = 500, pvalueCutoff = 1, qvalueCutoff = 1
+  )
+  if (is.null(res) || nrow(res@result) == 0) {
+    return(tibble(top_set = NA_character_, top_set_p = NA_real_, top_set_fdr = NA_real_))
+  }
+  top <- slice_min(as_tibble(res@result), pvalue, n = 1, with_ties = FALSE)
+  tibble(top_set = unname(set_label[top$ID]), top_set_p = top$pvalue, top_set_fdr = top$p.adjust)
+}
+```
+
+`summarise_groups()` takes each protein's group and t, and returns one row per group: size, mean t,
+share moving up, main module, the 15 proteins with the largest |t|, and `describe()`'s top set.
+
+```{r}
+#| label: summarise-groups
+summarise_groups <- function(groups, t, universe) {
+  tibble(feature = names(groups), group = groups, t = t[names(groups)]) |>
+    summarise(
+      n_proteins = n(), mean_t = mean(t), share_positive = mean(t > 0), members = list(feature),
+      main_module = names(which.max(table(module_of[feature]))),
+      proteins = paste(head(protein_label[feature][order(-abs(t))], 15), collapse = ", "),
+      .by = group
+    ) |>
+    mutate(enrichment = map(members, \(m) describe(m, universe))) |>
+    unnest(enrichment) |>
+    select(-members) |>
+    arrange(group)
+}
+```
+
+## Association profiles
+
+Each protein's row holds its t against every window-and-trait screen.
+
+```{r}
+#| label: profiles
+profiles <- observed_t |>
+  transmute(feature, screen = paste(window, trait), t) |>
+  pivot_wider(names_from = screen, values_from = t) |>
+  column_to_rownames("feature") |>
+  as.matrix()
+stopifnot(!anyNA(profiles))
+profile_cut <- tree_groups(profiles, min_size = 20)
+profile_summary <- summarise_groups(profile_cut$groups, rowMeans(profiles), rownames(profiles))
+profile_means <- as_tibble(profiles[names(profile_cut$groups), ], rownames = "feature") |>
+  mutate(group = profile_cut$groups) |>
+  pivot_longer(-c(feature, group), names_to = "screen", values_to = "t") |>
+  summarise(mean_t = mean(t), .by = c(group, screen))
+c(
+  proteins = nrow(profiles), screens = ncol(profiles), groups = n_distinct(profile_cut$groups),
+  silhouette = round(profile_cut$silhouette, 3)
+)
+```
+
+```{r}
+#| label: fig-profiles
+#| fig-cap: "Mean limma t per profile group and screen."
+#| fig-width: 11
+#| fig-height: 6
+ggplot(profile_means, aes(screen, factor(group), fill = mean_t)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "#2166AC", high = "#B2182B", name = "mean t") +
+  labs(x = NULL, y = "profile group") +
+  theme_bw(base_size = 7) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+## Co-variation groups per trait
+
+For the training and T1-level windows, each trait's p < 0.05 proteins are clustered on their values
+across people (training change, or T1 level), at least 8 proteins to a group. The universe for the
+enrichment is every protein tested in that window.
+
+```{r}
+#| label: trait-groups
+matrix_of <- list(
+  training = person_values(corrected$E, meta, "T2", from = "T1"),
+  baseline_level = person_values(corrected$E, meta, "T1")
+)
+trait_groups <- observed_t |>
+  filter(window %in% names(matrix_of), p < 0.05) |>
+  nest(.by = c(window, trait)) |>
+  mutate(result = map2(window, data, \(w, hits) {
+    cut <- tree_groups(matrix_of[[w]][hits$feature, , drop = FALSE], min_size = 8)
+    universe <- filter(observed_t, window == w)$feature
+    summarise_groups(cut$groups, set_names(hits$t, hits$feature), universe) |>
+      mutate(silhouette = cut$silhouette, n_hits = nrow(hits))
+  })) |>
+  select(-data) |>
+  unnest(result)
+count(trait_groups, window, trait, name = "groups")
+```
+
+```{r}
+#| label: fig-trait-groups
+#| fig-cap: "Co-variation groups among each trait's p < 0.05 proteins; fill: the group's mean t."
+#| fig-width: 9
+#| fig-height: 6
+ggplot(trait_groups, aes(n_proteins, paste(window, trait), fill = mean_t)) +
+  geom_col(position = position_stack(), colour = "white", linewidth = 0.2) +
+  scale_fill_gradient2(low = "#2166AC", high = "#B2182B", name = "mean t") +
+  labs(x = "proteins", y = NULL) +
+  theme_bw(base_size = 8)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  all(names(profile_cut$groups) %in% rownames(profiles)),
+  sum(profile_summary$n_proteins) == length(profile_cut$groups),
+  all(trait_groups$n_proteins >= 8), all(trait_groups$n_proteins <= trait_groups$n_hits)
+)
+```
+
+## Summary
+
+`r n_distinct(profile_cut$groups)` profile groups hold `r length(profile_cut$groups)` of
+`r nrow(profiles)` proteins (mean silhouette `r round(profile_cut$silhouette, 2)`); the largest
+holds `r max(profile_summary$n_proteins)`. `r nrow(trait_groups)` co-variation groups over
+`r nrow(distinct(trait_groups, window, trait))` trait and window pairs.
+
+## Save
+
+`profile_clusters.rds` holds the profile groups and the per-trait groups for the figures.
+
+```{r}
+#| label: save
+out <- here("03_Continuous", "03_Profile_Clusters", "c_data")
+dir.create(out, showWarnings = FALSE)
+profile_members <- tibble(
+  feature = names(profile_cut$groups), label = unname(protein_label[names(profile_cut$groups)]),
+  group = profile_cut$groups
+)
+saveRDS(
+  list(
+    profile_groups = profile_summary, profile_members = profile_members,
+    profile_means = profile_means, trait_groups = trait_groups
+  ),
+  file.path(out, "profile_clusters.rds")
+)
+write_workbook(
+  list(
+    profile_groups = profile_summary, profile_members = profile_members,
+    profile_means = profile_means, trait_groups = trait_groups
+  ),
+  c(
+    sprintf(
+      "Profile groups: size, mean t, main module, top over-represented set; mean silhouette %.3f.",
+      profile_cut$silhouette
+    ),
+    "Each protein's profile group.",
+    "Mean limma t per profile group and screen.",
+    "Per trait and window: co-variation groups among p < 0.05 proteins, with silhouette and ORA."
+  ),
+  file.path(out, "profile_clusters.xlsx"), inputs, paths
+)
+```

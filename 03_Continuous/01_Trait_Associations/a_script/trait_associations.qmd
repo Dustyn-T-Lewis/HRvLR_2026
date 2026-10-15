@@ -1,0 +1,358 @@
+---
+title: "Trait associations, everyone pooled"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Which proteins, gene-set scores and module eigengenes follow muscle size and strength when all 16
+people are pooled and each trait stays a number? No group label enters any model. Pooling avoids a
+split, not confounding: a feature that tracks growth may track anything that travels with growth
+across these people. HR and LR are the top and bottom 8 of 25 by growth, so correlations across
+them run stronger than they would across all 25.
+
+Four analyses, each for three feature types:
+
+- Sample model. Every T1 and T2 biopsy carries that person's trait level at that time. Per trait,
+  limma fits feature ~ timepoint + between + within with person as a block. `between` is the
+  person's mean trait level and `within` the biopsy's deviation from it. `within` asks whether a
+  feature rises in the biopsies where that person's trait rose; `between` asks whether people with
+  more of the trait carry more of the feature.
+- Change score. One value per person per window, against each trait: limma slope with its 95%
+  interval, Spearman's rho, and the biweight midcorrelation (bicor, a correlation that
+  down-weights outliers).
+- Two predictor: feature ~ growth + strength gain, each slope adjusted for the other. Growth is the
+  composite hypertrophy score; strength gain is the % change in one 1RM.
+- Interaction: feature ~ growth × strength gain, asking whether the link to strength gain depends
+  on how much the person grew.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+source(here("02_HRvLR", "helpers.R"))
+inputs <- c(
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+Correlations take no covariate, so proteins come from the blood-corrected matrix; set scores and
+eigengenes are built on it.
+
+```{r}
+#| label: input
+corrected <- readRDS(paths[["corrected"]])
+catalog <- filter(readRDS(paths[["gene_sets"]])$set_catalog, qualifies)
+modules <- readRDS(paths[["modules"]])
+phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
+meta <- as_tibble(corrected$targets)
+features <- list(
+  proteins = corrected$E,
+  sets = readRDS(paths[["singscore"]])$scores[catalog$set_id, ],
+  modules = modules$eigengenes
+)
+walk(features, \(x) stopifnot(identical(colnames(x), meta$sample_id)))
+label_of <- c(
+  set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected)),
+  set_names(catalog$pathway, catalog$set_id), set_names(rownames(modules$eigengenes))
+)
+collection_of <- set_names(catalog$collection, catalog$set_id)
+map(features, dim)
+```
+
+## Windows and traits
+
+`trait_windows()` and `window_values()` (from `02_HRvLR/helpers.R`) pair each feature value with
+its traits. The baseline window asks whether the T1 level predicts the response.
+
+| window | feature value | traits |
+|---|---|---|
+| `baseline_level` | T1 level | trait levels at T1 |
+| `baseline` | T1 level | % change, composite score, volume load |
+| `training` | change T1 → T2 | % change, composite score, volume load |
+| `post_level` | T2 level | trait levels at T2 |
+| `acute` | change T2 → T3 | % change, composite score, volume load |
+| `post_bout_level` | T3 level | trait levels at T2 (T3 has no phenotype) |
+
+```{r}
+#| label: windows
+windows <- trait_windows(phenotype)
+trait_of <- map(windows, \(d) setdiff(names(d), "subject"))
+trait_value <- \(w, tr, subjects) set_names(windows[[w]][[tr]], windows[[w]]$subject)[subjects]
+level_traits <- trait_of$baseline_level
+c(screens = sum(lengths(trait_of)))
+```
+
+## Sample model
+
+Per trait, the T1 and T2 biopsies with the trait measured. The within-person correlation is
+estimated per trait with `duplicateCorrelation()`.
+
+```{r}
+#| label: sample-model
+biopsy_traits <- bind_rows(
+  T1 = windows$baseline_level, T2 = windows$post_level, .id = "timepoint"
+)
+sample_model <- function(x, trait) {
+  s <- meta |>
+    filter(timepoint %in% c("T1", "T2")) |>
+    left_join(
+      select(biopsy_traits, timepoint, subject, value = all_of(trait)),
+      by = c("timepoint", "subject")
+    ) |>
+    filter(!is.na(value)) |>
+    mutate(between = ave(value, subject), within = value - between)
+  design <- model.matrix(~ timepoint + between + within, s)
+  y <- x[, s$sample_id]
+  correlation <- duplicateCorrelation(y, design, block = s$subject)$consensus.correlation
+  fit <- eBayes(lmFit(y, design, block = s$subject, correlation = correlation), robust = TRUE)
+  map(set_names(c("within", "between")), \(term) {
+    topTable(fit, coef = term, number = Inf, sort.by = "none", confint = TRUE) |>
+      as_tibble(rownames = "feature") |>
+      transmute(
+        feature, n_samples = nrow(s), slope = logFC, slope_lower = CI.L, slope_upper = CI.R, t,
+        p = P.Value
+      )
+  }) |>
+    list_rbind(names_to = "term")
+}
+model <- imap(features, \(x, type) {
+  map(set_names(level_traits), \(tr) sample_model(x, tr)) |>
+    list_rbind(names_to = "trait") |>
+    mutate(feature_type = type, .before = 1)
+}) |>
+  list_rbind()
+nrow(model)
+```
+
+## Change score, two predictor, interaction
+
+`subject_fit()` fits limma on one value per person against the given predictors (robust empirical
+Bayes) and returns each named term's slope with its 95% interval, t and p. People missing a
+predictor drop out. Spearman's rho and its p (t approximation) come from WGCNA's `corAndPvalue()`,
+bicor and its p from `bicorAndPvalue()`.
+
+```{r}
+#| label: change-score
+subject_fit <- function(x, predictors, formula, terms) {
+  kept <- complete.cases(predictors)
+  fit <- lmFit(x[, kept, drop = FALSE], model.matrix(formula, predictors[kept, , drop = FALSE])) |>
+    eBayes(robust = TRUE)
+  map(set_names(terms), \(term) {
+    topTable(fit, coef = term, number = Inf, sort.by = "none", confint = TRUE) |>
+      as_tibble(rownames = "feature") |>
+      transmute(
+        feature, n_people = sum(kept), slope = logFC, slope_lower = CI.L, slope_upper = CI.R, t,
+        p = P.Value
+      )
+  }) |>
+    list_rbind(names_to = "coefficient")
+}
+change_score_one <- function(x, y) {
+  kept <- !is.na(y)
+  sp <- WGCNA::corAndPvalue(t(x[, kept]), y[kept], method = "spearman")
+  bc <- WGCNA::bicorAndPvalue(t(x[, kept]), y[kept])
+  subject_fit(x, data.frame(trait = y), ~trait, "trait") |>
+    select(-coefficient) |>
+    mutate(rho = sp$cor[, 1], p_rho = sp$p[, 1], bicor = bc$bicor[, 1], p_bicor = bc$p[, 1])
+}
+per_person <- map(features, \(x) window_values(x, meta))
+change_score <- imap(per_person, \(values, type) {
+  imap(trait_of, \(traits, w) {
+    map(set_names(traits), \(tr) {
+      change_score_one(values[[w]], trait_value(w, tr, colnames(values[[w]])))
+    }) |>
+      list_rbind(names_to = "trait")
+  }) |>
+    list_rbind(names_to = "window") |>
+    mutate(feature_type = type, .before = 1)
+}) |>
+  list_rbind()
+strength_tests <- c("pct_leg_press_1rm", "pct_leg_ext_1rm")
+change_windows <- c("baseline", "training", "acute")
+two_term <- function(formula, terms) {
+  imap(per_person, \(values, type) {
+    expand_grid(window = change_windows, strength_test = strength_tests) |>
+      mutate(result = map2(window, strength_test, \(w, st) {
+        predictors <- data.frame(
+          growth = trait_value(w, "comp_hypertrophy", colnames(values[[w]])),
+          strength = trait_value(w, st, colnames(values[[w]]))
+        )
+        subject_fit(values[[w]], predictors, formula, terms)
+      })) |>
+      unnest(result) |>
+      mutate(feature_type = type, .before = 1)
+  }) |>
+    list_rbind()
+}
+two_predictor <- two_term(~ growth + strength, c("growth", "strength"))
+interaction <- two_term(~ growth * strength, "growth:strength") |>
+  select(-coefficient) |>
+  rename(interaction = slope, interaction_lower = slope_lower, interaction_upper = slope_upper)
+c(change_score = nrow(change_score), two_predictor = nrow(two_predictor),
+  interaction = nrow(interaction))
+```
+
+A protein that limpa never observed at a time point gets one estimate for everyone there. It has
+no spread across people, so its rho and bicor are empty in that window; the limma slope is 0.
+
+```{r}
+#| label: constant
+filter(change_score, is.na(rho)) |>
+  distinct(feature_type, window, feature) |>
+  mutate(label = label_of[feature])
+```
+
+## FDR and counts
+
+`fdr` is Benjamini-Hochberg within one screen: feature type, trait or window and trait (with term,
+strength test or coefficient where the analysis has them), and collection for sets. At p < 0.05
+chance alone puts 5% of features below the line in every screen.
+
+```{r}
+#| label: fdr
+annotate <- \(d, ...) {
+  d |>
+    mutate(
+      collection = unname(collection_of[feature]), label = unname(label_of[feature]),
+      .after = feature
+    ) |>
+    mutate(fdr = p.adjust(p, "BH"), .by = c(feature_type, ..., collection))
+}
+model <- annotate(model, trait, term)
+change_score <- annotate(change_score, window, trait)
+two_predictor <- annotate(two_predictor, window, strength_test, coefficient)
+interaction <- annotate(interaction, window, strength_test)
+tally <- \(d, analysis, ...) {
+  d |>
+    summarise(
+      n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05),
+      .by = c(feature_type, ...)
+    ) |>
+    unite("screen", -c(feature_type, n_tested, n_nominal, n_fdr_05), sep = ", ") |>
+    mutate(analysis = analysis, .before = 1)
+}
+counts <- bind_rows(
+  tally(model, "sample model", term, trait),
+  tally(change_score, "change score", window, trait),
+  tally(two_predictor, "two predictor", window, strength_test, coefficient),
+  tally(interaction, "interaction", window, strength_test)
+) |>
+  mutate(share_nominal = n_nominal / n_tested)
+counts |>
+  summarise(across(c(n_tested, n_nominal, n_fdr_05), sum), .by = c(analysis, feature_type)) |>
+  mutate(share_nominal = round(n_nominal / n_tested, 3))
+```
+
+```{r}
+#| label: fig-change-score
+#| fig-cap: "Change score: share of features at limma p < 0.05 per window and trait. Dashed: 5%."
+#| fig-width: 10
+#| fig-height: 6
+change_score |>
+  summarise(share = mean(p < 0.05), .by = c(feature_type, window, trait)) |>
+  mutate(window = factor(window, names(windows))) |>
+  ggplot(aes(share, trait, fill = feature_type)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_vline(xintercept = 0.05, linetype = "dashed", linewidth = 0.3) +
+  facet_wrap(~window, nrow = 2, scales = "free_y") +
+  scale_x_continuous(labels = scales::label_percent()) +
+  labs(x = "features at p < 0.05", y = NULL, fill = NULL) +
+  theme_bw(base_size = 8) +
+  theme(legend.position = "bottom")
+```
+
+The strongest protein links in the training window:
+
+```{r}
+#| label: top
+change_score |>
+  filter(feature_type == "proteins", window == "training") |>
+  slice_min(p, n = 8) |>
+  select(trait, label, slope, rho, bicor, p, fdr)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  nrow(change_score) == sum(map_int(features, nrow)) * sum(lengths(trait_of)),
+  all(abs(change_score$rho) <= 1, na.rm = TRUE), all(abs(change_score$bicor) <= 1, na.rm = TRUE),
+  sum(is.na(change_score$rho)) < 0.001 * nrow(change_score),
+  all(change_score$fdr >= change_score$p), all(model$fdr >= model$p),
+  !anyNA(change_score$p), !anyNA(model$p)
+)
+```
+
+## Summary
+
+```{r}
+#| label: summary
+totals <- counts |>
+  summarise(across(c(n_tested, n_nominal, n_fdr_05), sum), .by = analysis)
+totals
+cs <- filter(totals, analysis == "change score")
+```
+
+The change score runs `r format(cs$n_tested, big.mark = ",")` tests:
+`r format(cs$n_nominal, big.mark = ",")` at p < 0.05 against about
+`r format(round(cs$n_tested / 20), big.mark = ",")` by chance, and `r cs$n_fdr_05` at FDR < 0.05.
+
+## Save
+
+`associations.rds` holds the four tables; `02_Trait_Pathways` and `03_Profile_Clusters` read the
+protein change scores from it.
+
+```{r}
+#| label: save
+out <- here("03_Continuous", "01_Trait_Associations", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(
+  list(
+    counts = counts, model = model, change_score = change_score,
+    two_predictor = two_predictor, interaction = interaction
+  ),
+  file.path(out, "associations.rds")
+)
+write_workbook(
+  list(
+    counts = counts, model = arrange(model, feature_type, trait, term, collection, p),
+    change_score = arrange(change_score, feature_type, window, trait, collection, p),
+    two_predictor = arrange(two_predictor, feature_type, window, strength_test, coefficient, p),
+    interaction = arrange(interaction, feature_type, window, strength_test, collection, p)
+  ),
+  c(
+    "Tested, p < 0.05 and FDR < 0.05 per analysis, feature type and screen.",
+    "Sample model: within and between slopes per trait unit with 95% CI, t, p and FDR.",
+    paste(
+      "Change score: limma slope with 95% CI, t, p, FDR; Spearman rho and p_rho; bicor and",
+      "p_bicor; per feature, window and trait."
+    ),
+    "Two predictor: growth and strength slopes, each adjusted for the other; 95% CI, t, p, FDR.",
+    "Interaction, feature ~ growth x strength gain: interaction with 95% CI, t, p and FDR."
+  ),
+  file.path(out, "trait_associations.xlsx"), inputs, paths
+)
+```

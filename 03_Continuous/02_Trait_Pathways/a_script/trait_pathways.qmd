@@ -1,0 +1,244 @@
+---
+title: "Trait pathways, everyone pooled"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Which gene sets lead each trait's protein ranking? For every window and trait, proteins are ranked
+by the limma t that `01_Trait_Associations` saved for that pairing (change score), and fgsea tests
+every set on the ranking, one database at a time. The step ends by choosing, per window, the sets
+the trait pathway figure draws, grouping near-duplicates into a tree as `02_HRvLR/02_Set_Contrasts`
+does. fgsea treats proteins as independent, so a large set of co-moving proteins can look stronger
+than the 16 people behind it support (Wu and Smyth 2012).
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  associations = "03_Continuous/01_Trait_Associations/c_data/associations.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+The protein change scores, kept to the one protein that represents each gene in the sets, and the
+tested sets.
+
+```{r}
+#| label: input
+gs <- readRDS(paths[["gene_sets"]])
+catalog <- filter(gs$set_catalog, qualifies)
+sets <- gs$sets[catalog$set_id]
+chosen <- filter(gs$protein_map, selected)
+gene_of <- set_names(chosen$gene, chosen$uniprot_id)
+protein_t <- readRDS(paths[["associations"]])$change_score |>
+  filter(feature_type == "proteins", feature %in% chosen$uniprot_id) |>
+  select(window, trait, feature, t)
+window_order <- unique(protein_t$window)
+count(protein_t, window, name = "protein_trait_pairs")
+```
+
+## fgsea per window, trait and database
+
+fgsea receives one window-and-trait ranking (limma t, named by gene) and one database's sets, and
+returns each set's normalised enrichment score (NES), p and FDR. It runs one database at a time,
+so each `fdr` is Benjamini-Hochberg within one database and one ranking. fgsea estimates p by
+permutation, so it is seeded. When a ranking leans one way, fgsea cannot estimate p for some sets
+and leaves p, NES and FDR missing; `nPermSimple = 10000` keeps those few. They are listed below and
+count as tested but never as calls.
+
+```{r}
+#| label: fgsea
+set.seed(1)
+by_db <- split(catalog$set_id, catalog$collection)
+rankings <- protein_t |>
+  nest(.by = c(window, trait)) |>
+  mutate(stats = map(data, \(d) set_names(d$t, gene_of[d$feature])), .keep = "unused")
+pathways <- rankings |>
+  expand_grid(collection = names(by_db)) |>
+  mutate(tests = map2(stats, collection, \(stats, db) {
+    fgsea::fgsea(sets[by_db[[db]]], stats, minSize = 15, maxSize = 500, nPermSimple = 10000) |>
+      as_tibble() |>
+      transmute(
+        set_id = pathway, n_proteins = size, nes = NES, p = pval, fdr = padj,
+        leading_edge = map_chr(leadingEdge, \(x) paste(x, collapse = ";"))
+      )
+  })) |>
+  select(-stats) |>
+  unnest(tests) |>
+  left_join(select(catalog, set_id, pathway), by = "set_id")
+counts <- pathways |>
+  summarise(
+    n_tested = n(), n_nominal = sum(p < 0.05, na.rm = TRUE),
+    n_fdr_05 = sum(fdr < 0.05, na.rm = TRUE),
+    n_up = sum(fdr < 0.05 & nes > 0, na.rm = TRUE),
+    n_down = sum(fdr < 0.05 & nes < 0, na.rm = TRUE), .by = c(window, trait, collection)
+  )
+pathways |>
+  filter(is.na(p)) |>
+  select(window, trait, collection, pathway, n_proteins)
+counts |>
+  summarise(across(c(n_tested, n_fdr_05), sum), .by = window)
+```
+
+```{r}
+#| label: fig-counts
+#| fig-cap: "Sets at fgsea FDR < 0.05 per trait ranking, up and down, all databases."
+#| fig-width: 11
+#| fig-height: 5
+counts |>
+  summarise(across(c(n_up, n_down), sum), .by = c(window, trait)) |>
+  pivot_longer(c(n_up, n_down), names_to = "direction") |>
+  mutate(window = factor(window, window_order)) |>
+  ggplot(aes(value, trait, fill = direction)) +
+  geom_col() +
+  facet_wrap(~window, nrow = 1) +
+  scale_fill_manual(
+    values = c(n_up = "#B2182B", n_down = "#2166AC"), labels = c(n_up = "up", n_down = "down")
+  ) +
+  labs(x = "sets", y = NULL, fill = NULL) +
+  theme_bw(base_size = 8)
+```
+
+## Sets for the trait pathway figure
+
+A set is a candidate for a window when fgsea calls it at FDR < 0.05 against at least one of the
+window's traits (GO Slim excluded, as in `02_Set_Contrasts`). Candidates are ranked by whether
+their calls agree in sign, then by summed |NES| across the window's traits.
+
+```{r}
+#| label: candidates
+candidates <- pathways |>
+  filter(collection != "GO_Slim") |>
+  summarise(
+    hits = sum(fdr < 0.05, na.rm = TRUE),
+    same_sign = n_distinct(sign(nes[which(fdr < 0.05)])) == 1,
+    strength = sum(abs(nes), na.rm = TRUE), .by = c(window, set_id, collection)
+  ) |>
+  filter(hits >= 1) |>
+  arrange(window, desc(same_sign), desc(strength)) |>
+  mutate(rank = row_number(), .by = window)
+count(candidates, window)
+```
+
+Near-duplicate sets are grouped, not dropped. Within each window, sets are clustered by the
+proteins they share (Jaccard similarity: shared ÷ union; average linkage), and the tree is cut at
+three heights. The figure draws one set per cluster at height 0.85, the strongest.
+
+```{r}
+#| label: tree
+jaccard <- \(ids) {
+  outer(ids, ids, Vectorize(\(a, b) {
+    length(intersect(sets[[a]], sets[[b]])) / length(union(sets[[a]], sets[[b]]))
+  }))
+}
+trait_selection <- candidates |>
+  group_by(window) |>
+  group_modify(\(d, key) {
+    if (nrow(d) == 1) {
+      return(mutate(d, cut_0.75 = 1L, cut_0.85 = 1L, cut_0.9 = 1L, tree_order = 1L))
+    }
+    tree <- hclust(as.dist(1 - jaccard(d$set_id)), method = "average")
+    mutate(d,
+      cut_0.75 = cutree(tree, h = 0.75), cut_0.85 = cutree(tree, h = 0.85),
+      cut_0.9 = cutree(tree, h = 0.9), tree_order = order(tree$order)
+    )
+  }) |>
+  ungroup() |>
+  mutate(
+    representative_0.75 = !duplicated(cut_0.75), representative_0.85 = !duplicated(cut_0.85),
+    representative_0.9 = !duplicated(cut_0.9), .by = window
+  ) |>
+  left_join(select(catalog, set_id, pathway), by = "set_id")
+trait_selection |>
+  summarise(candidates = n(), across(starts_with("representative"), sum), .by = window)
+```
+
+Rows are ranked strongest first, so `!duplicated()` keeps each cluster's strongest set.
+
+```{r}
+#| label: fig-matrix
+#| fig-cap: "Up to 12 representative sets (cut 0.85) per window: NES per trait; ring: FDR < 0.05."
+#| fig-width: 11
+#| fig-height: 10
+drawn <- trait_selection |>
+  filter(representative_0.85) |>
+  slice_min(rank, n = 12, by = window)
+pathways |>
+  semi_join(drawn, by = c("window", "set_id")) |>
+  mutate(
+    window = factor(window, window_order),
+    label = stringr::str_trunc(pathway, 55)
+  ) |>
+  ggplot(aes(trait, label, fill = nes)) +
+  geom_point(shape = 21, size = 3, colour = "grey60") +
+  geom_point(data = \(d) filter(d, fdr < 0.05), shape = 1, size = 4.2, colour = "black") +
+  scale_fill_gradient2(low = "#2166AC", high = "#B2182B", name = "NES") +
+  facet_wrap(~window, scales = "free", ncol = 2) +
+  labs(x = NULL, y = NULL) +
+  theme_bw(base_size = 6) +
+  theme(axis.text.x = element_text(angle = 40, hjust = 1))
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  all(pathways$set_id %in% catalog$set_id), all(pathways$fdr >= pathways$p, na.rm = TRUE),
+  all(trait_selection$set_id %in% catalog$set_id),
+  !anyDuplicated(select(pathways, window, trait, set_id))
+)
+```
+
+## Summary
+
+`r length(sets)` sets in `r length(by_db)` databases ranked against `r nrow(rankings)` window and
+trait pairs: `r sum(counts$n_fdr_05)` set calls at FDR < 0.05 in total, the most for one pair
+`r max(summarise(counts, n = sum(n_fdr_05), .by = c(window, trait))$n)`.
+`r sum(trait_selection$representative_0.85)` sets represent the windows in the trait pathway
+figure.
+
+## Save
+
+`trait_pathways.rds` holds the fgsea table and the selection for the figure.
+
+```{r}
+#| label: save
+out <- here("03_Continuous", "02_Trait_Pathways", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(
+  list(pathways = pathways, trait_selection = trait_selection),
+  file.path(out, "trait_pathways.rds")
+)
+write_workbook(
+  list(
+    counts = counts,
+    trait_pathways = arrange(pathways, match(window, window_order), trait, collection, p),
+    trait_selection = trait_selection
+  ),
+  c(
+    "Per window, trait and database: sets tested, at p < 0.05, at FDR < 0.05 (up, down).",
+    "Per window, trait and set: fgsea NES, p, FDR within the database, leading edge.",
+    "Per window: candidate sets, rank, tree clusters at three cuts and the representative of each."
+  ),
+  file.path(out, "trait_pathways.xlsx"), inputs, paths
+)
+```
