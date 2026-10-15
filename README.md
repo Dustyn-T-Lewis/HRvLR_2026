@@ -1,80 +1,46 @@
-# HRvLR Proteomics
+# HRvLR Proteomics: trimmed scope, limpa from precursors
 
 DIA mass-spectrometry proteomics of skeletal muscle from a resistance-training study. Sixteen
 people were biopsied before training (T1), 96 h after the last of 16 sessions (T2), and 24 h after
-one further standardised session (T3). Of 48 runs, 45 pass quality control, and 1,900 of 2,400
-proteins are analysed.
-
-Twenty-five people trained. The study ranked them on a composite hypertrophy score,
+one further session (T3). The study ranked 25 trained people on a composite hypertrophy score,
 (2 × %ΔmCSA + %ΔfCSA) / 3, and profiled the top eight as higher responders (HR) and the bottom
-eight as lower responders (LR); the middle nine were not profiled. The repository asks its
-questions three ways: with those groups, with groups found by clustering, and with no groups at
-all.
+eight as lower responders (LR).
 
-![The pipeline: processing, eight parallel groupings, the shared comparison workflow, the
-continuous analysis and the figures](pipeline.png)
+This branch (`dustyn/trimmed-scope-limpa`) rebuilds the analysis for HR against LR only, quantified
+with limpa from DIA-NN's precursor report. The eight-grouping version is on `main`. Each phase
+returns here as it is rebuilt; every folder present runs.
 
-## This branch
+## Tree
 
-`dustyn/trimmed-scope-limpa` rebuilds a trimmed version of this analysis. The eight-grouping
-version stays on `main`.
+```
+HRvLR_V2/
+├── README.md, run_all.R, renv.lock
+├── 00_Setup/
+│   ├── Input/              report.parquet, metadata.csv, phenotype.csv
+│   └── Shared_functions/   workbooks.R, workbook_columns.csv
+└── 01_Processing/
+    ├── 01_Precursors/      read the report, one injection per biopsy, identity filters
+    └── 02_Quantification/  detection curve, protein values with standard errors, blood index,
+                            contaminants, detection filter
+```
 
-- Groups: HRvLR only; the clustered groupings are dropped.
-- Input: `00_Setup/Input/report.parquet`, the DIA-NN precursor report, quantified with limpa from
-  precursors (`readDIANN()`, `dpcCN()`, `dpcQuant()`, `dpcDE()`). The analysis keeps the current 16
-  people, with one injection per biopsy chosen by a written rule.
-- Kept: the continuous analysis.
-- Figures: F1 (design, PCA, proteins at Π, p and FDR, fry sets), F2 (pathways), and the
-  continuous overview.
-
-Until the rebuild lands, everything below describes the code as it is.
-
-## Folders, in run order
-
-| Folder | Holds |
-|---|---|
-| [`00_Setup`](00_Setup/README.md) | study inputs and the helpers every walkthrough sources |
-| [`01_Processing`](01_Processing/README.md) | filtering, normalisation, limpa quantification, gene sets, set scores, modules |
-| [`02_Groups`](02_Groups/README.md) | who is compared: eight parallel groupings, from the study labels and from clustering |
-| [`03_Group_comparisons`](03_Group_comparisons/README.md) | how two groups differ: contrasts, sets, modules, classification, trait links, for every grouping |
-| [`04_Continuous_no_group`](04_Continuous_no_group/README.md) | everyone pooled, each trait a number |
-| [`05_Figures`](05_Figures/README.md) | figures drawn from saved results only |
-
-The eight groupings run side by side through the same steps:
-
-| Grouping | Groups | Defined by |
-|---|---|---|
-| `HRvLR` | HR, LR | the study: top and bottom 8 of 25 on the composite hypertrophy score |
-| `Muscle_size` | HR, LR | clustering on % change in fibre and muscle area |
-| `Muscle_strength` | HR, LR | clustering on % change in leg-press and leg-extension 1RM |
-| `Proteome_T1`, `_T2`, `_T3`, `_training`, `_acute` | C1, C2 | clustering on module eigengenes at a time point, or their change |
+Next, in order: gene sets, set scores and modules (in `01_Processing`); the HR against LR
+comparisons; the continuous trait analysis; figures (F1 design, PCA, proteins and fry sets; F2
+pathways; the continuous overview).
 
 ## Every step
 
-Each analysis loads packages, reads its inputs, checks them, runs the analysis, validates the
-result, summarises and saves, explaining each step beside the code.
-
 ```
-01_Processing/NN_Step/            04_Continuous_no_group/NN_Step/
-├── a_script/   the walkthrough (.qmd)
-├── b_reports/  the rendered walkthrough (.html)
-└── c_data/     workbooks, plus any .rds a later step reads
-
-02_Groups/, 03_Group_comparisons/
-├── code/       each step written once, as an R script that is also its report
-└── <grouping>/
-    ├── a_script/  run_groups.R or run_comparisons.R: runs every step for this grouping
-    ├── b_reports/ one PDF per step
-    └── c_data/    files numbered by step
-
-05_Figures/<grouping or phase>/<Figure>/
-├── a_script/   a plain R script (F1's comes from 05_Figures/code/)
-├── b_reports/  the figure PDF
-└── c_data/     the numbers each panel draws
+NN_Step/
+├── README.md     what the step does, its inputs, how to run it, its outputs
+├── a_script/     the walkthrough (.qmd): code with the reasoning beside it
+├── b_reports/    the rendered walkthrough (.html): every table and preview plot
+├── c_data/       what later steps read (.rds) and the step's workbook (.xlsx)
+└── references/   fixed files the step reads, where it has any
 ```
 
 Every workbook opens with `read_me` (one line per sheet) and `columns` (every column defined, from
-`00_Setup/Shared_functions/workbook_columns.csv`), and closes with `input_manifest` (every file
+`00_Setup/Shared_functions/workbook_columns.csv`) and closes with `input_manifest` (every file
 read, with its md5) and `package_versions`. A step reads only files earlier steps saved, so any
 step reruns alone.
 
@@ -82,55 +48,27 @@ step reruns alone.
 
 ```sh
 Rscript -e 'renv::restore()'
-Rscript run_all.R                       # every step in order
-Rscript run_all.R 01_Processing 02      # stages whose path starts with these prefixes
-Rscript 03_Group_comparisons/HRvLR/a_script/run_comparisons.R   # one grouping
+Rscript run_all.R                  # every step in order
+Rscript run_all.R 01_Processing    # stages whose path starts with this prefix
 ```
 
-Run from the project root, so Quarto's R sessions start with the project's renv library. The
-runner stops at the first failure; logs go to the untracked `Scratch/runlogs/`. Every reference
-file sits in the `references/` folder of the step that reads it; nothing downloads at run time.
-Random steps are seeded.
+Run from the project root, so Quarto's R sessions start with the project's renv library. The runner
+stops at the first failure; logs go to the untracked `Scratch/runlogs/`.
 
 ## Terms
 
 | Term | Meaning here |
 |---|---|
-| contrast | one comparison of group means, e.g. `Training_HR` (HR's T2 minus T1) or `Training_Interaction` (HR's training change minus LR's) |
-| logFC, `_lower`, `_upper` | the contrast on the log2 scale (+1 is twice as much) and its 95% interval; every estimate's interval is named after it (`slope_lower`, `rho_upper`) |
-| `p`, `fdr`, `qvalue` | nominal p; Benjamini-Hochberg within the screen the sheet names; Storey's q over the same screen |
-| Π | p^\|logFC\| (Xiao et al. 2014); Π < 0.05 is the nominal call, always beside logFC, its 95% interval, p and FDR |
-| limpa | gives every protein a value and a standard error in every biopsy from a detection-probability curve, so missing values are modelled rather than filled |
-| fgsea, fry | two gene-set tests: fgsea asks whether a set ranks high against other proteins; fry asks whether its proteins move consistently across people |
-| module, eigengene, kME | a WGCNA group of co-varying proteins, its one-number summary per biopsy, and a protein's correlation with that summary |
-| singscore | one score per gene set per biopsy, from the set's rank within that biopsy |
-| AUC | the chance a random person from the first group has a higher value than one from the second |
-| baseline_reference | the baseline contrast: the groups come from an outcome, so a T1 difference shows how far the split separates people before training |
-| `group`, `group_time`, `hr_lr` | the two groups a grouping compares; a group-by-time cell such as `HR_T1`; the study's HR/LR label where it sits beside a clustering's own groups |
-| `feature_type` | proteins, gene sets or modules |
-| `window` | the time span a test covers: training (T2 − T1), acute (T3 − T2), or a single time point |
-
-## Conventions
-
-- Blood: an index (mean log2 HBB and HBA1 against the sample median) is a covariate in every
-  limma model. Tests that take no covariate read a copy with each protein's blood slope removed
-  against time point only.
-- People: each person gives up to three biopsies, so person is a random block in biopsy-level
-  models; change scores carry one value per person.
-- Reporting: nothing is filtered on a threshold before it is written. Reports draw at most 12 to
-  24 features per screen; the workbooks keep every row.
-- Identifiers: proteins by UniProt accession, gene sets by `collection|name`, modules by colour.
-  Module colours change if `01_Processing` is rebuilt.
+| precursor | one peptide ion as DIA-NN measures it; limpa quantifies proteins from their precursors |
+| MBR | match-between-runs: DIA-NN searches every run against one library built from all runs |
+| detection probability curve | limpa's logistic model of how likely a precursor is detected given its abundance |
+| standard error | limpa's uncertainty for each protein value in each biopsy; wide where few precursors were observed |
+| blood index | the biopsy's mean log2 HBB and HBA1, centred; a covariate in the comparisons |
 
 ## Limits
 
 - A needle biopsy holds a varying share of fibre, connective tissue and fat; no covariate adjusts
   for it.
-- Removing each protein's blood slope raises, rather than lowers, the blood correlation of the 85
-  proteins measured in 20 or fewer runs (`01_Processing/03_Quantification`). Every method that
-  reads the blood-corrected matrix inherits this; the fix is pending.
-
-## Dependencies
-
-`renv.lock` pins every package the code loads. `enrichVolcano` comes from GitHub, pinned to commit
-`d3fed631f4`.
+- Three biopsies (S28-T3, S28-T2, S10-T2) detected few proteins, so most of their values come from
+  the detection curve. They are kept and weighted down in the comparisons; their influence is
+  checked there.

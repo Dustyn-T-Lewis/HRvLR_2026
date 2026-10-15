@@ -1,13 +1,12 @@
 # 00_Setup
 
-Study inputs and the small helpers every walkthrough sources. Nothing here runs on its own.
+Study inputs and the one helper every step sources. Nothing here runs on its own.
 
 | Folder | Holds |
 |---|---|
-| [`Input`](Input/README.md) | DIA-NN protein matrix, sample sheet, phenotype |
-| [`Shared_functions`](Shared_functions/README.md) | helpers used by more than one walkthrough: workbook writing, limpa fit, Storey q, relabelling a grouping, report heatmaps, figure theme and panels, the Proteome input stacker |
+| [`Input`](Input/README.md) | the DIA-NN precursor report, the biopsy sheet and the phenotype table |
+| [`Shared_functions`](Shared_functions/README.md) | `write_workbook()` and the column dictionary it reads |
 | `Manuscript` | the collaborator's manuscript draft; local only, not tracked |
 
-Reference snapshots (MSigDB, GO Slim, STRING, Human Protein Atlas) live in the `references/` folder of
-the processing step that reads them. `renv/`, `renv.lock` and `.Rprofile` sit at the project root;
-run every command from there.
+Reference files a single step reads (such as the contaminant list) sit in that step's
+`references/` folder.

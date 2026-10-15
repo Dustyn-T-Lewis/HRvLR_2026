@@ -29,7 +29,8 @@ library(limpa)
 library(dplyr)
 library(tibble)
 library(ggplot2)
-source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+stopifnot(requireNamespace("nanoparquet", quietly = TRUE))
 inputs <- c(
   report = "00_Setup/Input/report.parquet",
   metadata = "00_Setup/Input/metadata.csv"
