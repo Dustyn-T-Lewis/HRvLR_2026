@@ -17,13 +17,14 @@ matrix. Nothing is normalised and nothing is filtered on missing values; limpa m
 
 ## Packages
 
-limpa supplies the reader and the filters; limma the `EList` object they return; nanoparquet
-(called with `::`) reads single columns of the report.
+limpa supplies the reader and the filters, limma the `EList` they return and the density plot.
+`readDIANN()` reads Parquet through the nanoparquet package, which must be installed.
 
 ```{r}
 #| label: packages
 #| message: false
 library(here)
+library(limma)
 library(limpa)
 library(dplyr)
 library(tibble)
@@ -47,6 +48,8 @@ precursor in a run only when its q-values pass 0.01. Which q-values depends on t
 match-between-runs (MBR), DIA-NN builds one library from all runs and searches each run against it,
 and limpa's vignette then filters on `Q.Value`, `Lib.Q.Value` and `Lib.PG.Q.Value`. This report's
 library q-values differ from its global ones, consistent with an MBR search, so the MBR set is used.
+(The no-MBR columns, `Global.Q.Value` and `Global.PG.Q.Value`, would keep 19,936 precursors against
+22,389.)
 
 ```{r}
 #| label: read
@@ -55,28 +58,6 @@ y <- readDIANN(
   q.columns = c("Q.Value", "Lib.Q.Value", "Lib.PG.Q.Value"), q.cutoffs = 0.01
 )
 c(precursors = nrow(y), runs = ncol(y), pct_missing = round(100 * mean(is.na(y$E)), 1))
-```
-
-For comparison, the precursors the no-MBR q-values (`Global.Q.Value`, `Global.PG.Q.Value`) would
-keep:
-
-```{r}
-#| label: mbr-check
-q <- nanoparquet::read_parquet(paths[["report"]], col_select = c(
-  "Precursor.Id", "Q.Value", "Lib.Q.Value", "Lib.PG.Q.Value", "Global.Q.Value", "Global.PG.Q.Value"
-))
-q_filters <- tibble(
-  filter = c("MBR (used)", "no MBR"),
-  distinct_precursors = c(
-    n_distinct(q$Precursor.Id[
-      q$Q.Value <= 0.01 & q$Lib.Q.Value <= 0.01 & q$Lib.PG.Q.Value <= 0.01
-    ]),
-    n_distinct(q$Precursor.Id[
-      q$Q.Value <= 0.01 & q$Global.Q.Value <= 0.01 & q$Global.PG.Q.Value <= 0.01
-    ])
-  )
-)
-q_filters
 ```
 
 ## One injection per biopsy
@@ -114,8 +95,10 @@ filter(run_map, n() > 1, .by = sample_id)
 ## Keep the chosen runs
 
 The chosen runs are renamed to their `sample_id` and matched to `metadata.csv`. A precursor
-detected only in dropped runs is removed. (`removeNARows()` would do this, but in limpa 1.4.0 with
-limma 3.68 it fails inside limma's `EList` subsetting, so a one-line filter does the same.)
+detected only in dropped runs must go: left in, it looks undetected in all 48 biopsies, which shifts
+the detection curve and pulls its protein's values down (tested: values moved by up to 5 log2
+units). limpa's `removeNARows()` does this, but in limpa 1.4.0 with limma 3.68 it fails inside
+limma's `EList` subsetting (`y[keep, , ]` passes an empty argument), so plain subsetting does it.
 
 ```{r}
 #| label: subset
@@ -137,16 +120,16 @@ intensity or missing values.
 
 ```{r}
 #| label: filters
-count_rows <- \(step, y) {
-  tibble(step, precursors = nrow(y), proteins = n_distinct(y$genes$Protein.Group))
-}
-filter_log <- count_rows("chosen runs", y)
+before <- c(precursors = nrow(y), proteins = n_distinct(y$genes$Protein.Group))
 y <- filterNonProteotypicPeptides(y)
-filter_log <- bind_rows(filter_log, count_rows("proteotypic precursors only", y))
 y <- filterCompoundProteins(y)
-filter_log <- bind_rows(filter_log, count_rows("single-protein groups only", y))
+after <- c(precursors = nrow(y), proteins = n_distinct(y$genes$Protein.Group))
+filter_log <- tibble(count = names(before), before, after)
 filter_log
 ```
+
+Both filters remove nothing here: DIA-NN already reported proteotypic precursors only and no
+protein group names two proteins. They stay as a check.
 
 ## Detection per run
 
@@ -158,9 +141,7 @@ down-weight them through sample weights rather than dropping them.
 per_run <- tibble(
   sample_id = colnames(y),
   n_precursors = colSums(!is.na(y$E)),
-  n_proteins = vapply(seq_len(ncol(y)), \(j) {
-    n_distinct(y$genes$Protein.Group[!is.na(y$E[, j])])
-  }, integer(1))
+  n_proteins = colSums(rowsum(1 * !is.na(y$E), y$genes$Protein.Group) > 0)
 ) |>
   left_join(select(metadata, sample_id, group, timepoint), by = "sample_id") |>
   arrange(n_precursors)
@@ -177,6 +158,22 @@ ggplot(per_run, aes(timepoint, n_precursors, colour = group)) +
   geom_point(position = position_jitter(width = 0.15, seed = 1)) +
   labs(x = NULL, y = "precursors detected", colour = NULL) +
   theme_bw(base_size = 10)
+```
+
+## Intensities per biopsy
+
+limpa adds no normalisation: it uses DIA-NN's `Precursor.Normalised`. If that worked, every
+biopsy's distribution of detected log2 intensities sits in the same place. limma's
+`plotDensities()` draws one curve per biopsy; a shifted curve would mean the normalisation failed
+for that run. Thin runs detect fewer faint precursors, so their curves start further right.
+
+```{r}
+#| label: fig-densities
+#| fig-cap: "Detected log2 precursor intensity per biopsy (limma's plotDensities)."
+#| fig-width: 7
+#| fig-height: 4
+plotDensities(y, legend = FALSE, main = "")
+round(summary(apply(y$E, 2, median, na.rm = TRUE)), 2)
 ```
 
 ## Validation
@@ -203,11 +200,10 @@ dir.create(out, showWarnings = FALSE)
 saveRDS(y, file.path(out, "precursors.rds"))
 readr::write_csv(run_map, file.path(out, "run_map.csv"))
 write_workbook(
-  list(run_map = run_map, q_filters = q_filters, filter_log = filter_log, per_run = per_run),
+  list(run_map = run_map, filter_log = filter_log, per_run = per_run),
   c(
     "Every run in the report: biopsy, injection, precursors detected, and whether it was kept.",
-    "Distinct precursors passing the MBR q-values (used) and the no-MBR q-values.",
-    "Precursors and proteins after each step.",
+    "Precursors and proteins before and after the identity filters.",
     "Precursors and proteins detected in each kept run."
   ),
   file.path(out, "precursors.xlsx"), inputs, paths

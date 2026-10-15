@@ -16,7 +16,8 @@ gives every protein a value and a standard error in every biopsy, using its obse
 and, through the curve, what its missing ones imply. Nothing is filled in as if measured; a value
 resting on few detections carries a wide standard error, and later fits weight it less.
 
-After quantification this step builds the blood index and removes contaminant proteins.
+After quantification this step builds the blood index, removes contaminant proteins and keeps
+proteins detected often enough to compare.
 
 ## Packages
 
@@ -24,6 +25,7 @@ After quantification this step builds the blood index and removes contaminant pr
 #| label: packages
 #| message: false
 library(here)
+library(limma)
 library(limpa)
 library(dplyr)
 library(tibble)
@@ -194,6 +196,39 @@ review <- proteins$genes |>
 review
 ```
 
+## Detection filter
+
+`filterByDetection()` (limpa) keeps proteins with at least one observed precursor in at least
+`n.samples` biopsies. Its help page suggests the smallest group size for a small study; each
+group-by-time cell holds 8 biopsies, so a kept protein was detected in at least one cell's worth of
+biopsies (decisions log, 2026-10-15). It runs after quantification, as limpa intends: the curve
+and the prior use every precursor.
+
+```{r}
+#| label: detection
+detected <- filterByDetection(proteins, n.samples = 8)
+table(kept = detected)
+dropped <- proteins$genes[!detected, ] |>
+  as_tibble(rownames = "uniprot_id") |>
+  select(uniprot_id, gene = Genes, n_precursors = NPrec, prop_observed = PropObs)
+proteins <- proteins[detected, ]
+c(proteins = nrow(proteins), one_precursor = sum(proteins$genes$NPrec == 1))
+```
+
+## Protein values per biopsy
+
+The same check as for precursors, now on limpa's complete protein values: one curve per biopsy,
+which should overlap.
+
+```{r}
+#| label: fig-protein-densities
+#| fig-cap: "log2 protein values per biopsy (limma's plotDensities)."
+#| fig-width: 7
+#| fig-height: 4
+plotDensities(proteins, legend = FALSE, main = "")
+round(summary(apply(proteins$E, 2, median)), 2)
+```
+
 ## Validation
 
 ```{r}
@@ -207,9 +242,10 @@ stopifnot(
 
 ## Summary
 
-`r nrow(proteins)` proteins quantified in `r ncol(proteins)` biopsies after removing
-`r nrow(removed)` contaminants. The detection curve's slope is `r round(dpcest$dpc[2], 2)`;
-`r sum(proteins$genes$NPrec == 1)` proteins rest on a single precursor.
+`r nrow(proteins)` proteins in `r ncol(proteins)` biopsies, after removing `r nrow(removed)`
+contaminants and `r nrow(dropped)` proteins detected in fewer than 8 biopsies. The detection
+curve's slope is `r round(dpcest$dpc[2], 2)`; `r sum(proteins$genes$NPrec == 1)` kept proteins rest
+on a single precursor.
 
 ## Save
 
@@ -231,14 +267,16 @@ write_workbook(
       ),
     blood_index = blood_index,
     contaminants_removed = removed,
-    contaminant_review = review
+    contaminant_review = review,
+    detection_dropped = dropped
   ),
   c(
     "Detection probability curve: intercept (beta0) and slope (beta1).",
-    "Every quantified protein: names, precursor count and share of values observed.",
+    "Every protein kept: names, precursor count and share of values observed.",
     "Blood index per biopsy (centred mean log2 HBB and HBA1).",
     "Contaminant proteins removed, with class and reason.",
-    "Keratin, immunoglobulin and haemoglobin genes not on the list, kept for review."
+    "Keratin, immunoglobulin and haemoglobin genes not on the list, kept for review.",
+    "Proteins detected in fewer than 8 biopsies, dropped by filterByDetection()."
   ),
   file.path(out, "quantification.xlsx"), inputs, paths
 )

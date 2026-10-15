@@ -309,12 +309,11 @@ composite,comp_hypertrophy,"Composite hypertrophy score as supplied in phenotype
 ,n_precursors,Precursors detected (q ≤ 0.01) in the run or protein.
 ,injection,"Injection suffix in the run name: empty for the first injection, r, rr, 4 or r for a re-injection."
 ,in_study,Whether the run's person is one of the 16 analysed.
-,filter,q-value columns used to keep a precursor.
-,distinct_precursors,Distinct precursors passing the q-value filter in at least one run.
-,precursors,Precursors left after the step.
 ^run_map$,chosen,Whether this run is the biopsy's kept injection (most precursors among its injections).
-^filter_log$,proteins,Protein groups left after the step.
 ^per_run$,n_proteins,Protein groups with at least one precursor detected in the run.
 ,prop_observed,Share of the protein's values (precursor by biopsy) that were observed rather than modelled from the detection curve.
 ^contaminants_removed$,class,"Contaminant class: plasma, immunoglobulin, erythrocyte, keratin, complement, globin or leukocyte."
 ,protein_name,"UniProt entry name, e.g. PDLI3_HUMAN."
+^filter_log$,count,What is counted: precursors or protein groups.
+^filter_log$,before,Count before the identity filters.
+^filter_log$,after,Count after the identity filters.
