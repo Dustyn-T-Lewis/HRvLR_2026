@@ -1303,42 +1303,6 @@
       "Author": "Constantin Ahlmann-Eltze [aut] (ORCID: <https://orcid.org/0000-0002-3762-068X>), Peter Hickey [aut, cre] (ORCID: <https://orcid.org/0000-0002-8153-6258>), Hervé Pagès [aut]",
       "Maintainer": "Peter Hickey <peter.hickey@gmail.com>"
     },
-    "Polychrome": {
-      "Package": "Polychrome",
-      "Version": "1.5.4",
-      "Source": "Repository",
-      "Title": "Qualitative Palettes with Many Colors",
-      "Date": "2025-04-06",
-      "Authors@R": "c(person(given = \"Guy\", family = \"Brock\", role = \"aut\"), person(given = c(\"Kevin\", \"R.\"), family = \"Coombes\", role = c(\"aut\", \"cre\"), email = \"krc@silicovore.com\"))",
-      "Description": "Tools for creating, viewing, and assessing qualitative palettes with many (20-30 or more) colors. See Coombes and colleagues (2019) <doi:10.18637/jss.v090.c01>.",
-      "Depends": [
-        "R (>= 4.4)"
-      ],
-      "Imports": [
-        "colorspace",
-        "scatterplot3d",
-        "methods",
-        "graphics",
-        "grDevices",
-        "stats",
-        "utils"
-      ],
-      "Suggests": [
-        "RColorBrewer",
-        "knitr",
-        "rmarkdown",
-        "ggplot2"
-      ],
-      "License": "Apache License (== 2.0)",
-      "LazyLoad": "yes",
-      "LazyData": "no",
-      "URL": "http://oompa.r-forge.r-project.org/",
-      "VignetteBuilder": "knitr",
-      "NeedsCompilation": "no",
-      "Author": "Guy Brock [aut], Kevin R. Coombes [aut, cre]",
-      "Maintainer": "Kevin R. Coombes <krc@silicovore.com>",
-      "Repository": "CRAN"
-    },
     "R6": {
       "Package": "R6",
       "Version": "2.6.1",
@@ -2045,76 +2009,6 @@
       "Author": "Tony Plate [aut, cre], Richard Heiberger [aut]",
       "Repository": "CRAN"
     },
-    "affy": {
-      "Package": "affy",
-      "Version": "1.90.0",
-      "Source": "Bioconductor",
-      "Title": "Methods for Affymetrix Oligonucleotide Arrays",
-      "Author": "Rafael A. Irizarry <rafa@ds.dfci.harvard.edu>, Laurent Gautier <lgautier@gmail.com>, Benjamin Milo Bolstad <bmb@bmbolstad.com>, and Crispin Miller <cmiller@picr.man.ac.uk> with contributions from Magnus Astrand <Magnus.Astrand@astrazeneca.com>, Leslie M. Cope <cope@mts.jhu.edu>, Robert Gentleman, Jeff Gentry, Conrad Halling <challing@agilixcorp.com>, Wolfgang Huber, James MacDonald <jmacdon@u.washington.edu>, Benjamin I. P. Rubinstein, Christopher Workman <workman@cbs.dtu.dk>, John Zhang",
-      "Maintainer": "Robert D. Shear <rshear@ds.dfci.harvard.edu>",
-      "URL": "https://bioconductor.org/packages/affy",
-      "BugReports": "https://github.com/rafalab/affy/issues",
-      "Depends": [
-        "R (>= 2.8.0)",
-        "BiocGenerics (>= 0.1.12)",
-        "Biobase (>= 2.5.5)"
-      ],
-      "Imports": [
-        "affyio (>= 1.13.3)",
-        "BiocManager",
-        "graphics",
-        "grDevices",
-        "methods",
-        "preprocessCore",
-        "stats",
-        "utils"
-      ],
-      "Suggests": [
-        "tkWidgets (>= 1.19.0)",
-        "affydata",
-        "widgetTools",
-        "hgu95av2cdf"
-      ],
-      "LinkingTo": [
-        "preprocessCore"
-      ],
-      "Description": "The package contains functions for exploratory oligonucleotide array analysis. The dependence on tkWidgets only concerns few convenience functions. 'affy' is fully functional without it.",
-      "License": "LGPL (>= 2.0)",
-      "Collate": "ProgressBarText.R ppset.ttest.R ppsetApply.R expressoWidget.R getCDFenv.R AffyRNAdeg.R avdiff.R barplot.ProbeSet.R bg.Affy.chipwide.R bg.R expresso.R fit.li.wong.R generateExprVal.method.avgdiff.R generateExprVal.method.liwong.R generateExprVal.method.mas.R generateExprVal.method.medianpolish.R generateExprVal.method.playerout.R hlog.R justrma.R loess.normalize.R maffy.R mas5.R merge.AffyBatch.R normalize.constant.R normalize.contrasts.R normalize.invariantset.R normalize.loess.R normalize.qspline.R normalize.quantiles.R pairs.AffyBatch.R plot.density.R plotLocation.R plot.ProbeSet.R pmcorrect.mas.R AffyBatch.R mva.pairs.R ProbeSet.R read.affybatch.R rma.R summary.R tukey.biweight.R whatcdf.R xy2indices.R zzz.R",
-      "biocViews": "Microarray, OneChannel, Preprocessing",
-      "LazyLoad": "yes",
-      "git_url": "https://git.bioconductor.org/packages/affy",
-      "git_branch": "RELEASE_3_23",
-      "git_last_commit": "7ed56e7",
-      "git_last_commit_date": "2026-04-28",
-      "Repository": "Bioconductor 3.23",
-      "NeedsCompilation": "yes"
-    },
-    "affyio": {
-      "Package": "affyio",
-      "Version": "1.82.0",
-      "Source": "Bioconductor",
-      "Title": "Tools for parsing Affymetrix data files",
-      "Author": "Ben Bolstad <bmb@bmbolstad.com>",
-      "Maintainer": "Ben Bolstad <bmb@bmbolstad.com>",
-      "Depends": [
-        "R (>= 2.6.0)"
-      ],
-      "Imports": [
-        "methods"
-      ],
-      "Description": "Routines for parsing Affymetrix data files based upon file format information. Primary focus is on accessing the CEL and CDF file formats.",
-      "License": "LGPL (>= 2)",
-      "URL": "https://github.com/bmbolstad/affyio",
-      "biocViews": "Microarray, DataImport, Infrastructure",
-      "LazyLoad": "yes",
-      "git_url": "https://git.bioconductor.org/packages/affyio",
-      "git_branch": "RELEASE_3_23",
-      "git_last_commit": "5c67e5d",
-      "git_last_commit_date": "2026-04-28",
-      "Repository": "Bioconductor 3.23",
-      "NeedsCompilation": "yes"
-    },
     "aisdk": {
       "Package": "aisdk",
       "Version": "1.4.12",
@@ -2306,74 +2200,6 @@
       "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
       "Repository": "CRAN"
     },
-    "arrow": {
-      "Package": "arrow",
-      "Version": "25.0.1",
-      "Source": "Repository",
-      "Title": "Integration to 'Apache' 'Arrow'",
-      "Authors@R": "c( person(\"Neal\", \"Richardson\", email = \"neal.p.richardson@gmail.com\", role = c(\"aut\")), person(\"Ian\", \"Cook\", email = \"ianmcook@gmail.com\", role = c(\"aut\")), person(\"Nic\", \"Crane\", email = \"thisisnic@gmail.com\", role = c(\"aut\")), person(\"Dewey\", \"Dunnington\", role = c(\"aut\"), email = \"dewey@fishandwhistle.net\", comment = c(ORCID = \"0000-0002-9415-4582\")), person(\"Romain\", \"Fran\\u00e7ois\", role = c(\"aut\"), comment = c(ORCID = \"0000-0002-2444-4226\")), person(\"Jonathan\", \"Keane\", email = \"jkeane@gmail.com\", role = c(\"aut\", \"cre\")), person(\"Bryce\", \"Mecum\", email = \"brycemecum@gmail.com\", role = c(\"aut\")), person(\"Drago\\u0219\", \"Moldovan-Gr\\u00fcnfeld\", email = \"dragos.mold@gmail.com\", role = c(\"aut\")), person(\"Jeroen\", \"Ooms\", email = \"jeroen@berkeley.edu\", role = c(\"aut\")), person(\"Jacob\", \"Wujciak-Jens\", email = \"jacob@wujciak.de\", role = c(\"aut\")), person(\"Javier\", \"Luraschi\", email = \"javier@rstudio.com\", role = c(\"ctb\")), person(\"Karl\", \"Dunkle Werner\", email = \"karldw@users.noreply.github.com\", role = c(\"ctb\"), comment = c(ORCID = \"0000-0003-0523-7309\")), person(\"Jeffrey\", \"Wong\", email = \"jeffreyw@netflix.com\", role = c(\"ctb\")), person(\"Apache Arrow\", email = \"dev@arrow.apache.org\", role = c(\"aut\", \"cph\")) )",
-      "Description": "'Apache' 'Arrow' <https://arrow.apache.org/> is a cross-language development platform for in-memory data. It specifies a standardized language-independent columnar memory format for flat and hierarchical data, organized for efficient analytic operations on modern hardware. This package provides an interface to the 'Arrow C++' library.",
-      "Depends": [
-        "R (>= 4.2)"
-      ],
-      "License": "Apache License (>= 2.0)",
-      "URL": "https://github.com/apache/arrow/, https://arrow.apache.org/docs/r/",
-      "BugReports": "https://github.com/apache/arrow/issues",
-      "Encoding": "UTF-8",
-      "Language": "en-US",
-      "SystemRequirements": "C++20; for AWS S3 support on Linux, libcurl and openssl (optional); cmake >= 3.26 (build-time only, and only for full source build)",
-      "Biarch": "true",
-      "Imports": [
-        "assertthat",
-        "bit64 (>= 0.9-7)",
-        "glue",
-        "methods",
-        "purrr",
-        "R6",
-        "rlang (>= 1.0.0)",
-        "stats",
-        "tidyselect (>= 1.0.0)",
-        "utils",
-        "vctrs"
-      ],
-      "Config/testthat/edition": "3",
-      "Config/build/bootstrap": "TRUE",
-      "Suggests": [
-        "blob",
-        "curl",
-        "cli",
-        "DBI",
-        "dbplyr",
-        "decor",
-        "distro",
-        "dplyr",
-        "duckdb (>= 0.2.8)",
-        "hms",
-        "jsonlite",
-        "knitr",
-        "lubridate",
-        "pillar",
-        "pkgload",
-        "reticulate",
-        "rmarkdown",
-        "stringi",
-        "stringr",
-        "sys",
-        "testthat (>= 3.3.0)",
-        "tibble",
-        "tzdb",
-        "withr"
-      ],
-      "LinkingTo": [
-        "cpp11 (>= 0.4.2)"
-      ],
-      "Collate": "'arrowExports.R' 'enums.R' 'arrow-object.R' 'type.R' 'array-data.R' 'arrow-datum.R' 'array.R' 'arrow-info.R' 'arrow-package.R' 'arrow-tabular.R' 'buffer.R' 'chunked-array.R' 'io.R' 'compression.R' 'scalar.R' 'compute.R' 'config.R' 'csv.R' 'dataset.R' 'dataset-factory.R' 'dataset-format.R' 'dataset-partition.R' 'dataset-scan.R' 'dataset-write.R' 'dictionary.R' 'dplyr-across.R' 'dplyr-arrange.R' 'dplyr-by.R' 'dplyr-collect.R' 'dplyr-count.R' 'dplyr-datetime-helpers.R' 'dplyr-distinct.R' 'dplyr-eval.R' 'dplyr-filter.R' 'dplyr-funcs-agg.R' 'dplyr-funcs-augmented.R' 'dplyr-funcs-conditional.R' 'dplyr-funcs-datetime.R' 'dplyr-funcs-doc.R' 'dplyr-funcs-math.R' 'dplyr-funcs-simple.R' 'dplyr-funcs-string.R' 'dplyr-funcs-type.R' 'expression.R' 'dplyr-funcs.R' 'dplyr-glimpse.R' 'dplyr-group-by.R' 'dplyr-join.R' 'dplyr-mutate.R' 'dplyr-select.R' 'dplyr-slice.R' 'dplyr-summarize.R' 'dplyr-union.R' 'record-batch.R' 'table.R' 'dplyr.R' 'duckdb.R' 'extension.R' 'feather.R' 'field.R' 'filesystem.R' 'flight.R' 'install-arrow.R' 'ipc-stream.R' 'json.R' 'memory-pool.R' 'message.R' 'metadata.R' 'parquet.R' 'python.R' 'query-engine.R' 'record-batch-reader.R' 'record-batch-writer.R' 'reexports-tidyselect.R' 'schema.R' 'udf.R' 'util.R'",
-      "Config/roxygen2/version": "8.1.0",
-      "NeedsCompilation": "yes",
-      "Author": "Neal Richardson [aut], Ian Cook [aut], Nic Crane [aut], Dewey Dunnington [aut] (ORCID: <https://orcid.org/0000-0002-9415-4582>), Romain François [aut] (ORCID: <https://orcid.org/0000-0002-2444-4226>), Jonathan Keane [aut, cre], Bryce Mecum [aut], Dragoș Moldovan-Grünfeld [aut], Jeroen Ooms [aut], Jacob Wujciak-Jens [aut], Javier Luraschi [ctb], Karl Dunkle Werner [ctb] (ORCID: <https://orcid.org/0000-0003-0523-7309>), Jeffrey Wong [ctb], Apache Arrow [aut, cph]",
-      "Maintainer": "Jonathan Keane <jkeane@gmail.com>",
-      "Repository": "CRAN"
-    },
     "askpass": {
       "Package": "askpass",
       "Version": "1.2.1",
@@ -2397,28 +2223,6 @@
       "NeedsCompilation": "yes",
       "Author": "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>)",
       "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
-      "Repository": "CRAN"
-    },
-    "assertthat": {
-      "Package": "assertthat",
-      "Version": "0.2.1",
-      "Source": "Repository",
-      "Title": "Easy Pre and Post Assertions",
-      "Authors@R": "person(\"Hadley\", \"Wickham\", , \"hadley@rstudio.com\", c(\"aut\", \"cre\"))",
-      "Description": "An extension to stopifnot() that makes it easy to declare  the pre and post conditions that you code should satisfy, while also  producing friendly error messages so that your users know what's gone wrong.",
-      "License": "GPL-3",
-      "Imports": [
-        "tools"
-      ],
-      "Suggests": [
-        "testthat",
-        "covr"
-      ],
-      "RoxygenNote": "6.0.1",
-      "Collate": "'assert-that.r' 'on-failure.r' 'assertions-file.r' 'assertions-scalar.R' 'assertions.r' 'base.r' 'base-comparison.r' 'base-is.r' 'base-logical.r' 'base-misc.r' 'utils.r' 'validate-that.R'",
-      "NeedsCompilation": "no",
-      "Author": "Hadley Wickham [aut, cre]",
-      "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
       "Repository": "CRAN"
     },
     "backports": {
@@ -7004,6 +6808,47 @@
       "Maintainer": "Torsten Hothorn <Torsten.Hothorn@R-project.org>",
       "Repository": "CRAN"
     },
+    "nanoparquet": {
+      "Package": "nanoparquet",
+      "Version": "0.5.2",
+      "Source": "Repository",
+      "Title": "Read and Write 'Parquet' Files",
+      "Authors@R": "c( person(\"Gábor\", \"Csárdi\", role = c(\"aut\", \"cre\"), email = \"csardi.gabor@gmail.com\"), person(\"Hannes\", \"Mühleisen\", role = c(\"aut\", \"cph\"), comment = c(ORCID = \"0000-0001-8552-0029\")), person(\"Google Inc.\", role = \"cph\"), person(\"Apache Software Foundation\", role = \"cph\"), person(\"Posit Software, PBC\", role = \"cph\"), person(\"RAD Game Tools\", role = \"cph\"), person(\"Valve Software\", role = \"cph\"), person(\"Tenacious Software LLC\", role = \"cph\"), person(\"Facebook, Inc.\", role = \"cph\"))",
+      "Description": "Self-sufficient reader and writer for flat 'Parquet' files. Can read most 'Parquet' data types. Can write many 'R' data types, including factors and temporal types. See docs for limitations.",
+      "Depends": [
+        "R (>= 4.0.0)"
+      ],
+      "License": "MIT + file LICENSE",
+      "URL": "https://github.com/r-lib/nanoparquet, https://nanoparquet.r-lib.org/",
+      "BugReports": "https://github.com/r-lib/nanoparquet/issues",
+      "Encoding": "UTF-8",
+      "Suggests": [
+        "arrow",
+        "bit64",
+        "blob",
+        "DBI",
+        "duckdb (>= 1.4.0)",
+        "hms",
+        "mockery",
+        "pillar",
+        "processx",
+        "rprojroot",
+        "spelling",
+        "testthat",
+        "tzdb",
+        "withr"
+      ],
+      "Config/testthat/edition": "3",
+      "Config/testthat/parallel": "TRUE",
+      "Config/Needs/website": "tidyverse/tidytemplate, r-lib/pkgdown, dplyr, gt, gtExtras, knitr, nycflights13, prettyunits, quarto, rmarkdown, sessioninfo, svglite",
+      "Language": "en-US",
+      "Biarch": "true",
+      "Config/roxygen2/version": "8.1.0",
+      "NeedsCompilation": "yes",
+      "Author": "Gábor Csárdi [aut, cre], Hannes Mühleisen [aut, cph] (ORCID: <https://orcid.org/0000-0001-8552-0029>), Google Inc. [cph], Apache Software Foundation [cph], Posit Software, PBC [cph], RAD Game Tools [cph], Valve Software [cph], Tenacious Software LLC [cph], Facebook, Inc. [cph]",
+      "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
+      "Repository": "CRAN"
+    },
     "nlme": {
       "Package": "nlme",
       "Version": "3.1-169",
@@ -7121,51 +6966,6 @@
       "NeedsCompilation": "yes",
       "Author": "Jeroen Ooms [aut, cre] (ORCID: <https://orcid.org/0000-0002-4035-0289>), Oliver Keyes [ctb]",
       "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
-      "Repository": "CRAN"
-    },
-    "openxlsx": {
-      "Package": "openxlsx",
-      "Version": "4.2.8.1",
-      "Source": "Repository",
-      "Type": "Package",
-      "Title": "Read, Write and Edit xlsx Files",
-      "Date": "2025-10-30",
-      "Authors@R": "c(person(given = \"Philipp\", family = \"Schauberger\", role = \"aut\", email = \"philipp@schauberger.co.at\"), person(given = \"Alexander\", family = \"Walker\", role = \"aut\", email = \"Alexander.Walker1989@gmail.com\"), person(given = \"Luca\", family = \"Braglia\", role = \"ctb\"), person(given = \"Joshua\", family = \"Sturm\", role = \"ctb\"), person(given = \"Jan Marvin\", family = \"Garbuszus\", role = c(\"ctb\", \"cre\"), email = \"jan.garbuszus@ruhr-uni-bochum.de\"), person(given = \"Jordan Mark\", family = \"Barbone\", role = \"ctb\", email = \"jmbarbone@gmail.com\", comment = c(ORCID = \"0000-0001-9788-3628\")), person(given = \"David\", family = \"Zimmermann\", role = \"ctb\", email = \"david_j_zimmermann@hotmail.com\"), person(given = \"Reinhold\", family = \"Kainhofer\", role = \"ctb\", email = \"reinhold@kainhofer.com\"))",
-      "Description": "Simplifies the creation of Excel .xlsx files by providing a high level interface to writing, styling and editing worksheets. Through the use of 'Rcpp', read/write times are comparable to the 'xlsx' and 'XLConnect' packages with the added benefit of removing the dependency on Java.",
-      "License": "MIT + file LICENSE",
-      "URL": "https://ycphs.github.io/openxlsx/index.html, https://github.com/ycphs/openxlsx",
-      "BugReports": "https://github.com/ycphs/openxlsx/issues",
-      "Depends": [
-        "R (>= 3.3.0)"
-      ],
-      "Imports": [
-        "grDevices",
-        "methods",
-        "Rcpp",
-        "stats",
-        "stringi",
-        "utils",
-        "zip"
-      ],
-      "Suggests": [
-        "curl",
-        "formula.tools",
-        "knitr",
-        "rmarkdown",
-        "testthat"
-      ],
-      "LinkingTo": [
-        "Rcpp"
-      ],
-      "VignetteBuilder": "knitr",
-      "Encoding": "UTF-8",
-      "Language": "en-US",
-      "RoxygenNote": "7.3.3",
-      "Collate": "'CommentClass.R' 'HyperlinkClass.R' 'RcppExports.R' 'class_definitions.R' 'StyleClass.R' 'WorkbookClass.R' 'asserts.R' 'baseXML.R' 'borderFunctions.R' 'build_workbook.R' 'chartsheet_class.R' 'conditional_formatting.R' 'data-fontSizeLookupTables.R' 'helperFunctions.R' 'loadWorkbook.R' 'onUnload.R' 'openXL.R' 'openxlsx-package.R' 'openxlsx.R' 'openxlsxCoerce.R' 'readWorkbook.R' 'setWindowSize.R' 'sheet_data_class.R' 'utils.R' 'workbook_column_widths.R' 'workbook_read_workbook.R' 'workbook_write_data.R' 'worksheet_class.R' 'wrappers.R' 'writeData.R' 'writeDataTable.R' 'writexlsx.R' 'zzz.R'",
-      "LazyData": "true",
-      "NeedsCompilation": "yes",
-      "Author": "Philipp Schauberger [aut], Alexander Walker [aut], Luca Braglia [ctb], Joshua Sturm [ctb], Jan Marvin Garbuszus [ctb, cre], Jordan Mark Barbone [ctb] (ORCID: <https://orcid.org/0000-0001-9788-3628>), David Zimmermann [ctb], Reinhold Kainhofer [ctb]",
-      "Maintainer": "Jan Marvin Garbuszus <jan.garbuszus@ruhr-uni-bochum.de>",
       "Repository": "CRAN"
     },
     "otel": {
@@ -7778,64 +7578,6 @@
       "Author": "Joe Cheng [aut], Barret Schloerke [aut, cre] (ORCID: <https://orcid.org/0000-0001-9986-114X>), Winston Chang [aut] (ORCID: <https://orcid.org/0000-0002-1576-2126>), Charlie Gao [aut] (ORCID: <https://orcid.org/0000-0002-0750-061X>), Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)",
       "Maintainer": "Barret Schloerke <barret@posit.co>",
       "Repository": "CRAN"
-    },
-    "proteoDA": {
-      "Package": "proteoDA",
-      "Version": "2.0.0",
-      "Source": "GitHub",
-      "Title": "Streamlined Differential Abundance Analysis of Proteomic Data",
-      "Authors@R": "c( person(given = \"Zuo-Fei\", family = \"Yuan\", email = \"zuo-fei.yuan@stjude.org\", role = \"ctb\"), person(given = \"Yingxue\", family = \"Fu\", email = \"Yingxue.Fu@stjude.org\", role = \"ctb\"), person(given = \"Stephanie\", family = \"Byrum\", email = \"sbyrum@stjude.org\", role = c(\"aut\", \"cre\")) )",
-      "Description": "Functions for performing differential abundance analysis of proteomic data.",
-      "License": "GPL-3 + file LICENSE",
-      "Encoding": "UTF-8",
-      "Depends": [
-        "R (>= 4.1.0)"
-      ],
-      "Imports": [
-        "circlize",
-        "cli (>= 3.6.0)",
-        "ComplexHeatmap",
-        "ggplot2 (>= 3.4.0)",
-        "ggrepel",
-        "grid",
-        "gridExtra",
-        "htmlwidgets",
-        "limma",
-        "MASS",
-        "openxlsx",
-        "patchwork",
-        "preprocessCore",
-        "rlang (>= 1.0.0)",
-        "stringr",
-        "vsn",
-        "Polychrome",
-        "ggplotify",
-        "statmod (>= 1.2.2)",
-        "RColorBrewer"
-      ],
-      "Suggests": [
-        "ggtree",
-        "grDevices",
-        "ggrastr",
-        "tibble",
-        "testthat (>= 3.0.0)",
-        "knitr",
-        "rmarkdown"
-      ],
-      "VignetteBuilder": "knitr",
-      "Config/testthat/edition": "3",
-      "Roxygen": "list(markdown = TRUE)",
-      "RoxygenNote": "7.3.2",
-      "LazyData": "true",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "proteoDA",
-      "RemoteUsername": "ByrumLab",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "ba99c77b8d401ef2e3ed95a9c0881ef19feab938",
-      "NeedsCompilation": "no",
-      "Author": "Zuo-Fei Yuan [ctb], Yingxue Fu [ctb], Stephanie Byrum [aut, cre]",
-      "Maintainer": "Stephanie Byrum <sbyrum@stjude.org>"
     },
     "proto": {
       "Package": "proto",
@@ -8734,29 +8476,6 @@
       "NeedsCompilation": "no",
       "Author": "Guangchuang Yu [aut, cre] (ORCID: <https://orcid.org/0000-0002-6485-8781>), Shuangbin Xu [ctb] (ORCID: <https://orcid.org/0000-0003-3513-5362>)",
       "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
-      "Repository": "CRAN"
-    },
-    "scatterplot3d": {
-      "Package": "scatterplot3d",
-      "Version": "0.3-45",
-      "Source": "Repository",
-      "Date": "2026-02-23",
-      "Title": "3D Scatter Plot",
-      "Authors@R": "c(person(given = \"Uwe\", family = \"Ligges\", role = c(\"aut\", \"cre\"), email = \"ligges@statistik.tu-dortmund.de\"), person(given = \"Martin\", family = \"Maechler\", role = \"aut\"), person(given = \"Sarah\", family = \"Schnackenberg\", role = \"aut\"))",
-      "Description": "Plots a three dimensional (3D) point cloud.",
-      "Depends": [
-        "R (>= 2.7.0)"
-      ],
-      "License": "GPL-2",
-      "Encoding": "UTF-8",
-      "Imports": [
-        "grDevices",
-        "graphics",
-        "stats"
-      ],
-      "NeedsCompilation": "no",
-      "Author": "Uwe Ligges [aut, cre], Martin Maechler [aut], Sarah Schnackenberg [aut]",
-      "Maintainer": "Uwe Ligges <ligges@statistik.tu-dortmund.de>",
       "Repository": "CRAN"
     },
     "sessioninfo": {
@@ -9824,51 +9543,6 @@
       "Maintainer": "Jennifer Bryan <jenny@posit.co>",
       "Repository": "CRAN"
     },
-    "vsn": {
-      "Package": "vsn",
-      "Version": "3.80.0",
-      "Source": "Bioconductor",
-      "Title": "Variance stabilization and calibration for microarray data",
-      "Authors@R": "c( person(\"Wolfgang\", \"Huber\", email=\"wolfgang.huber@embl.org\", role = c(\"aut\",\"cre\")), person(\"Anja\", \"von Heydebreck\", role = c(\"aut\")), person(\"Dennis\", \"Kostka\", role = c(\"ctb\")), person(\"David\", \"Kreil\", role = c(\"ctb\")), person(\"Hans-Ulrich\", \"Klein\", role = c(\"ctb\")), person(\"Robert\", \"Gentleman\", role = c(\"ctb\")), person(\"Deepayan\", \"Sarkar\", role = c(\"ctb\")), person(\"Gordon\", \"Smyth\", role = c(\"ctb\")), person(\"Federal Ministry of Research, Technology and Space of Germany, DHGP\", role=\"fnd\"))",
-      "Maintainer": "Wolfgang Huber <wolfgang.huber@embl.org>",
-      "Depends": [
-        "R (>= 4.0.0)",
-        "methods",
-        "Biobase"
-      ],
-      "Imports": [
-        "affy",
-        "limma",
-        "lattice",
-        "ggplot2"
-      ],
-      "Suggests": [
-        "affydata",
-        "hgu95av2cdf",
-        "BiocStyle",
-        "knitr",
-        "rmarkdown",
-        "dplyr",
-        "testthat",
-        "hexbin"
-      ],
-      "Description": "The package implements a method for normalising microarray intensities from single- and  multiple-color arrays. It can also be used for data from other technologies, as long as they have similar format. The method uses a robust variant of the maximum-likelihood estimator for an additive-multiplicative error model and affine calibration. The model incorporates data calibration step (a.k.a. normalization), a model for the dependence of the variance on the mean intensity and a variance stabilizing data transformation. Differences between transformed intensities are analogous to \"normalized log-ratios\". However, in contrast to the latter, their variance is independent of the mean, and they are usually more sensitive and specific in detecting differential transcription.",
-      "Reference": "[1] Variance stabilization applied to microarray data calibration and to the quantification of differential expression, Wolfgang Huber, Anja von Heydebreck, Holger Sueltmann, Annemarie Poustka, Martin Vingron; Bioinformatics (2002) 18 Suppl1 S96-S104. [2] Parameter estimation for the calibration and variance stabilization of microarray data, Wolfgang Huber, Anja von Heydebreck, Holger Sueltmann, Annemarie Poustka, and Martin Vingron; Statistical Applications in Genetics and Molecular Biology (2003) Vol. 2 No. 1, Article 3; http://www.bepress.com/sagmb/vol2/iss1/art3.",
-      "License": "Artistic-2.0",
-      "URL": "https://github.com/Huber-group-EMBL/vsn",
-      "BugReports": "https://github.com/Huber-group-EMBL/vsn/issues",
-      "biocViews": "Microarray, OneChannel, TwoChannel, Preprocessing",
-      "VignetteBuilder": "knitr",
-      "Collate": "AllClasses.R AllGenerics.R vsn2.R vsnLogLik.R justvsn.R methods-vsnInput.R methods-vsn.R methods-vsn2.R methods-predict.R RGList_to_NChannelSet.R meanSdPlot-methods.R plotLikelihood.R normalize.AffyBatch.vsn.R sagmbSimulateData.R zzz.R",
-      "RoxygenNote": "7.3.3",
-      "git_url": "https://git.bioconductor.org/packages/vsn",
-      "git_branch": "RELEASE_3_23",
-      "git_last_commit": "6ef8b94",
-      "git_last_commit_date": "2026-04-28",
-      "Repository": "Bioconductor 3.23",
-      "NeedsCompilation": "yes",
-      "Author": "Wolfgang Huber [aut, cre], Anja von Heydebreck [aut], Dennis Kostka [ctb], David Kreil [ctb], Hans-Ulrich Klein [ctb], Robert Gentleman [ctb], Deepayan Sarkar [ctb], Gordon Smyth [ctb], Federal Ministry of Research, Technology and Space of Germany, DHGP [fnd]"
-    },
     "withr": {
       "Package": "withr",
       "Version": "3.0.2",
@@ -10124,34 +9798,6 @@
       "NeedsCompilation": "no",
       "Author": "Guangchuang Yu [aut, cre] (ORCID: <https://orcid.org/0000-0002-6485-8781>)",
       "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
-      "Repository": "CRAN"
-    },
-    "zip": {
-      "Package": "zip",
-      "Version": "2.3.3",
-      "Source": "Repository",
-      "Title": "Cross-Platform 'zip' Compression",
-      "Authors@R": "c( person(\"Gábor\", \"Csárdi\", , \"csardi.gabor@gmail.com\", role = c(\"aut\", \"cre\")), person(\"Kuba\", \"Podgórski\", role = \"ctb\"), person(\"Rich\", \"Geldreich\", role = \"ctb\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\"), comment = c(ROR = \"03wc8by49\")) )",
-      "Description": "Cross-Platform 'zip' Compression Library. A replacement for the 'zip' function, that does not require any additional external tools on any platform.",
-      "License": "MIT + file LICENSE",
-      "URL": "https://github.com/r-lib/zip, https://r-lib.github.io/zip/",
-      "BugReports": "https://github.com/r-lib/zip/issues",
-      "Suggests": [
-        "covr",
-        "pillar",
-        "processx",
-        "R6",
-        "testthat",
-        "withr"
-      ],
-      "Config/Needs/website": "tidyverse/tidytemplate",
-      "Config/testthat/edition": "3",
-      "Config/usethis/last-upkeep": "2025-05-07",
-      "Encoding": "UTF-8",
-      "RoxygenNote": "7.3.2.9000",
-      "NeedsCompilation": "yes",
-      "Author": "Gábor Csárdi [aut, cre], Kuba Podgórski [ctb], Rich Geldreich [ctb], Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)",
-      "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
       "Repository": "CRAN"
     }
   }

@@ -1,0 +1,215 @@
+---
+title: "Precursors"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+The input is DIA-NN's precursor report: one row per precursor ion per run. limpa is built for this
+level. It reads the report, keeps confidently identified precursors, and later quantifies each
+protein from its precursors with a model of which ones go undetected. This step reads the report,
+picks one injection per biopsy, applies limpa's two identity filters and saves the precursor
+matrix. Nothing is normalised and nothing is filtered on missing values; limpa models both.
+
+## Packages
+
+limpa supplies the reader and the filters; limma the `EList` object they return; nanoparquet
+(called with `::`) reads single columns of the report.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limpa)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+inputs <- c(
+  report = "00_Setup/Input/report.parquet",
+  metadata = "00_Setup/Input/metadata.csv"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+out <- here("01_Processing", "01_Precursors", "c_data")
+packageVersion("limpa")
+```
+
+## Read the report
+
+`readDIANN()` (limpa) reads the Parquet report into a precursor-by-run matrix of log2
+`Precursor.Normalised` intensities, `NA` where a precursor was not detected in a run. It keeps a
+precursor in a run only when its q-values pass 0.01. Which q-values depends on the search: with
+match-between-runs (MBR), DIA-NN builds one library from all runs and searches each run against it,
+and limpa's vignette then filters on `Q.Value`, `Lib.Q.Value` and `Lib.PG.Q.Value`. This report's
+library q-values differ from its global ones, consistent with an MBR search, so the MBR set is used.
+
+```{r}
+#| label: read
+y <- readDIANN(
+  paths[["report"]],
+  q.columns = c("Q.Value", "Lib.Q.Value", "Lib.PG.Q.Value"), q.cutoffs = 0.01
+)
+c(precursors = nrow(y), runs = ncol(y), pct_missing = round(100 * mean(is.na(y$E)), 1))
+```
+
+For comparison, the precursors the no-MBR q-values (`Global.Q.Value`, `Global.PG.Q.Value`) would
+keep:
+
+```{r}
+#| label: mbr-check
+q <- nanoparquet::read_parquet(paths[["report"]], col_select = c(
+  "Precursor.Id", "Q.Value", "Lib.Q.Value", "Lib.PG.Q.Value", "Global.Q.Value", "Global.PG.Q.Value"
+))
+q_filters <- tibble(
+  filter = c("MBR (used)", "no MBR"),
+  distinct_precursors = c(
+    n_distinct(q$Precursor.Id[
+      q$Q.Value <= 0.01 & q$Lib.Q.Value <= 0.01 & q$Lib.PG.Q.Value <= 0.01
+    ]),
+    n_distinct(q$Precursor.Id[
+      q$Q.Value <= 0.01 & q$Global.Q.Value <= 0.01 & q$Global.PG.Q.Value <= 0.01
+    ])
+  )
+)
+q_filters
+```
+
+## One injection per biopsy
+
+The report holds 57 runs from 18 people. Some biopsies were injected twice: the second injection
+carries a suffix (`r`, `rr`, `_4`, `_r`). Each run name gives the person and time point. The
+analysis keeps the 16 people in `metadata.csv` and, for each biopsy, the injection that detected
+the most precursors (decisions log, 2026-10-14).
+
+```{r}
+#| label: run-map
+metadata <- readr::read_csv(paths[["metadata"]], show_col_types = FALSE)
+run_map <- tibble(run = colnames(y), n_precursors = colSums(!is.na(y$E))) |>
+  mutate(
+    sample_id = sub("^JBBC_CL_(S\\d+)-(T\\d).*$", "\\1_\\2", run),
+    injection = sub("^JBBC_CL_S\\d+-T\\d_?", "", run),
+    in_study = sample_id %in% metadata$sample_id
+  ) |>
+  mutate(chosen = in_study & n_precursors == max(n_precursors), .by = sample_id) |>
+  arrange(sample_id, desc(n_precursors))
+stopifnot(
+  !anyNA(run_map$sample_id), sum(run_map$chosen) == nrow(metadata),
+  setequal(run_map$sample_id[run_map$chosen], metadata$sample_id)
+)
+print(run_map, n = Inf)
+```
+
+Biopsies with more than one injection, and the one kept:
+
+```{r}
+#| label: reinjections
+filter(run_map, n() > 1, .by = sample_id)
+```
+
+## Keep the chosen runs
+
+The chosen runs are renamed to their `sample_id` and matched to `metadata.csv`. A precursor
+detected only in dropped runs is removed. (`removeNARows()` would do this, but in limpa 1.4.0 with
+limma 3.68 it fails inside limma's `EList` subsetting, so a one-line filter does the same.)
+
+```{r}
+#| label: subset
+chosen <- filter(run_map, chosen)
+y <- y[, chosen$run]
+colnames(y) <- chosen$sample_id
+y$targets <- metadata[match(colnames(y), metadata$sample_id), ]
+y <- y[rowSums(!is.na(y$E)) > 0, ]
+stopifnot(identical(y$targets$sample_id, colnames(y)))
+c(precursors = nrow(y), proteins = n_distinct(y$genes$Protein.Group), runs = ncol(y))
+```
+
+## Identity filters
+
+limpa's vignette applies two optional filters for easier interpretation:
+`filterNonProteotypicPeptides()` drops precursors whose peptide maps to more than one protein, and
+`filterCompoundProteins()` drops protein groups that name two or more proteins. Neither looks at
+intensity or missing values.
+
+```{r}
+#| label: filters
+count_rows <- \(step, y) {
+  tibble(step, precursors = nrow(y), proteins = n_distinct(y$genes$Protein.Group))
+}
+filter_log <- count_rows("chosen runs", y)
+y <- filterNonProteotypicPeptides(y)
+filter_log <- bind_rows(filter_log, count_rows("proteotypic precursors only", y))
+y <- filterCompoundProteins(y)
+filter_log <- bind_rows(filter_log, count_rows("single-protein groups only", y))
+filter_log
+```
+
+## Detection per run
+
+Precursors and proteins detected in each kept run. limpa keeps weak runs; the comparisons
+down-weight them through sample weights rather than dropping them.
+
+```{r}
+#| label: per-run
+per_run <- tibble(
+  sample_id = colnames(y),
+  n_precursors = colSums(!is.na(y$E)),
+  n_proteins = vapply(seq_len(ncol(y)), \(j) {
+    n_distinct(y$genes$Protein.Group[!is.na(y$E[, j])])
+  }, integer(1))
+) |>
+  left_join(select(metadata, sample_id, group, timepoint), by = "sample_id") |>
+  arrange(n_precursors)
+print(per_run, n = 6)
+summary(per_run$n_precursors)
+```
+
+```{r}
+#| label: fig-per-run
+#| fig-cap: "Precursors detected per kept run, by time point and group."
+#| fig-width: 7
+#| fig-height: 3
+ggplot(per_run, aes(timepoint, n_precursors, colour = group)) +
+  geom_point(position = position_jitter(width = 0.15, seed = 1)) +
+  labs(x = NULL, y = "precursors detected", colour = NULL) +
+  theme_bw(base_size = 10)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  ncol(y) == 48, !anyDuplicated(colnames(y)), all(rowSums(!is.na(y$E)) > 0),
+  !anyNA(y$genes$Protein.Group)
+)
+```
+
+## Summary
+
+`r nrow(y)` precursors from `r n_distinct(y$genes$Protein.Group)` proteins in `r ncol(y)` biopsies;
+`r round(100 * mean(is.na(y$E)), 1)`% of the matrix is missing, and limpa models every missing
+value in the next step.
+
+## Save
+
+```{r}
+#| label: save
+dir.create(out, showWarnings = FALSE)
+saveRDS(y, file.path(out, "precursors.rds"))
+readr::write_csv(run_map, file.path(out, "run_map.csv"))
+write_workbook(
+  list(run_map = run_map, q_filters = q_filters, filter_log = filter_log, per_run = per_run),
+  c(
+    "Every run in the report: biopsy, injection, precursors detected, and whether it was kept.",
+    "Distinct precursors passing the MBR q-values (used) and the no-MBR q-values.",
+    "Precursors and proteins after each step.",
+    "Precursors and proteins detected in each kept run."
+  ),
+  file.path(out, "precursors.xlsx"), inputs, paths
+)
+```

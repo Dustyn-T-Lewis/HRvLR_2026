@@ -1,0 +1,245 @@
+---
+title: "Quantification"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+A missing precursor usually means it was too faint to detect, not that it was absent at random.
+limpa turns that into a model in two steps. `dpc()` fits one detection probability curve for the
+whole experiment: the chance a precursor is detected, given how abundant it is. `dpcQuant()` then
+gives every protein a value and a standard error in every biopsy, using its observed precursors
+and, through the curve, what its missing ones imply. Nothing is filled in as if measured; a value
+resting on few detections carries a wide standard error, and later fits weight it less.
+
+After quantification this step builds the blood index and removes contaminant proteins.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limpa)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "analysis_reporting_helpers.R"))
+step <- here("01_Processing", "02_Quantification")
+inputs <- c(
+  precursors = "01_Processing/01_Precursors/c_data/precursors.rds",
+  contaminants = "01_Processing/02_Quantification/references/contaminants.csv"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+The precursor matrix from `01_Precursors`: log2 intensities, `NA` where undetected, one column
+per biopsy.
+
+```{r}
+#| label: input
+y <- readRDS(paths[["precursors"]])
+c(precursors = nrow(y), proteins = n_distinct(y$genes$Protein.Group), biopsies = ncol(y))
+```
+
+## Detection probability curve
+
+The curve is logistic: P(detected | log2 intensity y) = plogis(β0 + β1 y). The slope β1 says how
+strongly detection depends on abundance; 0 would mean values go missing at random. limpa's
+authors report slopes of about 0.7 to 1 in real data. The curve is fitted on every precursor,
+contaminants included, because it describes the instrument's detection of any precursor.
+
+```{r}
+#| label: dpc
+dpcest <- dpc(y)
+dpcest$dpc
+```
+
+```{r}
+#| label: fig-dpc
+#| fig-cap: "Detection probability against log2 intensity (limpa's plotDPC)."
+#| fig-width: 6
+#| fig-height: 4
+plotDPC(dpcest)
+```
+
+## Quantify proteins
+
+`dpcQuant()` fits each protein's precursors together (protein level plus a fixed offset per
+precursor), with the missing ones entering through the curve and a prior estimated from all
+proteins. It returns complete log2 values in `E`, a standard error per value in
+`other$standard.error`, and per protein the precursor count (`NPrec`) and the share of values
+observed (`PropObs`).
+
+```{r}
+#| label: quantify
+proteins <- dpcQuant(y, "Protein.Group", dpc = dpcest)
+c(proteins = nrow(proteins), biopsies = ncol(proteins), missing = sum(is.na(proteins$E)))
+```
+
+How much each protein rests on: precursors per protein and the share of its values observed.
+
+```{r}
+#| label: support
+proteins$genes |>
+  as_tibble() |>
+  summarise(
+    proteins = n(), one_precursor = sum(NPrec == 1), median_precursors = median(NPrec),
+    median_observed = round(median(PropObs), 2), observed_under_half = sum(PropObs < 0.5)
+  )
+quantile(proteins$other$standard.error, c(0, 0.25, 0.5, 0.75, 1))
+```
+
+Standard errors grow as fewer values are observed:
+
+```{r}
+#| label: fig-se
+#| fig-cap: "Median standard error per protein against the share of its values observed."
+#| fig-width: 6
+#| fig-height: 4
+tibble(
+  observed = proteins$genes$PropObs,
+  se = apply(proteins$other$standard.error, 1, median)
+) |>
+  ggplot(aes(observed, se)) +
+  geom_point(size = 0.6, alpha = 0.5) +
+  labs(x = "share of values observed", y = "median standard error") +
+  theme_bw(base_size = 10)
+```
+
+## Samples
+
+`plotMDSUsingSEs()` (limpa) places biopsies by their protein values, like limma's `plotMDS`, but
+takes the standard errors into account. Colour is time point, label the biopsy.
+
+```{r}
+#| label: fig-mds
+#| fig-cap: "Multidimensional scaling of the biopsies (limpa's plotMDSUsingSEs)."
+#| fig-width: 7
+#| fig-height: 6
+tp_colour <- c(T1 = "#1B9E77", T2 = "#D95F02", T3 = "#7570B3")
+mds <- plotMDSUsingSEs(
+  proteins,
+  labels = colnames(proteins), col = tp_colour[proteins$targets$timepoint], cex = 0.7
+)
+round(mds$var.explained[1:2], 3)
+```
+
+## Blood index
+
+Blood in a biopsy dilutes the muscle proteins. The index is each biopsy's mean log2 HBB and HBA1,
+taken from limpa's complete values, centred on the mean biopsy. Comparisons carry it as a
+covariate.
+
+```{r}
+#| label: blood
+blood_rows <- grepl("(^|;)(HBB|HBA1)(;|$)", proteins$genes$Genes)
+proteins$genes[blood_rows, c("Genes", "NPrec", "PropObs")]
+stopifnot(sum(blood_rows) >= 2)
+blood <- colMeans(proteins$E[blood_rows, , drop = FALSE])
+proteins$targets$blood <- unname(blood - mean(blood))
+blood_index <- proteins$targets |>
+  as_tibble() |>
+  select(sample_id, subject, group, timepoint, blood)
+summary(blood_index$blood)
+```
+
+```{r}
+#| label: fig-blood
+#| fig-cap: "Blood index per biopsy by time point and group."
+#| fig-width: 6
+#| fig-height: 3
+ggplot(blood_index, aes(timepoint, blood, colour = group)) +
+  geom_point(position = position_jitter(width = 0.15, seed = 1)) +
+  labs(x = NULL, y = "blood index (centred log2)", colour = NULL) +
+  theme_bw(base_size = 10)
+```
+
+## Contaminants
+
+`references/contaminants.csv` holds the 222 contaminant proteins the earlier protein-level pipeline
+resolved (plasma, immunoglobulin, erythrocyte, keratin, complement, globin, leukocyte; see
+`references/README.md`). They are removed now, after quantification: each protein is quantified
+from its own precursors, so removing them afterwards leaves every other protein's values
+unchanged apart from the shared prior.
+
+```{r}
+#| label: contaminants
+contaminants <- readr::read_csv(paths[["contaminants"]], show_col_types = FALSE)
+removed <- contaminants |>
+  filter(uniprot_id %in% rownames(proteins)) |>
+  arrange(class, gene)
+count(removed, class)
+c(on_list = nrow(contaminants), present = nrow(removed))
+proteins <- proteins[!rownames(proteins) %in% contaminants$uniprot_id, ]
+nrow(proteins)
+```
+
+Proteins not on the list cannot be removed by it. Remaining keratin, immunoglobulin and haemoglobin
+genes, printed for review and kept:
+
+```{r}
+#| label: review
+review <- proteins$genes |>
+  as_tibble(rownames = "uniprot_id") |>
+  filter(grepl("(^|;)(KRT|IG[HKL]|HB[ABDGQ])", Genes)) |>
+  select(uniprot_id, gene = Genes, n_precursors = NPrec, prop_observed = PropObs)
+review
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  !anyNA(proteins$E), all(proteins$other$standard.error > 0),
+  identical(colnames(proteins), proteins$targets$sample_id),
+  !any(rownames(proteins) %in% contaminants$uniprot_id), !anyNA(proteins$targets$blood)
+)
+```
+
+## Summary
+
+`r nrow(proteins)` proteins quantified in `r ncol(proteins)` biopsies after removing
+`r nrow(removed)` contaminants. The detection curve's slope is `r round(dpcest$dpc[2], 2)`;
+`r sum(proteins$genes$NPrec == 1)` proteins rest on a single precursor.
+
+## Save
+
+`proteins.rds` is limpa's `EList`: `E`, `other$standard.error`, `genes` and `targets` with the
+blood index. `dpcDE()` in the comparisons reads it directly.
+
+```{r}
+#| label: save
+out <- file.path(step, "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(proteins, file.path(out, "proteins.rds"))
+write_workbook(
+  list(
+    dpc = tibble(term = names(dpcest$dpc), estimate = unname(dpcest$dpc)),
+    proteins = as_tibble(proteins$genes, rownames = "uniprot_id") |>
+      select(
+        uniprot_id, protein_name = Protein.Names, gene = Genes, n_precursors = NPrec,
+        prop_observed = PropObs
+      ),
+    blood_index = blood_index,
+    contaminants_removed = removed,
+    contaminant_review = review
+  ),
+  c(
+    "Detection probability curve: intercept (beta0) and slope (beta1).",
+    "Every quantified protein: names, precursor count and share of values observed.",
+    "Blood index per biopsy (centred mean log2 HBB and HBA1).",
+    "Contaminant proteins removed, with class and reason.",
+    "Keratin, immunoglobulin and haemoglobin genes not on the list, kept for review."
+  ),
+  file.path(out, "quantification.xlsx"), inputs, paths
+)
+```
