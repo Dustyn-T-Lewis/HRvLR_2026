@@ -1,0 +1,266 @@
+---
+title: "Group trait slopes: HR against LR"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Does the link between a feature (protein, gene-set score or module eigengene) and a muscle trait
+differ between HR and LR? The pooled, label-free version of the question is
+`03_Continuous/01_Trait_Associations`; this step asks only what the grouping adds. Two tests per
+feature, window and trait:
+
+- Within each group: Spearman's rho between the feature and the trait across that group's 8
+  people, with its exact p. Descriptive only: a group split on growth has a narrowed range of
+  growth inside it.
+- Between groups: limma on feature ~ group × trait, one value per person. The interaction is HR's
+  slope minus LR's slope, with its 95% interval. The composite hypertrophy score defined the
+  groups, so it is left out of this test.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+source(here("02_HRvLR", "helpers.R"))
+inputs <- c(
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+Rank correlations take no covariate, so proteins come from the blood-corrected matrix.
+
+```{r}
+#| label: input
+corrected <- readRDS(paths[["corrected"]])
+catalog <- filter(readRDS(paths[["gene_sets"]])$set_catalog, qualifies)
+modules <- readRDS(paths[["modules"]])
+phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
+meta <- as_tibble(corrected$targets)
+features <- list(
+  proteins = corrected$E,
+  sets = readRDS(paths[["singscore"]])$scores[catalog$set_id, ],
+  modules = modules$eigengenes
+)
+walk(features, \(x) stopifnot(identical(colnames(x), meta$sample_id)))
+label_of <- c(
+  set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected)),
+  set_names(catalog$pathway, catalog$set_id), set_names(rownames(modules$eigengenes))
+)
+collection_of <- set_names(catalog$collection, catalog$set_id)
+group_of <- set_names(meta$group, meta$subject)
+map(features, dim)
+```
+
+## Windows and traits
+
+Each feature enters as one value per person in six windows (`window_values()` and
+`trait_windows()`, from `02_HRvLR/helpers.R`):
+
+| window | feature value | traits |
+|---|---|---|
+| `baseline_level` | T1 level | trait levels at T1 |
+| `baseline` | T1 level | % change, composite score, volume load |
+| `training` | change T1 → T2 | % change, composite score, volume load |
+| `post_level` | T2 level | trait levels at T2 |
+| `acute` | change T2 → T3 | % change, composite score, volume load |
+| `post_bout_level` | T3 level | trait levels at T2 (T3 has no phenotype) |
+
+```{r}
+#| label: windows
+windows <- trait_windows(phenotype)
+trait_of <- map(windows, \(d) setdiff(names(d), "subject"))
+lengths(trait_of)
+```
+
+## Tests
+
+`within_group()` takes a feature-by-person matrix and one trait value per person and returns, per
+group and feature, the people used, rho and its exact p (`cor.test()`, which drops to a normal
+approximation where values tie). `slope_difference()` fits feature ~ group × trait with robust
+empirical Bayes and returns HR's slope minus LR's with its 95% interval, t and p. People without
+the trait are dropped from both. `fdr` is Benjamini-Hochberg within feature type, window, trait
+and test (and group, and collection for sets).
+
+```{r}
+#| label: tests
+within_group <- function(x, y) {
+  map(set_names(c("HR", "LR")), \(g) {
+    kept <- group_of[colnames(x)] == g & !is.na(y)
+    tibble(
+      feature = rownames(x), n_people = sum(kept),
+      rho = cor(t(x[, kept]), y[kept], method = "spearman")[, 1],
+      p = apply(x[, kept], 1, \(v) {
+        suppressWarnings(cor.test(v, y[kept], method = "spearman"))$p.value
+      })
+    )
+  }) |>
+    list_rbind(names_to = "group")
+}
+slope_difference <- function(x, y) {
+  kept <- !is.na(y)
+  design <- model.matrix(~ group * trait, data.frame(
+    group = factor(group_of[colnames(x)][kept], c("LR", "HR")), trait = y[kept]
+  ))
+  lmFit(x[, kept], design) |>
+    eBayes(robust = TRUE) |>
+    topTable(coef = "groupHR:trait", number = Inf, sort.by = "none", confint = TRUE) |>
+    as_tibble(rownames = "feature") |>
+    transmute(
+      feature, n_people = sum(kept), slope_difference = logFC,
+      slope_difference_lower = CI.L, slope_difference_upper = CI.R, t, p = P.Value
+    )
+}
+screens <- imap(features, \(x, type) {
+  values <- window_values(x, meta)
+  list_rbind(imap(trait_of, \(tr, w) tibble(window = w, trait = tr))) |>
+    mutate(
+      feature_type = type, x = map(window, \(w) values[[w]]),
+      y = map2(window, trait, \(w, tr) {
+        set_names(windows[[w]][[tr]], windows[[w]]$subject)[colnames(values[[w]])]
+      })
+    )
+}) |>
+  list_rbind()
+tidy <- \(d) {
+  d |>
+    mutate(
+      collection = unname(collection_of[feature]), label = unname(label_of[feature]),
+      .after = feature
+    ) |>
+    mutate(
+      fdr = p.adjust(p, "BH"),
+      .by = c(feature_type, window, trait, any_of("group"), collection)
+    )
+}
+within <- screens |>
+  mutate(result = map2(x, y, within_group)) |>
+  select(feature_type, window, trait, result) |>
+  unnest(result) |>
+  tidy()
+between <- screens |>
+  filter(trait != "comp_hypertrophy") |>
+  mutate(result = map2(x, y, slope_difference)) |>
+  select(feature_type, window, trait, result) |>
+  unnest(result) |>
+  tidy()
+c(screens = nrow(distinct(screens, window, trait)), within = nrow(within), between = nrow(between))
+```
+
+## How many links, against chance
+
+A protein that limpa never observed at a time point gets one estimate for everyone there; it has
+no rank correlation in that window, so it is not counted as tested. At p < 0.05 chance alone puts
+5% of features below the line in every screen.
+
+```{r}
+#| label: counts
+counts <- bind_rows(
+  within_group = within, group_difference = mutate(between, group = "HR - LR"), .id = "test"
+) |>
+  summarise(
+    n_tested = sum(!is.na(p)), n_nominal = sum(p < 0.05, na.rm = TRUE),
+    n_fdr_05 = sum(fdr < 0.05, na.rm = TRUE), .by = c(test, group, feature_type, window, trait)
+  ) |>
+  mutate(share_nominal = n_nominal / n_tested)
+counts |>
+  summarise(
+    n_tested = sum(n_tested), n_nominal = sum(n_nominal), n_fdr_05 = sum(n_fdr_05),
+    .by = c(test, feature_type)
+  ) |>
+  mutate(share_nominal = round(n_nominal / n_tested, 3))
+```
+
+```{r}
+#| label: fig-counts
+#| fig-cap: "Share of features at p < 0.05 per test, window and trait. Dashed: 5%."
+#| fig-width: 11
+#| fig-height: 9
+counts |>
+  mutate(
+    test = if_else(test == "within_group", paste("Spearman in", group), "slope HR - LR"),
+    window = factor(window, names(windows))
+  ) |>
+  ggplot(aes(share_nominal, trait, fill = test)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_vline(xintercept = 0.05, linetype = "dashed", linewidth = 0.3) +
+  facet_grid(feature_type ~ window, scales = "free_y", space = "free_y") +
+  scale_x_continuous(labels = scales::label_percent()) +
+  labs(x = "features at p < 0.05", y = NULL, fill = NULL) +
+  theme_bw(base_size = 7) +
+  theme(legend.position = "bottom")
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  all(within$fdr >= within$p, na.rm = TRUE), all(abs(within$rho) <= 1, na.rm = TRUE),
+  all(between$fdr >= between$p), !"comp_hypertrophy" %in% between$trait,
+  all(within$n_people >= 7), all(between$n_people >= 15)
+)
+```
+
+## Summary
+
+```{r}
+#| label: summary
+tally <- \(name) summarise(filter(counts, test == name), across(starts_with("n_"), sum))
+between_n <- tally("group_difference")
+within_n <- tally("within_group")
+```
+
+Slope difference (limma, feature ~ group × trait): `r format(between_n$n_tested, big.mark = ",")`
+tests, `r format(between_n$n_nominal, big.mark = ",")` at p < 0.05 (chance:
+`r format(round(between_n$n_tested / 20), big.mark = ",")`), `r between_n$n_fdr_05` at FDR < 0.05.
+Within each group (Spearman): `r format(within_n$n_tested, big.mark = ",")` tests,
+`r format(within_n$n_nominal, big.mark = ",")` at p < 0.05 (chance:
+`r format(round(within_n$n_tested / 20), big.mark = ",")`), `r within_n$n_fdr_05` at FDR < 0.05.
+
+## Save
+
+`group_trait_slopes.rds` holds both tables and the counts for the figures.
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "07_Group_Trait_Slopes", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(
+  list(counts = counts, within_group = within, group_difference = between),
+  file.path(out, "group_trait_slopes.rds")
+)
+write_workbook(
+  list(
+    counts = counts,
+    within_group = arrange(within, feature_type, window, trait, group, p),
+    group_difference = arrange(between, feature_type, window, trait, p)
+  ),
+  c(
+    "Tested, p < 0.05 and FDR < 0.05 per test, group, feature type, window and trait.",
+    "Spearman rho and exact p within each group, per feature, window and trait.",
+    "limma, feature ~ group * trait: HR slope minus LR slope with its 95% CI, t, p and FDR."
+  ),
+  file.path(out, "group_trait_slopes.xlsx"), inputs, paths
+)
+```

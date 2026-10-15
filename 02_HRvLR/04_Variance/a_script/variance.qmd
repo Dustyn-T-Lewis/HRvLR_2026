@@ -1,0 +1,255 @@
+---
+title: "Where the variation lies"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Four descriptions of the protein data, none of them a test of HR against LR in mean abundance:
+how much of each protein's variation belongs to person, time, group and blood (variancePartition);
+whether one group varies more between people (DiffVar, exploratory); whether the biopsies fall
+into natural clusters (gap statistic); and what drives the main axes of variation (principal
+components against covariates). They feed supplement S1.
+
+## Packages
+
+variancePartition fits the variance shares, missMethyl's `varFit()` the variability test, cluster
+the gap statistic and PAM.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+library(variancePartition)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  proteins = "01_Processing/02_Quantification/c_data/proteins.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+```{r}
+#| label: input
+proteins <- readRDS(paths[["proteins"]])
+corrected <- readRDS(paths[["corrected"]])
+meta <- as_tibble(proteins$targets) |>
+  mutate(
+    weight = readRDS(paths[["fit"]])$fit$targets$sample.weight,
+    proteins_detected = colSums(proteins$other$n.observations > 0)
+  )
+c(proteins = nrow(proteins), biopsies = ncol(proteins))
+```
+
+## Variance shares
+
+`fitExtractVarPartModel()` fits one linear mixed model per protein, with person, time point and
+group as random effects and blood as a fixed covariate, and reports the share of the protein's
+variance each explains; the rest is residual. Group is constant within a person, so its share is
+the part of the between-person variation that HR and LR explain. limpa's precision weights
+(1/SE²) are used.
+
+```{r}
+#| label: variance-partition
+#| message: false
+vp_data <- as.data.frame(meta)
+vp_formula <- ~ (1 | subject) + (1 | timepoint) + (1 | group) + blood
+variance_shares <- fitExtractVarPartModel(
+  proteins$E, vp_formula, vp_data,
+  weights = 1 / proteins$other$standard.error^2
+) |>
+  as.data.frame() |>
+  as_tibble(rownames = "uniprot_id")
+variance_shares |>
+  summarise(across(-uniprot_id, median)) |>
+  round(3)
+```
+
+```{r}
+#| label: fig-variance
+#| fig-cap: "Share of each protein's variance by source (variancePartition)."
+#| fig-width: 7
+#| fig-height: 3.5
+variance_shares |>
+  pivot_longer(-uniprot_id, names_to = "source", values_to = "share") |>
+  ggplot(aes(reorder(source, -share, median), share)) +
+  geom_violin(fill = "grey85", colour = "grey40", scale = "width") +
+  geom_boxplot(width = 0.12, outlier.shape = NA) +
+  labs(x = NULL, y = "share of variance") +
+  theme_bw(base_size = 10)
+```
+
+## Is one group more variable?
+
+DiffVar (Phipson and Oshlack 2014, missMethyl's `varFit()`) tests whether people in one group
+spread more widely than in the other, one time point at a time. It works on each value's absolute
+deviation from its group median, moderated as in limma. limpa's modelled values for a protein no
+precursor was seen in carry little spread, so a group that never observed a protein looks
+uniform: the test then reads detection, not variability. It runs only on proteins observed in every
+biopsy of both groups at that time point. With 8 people per group this is exploratory: low power,
+and a hit is a lead, not a finding.
+
+```{r}
+#| label: diffvar
+diffvar <- map(set_names(c("T1", "T2", "T3")), \(tp) {
+  rows <- meta$timepoint == tp
+  complete <- rowSums(proteins$other$n.observations[, rows] > 0) == sum(rows)
+  design <- model.matrix(~ group, meta[rows, ])
+  fit <- missMethyl::varFit(proteins$E[complete, rows], design = design, coef = c(1, 2))
+  missMethyl::topVar(fit, coef = 2, number = sum(complete), sort = FALSE) |>
+    as_tibble(rownames = "uniprot_id") |>
+    transmute(uniprot_id, log_var_ratio = LogVarRatio, p = P.Value, fdr = Adj.P.Value)
+}) |>
+  list_rbind(names_to = "timepoint")
+diffvar |>
+  summarise(
+    more_variable_hr = sum(p < 0.05 & log_var_ratio < 0),
+    more_variable_lr = sum(p < 0.05 & log_var_ratio > 0),
+    tested = n(), fdr_05 = sum(fdr < 0.05), .by = timepoint
+  )
+```
+
+`log_var_ratio` is LR relative to HR (the second level against the first): positive means LR
+people spread more.
+
+## Do the biopsies form natural clusters?
+
+The blood-corrected values, proteins scaled, are reduced to their first 10 principal components.
+The gap statistic (Tibshirani, Walther and Hastie 2001; `cluster::clusGap()` with PAM, 100
+reference data sets) compares how tight k clusters are against data with no group structure; the
+one-standard-error rule (`Tibs2001SEmax`) picks the smallest k whose gap is at least the next k's
+gap minus that gap's standard error.
+k = 1 means no natural clusters. The biopsy correlation matrix, ordered by hierarchical
+clustering, shows the same question as a picture.
+
+```{r}
+#| label: clusters
+scaled <- scale(t(corrected$E))
+pcs <- prcomp(scaled)$x[, 1:10]
+set.seed(1)
+gap <- cluster::clusGap(
+  pcs, FUNcluster = \(x, k) list(cluster = cluster::pam(x, k, cluster.only = TRUE)),
+  K.max = 6, B = 100, verbose = FALSE
+)
+gap_table <- as_tibble(gap$Tab) |>
+  mutate(k = row_number(), .before = 1) |>
+  select(k, gap, se = SE.sim)
+k_chosen <- cluster::maxSE(gap_table$gap, gap_table$se, method = "Tibs2001SEmax")
+c(k_chosen = k_chosen)
+biopsy_correlation <- cor(t(scaled))
+order_rows <- hclust(as.dist(1 - biopsy_correlation), method = "average")$order
+correlation_long <- as_tibble(biopsy_correlation, rownames = "sample_a") |>
+  pivot_longer(-sample_a, names_to = "sample_b", values_to = "r")
+```
+
+```{r}
+#| label: fig-correlation
+#| fig-cap: "Biopsy correlation, ordered by average-linkage clustering; axis labels by group."
+#| fig-width: 7
+#| fig-height: 6
+ordered <- rownames(biopsy_correlation)[order_rows]
+group_of <- set_names(meta$group, meta$sample_id)
+correlation_long |>
+  mutate(sample_a = factor(sample_a, ordered), sample_b = factor(sample_b, ordered)) |>
+  ggplot(aes(sample_a, sample_b, fill = r)) +
+  geom_tile() +
+  scale_fill_distiller(palette = "RdBu", limits = c(-1, 1), name = "r") +
+  scale_x_discrete(labels = \(x) group_of[x]) +
+  scale_y_discrete(labels = \(x) paste(x, group_of[x])) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal(base_size = 6) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+```
+
+## What drives the main axes?
+
+For each of the first five principal components of the blood-corrected values, the share of its
+variance (R²) each covariate explains alone: time point, group, person, blood, proteins detected
+and sample weight. A technical covariate on PC1 means the largest variation is technical.
+
+```{r}
+#| label: covariates
+pca <- prcomp(scaled)
+pc_scores <- as_tibble(pca$x[, 1:5], rownames = "sample_id") |>
+  left_join(meta, by = "sample_id")
+covariates <- c("timepoint", "group", "subject", "blood", "proteins_detected", "weight")
+pc_covariates <- expand_grid(component = paste0("PC", 1:5), covariate = covariates) |>
+  mutate(r2 = map2_dbl(component, covariate, \(pc, cv) {
+    summary(lm(reformulate(cv, pc), data = pc_scores))$r.squared
+  })) |>
+  left_join(
+    tibble(component = paste0("PC", 1:5), pc_share = summary(pca)$importance[2, 1:5]),
+    by = "component"
+  )
+pc1_depth <- with(pc_covariates, r2[component == "PC1" & covariate == "proteins_detected"])
+pc_covariates |>
+  select(-pc_share) |>
+  pivot_wider(names_from = covariate, values_from = r2) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+`subject` has 16 levels, so its R² is high by construction on any axis; read it against the others.
+Proteins detected explains `r round(100 * pc1_depth)`% of PC1: the largest axis is technical. The
+two thin S28 biopsies, whose values are mostly estimated from limpa's detection curve, sit at its
+extreme; methods without a model (PCA, PERMANOVA, modules, set scores, DiffVar) include them
+unweighted.
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  all(abs(rowSums(select(variance_shares, -uniprot_id)) - 1) < 1e-6),
+  all(is.finite(diffvar$log_var_ratio)), k_chosen %in% 1:6,
+  all(pc_covariates$r2 >= 0 & pc_covariates$r2 <= 1)
+)
+```
+
+## Summary
+
+The median protein owes `r round(100 * median(variance_shares$subject), 1)`% of its variance to
+person, `r round(100 * median(variance_shares$timepoint), 1)`% to time point and
+`r round(100 * median(variance_shares$group), 1)`% to group. The gap statistic picks k =
+`r k_chosen`.
+
+## Save
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "04_Variance", "c_data")
+dir.create(out, showWarnings = FALSE)
+write_workbook(
+  list(
+    variance_shares = variance_shares, diffvar = diffvar, gap = gap_table,
+    biopsy_correlation = correlation_long,
+    biopsy_order = tibble(
+      sample_id = rownames(biopsy_correlation)[order_rows], position = seq_along(order_rows)
+    ),
+    pc_scores = pc_scores, pc_covariates = pc_covariates
+  ),
+  c(
+    "Per protein: share of variance from person, time point, group, blood and residual.",
+    "Per time point, proteins seen in all 16 biopsies: DiffVar log variance ratio (LR/HR), p, FDR.",
+    "Gap statistic per k (PAM on 10 PCs, 100 reference sets) with its standard error.",
+    "Pearson correlation between every pair of biopsies, blood-corrected values scaled.",
+    "Biopsy order from average-linkage clustering of 1 - correlation.",
+    "PC1 to PC5 per biopsy with its covariates.",
+    "R² of each covariate on each of PCs 1 to 5, and each PC's share of variance."
+  ),
+  file.path(out, "variance.xlsx"), inputs, paths
+)
+```

@@ -1,0 +1,200 @@
+---
+title: "Module contrasts: HR against LR"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+The co-expression modules from `01_Processing/06_Module_Building` are tested in the nine contrasts
+of the protein fit in two ways. The eigengene test fits limma to each module's eigengene (one
+number per biopsy). The set test runs fry on each module's proteins as a set, the way
+`02_Set_Contrasts` tests gene sets. A third table describes, within each module, whether the
+members that follow the module most closely are also the ones that changed most.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+The eigengenes (module by biopsy) and membership, and the protein fit with its design, contrasts
+and moderated t values.
+
+```{r}
+#| label: input
+modules <- readRDS(paths[["modules"]])
+saved <- readRDS(paths[["fit"]])
+me <- modules$eigengenes
+meta <- as_tibble(saved$fit$EList$targets)
+contrasts <- colnames(saved$contrast_matrix)
+members <- filter(modules$membership, module != "grey")
+module_order <- modules$module_summary$module
+stopifnot(identical(colnames(me), meta$sample_id), nrow(saved$design) == nrow(meta))
+modules$module_summary
+```
+
+## Eigengene tests
+
+Each eigengene goes through the protein design: one mean per group and time point plus the blood
+index, person as a block. The within-person correlation is estimated on the eigengenes themselves
+(`duplicateCorrelation()`), since they are the values fitted. limpa's sample weights belong to the
+protein values and are not used here. `fdr` is Benjamini-Hochberg across modules within a contrast.
+
+```{r}
+#| label: eigengene-tests
+me_correlation <- duplicateCorrelation(me, saved$design, block = meta$subject)$consensus.correlation
+me_fit <- lmFit(me, saved$design, block = meta$subject, correlation = me_correlation) |>
+  contrasts.fit(saved$contrast_matrix) |>
+  eBayes(robust = TRUE)
+eigengene_tests <- map(set_names(contrasts), \(cn) {
+  topTable(me_fit, coef = cn, number = Inf, sort.by = "none", confint = TRUE) |>
+    as_tibble(rownames = "module") |>
+    transmute(
+      module, logFC, logFC_lower = CI.L, logFC_upper = CI.R, t, p = P.Value, fdr = adj.P.Val
+    )
+}) |>
+  list_rbind(names_to = "contrast")
+c(within_person_correlation = round(me_correlation, 3))
+slice_min(eigengene_tests, p, n = 5)
+```
+
+## Modules as protein sets
+
+fry receives limpa's values and weights (`fit$EList`), the protein design, the contrast, the
+person block and the within-person correlation of the protein fit. It asks whether a module's
+proteins move together in the contrast, with people as the unit. `fdr` runs across modules within a
+contrast.
+
+```{r}
+#| label: fry-tests
+module_rows <- split(match(members$uniprot_id, rownames(saved$fit$EList)), members$module)
+stopifnot(!any(map_lgl(module_rows, anyNA)))
+fry_tests <- map(set_names(contrasts), \(cn) {
+  fry(
+    saved$fit$EList,
+    index = module_rows, design = saved$design, contrast = saved$contrast_matrix[, cn],
+    block = meta$subject, correlation = saved$fit$correlation, sort = "none"
+  ) |>
+    as_tibble(rownames = "module") |>
+    transmute(module, n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR)
+}) |>
+  list_rbind(names_to = "contrast")
+slice_min(fry_tests, p, n = 5)
+```
+
+## Membership against protein change
+
+Within each module, Spearman's rho between a member's kME (how closely it follows the eigengene)
+and its moderated t in the contrast. A positive rho means the module's most central proteins moved
+up most. Members were grouped by co-variation, so rho and its p describe the module; they do not
+test it.
+
+```{r}
+#| label: membership
+protein_t <- as_tibble(saved$eb$t, rownames = "uniprot_id") |>
+  pivot_longer(-uniprot_id, names_to = "contrast", values_to = "t")
+membership_contrast <- members |>
+  inner_join(protein_t, by = "uniprot_id", relationship = "one-to-many") |>
+  summarise(
+    n_members = n(), rho = cor(kme, t, method = "spearman"),
+    p = cor.test(kme, t, method = "spearman", exact = FALSE)$p.value, .by = c(module, contrast)
+  )
+slice_max(membership_contrast, abs(rho), n = 5)
+```
+
+```{r}
+#| label: fig-module-tests
+#| fig-cap: "Signed -log10 p per module and contrast; black border: FDR < 0.05; label: p < 0.05."
+#| fig-width: 9
+#| fig-height: 4.5
+bind_rows(
+  eigengene = transmute(eigengene_tests, contrast, module, signed = -log10(p) * sign(t), p, fdr),
+  fry = transmute(
+    fry_tests, contrast, module,
+    signed = -log10(p) * if_else(direction == "Up", 1, -1), p, fdr
+  ),
+  .id = "test"
+) |>
+  mutate(module = factor(module, rev(module_order)), contrast = factor(contrast, contrasts)) |>
+  ggplot(aes(contrast, module, fill = signed)) +
+  geom_tile(colour = "white") +
+  geom_tile(data = \(d) filter(d, fdr < 0.05), colour = "black", linewidth = 0.8, fill = NA) +
+  geom_text(aes(label = if_else(p < 0.05, sprintf("%.3f", p), "")), size = 2.4) +
+  scale_fill_gradient2(low = "#2166AC", high = "#B2182B", name = "signed\n-log10 p") +
+  facet_wrap(~test) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal(base_size = 9) +
+  theme(axis.text.x = element_text(angle = 40, hjust = 1))
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  nrow(eigengene_tests) == nrow(me) * length(contrasts),
+  nrow(fry_tests) == nrow(me) * length(contrasts),
+  setequal(names(module_rows), rownames(me)),
+  all(eigengene_tests$fdr >= eigengene_tests$p), all(fry_tests$fdr >= fry_tests$p),
+  all(abs(membership_contrast$rho) <= 1)
+)
+```
+
+## Summary
+
+`r nrow(me)` modules in `r length(contrasts)` contrasts. Eigengene tests:
+`r sum(eigengene_tests$p < 0.05)` at p < 0.05 and `r sum(eigengene_tests$fdr < 0.05)` at
+FDR < 0.05. fry: `r sum(fry_tests$p < 0.05)` at p < 0.05 and `r sum(fry_tests$fdr < 0.05)` at
+FDR < 0.05. Chance alone gives about `r round(nrow(me) * length(contrasts) / 20, 1)` per method at
+p < 0.05. Within-person correlation `r round(me_correlation, 3)` on the eigengenes,
+`r round(saved$fit$correlation, 3)` in the protein fit.
+
+## Save
+
+`module_tests.rds` holds the three tables for the figures.
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "03_Module_Contrasts", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(
+  list(
+    eigengene_tests = eigengene_tests, fry_tests = fry_tests,
+    membership_contrast = membership_contrast
+  ),
+  file.path(out, "module_tests.rds")
+)
+write_workbook(
+  list(
+    eigengene_tests = eigengene_tests, fry_tests = fry_tests,
+    membership_contrast = membership_contrast
+  ),
+  c(
+    "limma on module eigengenes: logFC with 95% CI, moderated t, p, FDR across modules.",
+    "fry on each module's proteins: direction, p, FDR across modules.",
+    "Spearman rho between member kME and protein moderated t, per module and contrast."
+  ),
+  file.path(out, "module_contrasts.xlsx"), inputs, paths
+)
+```

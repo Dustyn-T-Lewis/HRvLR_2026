@@ -1,0 +1,211 @@
+---
+title: "Classification: HR against LR"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+How well does a single protein, gene-set score or module eigengene tell HR from LR? Nothing is
+fitted. For each feature the AUC (area under the ROC curve) is the chance that a random HR person
+has a higher value than a random LR person: 0.5 is a coin toss, 1 perfect separation with HR
+higher, 0 perfect separation with LR higher. The AUC equals the Mann-Whitney statistic
+W / (n_HR × n_LR) (Hanley and McNeil 1982), so its p comes from the Wilcoxon rank-sum test. This
+is single-feature discrimination, not a predictive classifier: no AUC is measured on people held
+out.
+
+Five tasks: the T1, T2 and T3 levels, and the change over training (T2 − T1) and after the bout
+(T3 − T2), each for three feature types.
+
+## Packages
+
+pROC gives DeLong's interval for the AUC; it is called with `::`.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+source(here("02_HRvLR", "helpers.R"))
+inputs <- c(
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+Rank tests take no covariate, so proteins come from the blood-corrected matrix. Set scores are
+singscores of the tested sets on that matrix; modules are the eigengenes.
+
+```{r}
+#| label: input
+corrected <- readRDS(paths[["corrected"]])
+catalog <- filter(readRDS(paths[["gene_sets"]])$set_catalog, qualifies)
+modules <- readRDS(paths[["modules"]])
+meta <- as_tibble(corrected$targets)
+features <- list(
+  proteins = corrected$E,
+  sets = readRDS(paths[["singscore"]])$scores[catalog$set_id, ],
+  modules = modules$eigengenes
+)
+walk(features, \(x) stopifnot(identical(colnames(x), meta$sample_id)))
+label_of <- c(
+  set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected)),
+  set_names(catalog$pathway, catalog$set_id), set_names(rownames(modules$eigengenes))
+)
+collection_of <- set_names(catalog$collection, catalog$set_id)
+map(features, dim)
+```
+
+## Tasks
+
+`person_values()` (from `02_HRvLR/helpers.R`) returns one column per person: the value at a time
+point, or the change between two.
+
+```{r}
+#| label: tasks
+task_values <- \(x) {
+  list(
+    Baseline_HRvLR = person_values(x, meta, "T1"),
+    Trained_HRvLR = person_values(x, meta, "T2"),
+    Acute_HRvLR = person_values(x, meta, "T3"),
+    Training_change_HRvLR = person_values(x, meta, "T2", from = "T1"),
+    Acute_change_HRvLR = person_values(x, meta, "T3", from = "T2")
+  )
+}
+group_of <- set_names(meta$group, meta$subject)
+table(group_of[unique(meta$subject)])
+```
+
+## AUC per feature and task
+
+`discriminate()` takes one person-by-feature matrix and returns, per feature, the AUC, DeLong's
+95% interval, the Wilcoxon p and the people per group. At perfect separation DeLong's variance is
+zero, so no interval is given there. `fdr` is Benjamini-Hochberg within feature type and task, and
+within collection for sets, since each collection is its own screen. With 8 against 8 people the
+smallest p the rank-sum test can reach is 2 / choose(16, 8) = `r signif(2 / choose(16, 8), 2)`.
+
+```{r}
+#| label: auc
+discriminate <- function(x) {
+  is_hr <- group_of[colnames(x)] == "HR"
+  map(seq_len(nrow(x)), \(i) {
+    hr <- x[i, is_hr]
+    lr <- x[i, !is_hr]
+    test <- wilcox.test(hr, lr)
+    auc <- unname(test$statistic) / (length(hr) * length(lr))
+    interval <- if (auc %in% c(0, 1)) {
+      c(NA, NA)
+    } else {
+      pROC::roc(controls = lr, cases = hr, direction = "<", quiet = TRUE) |>
+        pROC::ci.auc(method = "delong") |>
+        as.numeric() |>
+        _[c(1, 3)]
+    }
+    tibble(
+      auc, auc_lower = interval[1], auc_upper = interval[2], p = test$p.value,
+      n_hr = length(hr), n_lr = length(lr)
+    )
+  }) |>
+    list_rbind() |>
+    mutate(feature = rownames(x), .before = 1)
+}
+auc <- imap(features, \(x, type) {
+  map(task_values(x), discriminate) |>
+    list_rbind(names_to = "task") |>
+    mutate(feature_type = type, .before = 1)
+}) |>
+  list_rbind() |>
+  mutate(
+    collection = unname(collection_of[feature]), label = unname(label_of[feature]),
+    .after = feature
+  ) |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(feature_type, task, collection))
+counts <- auc |>
+  summarise(
+    n_tested = n(), n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05), min_p = min(p),
+    best_auc = auc[which.max(abs(auc - 0.5))], .by = c(feature_type, task)
+  )
+counts
+```
+
+At p < 0.05 chance alone puts 5% of features below the line in every task.
+
+```{r}
+#| label: fig-auc
+#| fig-cap: "AUC per feature, by task and feature type. Dashed: 0.5."
+#| fig-width: 10
+#| fig-height: 5
+auc |>
+  mutate(task = factor(task, names(task_values(features$modules)))) |>
+  ggplot(aes(auc)) +
+  geom_histogram(binwidth = 1 / 32, boundary = 0, fill = "grey35") +
+  geom_vline(xintercept = 0.5, linetype = "dashed", colour = "firebrick") +
+  facet_grid(feature_type ~ task, scales = "free_y") +
+  labs(x = "AUC (HR higher above 0.5)", y = "features") +
+  theme_bw(base_size = 8)
+```
+
+The strongest features per task, by p:
+
+```{r}
+#| label: top
+top <- auc |>
+  slice_min(p, n = 3, by = c(feature_type, task), with_ties = FALSE) |>
+  select(feature_type, task, label, auc, auc_lower, auc_upper, p, fdr)
+top
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  nrow(auc) == 5 * sum(map_int(features, nrow)), !anyNA(auc$p),
+  all(auc$auc >= 0 & auc$auc <= 1), all(auc$fdr >= auc$p),
+  all(auc$n_hr == 8 & auc$n_lr == 8)
+)
+```
+
+## Summary
+
+Across five tasks, `r sum(counts$n_fdr_05[counts$feature_type == "proteins"])` protein,
+`r sum(counts$n_fdr_05[counts$feature_type == "sets"])` set and
+`r sum(counts$n_fdr_05[counts$feature_type == "modules"])` module tests pass FDR < 0.05. The
+largest distance from 0.5 is an AUC of `r round(auc$auc[which.max(abs(auc$auc - 0.5))], 2)`
+(`r auc$label[which.max(abs(auc$auc - 0.5))]`, `r auc$task[which.max(abs(auc$auc - 0.5))]`).
+
+## Save
+
+`classification.rds` holds the AUC table for the figures.
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "06_Classification", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(list(auc = auc, counts = counts), file.path(out, "classification.rds"))
+write_workbook(
+  list(counts = counts, auc = arrange(auc, feature_type, task, collection, p)),
+  c(
+    "Per feature type and task: tested, p < 0.05, FDR < 0.05, smallest p, AUC furthest from 0.5.",
+    paste(
+      "Per feature and task: AUC (HR above LR) with DeLong 95% CI, Wilcoxon p, people per group,",
+      "FDR within feature type, task and collection."
+    )
+  ),
+  file.path(out, "classification.xlsx"), inputs, paths
+)
+```

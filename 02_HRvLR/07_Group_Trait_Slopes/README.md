@@ -1,0 +1,43 @@
+# 07_Group_Trait_Slopes
+
+Does the link between a feature and a muscle trait differ between HR and LR? Per feature type
+(proteins, set scores, eigengenes), window and trait: Spearman's rho within each group (exact p,
+descriptive), and limma on feature ~ group × trait, whose interaction is HR's slope minus LR's with
+its 95% interval. The pooled, label-free version is `03_Continuous/01_Trait_Associations`.
+
+## Inputs
+
+| File | Holds |
+|---|---|
+| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | blood-corrected protein values and the biopsy table |
+| `01_Processing/05_Set_Scores/c_data/singscore.rds` | singscore per set and biopsy |
+| `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | the tested sets and their databases |
+| `01_Processing/06_Module_Building/c_data/modules.rds` | eigengenes |
+| `00_Setup/Input/phenotype.csv` | per-person size and strength traits at T1 and T2, composite score, volume load |
+| `02_HRvLR/helpers.R` | `trait_windows()`, `window_values()` |
+
+## Run
+
+```sh
+quarto render 02_HRvLR/07_Group_Trait_Slopes/a_script/group_trait_slopes.qmd --output-dir ../b_reports
+```
+
+## Outputs
+
+| File | Holds |
+|---|---|
+| `c_data/group_trait_slopes.rds` | `counts`, `within_group`, `group_difference`, for the figures |
+| `c_data/group_trait_slopes.xlsx` | the same tables |
+| `b_reports/group_trait_slopes.html` | the rendered walkthrough |
+
+## Read with care
+
+- Slope difference: 4,904 of 136,266 tests at p < 0.05 (3.6%; chance 5%), 50 at FDR < 0.05, 44 of
+  them gene sets in the training window against leg-press gain. Proteins: 3,207 of 80,301 (4.0%),
+  3 at FDR < 0.05.
+- Within groups: 12,942 of 292,378 Spearman tests at p < 0.05 (4.4%), 14 at FDR < 0.05. Each rests
+  on 8 people, and a group split on growth has a narrowed range of growth inside it.
+- The composite hypertrophy score defined the groups, so it is left out of the slope difference.
+- Proteins limpa never observed at a time point carry one estimate for everyone there; they have no
+  rank correlation in that window and are not counted as tested. The slope test counts them, with a
+  slope difference of 0 and p = 1 (46 tests).

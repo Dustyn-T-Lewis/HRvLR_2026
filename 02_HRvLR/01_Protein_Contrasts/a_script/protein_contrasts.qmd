@@ -1,0 +1,339 @@
+---
+title: "Protein contrasts: HR against LR"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Every protein is tested in nine contrasts between the six group-by-time means (HR and LR at T1, T2
+and T3), and in two F-tests that ask about the whole trajectory. The fit is limpa's `dpcDE()`,
+which carries each value's standard error into a precision weight. This step also gives the
+whole-proteome view: a PCA and PERMANOVA per time point.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(limpa)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  proteins = "01_Processing/02_Quantification/c_data/proteins.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+limpa's protein values with standard errors, and the biopsy table with the blood index.
+
+```{r}
+#| label: input
+proteins <- readRDS(paths[["proteins"]])
+meta <- as_tibble(proteins$targets)
+count(meta, group, timepoint)
+```
+
+## Design and fit
+
+The design has one mean per group and time point (`group_time`) plus the blood index as a
+covariate, so every comparison is made at equal blood content. Each person gave three biopsies,
+so person is a block: limma estimates how alike one person's biopsies are and uses it in every
+test. `sample.weights = TRUE` gives each biopsy a weight from how noisy it is, so the three thin
+biopsies count less in these fits without being dropped. Only `dpcDE()` fits use the weights;
+the PCA and PERMANOVA below, and every later method without a model, use all biopsies equally.
+
+```{r}
+#| label: fit
+design <- model.matrix(~ 0 + group_time + blood, meta)
+colnames(design) <- sub("^group_time", "", colnames(design))
+fit <- dpcDE(proteins, design, block = meta$subject, sample.weights = TRUE, plot = FALSE)
+c(within_person_correlation = round(fit$correlation, 3))
+```
+
+## Sample weights
+
+A weight above 1 means the biopsy fits the model better than average. The weights must not differ
+by group, or they would tilt the HR-against-LR comparison.
+
+```{r}
+#| label: weights
+sample_weights <- meta |>
+  select(sample_id, subject, group, timepoint) |>
+  mutate(weight = fit$targets$sample.weight)
+arrange(sample_weights, weight) |> head(4)
+weight_test <- wilcox.test(weight ~ group, data = sample_weights, exact = FALSE)
+c(median_hr = median(sample_weights$weight[sample_weights$group == "HR"]),
+  median_lr = median(sample_weights$weight[sample_weights$group == "LR"]),
+  wilcoxon_p = weight_test$p.value)
+stopifnot(weight_test$p.value > 0.05)
+```
+
+## Nine contrasts
+
+| Contrast | Compares | Role |
+|---|---|---|
+| `Training_HR`, `Training_LR` | T2 − T1 within the group | descriptive |
+| `Acute_HR`, `Acute_LR` | T3 − T2 within the group | descriptive |
+| `Baseline_HRvLR` | HR − LR at T1 | baseline reference |
+| `Trained_HRvLR`, `Acute_HRvLR` | HR − LR at T2, at T3 | descriptive |
+| `Training_Interaction` | HR's training change minus LR's | primary |
+| `Acute_Interaction` | HR's bout change minus LR's | secondary |
+
+The groups come from an outcome, so the T1 difference shows how far apart the split starts.
+
+```{r}
+#| label: contrasts
+contrast_matrix <- makeContrasts(
+  Training_HR = HR_T2 - HR_T1, Training_LR = LR_T2 - LR_T1,
+  Acute_HR = HR_T3 - HR_T2, Acute_LR = LR_T3 - LR_T2,
+  Baseline_HRvLR = HR_T1 - LR_T1, Trained_HRvLR = HR_T2 - LR_T2, Acute_HRvLR = HR_T3 - LR_T3,
+  Training_Interaction = (HR_T2 - HR_T1) - (LR_T2 - LR_T1),
+  Acute_Interaction = (HR_T3 - HR_T2) - (LR_T3 - LR_T2),
+  levels = design
+)
+roles <- tibble(
+  contrast = colnames(contrast_matrix),
+  role = case_when(
+    contrast == "Training_Interaction" ~ "primary",
+    contrast == "Acute_Interaction" ~ "secondary",
+    contrast == "Baseline_HRvLR" ~ "baseline_reference",
+    TRUE ~ "descriptive"
+  )
+)
+eb <- eBayes(contrasts.fit(fit, contrast_matrix), robust = TRUE)
+```
+
+## Results per protein and contrast
+
+`topTable()` gives each protein's logFC with its 95% interval, moderated t and p; `fdr` is
+Benjamini-Hochberg within the contrast. Π = p^|logFC| (Xiao et al. 2014) is the nominal call:
+small when p is small and the fold change large; Π < 0.05 counts as a hit beside logFC, interval,
+p and FDR.
+
+```{r}
+#| label: results
+annotation <- tibble(
+  uniprot_id = rownames(proteins), gene = sub(";.*", "", proteins$genes$Genes),
+  n_observed = rowSums(proteins$other$n.observations > 0)
+)
+results <- map(set_names(colnames(contrast_matrix)), \(contrast) {
+  topTable(eb, coef = contrast, number = Inf, sort.by = "none", confint = TRUE) |>
+    as_tibble() |>
+    transmute(logFC, logFC_lower = CI.L, logFC_upper = CI.R, t, p = P.Value, fdr = adj.P.Val) |>
+    bind_cols(annotation, x = _)
+}) |>
+  list_rbind(names_to = "contrast") |>
+  mutate(pi_score = p^abs(logFC), sig_pi = sign(logFC) * (pi_score < 0.05))
+contrast_summary <- results |>
+  summarise(
+    n_tested = n(), pi_up = sum(sig_pi == 1), pi_down = sum(sig_pi == -1),
+    n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05), min_fdr = min(fdr), .by = contrast
+  ) |>
+  left_join(roles, by = "contrast")
+contrast_summary
+```
+
+Chance alone puts about `r round(nrow(proteins) / 20)` proteins below p = 0.05 in each contrast.
+
+## Trajectory F-tests
+
+An F-test asks about several contrasts at once and returns one p per protein, with no direction.
+"Any difference" asks whether HR and LR differ at T1, T2 or T3; "shape" asks whether the two
+groups' training and bout changes differ (both interactions). The contrasts above say where and in
+which direction.
+
+```{r}
+#| label: f-tests
+f_test <- \(coefs) {
+  topTable(eb, coef = coefs, number = Inf, sort.by = "none") |>
+    as_tibble() |>
+    transmute(f = .data$F, p = P.Value, fdr = adj.P.Val) |>
+    bind_cols(annotation, x = _)
+}
+trajectory_tests <- bind_rows(
+  any_difference = f_test(c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR")),
+  shape = f_test(c("Training_Interaction", "Acute_Interaction")),
+  .id = "test"
+)
+trajectory_tests |>
+  summarise(n_nominal = sum(p < 0.05), n_fdr_05 = sum(fdr < 0.05), min_fdr = min(fdr), .by = test)
+```
+
+```{r}
+#| label: fig-p-histogram
+#| fig-cap: "p values per contrast. Dashed: a flat null (tested / 20)."
+#| fig-width: 9
+#| fig-height: 6
+results |>
+  mutate(contrast = factor(contrast, colnames(contrast_matrix))) |>
+  ggplot(aes(p)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
+  geom_hline(yintercept = nrow(proteins) / 20, linetype = 2, colour = "firebrick") +
+  facet_wrap(~contrast) +
+  labs(x = "p", y = "proteins") +
+  theme_bw(base_size = 9)
+```
+
+A spike at zero on a flat background is signal; a flat histogram is chance.
+
+## Does one group's response carry over to the other?
+
+The proteins one group changes with training (or the bout) at Π < 0.05 or p < 0.05 form a set; fry
+(limma) tests that set in the other group's contrast. Sets need 5 or
+more proteins. Beside each test: the set's mean logFC in the group that chose it (inflated by the
+selection) and in the other group, and the share of members with the same sign. fry is a rotation
+test across biopsies that keeps the person block and its within-person correlation.
+
+```{r}
+#| label: fry
+pairings <- tribble(
+  ~set_from, ~ranked_on,
+  "Training_HR", "Training_LR", "Training_LR", "Training_HR",
+  "Acute_HR", "Acute_LR", "Acute_LR", "Acute_HR"
+)
+signature <- \(contrast, criterion, direction) {
+  r <- filter(results, .data$contrast == .env$contrast)
+  hit <- if (criterion == "pi") r$pi_score < 0.05 else r$p < 0.05
+  hit & if (direction == "up") r$logFC > 0 else r$logFC < 0
+}
+fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
+  sets <- expand_grid(criterion = c("pi", "nominal"), direction = c("up", "down")) |>
+    mutate(set = paste(criterion, direction, sep = "_")) |>
+    mutate(rows = pmap(list(criterion, direction), \(c, d) which(signature(set_from, c, d))))
+  sets <- filter(sets, lengths(rows) >= 5)
+  own <- filter(results, contrast == set_from)$logFC
+  other <- filter(results, contrast == ranked_on)$logFC
+  carried <- transmute(sets, set,
+    mean_logfc_own = map_dbl(rows, \(i) mean(own[i])),
+    mean_logfc_other = map_dbl(rows, \(i) mean(other[i])),
+    same_sign_share = map_dbl(rows, \(i) mean(sign(own[i]) == sign(other[i])))
+  )
+  fry(fit$EList, index = set_names(sets$rows, sets$set), design = design,
+    contrast = contrast_matrix[, ranked_on], block = meta$subject, correlation = fit$correlation
+  ) |>
+    as_tibble(rownames = "set") |>
+    transmute(
+      set_from, ranked_on, set, n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR
+    ) |>
+    left_join(carried, by = "set")
+}) |>
+  list_rbind()
+fry_concordance
+```
+
+## Whole-proteome structure per time point
+
+A PCA on the blood-corrected values (proteins scaled) at each time point, and PERMANOVA (vegan's
+`adonis2()`, 9,999 permutations) asking how much of the distance between people group explains
+(R²) at that time point. Time is also tested across all biopsies, with permutations kept inside
+each person; the model has no person term, so this test is conservative.
+
+```{r}
+#| label: pca
+corrected <- readRDS(paths[["corrected"]])
+scaled_at <- \(rows) scale(t(corrected$E[, rows]))
+pca_by_time <- map(set_names(c("T1", "T2", "T3")), \(tp) {
+  rows <- meta$timepoint == tp
+  pca <- prcomp(scaled_at(rows))
+  as_tibble(pca$x[, 1:2], rownames = "sample_id") |>
+    mutate(pc1_share = summary(pca)$importance[2, 1], pc2_share = summary(pca)$importance[2, 2])
+}) |>
+  list_rbind(names_to = "timepoint") |>
+  left_join(select(meta, sample_id, subject, group), by = "sample_id")
+permanova <- \(rows, term, blocks = NULL) {
+  set.seed(1)
+  control <- permute::how(nperm = 9999, blocks = blocks)
+  fit <- vegan::adonis2(dist(scaled_at(rows)) ~ ., data = meta[rows, term], permutations = control)
+  tibble(n_samples = sum(rows), r2 = fit$R2[1], f = fit$F[1], p = fit$`Pr(>F)`[1])
+}
+permanova_tests <- bind_rows(
+  map(set_names(c("T1", "T2", "T3")), \(tp) permanova(meta$timepoint == tp, "group")) |>
+    list_rbind(names_to = "window") |>
+    mutate(term = "group", .before = 1),
+  permanova(rep(TRUE, nrow(meta)), "timepoint", blocks = factor(meta$subject)) |>
+    mutate(term = "time", window = "all", .before = 1)
+)
+permanova_tests
+```
+
+```{r}
+#| label: fig-pca
+#| fig-cap: "Biopsies per time point on PC1 and PC2 of the blood-corrected values."
+#| fig-width: 9
+#| fig-height: 3.2
+ggplot(pca_by_time, aes(PC1, PC2, colour = group)) +
+  geom_point(size = 2) +
+  facet_wrap(~timepoint, scales = "free") +
+  scale_colour_manual(values = c(HR = "#D6404E", LR = "#7F7F7F"), name = NULL) +
+  theme_bw(base_size = 9)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  nrow(results) == nrow(proteins) * ncol(contrast_matrix), !anyNA(results$p),
+  all(results$fdr >= results$p),
+  all(results$logFC_lower <= results$logFC & results$logFC <= results$logFC_upper),
+  nrow(trajectory_tests) == 2 * nrow(proteins)
+)
+```
+
+## Summary
+
+`r nrow(proteins)` proteins in nine contrasts: `r sum(contrast_summary$n_fdr_05)` calls at BH < 0.05
+in all, and between `r min(contrast_summary$n_nominal)` and `r max(contrast_summary$n_nominal)` at
+p < 0.05 per contrast against about `r round(nrow(proteins) / 20)` by chance. Group explains
+`r round(100 * permanova_tests$r2[1], 1)`%, `r round(100 * permanova_tests$r2[2], 1)`% and
+`r round(100 * permanova_tests$r2[3], 1)`% of the distance between people at T1, T2 and T3.
+
+## Save
+
+`fit.rds` holds the fit, the moderated contrasts, the design and contrast matrix; later steps read
+it.
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "01_Protein_Contrasts", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(
+  list(fit = fit, eb = eb, design = design, contrast_matrix = contrast_matrix, roles = roles),
+  file.path(out, "fit.rds")
+)
+write_workbook(
+  list(
+    protein_by_contrast = arrange(results, match(contrast, colnames(contrast_matrix)), p),
+    contrast_summary = contrast_summary,
+    trajectory_tests = arrange(trajectory_tests, test, p),
+    sample_weights = sample_weights,
+    fry_concordance = fry_concordance,
+    pca_by_time = pca_by_time,
+    permanova = permanova_tests
+  ),
+  c(
+    "Per contrast and protein: logFC with 95% CI, t, p, FDR (BH within contrast), Π, the Π call.",
+    "Per contrast: tested, Π up and down, p < 0.05 and BH < 0.05 counts, lowest FDR, role.",
+    "Per protein: moderated F for any HR-LR difference and trajectory shape; FDR (BH) within test.",
+    "Per biopsy: limpa sample weight; tested HR against LR.",
+    "fry: each group's responders tested in the other group's contrast; FDR within each pairing.",
+    "PC1 and PC2 per biopsy within each time point, blood-corrected values, proteins scaled.",
+    "PERMANOVA: group at each time point; time across all biopsies within person."
+  ),
+  file.path(out, "protein_contrasts.xlsx"), inputs, paths
+)
+```

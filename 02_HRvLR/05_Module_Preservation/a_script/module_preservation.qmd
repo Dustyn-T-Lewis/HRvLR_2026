@@ -1,0 +1,236 @@
+---
+title: "Module preservation: HR against LR"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Do HR and LR share the same co-expression structure? Modules are built inside each group with the
+network settings of `01_Processing/06_Module_Building`, then WGCNA's `modulePreservation()` tests each group's modules in the other group's data
+(Langfelder et al. 2011).
+
+Two statistics come back per module. Zsummary combines how dense and how connected the module is
+in the other group, against permutations: above 10 is strong preservation, 2 to 10 weak to
+moderate, below 2 none (Langfelder et al. 2011). The median rank orders modules against each other
+and does not depend on module size; lower is better preserved. Each group has 8 people and 24
+biopsies, so the test has little power to show a module is missing: Zsummary above 2 says the
+module is found again, not that the two networks are the same.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(purrr)
+library(ggplot2)
+library(WGCNA)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+disableWGCNAThreads()
+inputs <- c(
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+The blood-corrected matrix that the full-cohort modules were built on, and those modules.
+
+```{r}
+#| label: input
+corrected <- readRDS(paths[["corrected"]])
+modules <- readRDS(paths[["modules"]])
+abund <- corrected$E
+meta <- modules$meta
+stopifnot(identical(colnames(abund), meta$sample_id))
+count(meta, group, timepoint)
+```
+
+## One network per group
+
+As in `06_Module_Building`, each protein is centred within person, so modules follow within-person
+variation. `apply()` over proteins returns biopsies in rows, the orientation WGCNA expects.
+A protein with no spread inside one group cannot be correlated there; `goodSamplesGenes()` finds
+those, and they are dropped from both groups so the two networks cover the same proteins.
+
+```{r}
+#| label: centre
+expr <- map(set_names(c("HR", "LR")), \(g) {
+  kept <- filter(meta, group == g)
+  apply(abund[, kept$sample_id], 1, \(x) x - ave(x, kept$subject))
+})
+good <- reduce(map(expr, \(x) goodSamplesGenes(x, verbose = 0)$goodGenes), `&`)
+expr <- map(expr, \(x) x[, good])
+c(dropped = sum(!good), kept = sum(good))
+```
+
+`build_group()` builds one group's modules with the `blockwiseModules()` settings and seed of
+`06_Module_Building`, and the soft power by the same rule: the WGCNA FAQ's value for a signed
+network of that many samples (18 below 20, 16 for 20 to 30, 14 for 30 to 40, 12 above 40). Each
+group has 24 biopsies, so both use 16; the scale-free rule would push them to powers where most
+proteins fall in no module, as it did for the full network. It returns the power and each protein's
+module colour.
+
+```{r}
+#| label: build
+bicor_args <- list(corType = "bicor", maxPOutliers = 0.05, pearsonFallback = "individual")
+build_group <- function(data) {
+  power <- c(18L, 16L, 14L, 12L)[findInterval(nrow(data), c(20, 31, 41)) + 1]
+  net <- do.call(blockwiseModules, c(
+    list(data,
+      power = power, networkType = "signed", TOMType = "signed",
+      deepSplit = 2, minModuleSize = 30, mergeCutHeight = 0.15,
+      pamStage = TRUE, pamRespectsDendro = TRUE, maxBlockSize = 2500,
+      numericLabels = FALSE, randomSeed = 54321, verbose = 0
+    ),
+    bicor_args
+  ))
+  list(power = power, colours = set_names(net$colors, colnames(data)))
+}
+group_modules <- map(expr, build_group)
+group_networks <- tibble(
+  group = names(group_modules), n_samples = map_int(expr, nrow),
+  power = map_int(group_modules, "power"),
+  n_modules = map_int(group_modules, \(x) n_distinct(setdiff(x$colours, "grey"))),
+  n_unassigned = map_int(group_modules, \(x) sum(x$colours == "grey"))
+)
+group_networks
+```
+
+## Preservation
+
+Each group is the reference once and the test once, with 200 permutations (seeded). `grey`
+(unassigned) and `gold` (a random sample WGCNA adds as a baseline) are dropped from the table.
+
+```{r}
+#| label: preservation
+preservation <- modulePreservation(
+  multiData = map(expr, \(data) list(data = data)),
+  multiColor = map(group_modules, "colours"),
+  referenceNetworks = 1:2, networkType = "signed",
+  corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'",
+  nPermutations = 200, randomSeed = 42, savePermutedStatistics = FALSE, verbose = 0
+)
+```
+
+Each group module is labelled with the full-cohort module that holds most of its proteins, so the
+two sets of colour names can be read together.
+
+```{r}
+#| label: table
+full <- set_names(modules$membership$module, modules$membership$uniprot_id)
+best_match <- imap(group_modules, \(built, g) {
+  tibble(group_module = built$colours, full_module = full[names(built$colours)]) |>
+    filter(group_module != "grey") |>
+    count(group_module, full_module) |>
+    mutate(full_share = n / sum(n), .by = group_module) |>
+    slice_max(n, n = 1, by = group_module, with_ties = FALSE) |>
+    transmute(reference = g, module = group_module, full_module, full_share)
+}) |>
+  list_rbind()
+preservation_table <- map(c(HR = "LR", LR = "HR"), \(test) {
+  reference <- setdiff(c("HR", "LR"), test)
+  pair <- c(paste0("ref.", reference), paste0("inColumnsAlsoPresentIn.", test))
+  z <- preservation$preservation$Z[[pair]]
+  tibble(
+    reference = reference, test = test, module = rownames(z), n_proteins = z$moduleSize,
+    z_summary = z$Zsummary.pres,
+    median_rank = preservation$preservation$observed[[pair]]$medianRank.pres
+  )
+}) |>
+  list_rbind() |>
+  filter(!module %in% c("grey", "gold")) |>
+  left_join(best_match, by = c("reference", "module")) |>
+  mutate(preservation = cut(z_summary, c(-Inf, 2, 10, Inf),
+    labels = c("none", "weak to moderate", "strong")
+  ))
+count(preservation_table, reference, test, preservation)
+```
+
+```{r}
+#| label: fig-preservation
+#| fig-cap: "Zsummary of each group's modules in the other group; dashed: 2 and 10."
+#| fig-width: 9
+#| fig-height: 4
+preservation_table |>
+  mutate(direction = paste(reference, "modules tested in", test)) |>
+  ggplot(aes(n_proteins, z_summary)) +
+  geom_hline(yintercept = c(2, 10), linetype = "dashed", colour = "grey55") +
+  geom_point(aes(fill = module), shape = 21, size = 3, colour = "grey30") +
+  ggrepel::geom_text_repel(aes(label = paste0(module, " (", full_module, ")")),
+    size = 2.4, seed = 1, colour = "grey25", min.segment.length = 0
+  ) +
+  facet_wrap(~direction) +
+  scale_fill_identity() +
+  scale_x_log10() +
+  labs(x = "module size (log scale)", y = "Zsummary") +
+  theme_minimal(base_size = 10)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  setequal(preservation_table$reference, c("HR", "LR")),
+  !anyNA(preservation_table$z_summary), !anyNA(preservation_table$full_module),
+  all(group_networks$n_samples == 24), all(map_lgl(expr, \(x) ncol(x) == sum(good)))
+)
+```
+
+## Summary
+
+```{r}
+#| label: summary
+preservation_table |>
+  summarise(n_modules = n(), min_z = min(z_summary), max_z = max(z_summary), .by = reference)
+```
+
+HR builds `r group_networks$n_modules[1]` modules at power `r group_networks$power[1]` and LR
+builds `r group_networks$n_modules[2]` at power `r group_networks$power[2]`. Zsummary runs from
+`r round(min(preservation_table$z_summary), 1)` to `r round(max(preservation_table$z_summary), 1)`;
+`r sum(preservation_table$z_summary < 2)` of `r nrow(preservation_table)` group modules fall
+below 2.
+
+## Save
+
+`preservation.rds` holds the table and each group's module colours for the figures.
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "05_Module_Preservation", "c_data")
+dir.create(out, showWarnings = FALSE)
+group_membership <- imap(group_modules, \(x, g) {
+  tibble(group = g, uniprot_id = names(x$colours), module = x$colours)
+}) |>
+  list_rbind()
+saveRDS(
+  list(
+    preservation = preservation_table, group_networks = group_networks,
+    group_membership = group_membership
+  ),
+  file.path(out, "preservation.rds")
+)
+write_workbook(
+  list(
+    preservation = preservation_table, group_networks = group_networks,
+    group_membership = group_membership
+  ),
+  c(
+    "Zsummary and median rank of each group's modules tested in the other group.",
+    "Biopsies, soft power, module count and unassigned proteins of each group's network.",
+    "Every protein's module in each group's network."
+  ),
+  file.path(out, "module_preservation.xlsx"), inputs, paths
+)
+```
