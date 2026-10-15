@@ -1,0 +1,210 @@
+---
+title: "Set scores"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+singscore (Foroutan et al. 2018) gives every biopsy one score per gene set. Within a biopsy, it
+ranks all genes by abundance and averages the ranks of the set's members. A set whose members sit
+high in that biopsy scores high. The score depends only on ranks inside one biopsy, so it does not
+move when other biopsies are added or removed. This step computes scores and describes them; it
+tests nothing.
+
+## Packages
+
+singscore is called with `::` where used.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  proteins = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Inputs
+
+Ranking needs every protein in every biopsy and cannot carry a covariate, so the input is limpa's
+complete matrix with each protein's blood slope removed from its observed values
+(`proteins_corrected.rds`, from `03_Blood_Correction`). Values limpa estimated from the detection
+curve are unchanged there.
+
+```{r}
+#| label: inputs
+gs <- readRDS(paths[["gene_sets"]])
+proteins <- readRDS(paths[["proteins"]])
+targets <- proteins$targets
+c(sets = length(gs$sets), proteins = nrow(proteins), biopsies = ncol(proteins))
+```
+
+Sets are keyed on gene symbols, so the matrix rows switch from accessions to the representative
+gene chosen in `04_Gene_Sets`.
+
+```{r}
+#| label: gene-matrix
+gene_map <- filter(gs$protein_map, selected)
+stopifnot(all(gene_map$uniprot_id %in% rownames(proteins)), !anyDuplicated(gene_map$gene))
+gene_matrix <- proteins$E[gene_map$uniprot_id, ]
+rownames(gene_matrix) <- gene_map$gene
+dim(gene_matrix)
+round(gene_matrix[1:3, 1:3], 2)
+```
+
+## Scores
+
+`rankGenes()` ranks genes within each biopsy. `multiScore()` scores every set in one pass and also
+returns each set's dispersion: the spread (median absolute deviation) of its members' ranks within
+a biopsy. Low dispersion means the members sit together; high means they scatter. By default
+singscore centres the score so that 0 means the members' average rank equals the biopsy's middle
+rank.
+
+```{r}
+#| label: score
+ranks <- singscore::rankGenes(gene_matrix)
+scored <- singscore::multiScore(ranks, upSetColc = gs$sets)
+scores <- scored$Scores
+stopifnot(
+  identical(rownames(scores), names(gs$sets)),
+  identical(colnames(scores), targets$sample_id)
+)
+dim(scores)
+round(scores[1:3, 1:4], 3)
+```
+
+Spread across sets within a biopsy reflects which genes each set holds. Spread across biopsies
+within a set is what later comparisons use. Both are recorded.
+
+```{r}
+#| label: score-summary
+score_summary <- tibble(
+  n_sets = nrow(scores), n_samples = ncol(scores),
+  min = round(min(scores), 4), max = round(max(scores), 4),
+  mean = round(mean(scores), 4),
+  mean_sd_across_sets = round(mean(apply(scores, 2, sd)), 4),
+  mean_sd_across_samples = round(mean(apply(scores, 1, sd)), 4)
+)
+score_summary
+```
+
+```{r}
+#| label: spread
+set_spread <- gs$set_catalog |>
+  filter(qualifies) |>
+  transmute(set_id, collection) |>
+  mutate(
+    score = rowMeans(scores[set_id, ]),
+    dispersion = rowMeans(scored$Dispersions[set_id, ])
+  )
+collection_spread <- set_spread |>
+  summarise(
+    n_sets = n(), median_score = round(median(score), 4),
+    median_dispersion = round(median(dispersion), 1), .by = collection
+  )
+collection_spread
+```
+
+```{r}
+#| label: fig-dispersion
+#| fig-cap: "Each set's mean score against its mean dispersion, averaged over biopsies."
+#| fig-width: 7
+#| fig-height: 4.5
+ggplot(set_spread, aes(score, dispersion, colour = collection)) +
+  geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey80") +
+  geom_point(alpha = 0.4, size = 0.8) +
+  scale_colour_brewer(palette = "Dark2", name = NULL) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  labs(x = "mean score across biopsies", y = "mean dispersion across biopsies") +
+  theme_minimal(base_size = 9)
+```
+
+```{r}
+#| label: fig-distribution
+#| fig-cap: "Every set's score in every biopsy, pooled within each group-by-time cell."
+#| fig-width: 6
+#| fig-height: 4
+tibble(group_time = rep(targets$group_time, each = nrow(scores)), score = as.vector(scores)) |>
+  ggplot(aes(score, group_time)) +
+  geom_violin(fill = "grey85", colour = NA) +
+  geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.3) +
+  labs(x = "singscore", y = NULL) +
+  theme_minimal(base_size = 9)
+```
+
+## How much of the score variation is the person
+
+A principal component analysis (PCA) of the score matrix, then a one-way ANOVA of PC1 and PC2 on
+the person (`subject`). The subject share is the fraction of each component's variance that person
+identity explains. A large share means comparisons of set scores must account for the person.
+
+```{r}
+#| label: structure
+components <- prcomp(t(scores), scale. = FALSE)
+variance <- summary(components)$importance[2, 1:4]
+stopifnot(identical(rownames(components$x), targets$sample_id))
+subject_share <- vapply(1:2, function(i) {
+  terms <- summary(aov(components$x[, i] ~ targets$subject))[[1]]
+  terms[1, 2] / sum(terms[, 2])
+}, numeric(1))
+structure_check <- tibble(
+  component = paste0("PC", 1:4),
+  variance_explained = round(as.numeric(variance), 3),
+  subject_share = c(round(subject_share, 3), NA, NA)
+)
+structure_check
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  !anyNA(scores), identical(dim(scores), c(length(gs$sets), ncol(proteins))),
+  all(abs(scores) <= 1), setequal(set_spread$set_id, rownames(scores))
+)
+```
+
+## Summary
+
+`r nrow(scores)` sets were scored in `r ncol(scores)` biopsies. Scores range from
+`r round(min(scores), 2)` to `r round(max(scores), 2)`. Person identity explains
+`r round(100 * subject_share[1])`% of PC1 and `r round(100 * subject_share[2])`% of PC2.
+
+## Save
+
+`singscore.rds` holds the set-by-biopsy score matrix (`scores`); later set-level comparisons read
+it.
+
+```{r}
+#| label: save
+out <- here("01_Processing", "05_Set_Scores", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(list(scores = scores), file.path(out, "singscore.rds"), compress = "xz")
+sheets <- list(
+  score_summary = score_summary,
+  collection_spread = collection_spread,
+  set_spread = set_spread,
+  structure_check = structure_check,
+  set_scores = as_tibble(scores, rownames = "set_id")
+)
+holds <- c(
+  "Range and spread of the score matrix.",
+  "Median score and dispersion per collection.",
+  "Mean score and dispersion per set across biopsies.",
+  "Variance explained by the first four components, and the subject share of PC1 and PC2.",
+  "The set by biopsy score matrix, as saved in singscore.rds."
+)
+write_workbook(sheets, holds, file.path(out, "set_scores.xlsx"), inputs, paths)
+```

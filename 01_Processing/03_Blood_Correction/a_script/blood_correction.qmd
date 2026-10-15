@@ -1,0 +1,144 @@
+---
+title: "Blood correction"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Blood in a biopsy dilutes the muscle proteins, so many proteins rise or fall with the blood index.
+The comparisons carry the index as a covariate. Some later methods cannot: module building,
+set scores and correlations. They read a copy of the protein values with each protein's blood
+slope removed. This step builds that copy, after testing three ways to remove the slope.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(limma)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(proteins = "01_Processing/02_Quantification/c_data/proteins.rds")
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+limpa's protein values: complete log2 values, a standard error for each, and per value the number
+of observed precursors (`other$n.observations`). A value with no observed precursor was estimated
+from the detection curve.
+
+```{r}
+#| label: input
+proteins <- readRDS(paths[["proteins"]])
+blood <- proteins$targets$blood
+observed <- proteins$other$n.observations > 0
+time_design <- model.matrix(~ 0 + timepoint, proteins$targets)
+design <- cbind(time_design, blood = blood)
+c(
+  proteins = nrow(proteins), biopsies = ncol(proteins),
+  pct_estimated = round(100 * mean(!observed), 1)
+)
+```
+
+## Three ways to remove the slope
+
+Each fits protein ~ time point + blood and subtracts the blood term, so time differences are kept.
+They differ in which values the slope is fitted on and removed from:
+
+- **a, all values**: `limma::removeBatchEffect()` fits and removes on every value, observed or
+  estimated.
+- **b, observed values only**: `lmFit()` with weight 1 on observed values and 0 on estimated ones,
+  so the slope is fitted on observed values only, and it is removed from them; estimated values are
+  left as limpa made them.
+- **c, precision-weighted**: `lmFit()` with weights 1/SE², removed from every value.
+
+```{r}
+#| label: variants
+variant_a <- removeBatchEffect(proteins$E, covariates = blood, design = time_design)
+weighted <- lmFit(proteins$E, design, weights = 1 / proteins$other$standard.error^2)
+variant_c <- proteins$E - outer(weighted$coefficients[, "blood"], blood)
+observed_fit <- lmFit(proteins$E, design, weights = 1 * observed)
+variant_b <- proteins$E - outer(observed_fit$coefficients[, "blood"], blood) * observed
+```
+
+## Which one works
+
+A correction works if it lowers each protein's correlation with blood. The check is the median
+absolute Spearman correlation with the blood index, by how many biopsies observed the protein.
+The rule, set before looking: keep the variant that lowers it in every band.
+
+```{r}
+#| label: check
+band <- cut(rowSums(observed), c(0, 20, 39, ncol(proteins)), labels = c("<=20", "21-39", ">=40"))
+blood_rho <- \(values) abs(apply(values, 1, \(x) cor(x, blood, method = "spearman")))
+check <- list(
+  uncorrected = proteins$E, a_all_values = variant_a, b_observed_only = variant_b,
+  c_precision_weighted = variant_c
+) |>
+  vapply(\(values) tapply(blood_rho(values), band, median), numeric(3)) |>
+  as_tibble(rownames = "observed_in") |>
+  mutate(n_proteins = as.vector(table(band)), .after = observed_in)
+check
+passes <- vapply(
+  c("a_all_values", "b_observed_only", "c_precision_weighted"),
+  \(v) all(check[[v]] < check$uncorrected), logical(1)
+)
+passes
+stopifnot(passes[["b_observed_only"]])
+```
+
+Variants a and c raise the blood correlation of sparsely observed proteins: their slope is fitted
+mostly on estimated values, which do not carry the protein's blood relationship, and subtracting it
+adds blood signal. Variant b lowers the correlation in every band and is kept.
+
+```{r}
+#| label: fig-check
+#| fig-cap: "Median |Spearman rho| with the blood index, by detection band and variant."
+#| fig-width: 7
+#| fig-height: 3
+check |>
+  tidyr::pivot_longer(-c(observed_in, n_proteins), names_to = "variant", values_to = "rho") |>
+  ggplot(aes(observed_in, rho, colour = variant, group = variant)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "biopsies observed", y = "median |rho| with blood", colour = NULL) +
+  theme_bw(base_size = 10)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  !anyNA(variant_b), identical(dim(variant_b), dim(proteins$E)),
+  all(variant_b[!observed] == proteins$E[!observed])
+)
+```
+
+## Save
+
+`proteins_corrected.rds` is the protein `EList` with `E` replaced by variant b; standard errors,
+annotation and biopsy table are unchanged.
+
+```{r}
+#| label: save
+corrected <- proteins
+corrected$E <- variant_b
+out <- here("01_Processing", "03_Blood_Correction", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(corrected, file.path(out, "proteins_corrected.rds"))
+write_workbook(
+  list(blood_check = check),
+  "Median |Spearman rho| with the blood index by detection band, uncorrected and three variants.",
+  file.path(out, "blood_correction.xlsx"), inputs, paths
+)
+```

@@ -98,7 +98,7 @@ filter(run_map, n() > 1, .by = sample_id)
 The chosen runs are renamed to their `sample_id` and matched to `metadata.csv`. A precursor
 detected only in dropped runs must go: left in, it looks undetected in all 48 biopsies, which shifts
 the detection curve and pulls its protein's values down (tested: values moved by up to 5 log2
-units). limpa's `removeNARows()` does this, but in limpa 1.4.0 with limma 3.68 it fails inside
+units). limpa's `removeNARows()` does this, but with the installed limpa and limma it fails inside
 limma's `EList` subsetting (`y[keep, , ]` passes an empty argument), so plain subsetting does it.
 
 ```{r}

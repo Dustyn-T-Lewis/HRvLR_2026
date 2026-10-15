@@ -17,7 +17,8 @@ input_manifest,path,Path of the file read.
 ,version,Package version.
 ,source,Where the package came from.
 ,run,DIA-NN run name as it appears in the precursor report.
-,n_precursors,Precursors detected (q ≤ 0.01) in the run or protein.
+,n_precursors,Precursors limpa used for the protein (NPrec).
+^(run_map|per_run)$,n_precursors,Precursors detected (q ≤ 0.01) in the run.
 ,injection,"Injection suffix in the run name: empty for the first injection; r, rr, _r or _4 for a re-injection."
 ,in_study,Whether the run's person is one of the 16 analysed.
 ^run_map$,chosen,Whether this run is the biopsy's kept injection (most precursors among its injections).
@@ -27,3 +28,337 @@ input_manifest,path,Path of the file read.
 ^filter_log$,count,What is counted: precursors or protein groups.
 ^filter_log$,before,Count before the identity filters.
 ^filter_log$,after,Count after the identity filters.
+^blood_check$,observed_in,Biopsies (of 48) in which the protein had at least one observed precursor.
+^blood_check$,n_proteins,Proteins in the band.
+^blood_check$,uncorrected,Median |Spearman rho| with the blood index before correction.
+^blood_check$,a_all_values,"Median |rho| after removing the slope from all values (limma::removeBatchEffect)."
+^blood_check$,b_observed_only,Median |rho| after fitting and removing the slope on observed values only (kept).
+^blood_check$,c_precision_weighted,"Median |rho| after a slope fitted with weights 1/SE^2, removed from all values."
+,set_id,Gene set identifier: collection|set name.
+,collection,"Gene set collection: Hallmark, Reactome, KEGG_Legacy, GOBP or GO_Slim."
+,pathway,Gene set name as published by its source collection.
+,source_id,Identifier of the set in its source database.
+set_catalog,description,Description of the set from its source (MSigDB) or how a GO Slim set is built.
+,source_size,"Genes in the set as published; blank for GO Slim themes, which are built from measured genes."
+,measured_size,Genes of the set measured here (one protein per gene).
+,size_ok,TRUE when the set passes the size rule: 15 to 500 genes in the source (MSigDB sets) and at least 15 measured.
+,disease_set,"TRUE when a whole word of the set's name is on the disease list (disease, infection, cancer, virus and so on); see gene_sets.html."
+,qualifies,TRUE when the set is tested: it passes the size rule and is not a disease set.
+,n_in_source,Sets in the collection as published.
+,n_size_ok,Sets of the collection that pass the size rule.
+,n_disease,Sets of the collection that pass the size rule but are removed as disease sets.
+,n_qualifying,Sets of the collection that are tested.
+,median_measured,Median measured size of the collection's tested sets.
+,mapping_status,"How the protein maps to a gene symbol: representative, duplicate_gene (another protein represents the symbol) or missing_symbol."
+,selected,TRUE when the protein represents its gene symbol in the gene sets.
+protein_gene_map,label,"Readable name: the gene symbol, with the accession appended when two proteins share the symbol."
+,n_proteins,"Proteins in the row's module, set or category."
+,n_sets,Gene sets.
+,n_samples,Biopsies contributing to the row.
+,min,Smallest value.
+,max,Largest value.
+,mean,Mean value.
+,mean_sd_across_sets,Mean standard deviation of scores across sets.
+,mean_sd_across_samples,Mean standard deviation of scores across biopsies.
+,median_score,Median singscore.
+,median_dispersion,Median singscore dispersion (spread of member ranks).
+,score,Mean singscore of the set across biopsies.
+,dispersion,Mean singscore dispersion of the set (spread of its members' ranks).
+,component,Principal component.
+,variance_explained,Share of variance on the component.
+,subject_share,Share of the component's variance explained by subject.
+,^S[0-9]+_T[123]$,"Value in that biopsy (subject_timepoint): set score or eigengene, as the sheet's read_me says."
+,module,WGCNA module colour (grey: no module).
+,icc,Intra-class correlation of the eigengene across a subject's biopsies: how much of it is the person.
+,kme,Module membership: correlation of the protein with its module's eigengene on person-centred values.
+eigengenes,^[a-z]+$,Eigengene of that module (column name) in the biopsy.
+,Power,Soft-thresholding power.
+,SFT.R.sq,Scale-free fit R squared at that power.
+soft_threshold,slope,Slope of log10 p(k) on log10 k at that power (pickSoftThreshold): near -1 for a scale-free network.
+,truncated.R.sq,Truncated scale-free fit R squared.
+,mean.k.,Mean connectivity at that power.
+,median.k.,Median connectivity at that power.
+,max.k.,Largest connectivity at that power.
+,signed_r2,Scale-free fit R squared signed by the slope.
+soft_threshold,chosen,TRUE for the power used.
+,top_set,Most over-represented gene set among the module's members (smallest ORA p).
+,top_set_fdr,BH-adjusted p of the top set within the module.
+,top_go_slim,Most over-represented GO Slim term among the module's members.
+,go_slim_fdr,BH-adjusted p of the top GO Slim term within the module.
+,top_members,The module's ten members with the highest kME.
+,string_ratio,"STRING interactions among the members, observed over expected."
+,string_fdr,BH-adjusted p of the STRING interaction enrichment across modules.
+,gene_ratio,Module members in the set over module members tested.
+,bg_ratio,Measured genes in the set over measured genes (the universe).
+,n_overlap,Module members in the set.
+,p,Nominal p-value of the row's test.
+,fdr,Benjamini-Hochberg adjusted p-value; the sheet's read_me says within which family.
+,n_mapped,Members mapped to STRING.
+,n_edges,STRING interactions (score >= 700) among the members.
+,n_expected,STRING interactions expected by chance given each member's partner count in the background.
+,ratio,Observed over expected interactions.
+,from,STRING identifier of one partner.
+,to,STRING identifier of the other partner.
+,from_gene,Gene symbol of one partner.
+,to_gene,Gene symbol of the other partner.
+,combined_score,STRING combined interaction score (0 to 1000).
+,contrast,"Comparison from the design: Training_HR/LR (T2 - T1), Acute_HR/LR (T3 - T2), Baseline/Trained/Acute_HRvLR (HR - LR at T1, T2, T3), Training_Interaction and Acute_Interaction (HR's change minus LR's)."
+,role,"How the contrast is read: primary, secondary, descriptive, or baseline_reference (the T1 group difference)."
+,logFC,Difference in log2 abundance for the contrast; positive = higher at the later time point or in HR.
+,logFC_lower,Lower bound of the 95% confidence interval of logFC (limma topTable).
+,logFC_upper,Upper bound of the 95% confidence interval of logFC (limma topTable).
+,t,Moderated t statistic (limma).
+,n_observed,Biopsies (of 48) in which the protein had at least one observed precursor.
+,pi_score,Π = p^|logFC| (Xiao et al. 2014).
+,sig_pi,"Π call: 1 up, -1 down, 0 none (Π < 0.05)."
+,n_tested,Features tested.
+,pi_up,Proteins up at Π < 0.05.
+,pi_down,Proteins down at Π < 0.05.
+,n_nominal,Features at p < 0.05.
+,n_fdr_05,Features at FDR < 0.05.
+,min_fdr,Smallest FDR in the contrast.
+^trajectory_tests$,test,"any_difference: HR - LR at T1, T2 or T3 (F, 3 contrasts); shape: the two interactions together (F, 2 contrasts)."
+^trajectory_tests$,f,Moderated F statistic (limma).
+,direction,Direction of the change: Up or Down.
+^fry_concordance$,set,"Selection: pi_up, pi_down (Π < 0.05) or nominal_up, nominal_down (p < 0.05) in set_from."
+,set_from,Contrast whose responders form the set.
+,ranked_on,Contrast the set is tested in.
+,mean_logfc_own,Mean logFC of the members in the contrast that chose them.
+,mean_logfc_other,Mean logFC of the members in the contrast they are tested in.
+,same_sign_share,Share of members moving the same way in both contrasts.
+,PC1,Score on the first principal component.
+,PC2,Score on the second principal component.
+,pc1_share,Share of variance on PC1 at that time point.
+,pc2_share,Share of variance on PC2 at that time point.
+^permanova$,window,Time point tested (T1/T2/T3) or all biopsies.
+^permanova$,term,PERMANOVA term: group or time.
+,r2,Share of distance variation the term explains (PERMANOVA R squared).
+^permanova$,f,Pseudo-F statistic.
+^set_tests$,method,"Test: fgsea (ranked moderated t, NES) or fry (self-contained, people as the unit)."
+^set_tests$,nes,fgsea normalised enrichment score: positive = the set sits towards the up end of the ranking.
+^set_tests$,leading_edge,"fgsea leading edge: the set's genes that drive the score, separated by ;."
+^selection$,window,"Figure window: Training, Acute, HR - LR or Interaction."
+^selection$,hits,Contrasts in the window where fgsea calls the set at FDR < 0.05.
+^selection$,same_sign,Whether the set's FDR < 0.05 calls in the window agree in sign.
+^selection$,strength,Summed |NES| across the window's contrasts.
+^selection$,rank,"Rank within the window: agreeing sign first, then strength."
+^selection$,cut_0.75,Tree cluster within the window at Jaccard-distance height 0.75.
+^selection$,cut_0.85,Tree cluster within the window at height 0.85 (main figure).
+^selection$,cut_0.9,Tree cluster within the window at height 0.9.
+^selection$,tree_order,Position of the set in the window's tree (leaf order).
+^selection$,representative_0.75,Whether the set is its cluster's strongest at cut 0.75.
+^selection$,representative_0.85,Whether the set is its cluster's strongest at cut 0.85 (drawn in the main figure).
+^selection$,representative_0.9,Whether the set is its cluster's strongest at cut 0.9.
+^variance_shares$,subject,Share of the protein's variance explained by person (variancePartition).
+^variance_shares$,timepoint,Share of the protein's variance explained by time point.
+^variance_shares$,group,Share explained by HR/LR (part of the between-person variation).
+^variance_shares$,blood,Share explained by the blood index.
+^variance_shares$,Residuals,Share left unexplained.
+^diffvar$,log_var_ratio,"DiffVar log variance ratio, LR relative to HR: positive = LR people spread more."
+^gap$,k,Number of clusters.
+^gap$,gap,Gap statistic: log within-cluster dispersion of reference data minus that of the data.
+^gap$,se,Simulation standard error of the gap.
+^biopsy_correlation$,sample_a,First biopsy of the pair.
+^biopsy_correlation$,sample_b,Second biopsy of the pair.
+^biopsy_correlation$,r,"Pearson correlation of the two biopsies' blood-corrected, scaled values."
+^biopsy_order$,position,Position of the biopsy in the clustering order.
+,PC3,Score on the third principal component.
+,PC4,Score on the fourth principal component.
+,PC5,Score on the fifth principal component.
+,group_time,"Group-by-time cell, such as HR_T1."
+,weight,limpa sample weight from dpcDE(sample.weights = TRUE); 1 is an average biopsy.
+,proteins_detected,Proteins with at least one observed precursor in the biopsy.
+^pc_covariates$,covariate,Biopsy covariate regressed on the component.
+^pc_covariates$,component,Principal component.
+^pc_covariates$,pc_share,Share of total variance on the component.
+^pc_covariates$,r2,R² of the covariate alone on the component's scores.
+,n_members,Module members (proteins with a kME) in the row.
+,rho,Spearman rank correlation.
+^eigengene_tests$,logFC,Difference in the module eigengene for the contrast; positive = higher at the later time point or in HR.
+^eigengene_tests$,logFC_lower,Lower bound of the 95% confidence interval of the eigengene difference (limma topTable).
+^eigengene_tests$,logFC_upper,Upper bound of the 95% confidence interval of the eigengene difference (limma topTable).
+^eigengene_tests$,t,Moderated t statistic of the eigengene difference (limma).
+^membership_contrast$,p,"Spearman p (t approximation); descriptive, since members were chosen by co-variation."
+^preservation$,reference,Group whose network defined the module.
+^preservation$,test,Group whose data the module is tested in.
+^preservation$,module,Module colour in the reference group's network (not the full-cohort colour).
+,z_summary,"WGCNA preservation Zsummary against 200 permutations: above 10 strong, 2 to 10 weak to moderate, below 2 none."
+,median_rank,"WGCNA median rank of preservation among the reference group's modules; lower is better preserved."
+,full_module,Full-cohort module (06_Module_Building) holding most of the group module's proteins.
+,full_share,Share of the group module's proteins that sit in full_module.
+^preservation$,preservation,"Zsummary band: none (< 2), weak to moderate (2 to 10) or strong (> 10)."
+,n_modules,Modules found (grey excluded).
+,n_unassigned,Proteins that fit no module (grey).
+^group_networks$,power,Soft-thresholding power chosen for the group's network.
+^group_membership$,module,Module colour in that group's network (grey: no module).
+,feature_type,"Feature type: proteins, sets (singscore of a gene set) or modules (eigengene)."
+,feature,"Feature identifier: UniProt accession, set_id or module colour."
+,label,"Readable feature name: gene symbol, set name or module colour."
+,task,"Classification task: HR against LR at T1 (Baseline), T2 (Trained), T3 (Acute), or in the change T2 - T1 (Training_change) or T3 - T2 (Acute_change)."
+,auc,AUC: chance that a random HR person has a higher value than a random LR person (Mann-Whitney W / (n_HR x n_LR)).
+,auc_lower,Lower bound of DeLong's 95% interval of the AUC (pROC); empty at perfect separation.
+,auc_upper,Upper bound of DeLong's 95% interval of the AUC (pROC); empty at perfect separation.
+,n_hr,HR people in the test.
+,n_lr,LR people in the test.
+^counts$,min_p,Smallest p among the features in the row.
+^counts$,best_auc,AUC furthest from 0.5 among the features in the row.
+,window,"Trait window: the feature value (T1, T2 or T3 level, or the change T1 to T2 or T2 to T3) and the traits it is paired with; see the step's README."
+,trait,"Phenotype trait: a level (fcsa_mixed, fcsa_type1, fcsa_type2 in um2, mcsa in cm2, leg_press_1rm, leg_ext_1rm in kg), its % change T1 to T2 (pct_ prefix), comp_hypertrophy (composite score) or volume_load_total_kg."
+,n_people,People in the test (one value each).
+,slope_difference,"HR slope minus LR slope of the feature on the trait (limma, feature ~ group * trait), per trait unit."
+,slope_difference_lower,Lower bound of the 95% confidence interval of slope_difference.
+,slope_difference_upper,Upper bound of the 95% confidence interval of slope_difference.
+,share_nominal,Share of tested features at p < 0.05; 0.05 is expected by chance.
+^counts$,test,"within_group: Spearman within HR or LR; group_difference: HR slope minus LR slope (limma)."
+^counts$,group,"HR or LR for the within-group test; HR - LR for the slope difference."
+^within_group$,p,Exact Spearman p (normal approximation where values tie).
+,slope,"limma slope of the feature on the predictor, per predictor unit (sheet read_me names the model)."
+,slope_lower,Lower bound of the 95% confidence interval of the slope (limma topTable).
+,slope_upper,Upper bound of the 95% confidence interval of the slope (limma topTable).
+^model$,term,"within: the biopsy's deviation from the person's mean trait level; between: the person's mean trait level."
+^change_score$,rho,Spearman rank correlation between the feature and the trait across people.
+,p_rho,Spearman p (t approximation).
+,bicor,Biweight midcorrelation between the feature and the trait (WGCNA).
+,p_bicor,p of the biweight midcorrelation (WGCNA bicorAndPvalue).
+,strength_test,Strength gain used as the second predictor: % change in leg press or leg extension 1RM.
+,coefficient,"Model term the row reports: growth (comp_hypertrophy) or strength (strength_test)."
+,interaction,"growth x strength gain interaction of feature ~ growth * strength gain (limma), per unit of each."
+,interaction_lower,Lower bound of the 95% confidence interval of the interaction.
+,interaction_upper,Upper bound of the 95% confidence interval of the interaction.
+^counts$,analysis,"Analysis: sample model, change score, two predictor or interaction."
+^counts$,screen,"The screen within the analysis: term and trait, window and trait, or window, strength test and coefficient."
+,n_up,Sets at FDR < 0.05 with positive NES (lead the top of the ranking: higher with more of the trait).
+,n_down,Sets at FDR < 0.05 with negative NES.
+^trait_pathways$,nes,fgsea normalised enrichment score: positive = the set sits towards the end of the ranking that rises with the trait.
+^trait_pathways$,leading_edge,"fgsea leading edge: the set's genes that drive the score, separated by ;."
+^trait_selection$,hits,Traits of the window against which fgsea calls the set at FDR < 0.05.
+^trait_selection$,same_sign,Whether the set's FDR < 0.05 calls in the window agree in sign.
+^trait_selection$,strength,Summed |NES| across the window's traits.
+^trait_selection$,rank,"Rank within the window: agreeing sign first, then strength."
+^trait_selection$,cut_0.75,Tree cluster within the window at Jaccard-distance height 0.75.
+^trait_selection$,cut_0.85,Tree cluster within the window at height 0.85 (drawn in the figure).
+^trait_selection$,cut_0.9,Tree cluster within the window at height 0.9.
+^trait_selection$,tree_order,Position of the set in the window's tree (leaf order).
+^trait_selection$,representative_0.75,Whether the set is its cluster's strongest at cut 0.75.
+^trait_selection$,representative_0.85,Whether the set is its cluster's strongest at cut 0.85 (drawn in the figure).
+^trait_selection$,representative_0.9,Whether the set is its cluster's strongest at cut 0.9.
+^(profile_groups|profile_members|profile_means|trait_groups)$,group,"Cluster number from dynamicTreeCut (a protein group, not HR or LR)."
+,mean_t,Mean limma t of the group's proteins (profile groups: mean over all screens).
+,share_positive,Share of the group's proteins with a positive t.
+,main_module,WGCNA module holding most of the group's proteins (grey: no module).
+^(profile_groups|trait_groups)$,proteins,"Up to 15 of the group's proteins with the largest |t|, by gene."
+^(profile_groups|trait_groups)$,top_set,Most over-represented gene set among the group's proteins (clusterProfiler enricher; smallest p).
+,top_set_p,Over-representation p of the top set.
+^(profile_groups|trait_groups)$,top_set_fdr,BH-adjusted p of the top set across the sets tested for the group.
+^profile_means$,screen,Window and trait of the change score.
+,silhouette,"Mean silhouette width of the clustering (-1 to 1): how much closer proteins sit to their own group than to the next."
+,n_hits,Proteins at p < 0.05 for the trait in the window (the proteins clustered).
+^module_qc$,power_other,Soft power compared with the power-12 modules.
+^module_qc$,module,Module at power 12.
+^module_qc$,kept_share,Share of the power-12 module's proteins in its best-matching module at the other power.
+^module_qc$,n_modules_other,Modules found at the other power.
+^module_qc$,grey_other,Proteins in no module at the other power.
+^a_responders$,block,"Row block: Shared (Π < 0.05 in both groups' training or acute contrasts), HR only or LR only."
+^a_responders$,selection_pi,"Π the row was ranked on: the group's smallest Π over its training and acute contrasts; for Shared, the larger of the two groups' values."
+^b_hr_lr_candidates$,block,"Row block: the panel (Between groups or Interaction) of the contrast where the protein's Π is smallest."
+^(b_hr_lr_candidates|c_trajectories)$,selected_in,Contrast giving the protein's smallest Π among the HR - LR and interaction contrasts.
+^(b_hr_lr_candidates|c_trajectories)$,selection_pi,Smallest Π of the protein among the HR - LR and interaction contrasts (the ranking value).
+^(a_responders|b_hr_lr_candidates)$,row_order,Position of the protein within its block (1 at the top).
+^c_trajectories$,log2_abundance,"Blood-corrected log2 protein value in the biopsy (01_Processing/03_Blood_Correction)."
+^c_trajectories$,observed,TRUE when at least one precursor of the protein was observed in the biopsy; FALSE when limpa modelled the value from the detection curve.
+^a_auc_top$,rank,"Rank within task and feature type: smallest Wilcoxon p, then AUC furthest from 0.5."
+^a_design$,asset,Image file drawn as the design panel.
+^a_design$,width_px,Width of the design image in pixels.
+^a_design$,height_px,Height of the design image in pixels.
+^a_design$,n_people,People analysed.
+^a_design$,n_hr,HR people analysed.
+^a_design$,n_lr,LR people analysed.
+^a_design$,n_biopsies,Biopsies analysed.
+^b_pca$,permanova_n,Biopsies in that time point's PERMANOVA.
+^b_pca$,permanova_r2,Share of distance variation HR/LR explains at that time point (PERMANOVA R squared).
+^b_pca$,permanova_p,PERMANOVA p for HR/LR at that time point.
+^c_counts$,family,"Contrast family the row sits under: Training, Acute, HR - LR or Interaction."
+^c_counts$,label,Row label: the group for a within-group window; the time point for HR - LR; the window for an interaction.
+^c_counts$,n_pi,Proteins at Π < 0.05 in that direction.
+^c_counts$,n_chance,Proteins expected at p < 0.05 in one direction by chance: 2.5% of those tested.
+^c_counts$,n_nominal,Proteins at p < 0.05 in that direction.
+^c_counts$,n_fdr_05,Proteins at FDR < 0.05 in that direction.
+^d_fry_transfer$,window,Window the set comes from: Training (T2 - T1) or Acute (T3 - T2).
+^d_fry_transfer$,from_group,Group whose contrast chose the set.
+^d_fry_transfer$,in_group,Group whose contrast the set is tested in.
+^d_fry_transfer$,criterion,"Selection of the set: pi (Π < 0.05) or nominal (p < 0.05)."
+^d_fry_transfer$,set_direction,Direction of the set's members in the group that chose them.
+^d_fry_transfer$,set_size,Proteins in the set.
+^d_fry_transfer$,tested,"Whether fry tested the set; sets under 5 proteins were not tested."
+^d_fry_transfer$,direction,Direction fry reports for the set in the other group's contrast.
+^d_fry_transfer$,evidence,"Evidence level drawn: FDR < 0.05, p < 0.05 only, or not significant."
+^d_fry_transfer$,signed_log_p,"-log10 fry p, negative for down sets: the bar drawn."
+^a_trait_changes$,block,"Which axis the trait is drawn on: % change, composite score or volume load (kg)."
+^a_trait_changes$,value,"The person's T1 to T2 value of the trait: % change, composite hypertrophy score, or total volume load in kg."
+^(b_links_vs_chance|a_slope_counts)$,n_expected,Features expected at p < 0.05 by chance alone: 5% of those tested.
+^d_profile_clusters$,group,Profile group number from dynamicTreeCut (03_Profile_Clusters).
+^d_profile_clusters$,top_set,Most over-represented gene set among the group's proteins (clusterProfiler enricher).
+^d_profile_clusters$,top_set_fdr,BH-adjusted p of the top set across the sets tested for the group.
+^d_profile_clusters$,screen,Window and trait of the change score.
+^b_within_rho$,rho_HR,Spearman rho between the feature and the trait across the HR people.
+^b_within_rho$,rho_LR,Spearman rho between the feature and the trait across the LR people.
+^b_within_rho$,t,Moderated t of the HR slope minus LR slope (limma).
+^b_within_rho$,p,p of the HR slope minus LR slope.
+^b_within_rho$,fdr,"BH-adjusted p of the slope difference within feature type, window and trait (and collection for sets)."
+^b_within_rho$,evidence,"Slope-difference call: FDR < 0.05, p < 0.05 only, or not significant."
+^c_top_slope$,feature_value,"The feature's value for the person in the window: log2 abundance, set score or eigengene, as a level or a change."
+^c_top_slope$,trait_value,The person's value of the trait in the window.
+^a_identity$,identity,"Label drawn for the module: its top ORA set when FDR < 0.05 (else no set at FDR < 0.05), with the colour in brackets."
+^a_identity$,string_p,Nominal p of the STRING interaction enrichment among the module's members.
+^b_eigengene_matrix$,logFC,Difference in the module eigengene for the contrast; positive = higher at the later time point or in HR.
+^b_eigengene_matrix$,logFC_lower,Lower bound of the 95% confidence interval of the eigengene difference (limma topTable).
+^b_eigengene_matrix$,logFC_upper,Upper bound of the 95% confidence interval of the eigengene difference (limma topTable).
+^b_eigengene_matrix$,t,Moderated t statistic of the eigengene difference (limma).
+^b_eigengene_matrix$,fry_direction,Direction fry gives for the module's proteins in the contrast: Up or Down.
+^b_eigengene_matrix$,fry_p,fry p for the module's proteins as a set in the contrast.
+^b_eigengene_matrix$,fry_fdr,Benjamini-Hochberg adjusted fry p across modules within the contrast.
+^c_trajectories$,eigengene,Eigengene of the drawn module in the biopsy.
+^c_trajectories$,chosen_contrast,Contrast whose eigengene p chose the module: the smallest p outside the two interactions.
+^c_trajectories$,chosen_p,Eigengene p of the module in chosen_contrast.
+^d_preservation$,reference,Group whose network defined the module.
+^d_preservation$,test,Group whose data the module is tested in.
+^d_preservation$,module,Module colour in the reference group's network (not the full-cohort colour).
+^(a_characterisation|c_module_qc)$,part,Which of the panel's plots the row belongs to; the sheet's read_me names them.
+^a_characterisation$,row,"Row within the module's block: set rank for ora, line of the member grid for member."
+^a_characterisation$,column,Column of the member grid (member rows only).
+^a_characterisation$,rank,Member's rank by kME within the module (member rows only).
+^a_characterisation$,label,Set name as printed in the figure.
+^c_module_qc$,power,Soft-thresholding power.
+^c_module_qc$,n_grey,Proteins in no module at that power.
+^c_module_qc$,module,Module at power 12.
+^c_module_qc$,kept_share,Share of the power-12 module's proteins in its best-matching module at the other power.
+^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09)$,window,"Window that selected the set: Training, Acute, Between groups (HR - LR in 02_Set_Contrasts) or Interaction."
+^(a_pathways|b_cut_075|c_cut_09|c_trait_pathways)$,rank,"Rank of the set within its window: agreeing sign first, then summed |NES|; rows run in this order."
+^a_tree_matrix$,tree_order,Position of the set in its window's tree (leaf order); rows run in this order.
+^a_tree_matrix$,cut_0.85,Tree cluster within the window at Jaccard-distance height 0.85; grey and white bands alternate between clusters.
+^a_tree_matrix$,representative_0.85,Whether the set represents its cluster at height 0.85 (bold; drawn in Figure 3).
+^d_go_slim$,order,"Row position, top first, from average-linkage clustering of the theme's NES across the nine contrasts."
+^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09|d_go_slim)$,nes,fgsea normalised enrichment score in the contrast: positive = the set sits towards the up end of the ranking.
+^c_trait_pathways$,nes,fgsea normalised enrichment score against the trait: positive = the set sits towards the end of the ranking that rises with the trait.
+^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09|d_go_slim|c_trait_pathways)$,label,Set name as printed in the figure; * marks calls of opposite sign within the window.
+^a_no_clusters$,layer,"What the row draws: correlation (a heatmap cell), strip (a biopsy's annotation) or gap (one k of the gap curve)."
+^a_no_clusters$,sample_a,Biopsy on the heatmap's x axis.
+^a_no_clusters$,sample_b,Biopsy on the heatmap's y axis.
+^a_no_clusters$,r,Pearson correlation of the two biopsies' blood-corrected scaled values.
+^a_no_clusters$,position_a,Position of sample_a in the saved clustering order.
+^a_no_clusters$,position_b,Position of sample_b in the saved clustering order.
+^a_no_clusters$,position,Position of the biopsy in the saved clustering order.
+^a_no_clusters$,k,Number of clusters.
+^a_no_clusters$,gap,Gap statistic: log within-cluster dispersion of reference data minus that of the data.
+^a_no_clusters$,se,Simulation standard error of the gap.
+^a_no_clusters$,chosen,Whether this k is the one the one-standard-error rule (Tibs2001SEmax) picks.
+^b_variance_shares$,component,"Variance component: person, time point, HR/LR, blood index or residual."
+^b_variance_shares$,share,Share of the protein's variance from the component (variancePartition).
+^c_diffvar$,log_var_ratio,"DiffVar log variance ratio, LR relative to HR: positive = LR people spread more."
+^c_diffvar$,call,"Colour drawn: HR more variable or LR more variable at p < 0.05, else not significant."
+^c_diffvar$,beyond_axis,"Whether the ratio lies beyond the axis (|ratio| > 4), counted but not drawn."
+^d_pc_covariates$,covariate,Biopsy covariate regressed on the component.
+^d_pc_covariates$,r2,R² of the covariate alone on the component's scores.
+^d_pc_covariates$,pc_share,Share of total variance on the component.
+^d_pc_covariates$,covariate_label,Row label of the covariate.
+^d_pc_covariates$,component_label,Column label: the component and its share of variance.

@@ -22,7 +22,7 @@ quarto render 01_Processing/01_Precursors/a_script/precursors.qmd --output-dir .
 |---|---|
 | `c_data/precursors.rds` | limma `EList`: log2 precursor intensities (`NA` where undetected), precursor annotation, biopsy table |
 | `c_data/run_map.csv` | every report run: biopsy, injection, precursors detected, kept or not |
-| `c_data/precursors.xlsx` | the run map, MBR and no-MBR q-filter counts, the filter log, detection per run |
+| `c_data/precursors.xlsx` | the run map, the filter log, precursors and proteins detected per run |
 | `b_reports/precursors.html` | the rendered walkthrough |
 
 ## Read with care

@@ -13,8 +13,8 @@ them.
 
 Sixteen people each gave three biopsies: T1 before training, T2 after training, T3 after one more
 session at the end of training. `sample_id` names a biopsy (`S03_T1`), `subject` a person
-(`HR_S03`), and `group_time` the group and time point (`HR_T1`). `01_Precursors` maps each report run
-to a `sample_id`; `subject` links a biopsy to `phenotype.csv`. The report also holds S07 and S13,
+(`HR_S03`), and `group_time` the group and time point (`HR_T1`). `01_Precursors` maps each report
+run to a `sample_id`; `subject` links a biopsy to `phenotype.csv`. The report also holds S07 and S13,
 who are not analysed.
 
 ## HR and LR are the two ends of the composite

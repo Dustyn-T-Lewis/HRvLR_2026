@@ -1,0 +1,292 @@
+---
+title: "Gene sets"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+A gene set is a named list of genes that share a pathway or function, such as "oxidative
+phosphorylation". Set-level methods ask whether a set's proteins move together. This step decides
+set membership once, for every set-level analysis: which protein stands for each gene, which sets
+are tested, and which genes each set holds in this experiment.
+
+## Packages
+
+GSEABase reads the GO Slim file and GO.db supplies the Gene Ontology hierarchy; both are called
+with `::` where used.
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tibble)
+library(purrr)
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  proteins = "01_Processing/02_Quantification/c_data/proteins.rds",
+  msigdb = "01_Processing/04_Gene_Sets/references/msigdb_2026.1.Hs.rds",
+  goslim = "01_Processing/04_Gene_Sets/references/goslim_generic.obo"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Inputs
+
+The protein list and its annotation come from limpa's protein `EList` (`genes`: gene symbol,
+precursor count `NPrec`, share of precursor values observed `PropObs`). Membership never reads a
+protein value or a fold change. Two fixed snapshots sit in `references/` (sources in
+`references/README.md`):
+
+- MSigDB release 2026.1.Hs, saved from msigdbr. It supplies Hallmark, Reactome, KEGG Legacy and GO
+  Biological Process (GO:BP) membership. Membership shifts between releases, so the release is read
+  from the snapshot, not from the installed package.
+- The GO Consortium's generic GO Slim, a short list of broad GO terms.
+
+```{r}
+#| label: inputs
+proteins <- readRDS(paths[["proteins"]])
+msigdb <- readRDS(paths[["msigdb"]])
+collections <- msigdb$collections
+membership <- rename(msigdb$membership, collection = database)
+msigdb$db_version
+count(distinct(membership, set_id, collection), collection)
+```
+
+## One protein per gene
+
+Set methods need one row per gene symbol. The symbol is the first in `Genes` when limpa lists
+several; a protein with none is dropped. When two proteins share a symbol, the one with the higher
+share of observed precursor values (`PropObs`) represents it, then the one with more precursors
+(`NPrec`), then the lower accession. The rule reads detection only.
+
+```{r}
+#| label: protein-map
+protein_map <- proteins$genes |>
+  as_tibble(rownames = "uniprot_id") |>
+  transmute(
+    uniprot_id,
+    gene = trimws(sub(";.*", "", Genes)),
+    n_precursors = NPrec,
+    prop_observed = PropObs,
+    mapping_status = if_else(is.na(gene) | !nzchar(gene), "missing_symbol", "candidate"),
+    gene = if_else(mapping_status == "candidate", gene, NA_character_)
+  )
+representatives <- protein_map |>
+  filter(mapping_status == "candidate") |>
+  arrange(gene, desc(prop_observed), desc(n_precursors), uniprot_id) |>
+  distinct(gene, .keep_all = TRUE) |>
+  pull(uniprot_id)
+c(proteins = nrow(protein_map), representatives = length(representatives))
+```
+
+Plot labels must be unique, so a symbol shared by two proteins gets its accession appended.
+
+```{r}
+#| label: labels
+protein_map <- protein_map |>
+  mutate(
+    selected = uniprot_id %in% representatives,
+    mapping_status = case_when(
+      selected ~ "representative",
+      mapping_status == "candidate" ~ "duplicate_gene",
+      TRUE ~ mapping_status
+    ),
+    label = if_else(
+      is.na(gene), uniprot_id,
+      if_else(duplicated(gene) | duplicated(gene, fromLast = TRUE),
+        paste0(gene, " (", uniprot_id, ")"), gene
+      )
+    )
+  )
+gene_universe <- protein_map$gene[protein_map$selected]
+stopifnot(!anyDuplicated(protein_map$label))
+mapping_summary <- count(protein_map, mapping_status, name = "n_proteins")
+mapping_summary
+filter(protein_map, gene %in% gene[mapping_status == "duplicate_gene"])
+```
+
+One symbol, MOCS2, is carried by two proteins (MOCS2A and MOCS2B); the one with the higher
+observed share stands for it. The gene universe, the genes this experiment can speak to, holds
+`r length(gene_universe)` genes.
+
+## Which MSigDB sets qualify by size
+
+Each set is cut down to the genes measured here. A set qualifies by size when its source size is 15
+to 500 genes and at least 15 of them were measured. 15 to 500 is the GSEA software's default range,
+and the manuscript uses the same bounds.
+
+```{r}
+#| label: msigdb-sets
+set_members <- distinct(membership, set_id, gene)
+sets_full <- split(set_members$gene, set_members$set_id)
+sets_measured <- map(sets_full, intersect, y = gene_universe)
+set_catalog <- membership |>
+  distinct(set_id, collection, pathway, source_id, description) |>
+  mutate(
+    source_size = lengths(sets_full)[set_id],
+    measured_size = lengths(sets_measured)[set_id],
+    size_ok = source_size >= 15 & source_size <= 500 & measured_size >= 15
+  )
+stopifnot(!anyDuplicated(set_catalog$set_id))
+count(set_catalog, collection, size_ok)
+```
+
+## GO Slim sets
+
+GO terms form a hierarchy, and a broad term covers every narrower term beneath it. Each GO Slim
+term becomes a set holding every measured gene annotated to it or to any term below it. The genes
+come from the full MSigDB GO:BP membership, so a gene is not lost when its own GO:BP set failed the
+size rule. A slim term is broad by design, so the 15-to-500 rule reads measured size only. GO Slim
+is an overview family: its sets nest and overlap the GO:BP sets.
+
+```{r}
+#| label: go-slim
+slim_offspring <- AnnotationDbi::mget(
+  GSEABase::ids(GSEABase::getOBOCollection(paths[["goslim"]])), GO.db::GOBPOFFSPRING,
+  ifnotfound = NA
+)
+slim_offspring <- slim_offspring[!is.na(slim_offspring)]
+go_genes <- membership |>
+  filter(collection == "GOBP") |>
+  with(split(gene, source_id))
+slim_sets <- imap(slim_offspring, function(descendants, slim_id) {
+  covered <- intersect(c(slim_id, descendants), names(go_genes))
+  sort(intersect(unique(unlist(go_genes[covered], use.names = FALSE)), gene_universe))
+})
+slim_catalog <- tibble(
+  theme_id = names(slim_sets),
+  pathway = unname(AnnotationDbi::Term(GO.db::GOTERM[theme_id])),
+  measured_size = lengths(slim_sets)
+) |>
+  transmute(
+    set_id = paste("GO_Slim", toupper(gsub("[^A-Za-z0-9]+", "_", pathway)), sep = "|"),
+    collection = "GO_Slim", pathway, source_id = theme_id,
+    description = "GO Slim term: every measured gene under it in the GO:BP hierarchy",
+    source_size = NA_integer_, measured_size,
+    size_ok = measured_size >= 15 & measured_size <= 500
+  )
+names(slim_sets) <- slim_catalog$set_id
+set_catalog <- bind_rows(set_catalog, slim_catalog)
+sets_measured <- c(sets_measured, slim_sets)
+c(slim_terms = nrow(slim_catalog), slim_size_ok = sum(slim_catalog$size_ok))
+```
+
+## Disease sets are left out
+
+KEGG, Reactome and GO include sets named for a disease or a pathogen ("KEGG_PARKINSONS_DISEASE",
+"REACTOME_SARS_COV_2_INFECTION"). In healthy muscle they mostly repackage mitochondrial, ribosomal
+or signalling proteins already covered by the process sets, and a hit reads as a disease claim the
+study cannot make. They are removed by name, not by content: a set is a disease set when a whole
+word of its name (underscores split words, a trailing S allowed) is one of `disease_words`. The one
+name that matches but is not a disease, the cytokine leukaemia inhibitory factor, is listed in
+`not_disease` and kept. The rule runs on every collection; Hallmark names match none of the words.
+
+```{r}
+#| label: disease-rule
+disease_words <- c(
+  "DISEASE", "DISORDER", "INFECTION", "CANCER", "CARCINOMA", "ONCOGENIC", "LEUKEMIA", "LYMPHOMA",
+  "GLIOMA", "MELANOMA", "SARCOMA", "DIABETES", "CARDIOMYOPATHY", "MYOCARDITIS", "SCLEROSIS",
+  "LUPUS", "ASTHMA", "ARTHRITIS", "VIRAL", "VIRUS", "SYMBIONT", "INFLUENZA", "DENGUE", "HIV",
+  "HCMV", "SARS", "MEASLES", "HERPES", "HEPATITIS", "TUBERCULOSIS", "MALARIA", "LEISHMANIA",
+  "TOXOPLASMOSIS", "SALMONELLA", "SHIGELLOSIS", "HUNTINGTON", "PARKINSON", "ALZHEIMER", "PRION"
+)
+not_disease <- "LEUKEMIA_INHIBITORY_FACTOR"
+disease_rule <- paste0("(^|_)(", paste(disease_words, collapse = "|"), ")S?(_|$)")
+set_catalog <- set_catalog |>
+  mutate(
+    name_key = toupper(gsub("[^A-Za-z0-9]+", "_", pathway)),
+    disease_set = grepl(disease_rule, name_key) & !grepl(not_disease, name_key),
+    qualifies = size_ok & !disease_set
+  ) |>
+  select(-name_key)
+disease_excluded <- set_catalog |>
+  filter(size_ok, disease_set) |>
+  select(set_id, collection, pathway, source_size, measured_size)
+count(disease_excluded, collection)
+print(select(disease_excluded, collection, pathway), n = Inf)
+```
+
+The rule removes host-defence and host-machinery sets as well ("response to virus", "viral gene
+expression", "viral process", "symbiont entry into host"), because their names carry "virus",
+"viral" or "symbiont". They are listed above and in the `disease_excluded` sheet;
+add a name to `not_disease` to bring one back.
+
+```{r}
+#| label: tested-sets
+sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
+c(tested = length(sets), excluded_disease = nrow(disease_excluded))
+```
+
+## Validation
+
+Every set name is unique, every tested set meets its size rule and is not a disease set, and every
+member is in the gene universe.
+
+```{r}
+#| label: validate
+stopifnot(
+  !anyDuplicated(set_catalog$set_id), !anyDuplicated(names(sets)),
+  all(lengths(sets) >= 15), all(lengths(sets) <= 500),
+  all(unlist(sets) %in% gene_universe),
+  !any(names(sets) %in% disease_excluded$set_id),
+  setequal(names(sets), set_catalog$set_id[set_catalog$qualifies])
+)
+```
+
+## Summary
+
+```{r}
+#| label: summary
+collection_summary <- set_catalog |>
+  summarise(
+    n_in_source = n(), n_size_ok = sum(size_ok), n_disease = sum(size_ok & disease_set),
+    n_qualifying = sum(qualifies), median_measured = median(measured_size[qualifies]),
+    .by = collection
+  ) |>
+  arrange(match(collection, c(collections, "GO_Slim")))
+collection_summary
+```
+
+`r nrow(protein_map)` proteins map to `r length(gene_universe)` genes. `r length(sets)` sets
+qualify across `r nrow(collection_summary)` collections, after `r nrow(disease_excluded)` disease
+sets were removed by name.
+
+## Save
+
+`gene_sets.rds` holds the tested sets, the full catalogue (with `size_ok`, `disease_set` and
+`qualifies`), the protein-to-gene map and the gene universe; every set-level step reads it.
+
+```{r}
+#| label: save
+out <- here("01_Processing", "04_Gene_Sets", "c_data")
+dir.create(out, showWarnings = FALSE)
+saveRDS(
+  list(
+    sets = sets, set_catalog = set_catalog, protein_map = protein_map,
+    gene_universe = gene_universe
+  ),
+  file.path(out, "gene_sets.rds"),
+  compress = "xz"
+)
+sheets <- list(
+  collection_summary = collection_summary,
+  disease_excluded = disease_excluded,
+  set_catalog = set_catalog,
+  protein_gene_map = protein_map,
+  mapping_summary = mapping_summary
+)
+holds <- c(
+  "Sets per collection: in the source, passing the size rule, removed as disease, tested.",
+  "Sets that pass the size rule but are removed because their name matches the disease rule.",
+  "Every set with its source and measured size, the size rule, the disease flag, and qualifies.",
+  "Every protein, its gene symbol, and the representative chosen per symbol.",
+  "Proteins per mapping status."
+)
+write_workbook(sheets, holds, file.path(out, "gene_sets.xlsx"), inputs, paths)
+```
