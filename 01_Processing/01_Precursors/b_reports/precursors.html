@@ -2383,7 +2383,7 @@ vertical-align: -.125em;
 </section>
 <section id="keep-the-chosen-runs" class="level2">
 <h2 class="anchored" data-anchor-id="keep-the-chosen-runs">Keep the chosen runs</h2>
-<p>The chosen runs are renamed to their <code>sample_id</code> and matched to <code>metadata.csv</code>. A precursor detected only in dropped runs must go: left in, it looks undetected in all 48 biopsies, which shifts the detection curve and pulls its protein’s values down (tested: values moved by up to 5 log2 units). limpa’s <code>removeNARows()</code> does this, but in limpa 1.4.0 with limma 3.68 it fails inside limma’s <code>EList</code> subsetting (<code>y[keep, , ]</code> passes an empty argument), so plain subsetting does it.</p>
+<p>The chosen runs are renamed to their <code>sample_id</code> and matched to <code>metadata.csv</code>. A precursor detected only in dropped runs must go: left in, it looks undetected in all 48 biopsies, which shifts the detection curve and pulls its protein’s values down (tested: values moved by up to 5 log2 units). limpa’s <code>removeNARows()</code> does this, but with the installed limpa and limma it fails inside limma’s <code>EList</code> subsetting (<code>y[keep, , ]</code> passes an empty argument), so plain subsetting does it.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>chosen <span class="ot">&lt;-</span> <span class="fu">filter</span>(run_map, chosen)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[, chosen<span class="sc">$</span>run]</span>
