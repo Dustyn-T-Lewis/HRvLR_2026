@@ -1,6 +1,6 @@
-# F1 b: the proteome within each time point, three PCAs in a row. Each carries the test of HR
-# against LR (PERMANOVA) and the two checks for natural clusters (gap statistic k, and how a forced
-# two-cluster split matches HR/LR).
+# F1 b: the proteome within each time point, three PCAs in a row, each group in its 95% ellipse and
+# labelled at its centre. Each carries the test of HR against LR (PERMANOVA) and the two checks for
+# natural clusters (gap statistic k, and how a forced two-cluster split matches HR/LR).
 library(here)
 library(dplyr)
 library(ggplot2)
@@ -46,12 +46,25 @@ time_plot <- function(time) {
   tests <- with(d[1, ], sprintf(
     "R² %.2f, %s\ngap k = %d; ARI %.2f", permanova_r2, label_p(permanova_p), k_gap, ari_group
   ))
-  ggplot(d, aes(PC1, PC2)) +
+  centres <- summarise(d, across(c(PC1, PC2), mean), .by = group)
+  ggplot(d, aes(PC1, PC2, colour = group)) +
     geom_hline(yintercept = 0, linewidth = 0.2, colour = "grey85") +
     geom_vline(xintercept = 0, linewidth = 0.2, colour = "grey85") +
-    geom_point(aes(colour = group, shape = group), size = 1.5) +
-    scale_colour_manual(values = group_greys, name = NULL) +
-    scale_shape_manual(values = group_shapes, name = NULL) +
+    stat_ellipse(
+      aes(fill = group), geom = "polygon", type = "norm", level = 0.95, alpha = 0.12,
+      linewidth = 0.3
+    ) +
+    geom_point(aes(shape = group), size = 1.5) +
+    # The two centres nearly coincide, so each label is pushed clear with a line to its centre.
+    ggrepel::geom_label_repel(
+      aes(label = group), centres,
+      size = 2.2, fontface = "bold", label.size = 0, fill = alpha("white", 0.8),
+      label.padding = unit(0.4, "mm"), box.padding = unit(4, "mm"), min.segment.length = 0,
+      segment.size = 0.25, seed = 1
+    ) +
+    geom_point(data = centres, shape = 3, size = 1.5, stroke = 0.5) +
+    scale_colour_manual(values = group_greys, aesthetics = c("colour", "fill"), guide = "none") +
+    scale_shape_manual(values = group_shapes, guide = "none") +
     labs(
       title = time_names[[time]], subtitle = tests,
       x = axis_title(1, d$pc1_share[1]), y = axis_title(2, d$pc2_share[1])
@@ -64,21 +77,19 @@ time_plot <- function(time) {
     )
 }
 
-grid <- wrap_plots(lapply(times, time_plot), nrow = 1) +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom", legend.margin = margin(0, 0, 0, 0))
+grid <- wrap_plots(lapply(times, time_plot), nrow = 1)
 panel <- wrap_elements(panel = grid) +
   labs(
     title = "Proteome within each time point",
     subtitle = with(time_test, sprintf(
       paste0(
-        "PCA of blood-corrected values, proteins scaled. Per time point: PERMANOVA for HR/LR;\n",
-        "gap k (1 = no natural clusters); ARI, forced two-cluster split vs HR/LR (0 = chance)\n",
-        "time across all %d biopsies: PERMANOVA R² %.2f, %s"
+        "PCA of blood-corrected values, proteins scaled; 95%% ellipse per group. Per time point: ",
+        "PERMANOVA for HR/LR; gap k (1 = no natural clusters);\nARI of a forced two-cluster split ",
+        "against HR/LR (0 = chance). Time across all %d biopsies: PERMANOVA R² %.2f, %s"
       ),
       n_samples, r2, label_p(p)
     ))
   ) +
   figure_theme
 
-save_panel(panel, "F1", "b_pca", 105, 70)
+save_panel(panel, "F1", "b_pca", 155, 66)

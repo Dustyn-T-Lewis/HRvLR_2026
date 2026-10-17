@@ -114,4 +114,4 @@ panel <- ggplot(filter(plotted, tested), aes(signed_log_p, row)) +
     alpha = guide_legend(order = 2, override.aes = list(fill = "grey30", colour = "grey30"))
   )
 
-save_panel(panel, "F1", "e_fry_transfer", 80, 95)
+save_panel(panel, "F1", "e_fry_transfer", 105, 95)

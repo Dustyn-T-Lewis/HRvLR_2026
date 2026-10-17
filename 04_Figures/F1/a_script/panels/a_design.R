@@ -27,7 +27,7 @@ stopifnot(
 panel <- ggplot() +
   annotation_custom(grid::rasterGrob(
     design,
-    y = unit(1, "npc"), just = "top", interpolate = TRUE
+    width = unit(1, "npc"), y = unit(1, "npc"), just = "top", interpolate = TRUE
   )) +
   labs(
     title = "Design and contrasts",
@@ -42,4 +42,4 @@ panel <- ggplot() +
     plot.title.position = "plot"
   )
 
-save_panel(panel, "F1", "a_design", 75, 70)
+save_panel(panel, "F1", "a_design", 95, 66)

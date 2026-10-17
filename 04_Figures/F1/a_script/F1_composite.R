@@ -11,17 +11,17 @@ stopifnot(
 # Panels are not aligned with each other, so a wrapped panel's title stays beside its tag.
 plots <- lapply(panels, \(env) free(env$panel))
 
-# Widths in 5 mm columns: a 75 mm beside b 105 mm, then c 50, d 50 and e 80 mm.
+# Widths in 5 mm columns of a 250 mm page: a 95 mm beside b 155 mm, then c 70, d 75 and e 105 mm.
 layout <- c(
-  area(1, 1, 1, 15), area(1, 16, 1, 36),
-  area(2, 1, 2, 10), area(2, 11, 2, 20), area(2, 21, 2, 36)
+  area(1, 1, 1, 19), area(1, 20, 1, 50),
+  area(2, 1, 2, 14), area(2, 15, 2, 29), area(2, 30, 2, 50)
 )
-figure <- wrap_plots(plots, design = layout, heights = c(78, 100)) +
+figure <- wrap_plots(plots, design = layout, heights = c(66, 95)) +
   plot_annotation(tag_levels = "a") &
   figure_tags
 ggplot2::ggsave(
   here("04_Figures", "F1", "b_reports", "F1_composite.pdf"), figure,
-  width = 180, height = 185, units = "mm", device = grDevices::cairo_pdf
+  width = 250, height = 165, units = "mm", device = grDevices::cairo_pdf
 )
 
 write_figure_workbook(panels, "F1")
