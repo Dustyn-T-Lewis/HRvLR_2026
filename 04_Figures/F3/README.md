@@ -4,7 +4,7 @@ One panel, drawn with the shared pathway dot-matrix (`style/pathway_grid.R`).
 
 | Panel | Shows |
 |---|---|
-| a_pathways | Per window (Training, Acute, Between groups, Interaction), the sets `02_HRvLR/02_Set_Contrasts` selects as candidates, grouped by a tree of shared proteins and cut at Jaccard height 0.85; one set per cluster (`representative_0.85`), up to ten per window by rank. Each set is drawn in all nine contrasts: fill fgsea NES, size -log10 FDR, square the database. `*` marks a set whose FDR < 0.05 calls in its window disagree in sign. |
+| a_pathways | Seven row blocks: Training and Acute each split into shared, HR only and LR only (fgsea FDR < 0.05 in both groups, HR alone or LR alone; candidate count in the strip), then Between groups (two of three time points). Within a block, sets are grouped by a tree of shared proteins cut at Jaccard height 0.85, each cluster shown by its most specific set (`representative_0.85`), up to eight per block by rank. Each set is drawn in all nine contrasts: fill fgsea NES, size -log10 FDR, square the database. `*` marks calls of opposite sign within the window, `†` a set whose interaction also reaches FDR < 0.05. The interaction window is in S3. |
 
 Disease sets are removed upstream in `01_Processing/04_Gene_Sets`; GO Slim is left out of the
 selection (see S3d).

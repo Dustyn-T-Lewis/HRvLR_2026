@@ -138,17 +138,20 @@ soft_threshold,chosen,TRUE for the power used.
 ^set_tests$,nes,fgsea normalised enrichment score: positive = the set sits towards the up end of the ranking.
 ^set_tests$,leading_edge,"fgsea leading edge: the set's genes that drive the score, separated by ;."
 ^selection$,window,"Figure window: Training, Acute, HR - LR or Interaction."
+^selection$,block,"Rows of the figure: the window, split for Training and Acute into shared, HR only and LR only."
+^selection$,pattern,"Training and Acute: shared (FDR < 0.05 in HR and LR), HR only or LR only; blank in the other windows."
 ^selection$,hits,Contrasts in the window where fgsea calls the set at FDR < 0.05.
 ^selection$,same_sign,Whether the set's FDR < 0.05 calls in the window agree in sign.
-^selection$,strength,Summed |NES| across the window's contrasts.
-^selection$,rank,"Rank within the window: agreeing sign first, then strength."
-^selection$,cut_0.75,Tree cluster within the window at Jaccard-distance height 0.75.
-^selection$,cut_0.85,Tree cluster within the window at height 0.85 (main figure).
-^selection$,cut_0.9,Tree cluster within the window at height 0.9.
-^selection$,tree_order,Position of the set in the window's tree (leaf order).
-^selection$,representative_0.75,Whether the set is its cluster's strongest at cut 0.75.
-^selection$,representative_0.85,Whether the set is its cluster's strongest at cut 0.85 (drawn in the main figure).
-^selection$,representative_0.9,Whether the set is its cluster's strongest at cut 0.9.
+^selection$,best_p,Smallest fgsea p among the window's FDR < 0.05 calls.
+^selection$,interaction,"Training and Acute: whether the window's interaction (HR change minus LR change) reaches fgsea FDR < 0.05; blank in the other windows."
+^selection$,rank,"Rank within the block: agreeing sign first, then interaction, then best_p."
+^selection$,cut_0.75,Tree cluster within the block at Jaccard-distance height 0.75.
+^selection$,cut_0.85,Tree cluster within the block at height 0.85 (main figure).
+^selection$,cut_0.9,Tree cluster within the block at height 0.9.
+^selection$,tree_order,Position of the set in the block's tree (leaf order).
+^selection$,representative_0.75,"Whether the set represents its cluster at cut 0.75: the smallest set with p within 10-fold of the cluster's best."
+^selection$,representative_0.85,Whether the set represents its cluster at cut 0.85 (same rule; drawn in the main figure).
+^selection$,representative_0.9,Whether the set represents its cluster at cut 0.9 (same rule).
 ^variance_shares$,subject,Share of the protein's variance explained by person (variancePartition).
 ^variance_shares$,timepoint,Share of the protein's variance explained by time point.
 ^variance_shares$,group,Share explained by HR/LR (part of the between-person variation).
@@ -333,14 +336,16 @@ soft_threshold,chosen,TRUE for the power used.
 ^c_module_qc$,module,Module at power 12.
 ^c_module_qc$,kept_share,Share of the power-12 module's proteins in its best-matching module at the other power.
 ^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09)$,window,"Window that selected the set: Training, Acute, Between groups (HR - LR in 02_Set_Contrasts) or Interaction."
-^(a_pathways|b_cut_075|c_cut_09|c_trait_pathways)$,rank,"Rank of the set within its window: agreeing sign first, then summed |NES|; rows run in this order."
-^a_tree_matrix$,tree_order,Position of the set in its window's tree (leaf order); rows run in this order.
-^a_tree_matrix$,cut_0.85,Tree cluster within the window at Jaccard-distance height 0.85; grey and white bands alternate between clusters.
-^a_tree_matrix$,representative_0.85,Whether the set represents its cluster at height 0.85 (bold; drawn in Figure 3).
+^c_trait_pathways$,rank,"Rank of the set within its window: agreeing sign first, then summed |NES|; rows run in this order."
+^(a_pathways|b_cut_075|c_cut_09)$,rank,"Rank of the set within its block: agreeing sign first, then interaction FDR < 0.05, then smallest p; rows run in this order."
+^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09)$,block,"Row block: the window, split for Training and Acute into shared, HR only and LR only with the candidate count."
+^a_tree_matrix$,tree_order,Position of the set in its block's tree (leaf order); rows run in this order.
+^a_tree_matrix$,cut_0.85,Tree cluster within the block at Jaccard-distance height 0.85; grey and white bands alternate between clusters.
+^a_tree_matrix$,representative_0.85,Whether the set is its cluster's most specific at height 0.85 (bold; Figure 3 draws the first eight per block).
 ^d_go_slim$,order,"Row position, top first, from average-linkage clustering of the theme's NES across the nine contrasts."
 ^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09|d_go_slim)$,nes,fgsea normalised enrichment score in the contrast: positive = the set sits towards the up end of the ranking.
 ^c_trait_pathways$,nes,fgsea normalised enrichment score against the trait: positive = the set sits towards the end of the ranking that rises with the trait.
-^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09|d_go_slim|c_trait_pathways)$,label,Set name as printed in the figure; * marks calls of opposite sign within the window.
+^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09|d_go_slim|c_trait_pathways)$,label,Set name as printed in the figure; * marks calls of opposite sign within the window; † a training or acute set whose interaction also reaches FDR < 0.05.
 ^a_no_clusters$,layer,"What the row draws: correlation (a heatmap cell), strip (a biopsy's annotation) or gap (one k of the gap curve)."
 ^a_no_clusters$,sample_a,Biopsy on the heatmap's x axis.
 ^a_no_clusters$,sample_b,Biopsy on the heatmap's y axis.

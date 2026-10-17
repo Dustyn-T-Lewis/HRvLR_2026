@@ -10,7 +10,7 @@ and which went to supplements (see the root README).
 |---|---|---|
 | F1 | design; PCA per time point with PERMANOVA; proteins per contrast at Π, p and FDR; each group's training and acute sets tested in the other | S1: no natural clusters (correlation heatmap, gap statistic); variance shares; DiffVar; PCs against covariates |
 | F2 | proteins: responders, then exploratory HR − LR candidates | S2: single-feature classification AUC |
-| F3 | pathways: one representative set per tree cluster per window | S3: every candidate set grouped by tree, cuts 0.75 and 0.9, GO Slim overview |
+| F3 | pathways: shared, HR-only and LR-only blocks for training and the bout, then between groups; one set per tree cluster | S3: every candidate set grouped by tree, cuts 0.75 and 0.9, GO Slim overview |
 | F4 | traits: people's changes; links against chance; trait pathways; profile clusters | S4: HR slope minus LR slope |
 | F5 | modules: identity, eigengene contrasts, trajectories, preservation | S5: module characterisation with STRING; WGCNA module QC |
 

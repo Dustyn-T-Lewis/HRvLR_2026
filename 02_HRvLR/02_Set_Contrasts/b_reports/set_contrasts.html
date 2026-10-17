@@ -2373,76 +2373,113 @@ vertical-align: -.125em;
 </section>
 <section id="sets-for-the-pathway-figure" class="level2">
 <h2 class="anchored" data-anchor-id="sets-for-the-pathway-figure">Sets for the pathway figure</h2>
-<p>The figure groups the nine contrasts into four windows. A set is a candidate for a window when fgsea calls it at FDR &lt; 0.05 in both contrasts of the training or acute window, in at least two of the three HR − LR time points, or in either interaction. GO Slim is left out: its broad terms repeat GO:BP. Candidates are ranked by whether their calls agree in sign, then by summed |NES| across the window.</p>
+<p>The figure groups the nine contrasts into four windows. A set is a candidate for the training or acute window when fgsea calls it at FDR &lt; 0.05 in HR, in LR or in both, and that call places it in a block: shared, HR only or LR only. Between groups, a set needs FDR &lt; 0.05 at two of the three time points; in the interaction window, in either interaction. GO Slim is left out: its broad terms repeat GO:BP.</p>
+<p>A set in the HR-only block passed in HR and missed in LR. That alone does not show HR changed it more; the interaction contrast tests that, so each training and acute candidate also records whether its window’s interaction reaches FDR &lt; 0.05. Within a block, candidates rank by whether their calls agree in sign, then by that interaction, then by their smallest p.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>windows <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Training =</span> <span class="fu">c</span>(<span class="st">&quot;Training_HR&quot;</span>, <span class="st">&quot;Training_LR&quot;</span>), <span class="at">Acute =</span> <span class="fu">c</span>(<span class="st">&quot;Acute_HR&quot;</span>, <span class="st">&quot;Acute_LR&quot;</span>),</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">HR - LR</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;Baseline_HRvLR&quot;</span>, <span class="st">&quot;Trained_HRvLR&quot;</span>, <span class="st">&quot;Acute_HRvLR&quot;</span>),</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Interaction =</span> <span class="fu">c</span>(<span class="st">&quot;Training_Interaction&quot;</span>, <span class="st">&quot;Acute_Interaction&quot;</span>)</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>needed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Training =</span> <span class="dv">2</span>, <span class="at">Acute =</span> <span class="dv">2</span>, <span class="st">`</span><span class="at">HR - LR</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">2</span>, <span class="at">Interaction =</span> <span class="dv">1</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>needed <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Training =</span> <span class="dv">1</span>, <span class="at">Acute =</span> <span class="dv">1</span>, <span class="st">`</span><span class="at">HR - LR</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">2</span>, <span class="at">Interaction =</span> <span class="dv">1</span>)</span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>gsea_main <span class="ot">&lt;-</span> <span class="fu">filter</span>(fgsea_tests, collection <span class="sc">!=</span> <span class="st">&quot;GO_Slim&quot;</span>)</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>candidates <span class="ot">&lt;-</span> <span class="fu">imap</span>(windows, \(cns, win) {</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  gsea_main <span class="sc">|&gt;</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(contrast <span class="sc">%in%</span> cns) <span class="sc">|&gt;</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">hits =</span> <span class="fu">sum</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">same_sign =</span> <span class="fu">n_distinct</span>(<span class="fu">sign</span>(nes[<span class="fu">which</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)])) <span class="sc">==</span> <span class="dv">1</span>,</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">strength =</span> <span class="fu">sum</span>(<span class="fu">abs</span>(nes), <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.by =</span> <span class="fu">c</span>(set_id, collection)</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(hits <span class="sc">&gt;=</span> needed[[win]]) <span class="sc">|&gt;</span></span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(<span class="fu">desc</span>(same_sign), <span class="fu">desc</span>(strength)) <span class="sc">|&gt;</span></span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">window =</span> win, <span class="at">rank =</span> <span class="fu">row_number</span>())</span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(candidates, window)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>calls <span class="ot">&lt;-</span> <span class="fu">with</span>(<span class="fu">filter</span>(gsea_main, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="fu">paste</span>(contrast, set_id))</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>is_called <span class="ot">&lt;-</span> \(contrast, set_id) <span class="fu">paste</span>(contrast, set_id) <span class="sc">%in%</span> calls</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>within_group <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Training&quot;</span>, <span class="st">&quot;Acute&quot;</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>candidates <span class="ot">&lt;-</span> <span class="fu">imap</span>(windows, \(cns, win) {</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  gsea_main <span class="sc">|&gt;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(contrast <span class="sc">%in%</span> cns) <span class="sc">|&gt;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_proteins =</span> <span class="fu">first</span>(n_proteins), <span class="at">hits =</span> <span class="fu">sum</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">same_sign =</span> <span class="fu">n_distinct</span>(<span class="fu">sign</span>(nes[<span class="fu">which</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)])) <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">best_p =</span> <span class="fu">min</span>(p[<span class="fu">which</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)], <span class="cn">Inf</span>), <span class="at">.by =</span> <span class="fu">c</span>(set_id, collection)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(hits <span class="sc">&gt;=</span> needed[[win]]) <span class="sc">|&gt;</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">window =</span> win)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">in_hr =</span> <span class="fu">is_called</span>(<span class="fu">paste0</span>(window, <span class="st">&quot;_HR&quot;</span>), set_id),</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">in_lr =</span> <span class="fu">is_called</span>(<span class="fu">paste0</span>(window, <span class="st">&quot;_LR&quot;</span>), set_id),</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">pattern =</span> <span class="fu">case_when</span>(</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span>window <span class="sc">%in%</span> within_group <span class="sc">~</span> <span class="cn">NA_character_</span>,</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>      in_hr <span class="sc">&amp;</span> in_lr <span class="sc">~</span> <span class="st">&quot;shared&quot;</span>, in_hr <span class="sc">~</span> <span class="st">&quot;HR only&quot;</span>, <span class="at">.default =</span> <span class="st">&quot;LR only&quot;</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">interaction =</span> <span class="fu">if_else</span>(</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>      window <span class="sc">%in%</span> within_group, <span class="fu">is_called</span>(<span class="fu">paste0</span>(window, <span class="st">&quot;_Interaction&quot;</span>), set_id), <span class="cn">NA</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">block =</span> <span class="fu">if_else</span>(<span class="fu">is.na</span>(pattern), window, <span class="fu">paste0</span>(window, <span class="st">&quot;: &quot;</span>, pattern))</span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>in_hr, <span class="sc">-</span>in_lr) <span class="sc">|&gt;</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(same_sign), <span class="fu">desc</span>(interaction), best_p) <span class="sc">|&gt;</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">rank =</span> <span class="fu">row_number</span>(), <span class="at">.by =</span> block)</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(candidates, window, block)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 4 × 2
-  window          n
-  &lt;chr&gt;       &lt;int&gt;
-1 Acute          16
-2 HR - LR        47
-3 Interaction    64
-4 Training       26</code></pre>
+<pre><code># A tibble: 8 × 3
+  window      block                 n
+  &lt;chr&gt;       &lt;chr&gt;             &lt;int&gt;
+1 Acute       Acute: HR only      148
+2 Acute       Acute: LR only       12
+3 Acute       Acute: shared        16
+4 HR - LR     HR - LR              47
+5 Interaction Interaction          64
+6 Training    Training: HR only   116
+7 Training    Training: LR only     5
+8 Training    Training: shared     26</code></pre>
 </div>
 </div>
-<p>Overlapping sets are grouped, not dropped. Within each window, sets are clustered by the proteins they share (Jaccard similarity: shared ÷ union; average linkage), and the tree is cut at three heights; at 0.85, sets in one cluster share at least about 15% of their proteins. The main figure draws one set per cluster at height 0.85, its top-ranked; the supplement draws every candidate beside its tree, and the cuts at 0.75 and 0.9.</p>
+<p>Overlapping sets are grouped, not dropped. Within each block, sets are clustered by the proteins they share (Jaccard similarity: shared ÷ union; average linkage), as EnrichmentMap and DAVID group them (Merico et al. 2010; Huang et al. 2007), and the tree is cut at three heights; at 0.85, sets in one cluster share on average at least about 15% of their proteins. Each cluster is shown by its most specific set: the smallest whose p is within 10-fold of the cluster’s best, so a narrow set nested in a broad one takes its place when the evidence is close. The main figure draws the representatives at 0.85; the supplement draws every candidate beside its tree, and the cuts at 0.75 and 0.9.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>jaccard <span class="ot">&lt;-</span> \(ids) {</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">outer</span>(ids, ids, <span class="fu">Vectorize</span>(\(a, b) {</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(<span class="fu">intersect</span>(sets[[a]], sets[[b]])) <span class="sc">/</span> <span class="fu">length</span>(<span class="fu">union</span>(sets[[a]], sets[[b]]))</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  }))</span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>selection <span class="ot">&lt;-</span> candidates <span class="sc">|&gt;</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(window) <span class="sc">|&gt;</span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_modify</span>(\(d, key) {</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">nrow</span>(d) <span class="sc">==</span> <span class="dv">1</span>) {</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">return</span>(<span class="fu">mutate</span>(d, <span class="at">cut_0.75 =</span> <span class="dv">1</span>L, <span class="at">cut_0.85 =</span> <span class="dv">1</span>L, <span class="at">cut_0.9 =</span> <span class="dv">1</span>L, <span class="at">tree_order =</span> <span class="dv">1</span>L))</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    tree <span class="ot">&lt;-</span> <span class="fu">hclust</span>(<span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fu">jaccard</span>(d<span class="sc">$</span>set_id)), <span class="at">method =</span> <span class="st">&quot;average&quot;</span>)</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(d,</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">cut_0.75 =</span> <span class="fu">cutree</span>(tree, <span class="at">h =</span> <span class="fl">0.75</span>), <span class="at">cut_0.85 =</span> <span class="fu">cutree</span>(tree, <span class="at">h =</span> <span class="fl">0.85</span>),</span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">cut_0.9 =</span> <span class="fu">cutree</span>(tree, <span class="at">h =</span> <span class="fl">0.9</span>), <span class="at">tree_order =</span> <span class="fu">order</span>(tree<span class="sc">$</span>order)</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">representative_0.75 =</span> <span class="sc">!</span><span class="fu">duplicated</span>(cut_0<span class="fl">.75</span>), <span class="at">representative_0.85 =</span> <span class="sc">!</span><span class="fu">duplicated</span>(cut_0<span class="fl">.85</span>),</span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">representative_0.9 =</span> <span class="sc">!</span><span class="fu">duplicated</span>(cut_0<span class="fl">.9</span>), <span class="at">.by =</span> window</span>
-<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>selection <span class="sc">|&gt;</span></span>
-<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">candidates =</span> <span class="fu">n</span>(), <span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">&quot;representative&quot;</span>), sum), <span class="at">.by =</span> window)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>most_specific <span class="ot">&lt;-</span> \(cluster, p, size) {</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  near_best <span class="ot">&lt;-</span> p <span class="sc">&lt;=</span> <span class="dv">10</span> <span class="sc">*</span> <span class="fu">ave</span>(p, cluster, <span class="at">FUN =</span> min)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  pick <span class="ot">&lt;-</span> <span class="fu">order</span>(cluster, <span class="sc">!</span>near_best, size, p)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">seq_along</span>(p) <span class="sc">%in%</span> pick[<span class="sc">!</span><span class="fu">duplicated</span>(cluster[pick])]</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>selection <span class="ot">&lt;-</span> candidates <span class="sc">|&gt;</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(block) <span class="sc">|&gt;</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_modify</span>(\(d, key) {</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">nrow</span>(d) <span class="sc">==</span> <span class="dv">1</span>) {</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">return</span>(<span class="fu">mutate</span>(d, <span class="at">cut_0.75 =</span> <span class="dv">1</span>L, <span class="at">cut_0.85 =</span> <span class="dv">1</span>L, <span class="at">cut_0.9 =</span> <span class="dv">1</span>L, <span class="at">tree_order =</span> <span class="dv">1</span>L))</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    tree <span class="ot">&lt;-</span> <span class="fu">hclust</span>(<span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fu">jaccard</span>(d<span class="sc">$</span>set_id)), <span class="at">method =</span> <span class="st">&quot;average&quot;</span>)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(d,</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">cut_0.75 =</span> <span class="fu">cutree</span>(tree, <span class="at">h =</span> <span class="fl">0.75</span>), <span class="at">cut_0.85 =</span> <span class="fu">cutree</span>(tree, <span class="at">h =</span> <span class="fl">0.85</span>),</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">cut_0.9 =</span> <span class="fu">cutree</span>(tree, <span class="at">h =</span> <span class="fl">0.9</span>), <span class="at">tree_order =</span> <span class="fu">order</span>(tree<span class="sc">$</span>order)</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">representative_0.75 =</span> <span class="fu">most_specific</span>(cut_0<span class="fl">.75</span>, best_p, n_proteins),</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">representative_0.85 =</span> <span class="fu">most_specific</span>(cut_0<span class="fl">.85</span>, best_p, n_proteins),</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">representative_0.9 =</span> <span class="fu">most_specific</span>(cut_0<span class="fl">.9</span>, best_p, n_proteins), <span class="at">.by =</span> block</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(window, block, pattern, <span class="at">.before =</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(window, <span class="fu">names</span>(windows)), block, rank)</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>selection <span class="sc">|&gt;</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">candidates =</span> <span class="fu">n</span>(), <span class="at">interaction =</span> <span class="fu">sum</span>(interaction), <span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">&quot;representative&quot;</span>), sum),</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(window, block)</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 4 × 5
-  window   candidates representative_0.75 representative_0.85 representative_0.9
-  &lt;chr&gt;         &lt;int&gt;               &lt;int&gt;               &lt;int&gt;              &lt;int&gt;
-1 Acute            16                   6                   6                  5
-2 HR - LR          47                  10                   9                  6
-3 Interac…         64                  19                  16                 11
-4 Training         26                  12                   7                  5</code></pre>
+<pre><code># A tibble: 8 × 7
+  window    block candidates interaction representative_0.75 representative_0.85
+  &lt;chr&gt;     &lt;chr&gt;      &lt;int&gt;       &lt;int&gt;               &lt;int&gt;               &lt;int&gt;
+1 Training  Trai…        116          11                  41                  32
+2 Training  Trai…          5           0                   4                   4
+3 Training  Trai…         26           1                  12                   7
+4 Acute     Acut…        148          30                  59                  43
+5 Acute     Acut…         12           0                   6                   5
+6 Acute     Acut…         16           0                   6                   6
+7 HR - LR   HR -…         47          NA                  10                   9
+8 Interact… Inte…         64          NA                  19                  16
+# ℹ 1 more variable: representative_0.9 &lt;int&gt;</code></pre>
 </div>
 </div>
-<p>Rows are in rank order, so <code>!duplicated()</code> keeps each cluster’s top-ranked set.</p>
 </section>
 <section id="validation" class="level2">
 <h2 class="anchored" data-anchor-id="validation">Validation</h2>
@@ -2455,7 +2492,7 @@ vertical-align: -.125em;
 </section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
-<p>1422 sets in 5 databases, tested in nine contrasts by fgsea and fry. 38 sets represent the windows in the main pathway figure.</p>
+<p>1422 sets in 5 databases, tested in nine contrasts by fgsea and fry. 122 sets represent the clusters of the 8 blocks at cut 0.85; the main pathway figure draws up to eight per block.</p>
 </section>
 <section id="save" class="level2">
 <h2 class="anchored" data-anchor-id="save">Save</h2>
@@ -2472,7 +2509,7 @@ vertical-align: -.125em;
 <span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(</span>
 <span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Per contrast, database and set: fgsea NES or fry direction, p and FDR within the database.&quot;</span>,</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Per window: candidate sets, rank, tree clusters at three cuts and the representative of each.&quot;</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Candidate sets per block: rank, tree clusters at three cuts, most specific set per cluster.&quot;</span></span>
 <span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;set_contrasts.xlsx&quot;</span>), inputs, paths</span>
 <span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>

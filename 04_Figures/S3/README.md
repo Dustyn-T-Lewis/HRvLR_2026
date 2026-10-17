@@ -5,13 +5,14 @@ well past 240 mm, so `S3_composite.pdf` has one page per panel, each page as tal
 
 | Panel | Shows |
 |---|---|
-| a_tree_matrix | Every candidate set per window from `02_HRvLR/02_Set_Contrasts`, in its tree's leaf order, in all nine contrasts. Grey and white bands alternate between clusters at height 0.85; each cluster's representative (the set F3 draws) is in bold. |
-| b_cut_075 | One set per cluster with the tree cut at 0.75 (tighter clusters, more rows), every cluster. |
+| a_tree_matrix | Every candidate set per block from `02_HRvLR/02_Set_Contrasts`, in its tree's leaf order, in all nine contrasts. Grey and white bands alternate between clusters at height 0.85; each cluster's most specific set is in bold (F3 draws the first eight per block). About 1.2 m tall: it lists all 434 candidates. |
+| b_cut_075 | One set per cluster with the tree cut at 0.75 (tighter clusters, more rows), every cluster of every block, the interaction window included. |
 | c_cut_09 | The same at 0.9 (looser clusters, fewer rows). |
 | d_go_slim | Every GO Slim theme in the nine contrasts, rows ordered by average-linkage clustering of their NES. GO Slim is tested upstream but kept out of the F3 selection. |
 
 Fill is fgsea NES, size -log10 FDR, the square the database; `*` marks a set whose FDR < 0.05 calls
-in its window disagree in sign. A cell is empty where fgsea returned no score.
+in its window disagree in sign, `†` a training or acute set whose interaction also reaches
+FDR < 0.05. A cell is empty where fgsea returned no score.
 
 ## Inputs
 

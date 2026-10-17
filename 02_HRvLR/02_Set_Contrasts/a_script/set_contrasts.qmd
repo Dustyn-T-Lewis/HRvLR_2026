@@ -117,11 +117,16 @@ set_tests |>
 
 ## Sets for the pathway figure
 
-The figure groups the nine contrasts into four windows. A set is a candidate for a window when
-fgsea calls it at FDR < 0.05 in both contrasts of the training or acute window, in at least two of
-the three HR − LR time points, or in either interaction. GO Slim is left out: its broad terms
-repeat GO:BP. Candidates are ranked by whether their calls agree in sign, then by summed |NES|
-across the window.
+The figure groups the nine contrasts into four windows. A set is a candidate for the training or
+acute window when fgsea calls it at FDR < 0.05 in HR, in LR or in both, and that call places it in a
+block: shared, HR only or LR only. Between groups, a set needs FDR < 0.05 at two of the three time
+points; in the interaction window, in either interaction. GO Slim is left out: its broad terms
+repeat GO:BP.
+
+A set in the HR-only block passed in HR and missed in LR. That alone does not show HR changed it
+more; the interaction contrast tests that, so each training and acute candidate also records
+whether its window's interaction reaches FDR < 0.05. Within a block, candidates rank by whether
+their calls agree in sign, then by that interaction, then by their smallest p.
 
 ```{r}
 #| label: candidates
@@ -130,29 +135,49 @@ windows <- list(
   `HR - LR` = c("Baseline_HRvLR", "Trained_HRvLR", "Acute_HRvLR"),
   Interaction = c("Training_Interaction", "Acute_Interaction")
 )
-needed <- c(Training = 2, Acute = 2, `HR - LR` = 2, Interaction = 1)
+needed <- c(Training = 1, Acute = 1, `HR - LR` = 2, Interaction = 1)
 gsea_main <- filter(fgsea_tests, collection != "GO_Slim")
+calls <- with(filter(gsea_main, fdr < 0.05), paste(contrast, set_id))
+is_called <- \(contrast, set_id) paste(contrast, set_id) %in% calls
+within_group <- c("Training", "Acute")
 candidates <- imap(windows, \(cns, win) {
   gsea_main |>
     filter(contrast %in% cns) |>
     summarise(
-      hits = sum(fdr < 0.05, na.rm = TRUE),
+      n_proteins = first(n_proteins), hits = sum(fdr < 0.05, na.rm = TRUE),
       same_sign = n_distinct(sign(nes[which(fdr < 0.05)])) == 1,
-      strength = sum(abs(nes), na.rm = TRUE), .by = c(set_id, collection)
+      best_p = min(p[which(fdr < 0.05)], Inf), .by = c(set_id, collection)
     ) |>
     filter(hits >= needed[[win]]) |>
-    arrange(desc(same_sign), desc(strength)) |>
-    mutate(window = win, rank = row_number())
+    mutate(window = win)
 }) |>
-  list_rbind()
-count(candidates, window)
+  list_rbind() |>
+  mutate(
+    in_hr = is_called(paste0(window, "_HR"), set_id),
+    in_lr = is_called(paste0(window, "_LR"), set_id),
+    pattern = case_when(
+      !window %in% within_group ~ NA_character_,
+      in_hr & in_lr ~ "shared", in_hr ~ "HR only", .default = "LR only"
+    ),
+    interaction = if_else(
+      window %in% within_group, is_called(paste0(window, "_Interaction"), set_id), NA
+    ),
+    block = if_else(is.na(pattern), window, paste0(window, ": ", pattern))
+  ) |>
+  select(-in_hr, -in_lr) |>
+  arrange(desc(same_sign), desc(interaction), best_p) |>
+  mutate(rank = row_number(), .by = block)
+count(candidates, window, block)
 ```
 
-Overlapping sets are grouped, not dropped. Within each window, sets are clustered by the
-proteins they share (Jaccard similarity: shared ÷ union; average linkage), and the tree is cut at
-three heights; at 0.85, sets in one cluster share at least about 15% of their proteins. The main
-figure draws one set per cluster at height 0.85, its top-ranked; the supplement draws every
-candidate beside its tree, and the cuts at 0.75 and 0.9.
+Overlapping sets are grouped, not dropped. Within each block, sets are clustered by the proteins
+they share (Jaccard similarity: shared ÷ union; average linkage), as EnrichmentMap and DAVID group
+them (Merico et al. 2010; Huang et al. 2007), and the tree is cut at three heights; at 0.85, sets
+in one cluster share on average at least about 15% of their proteins. Each cluster is shown by its
+most specific set: the smallest whose p is within 10-fold of the cluster's best, so a narrow set
+nested in a broad one takes its place when the evidence is close. The main figure draws the
+representatives at 0.85; the supplement draws every candidate beside its tree, and the cuts at 0.75
+and 0.9.
 
 ```{r}
 #| label: tree
@@ -161,8 +186,13 @@ jaccard <- \(ids) {
     length(intersect(sets[[a]], sets[[b]])) / length(union(sets[[a]], sets[[b]]))
   }))
 }
+most_specific <- \(cluster, p, size) {
+  near_best <- p <= 10 * ave(p, cluster, FUN = min)
+  pick <- order(cluster, !near_best, size, p)
+  seq_along(p) %in% pick[!duplicated(cluster[pick])]
+}
 selection <- candidates |>
-  group_by(window) |>
+  group_by(block) |>
   group_modify(\(d, key) {
     if (nrow(d) == 1) {
       return(mutate(d, cut_0.75 = 1L, cut_0.85 = 1L, cut_0.9 = 1L, tree_order = 1L))
@@ -175,14 +205,18 @@ selection <- candidates |>
   }) |>
   ungroup() |>
   mutate(
-    representative_0.75 = !duplicated(cut_0.75), representative_0.85 = !duplicated(cut_0.85),
-    representative_0.9 = !duplicated(cut_0.9), .by = window
-  )
+    representative_0.75 = most_specific(cut_0.75, best_p, n_proteins),
+    representative_0.85 = most_specific(cut_0.85, best_p, n_proteins),
+    representative_0.9 = most_specific(cut_0.9, best_p, n_proteins), .by = block
+  ) |>
+  relocate(window, block, pattern, .before = 1) |>
+  arrange(match(window, names(windows)), block, rank)
 selection |>
-  summarise(candidates = n(), across(starts_with("representative"), sum), .by = window)
+  summarise(
+    candidates = n(), interaction = sum(interaction), across(starts_with("representative"), sum),
+    .by = c(window, block)
+  )
 ```
-
-Rows are in rank order, so `!duplicated()` keeps each cluster's top-ranked set.
 
 ## Validation
 
@@ -197,7 +231,8 @@ stopifnot(
 ## Summary
 
 `r length(sets)` sets in `r length(by_db)` databases, tested in nine contrasts by fgsea and fry.
-`r sum(selection$representative_0.85)` sets represent the windows in the main pathway figure.
+`r sum(selection$representative_0.85)` sets represent the clusters of the `r n_distinct(selection$block)`
+blocks at cut 0.85; the main pathway figure draws up to eight per block.
 
 ## Save
 
@@ -215,7 +250,7 @@ write_workbook(
   ),
   c(
     "Per contrast, database and set: fgsea NES or fry direction, p and FDR within the database.",
-    "Per window: candidate sets, rank, tree clusters at three cuts and the representative of each."
+    "Candidate sets per block: rank, tree clusters at three cuts, most specific set per cluster."
   ),
   file.path(out, "set_contrasts.xlsx"), inputs, paths
 )

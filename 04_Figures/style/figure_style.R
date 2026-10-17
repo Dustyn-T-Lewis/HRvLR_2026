@@ -186,7 +186,7 @@ pathway_label <- function(pathway, width = 52) {
     ecm = "ECM", mhc = "MHC", i = "I", ii = "II", iii = "III", iv = "IV", nadh = "NADH",
     pten = "PTEN", mapk = "MAPK", aurka = "AURKA", numa = "NUMA", rqc = "RQC",
     gtpases = "GTPases", atpases = "ATPases", pkns = "PKNs", dgc = "DGC", golgi = "Golgi",
-    pd = "PD", l1 = "L1", er = "ER", m = "M", tnfa = "TNFA", tnf = "TNF", nfkb = "NFKB",
+    pd = "PD", l1 = "L1", er = "ER", m = "M", n = "N", tnfa = "TNFA", tnf = "TNF", nfkb = "NFKB",
     il2 = "IL2", stat5 = "STAT5", copii = "COPII", copi = "COPI", ppar = "PPAR", ca2 = "Ca2+"
   )
   label <- pathway |>

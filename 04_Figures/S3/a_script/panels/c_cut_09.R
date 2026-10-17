@@ -1,5 +1,5 @@
 # One set per tree cluster at Jaccard height 0.9 (02_HRvLR/02_Set_Contrasts), every cluster of
-# every window, drawn in all nine contrasts; Figure 3 draws the cut at 0.85.
+# every block, drawn in all nine contrasts; Figure 3 draws the cut at 0.85.
 library(here)
 library(dplyr)
 library(ggplot2)
@@ -16,7 +16,7 @@ built <- cluster_grid(
   title = "One set per cluster at tree height 0.9",
   subtitle = paste(
     "As Figure 3 with the tree cut at 0.9 instead of 0.85, every cluster shown;",
-    "* calls of opposite sign"
+    "* calls of opposite sign; \u2020 interaction FDR < 0.05"
   )
 )
 panel <- built$panel

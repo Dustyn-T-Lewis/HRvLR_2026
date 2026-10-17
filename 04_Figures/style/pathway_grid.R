@@ -5,8 +5,9 @@
 #
 # `cells`: one row per drawn dot, with window, set_id, pathway, collection, column, nes, fdr.
 # `rows`: one row per set and window, with window (a factor sets the block order), set_id and
-# order (1 at the top of its block); optional label (default from pathway), shade (grey band
-# behind the row) and bold (label in bold).
+# order (1 at the top of its block); optional block (a factor of strip labels that splits a window
+# into several row strips, each in its window's colour), label (default from pathway), shade (grey
+# band behind the row) and bold (label in bold).
 # `columns`: column, column_window and markup (the axis label, may hold in_colour() spans), in
 # display order.
 pathway_collections <- c(
@@ -26,40 +27,57 @@ contrast_columns <- function(contrasts) {
   )
 }
 
-# A set's row label; `*` marks a set whose FDR < 0.05 calls in its window disagree in sign.
-set_label <- \(pathway, same_sign) paste0(pathway_label(pathway), if_else(same_sign, "", " *"))
-
-# The candidate sets of 02_HRvLR/02_Set_Contrasts, the window as a factor in strip order (the step
-# names the between-group window "HR - LR").
-set_selection <- function(selection) {
-  mutate(selection, window = factor(
-    if_else(window == "HR - LR", "Between groups", window), panel_families
-  ))
+# A set's row label; `*` marks a set whose FDR < 0.05 calls in its window disagree in sign, `†` a
+# training or acute set whose interaction also reaches FDR < 0.05.
+set_label <- \(pathway, same_sign, interaction = FALSE) {
+  paste0(
+    pathway_label(pathway), if_else(same_sign, "", " *"),
+    if_else(interaction %in% TRUE, " \u2020", "")
+  )
 }
 
-# One set per tree cluster at `cut` (F3, S3), the first `cap` per window by rank, in all nine
-# contrasts. Returns the plot, the cells drawn (checked against set_tests) and a height in mm.
-cluster_grid <- function(saved, cut, title, subtitle, cap = Inf) {
+# The candidate sets of 02_HRvLR/02_Set_Contrasts, the window as a factor in strip order (the step
+# names the between-group window "HR - LR"), and each block's strip label: the window, then for
+# Training and Acute the pattern and its candidate count.
+set_selection <- function(selection) {
+  selection |>
+    mutate(
+      window = factor(if_else(window == "HR - LR", "Between groups", window), panel_families),
+      block = if_else(
+        is.na(pattern), as.character(window),
+        sprintf("%s\n%s (%d)", as.character(window), pattern, n())
+      ),
+      .by = c(window, pattern)
+    ) |>
+    arrange(window, factor(pattern, c("shared", "HR only", "LR only"))) |>
+    mutate(block = factor(block, unique(block)))
+}
+
+# One set per tree cluster at `cut` (F3, S3), the first `cap` per block by rank, in all nine
+# contrasts; `windows` limits the blocks drawn. Returns the plot, the cells drawn (checked against
+# set_tests) and a height in mm.
+cluster_grid <- function(saved, cut, title, subtitle, cap = Inf, windows = panel_families) {
   fgsea <- filter(saved$set_tests, method == "fgsea")
   columns <- contrast_columns(unique(fgsea$contrast))
-  rows <- set_selection(saved$selection) |>
+  selection <- filter(set_selection(saved$selection), window %in% windows)
+  rows <- selection |>
     filter(.data[[paste0("representative_", cut)]]) |>
     arrange(rank) |>
-    filter(row_number() <= cap, .by = window) |>
+    filter(row_number() <= cap, .by = block) |>
     left_join(distinct(fgsea, set_id, pathway), by = "set_id") |>
-    mutate(order = rank, label = set_label(pathway, same_sign))
+    mutate(order = rank, label = set_label(pathway, same_sign, interaction))
   cells <- fgsea |>
     inner_join(select(rows, window, set_id), by = "set_id", relationship = "many-to-many") |>
     transmute(window, set_id, pathway, collection, column = contrast, nes, fdr)
   panel_data <- cells |>
-    inner_join(select(rows, window, set_id, rank, label), by = c("window", "set_id")) |>
+    inner_join(select(rows, window, block, set_id, rank, label), by = c("window", "set_id")) |>
     transmute(
-      window = as.character(window), rank, set_id, collection, label,
-      contrast = column, nes, fdr
+      window = as.character(window), block = sub("\n", ": ", block), rank, set_id, collection,
+      label, contrast = column, nes, fdr
     ) |>
-    arrange(match(window, panel_families), rank, match(contrast, columns$column))
+    arrange(match(window, panel_families), block, rank, match(contrast, columns$column))
   source_values <- inner_join(panel_data, fgsea, by = c("set_id", "contrast"))
-  clusters <- summarise(saved$selection, n = n_distinct(.data[[paste0("cut_", cut)]]), .by = window)
+  clusters <- summarise(selection, n = n_distinct(.data[[paste0("cut_", cut)]]), .by = block)
   stopifnot(
     nrow(columns) == 9, all(count(panel_data, window, set_id)$n == 9),
     nrow(source_values) == nrow(panel_data),
@@ -82,24 +100,25 @@ pathway_grid <- function(cells, rows, columns, title = NULL, subtitle = NULL, ne
     left_join(pathways, by = "set_id") |>
     mutate(
       row = paste(window, set_id),
+      block = if ("block" %in% names(rows)) block else window,
       label = if ("label" %in% names(rows)) label else pathway_label(pathway),
       shade = if ("shade" %in% names(rows)) shade else FALSE,
       bold = if ("bold" %in% names(rows)) bold else FALSE
     ) |>
-    arrange(window, desc(order))
+    arrange(block, desc(order))
   # A narrow first column, with an empty strip, carries each row's database square.
   x_windows <- c("", unique(columns$column_window))
   x_columns <- c(" ", columns$column)
   place <- \(d) {
     mutate(d,
-      row = factor(row, rows$row), window = factor(window, levels(rows$window)),
+      row = factor(row, rows$row), block = factor(block, levels(rows$block)),
       column = factor(column, x_columns), column_window = factor(column_window, x_windows)
     )
   }
   drawn <- cells |>
     select(window, set_id, column, nes, fdr) |>
     inner_join(
-      select(rows, window, set_id, row, collection, shade),
+      select(rows, window, block, set_id, row, collection, shade),
       by = c("window", "set_id")
     ) |>
     inner_join(select(columns, column, column_window), by = "column") |>
@@ -117,7 +136,7 @@ pathway_grid <- function(cells, rows, columns, title = NULL, subtitle = NULL, ne
   if (all(rows$collection == "GO_Slim")) shown <- "GO_Slim"
   strips <- contrast_strips(
     x = x_windows[x_windows %in% c("", as.character(drawn$column_window))],
-    y = levels(droplevels(rows$window))
+    y = as.character(rows$window[match(levels(droplevels(rows$block)), rows$block)])
   )
   markdown <- any(rows$bold)
   y_labels <- if (markdown) gsub("*", "\\*", rows$label, fixed = TRUE) else rows$label
@@ -156,7 +175,7 @@ pathway_grid <- function(cells, rows, columns, title = NULL, subtitle = NULL, ne
       size = guide_legend(order = 2), colour = guide_legend(order = 3)
     ) +
     ggh4x::facet_grid2(
-      window ~ column_window,
+      block ~ column_window,
       scales = "free", space = "free", switch = "y", strip = strips
     ) +
     labs(x = NULL, y = NULL, title = title, subtitle = subtitle) +
