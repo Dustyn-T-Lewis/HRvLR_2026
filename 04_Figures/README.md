@@ -3,6 +3,9 @@
 Main figures F1 to F5 and supplements S1 to S5, drawn from the saved results of `01_Processing`,
 `02_HRvLR` and `03_Continuous`. No figure fits a model; each reads tables and draws them.
 
+The analysis steps are exploratory, and their results informed which panels became main figures
+and which went to supplements (see the root README).
+
 | Figure | Shows | Supplement |
 |---|---|---|
 | F1 | design; PCA per time point with PERMANOVA; proteins per contrast at Π, p and FDR; each group's training and acute sets tested in the other | S1: no natural clusters (correlation heatmap, gap statistic); variance shares; DiffVar; PCs against covariates |

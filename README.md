@@ -9,6 +9,19 @@ eight as lower responders (LR).
 This branch (`dustyn/trimmed-scope-limpa`) rebuilds the analysis for HR against LR only, quantified
 with limpa from DIA-NN's precursor report. The eight-grouping version is on `main`.
 
+## An exploratory analysis
+
+With 8 people per group, this is exploratory data analysis. `01_Processing` builds the values;
+`02_HRvLR` and `03_Continuous` then examine the data at every level available (proteins, gene
+sets, modules, variance, traits), each set against what chance gives. Those results informed the
+figure plan in `04_Figures`: which panels became main figures, which went to supplements, and the
+story the figures tell.
+
+That story: both groups respond to training and to the extra bout, and HR's response reaches
+significance in more gene sets than LR's (158 against 36 with training, 189 against 32 after the
+bout, FDR < 0.05). The direct test of a larger HR response, the interaction, is weaker: 23 sets
+for training and 58 for the bout at FDR < 0.05, and no single protein at that threshold.
+
 ## Tree
 
 ```
