@@ -2487,7 +2487,7 @@ Figure 1: p values per contrast. Dashed: a flat null (tested / 20).
 </section>
 <section id="does-one-groups-response-carry-over-to-the-other" class="level2">
 <h2 class="anchored" data-anchor-id="does-one-groups-response-carry-over-to-the-other">Does one group’s response carry over to the other?</h2>
-<p>The proteins one group changes with training (or the bout) at Π &lt; 0.05 or p &lt; 0.05 form a set; fry (limma) tests that set in the other group’s contrast. Sets need 5 or more proteins. Beside each test: the set’s mean logFC in the group that chose it (inflated by the selection) and in the other group, and the share of members with the same sign. fry is a rotation test across biopsies that keeps the person block and its within-person correlation.</p>
+<p>The proteins one group changes with training (or the bout) at Π &lt; 0.05 or p &lt; 0.05 form a set; fry (limma) tests that set in the other group’s contrast. All four sets per pairing are kept; fry tests those with 5 or more proteins. Beside each test: the set’s mean logFC in the group that chose it (inflated by the selection) and in the other group, and the share of members with the same sign. fry is a rotation test across biopsies that keeps the person block and its within-person correlation.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pairings <span class="ot">&lt;-</span> <span class="fu">tribble</span>(</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="sc">~</span>set_from, <span class="sc">~</span>ranked_on,</span>
@@ -2500,48 +2500,54 @@ Figure 1: p values per contrast. Dashed: a flat null (tested / 20).
 <span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  hit <span class="sc">&amp;</span> <span class="cf">if</span> (direction <span class="sc">==</span> <span class="st">&quot;up&quot;</span>) r<span class="sc">$</span>logFC <span class="sc">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> r<span class="sc">$</span>logFC <span class="sc">&lt;</span> <span class="dv">0</span></span>
 <span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>fry_concordance <span class="ot">&lt;-</span> <span class="fu">pmap</span>(pairings, \(set_from, ranked_on) {</span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  sets <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">criterion =</span> <span class="fu">c</span>(<span class="st">&quot;pi&quot;</span>, <span class="st">&quot;nominal&quot;</span>), <span class="at">direction =</span> <span class="fu">c</span>(<span class="st">&quot;up&quot;</span>, <span class="st">&quot;down&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">set =</span> <span class="fu">paste</span>(criterion, direction, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">rows =</span> <span class="fu">pmap</span>(<span class="fu">list</span>(criterion, direction), \(c, d) <span class="fu">which</span>(<span class="fu">signature</span>(set_from, c, d))))</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  sets <span class="ot">&lt;-</span> <span class="fu">filter</span>(sets, <span class="fu">lengths</span>(rows) <span class="sc">&gt;=</span> <span class="dv">5</span>)</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  own <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> set_from)<span class="sc">$</span>logFC</span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  other <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> ranked_on)<span class="sc">$</span>logFC</span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  carried <span class="ot">&lt;-</span> <span class="fu">transmute</span>(sets, set,</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_logfc_own =</span> <span class="fu">map_dbl</span>(rows, \(i) <span class="fu">mean</span>(own[i])),</span>
-<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_logfc_other =</span> <span class="fu">map_dbl</span>(rows, \(i) <span class="fu">mean</span>(other[i])),</span>
-<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">same_sign_share =</span> <span class="fu">map_dbl</span>(rows, \(i) <span class="fu">mean</span>(<span class="fu">sign</span>(own[i]) <span class="sc">==</span> <span class="fu">sign</span>(other[i])))</span>
-<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(fit<span class="sc">$</span>EList, <span class="at">index =</span> <span class="fu">set_names</span>(sets<span class="sc">$</span>rows, sets<span class="sc">$</span>set), <span class="at">design =</span> design,</span>
-<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrast =</span> contrast_matrix[, ranked_on], <span class="at">block =</span> meta<span class="sc">$</span>subject, <span class="at">correlation =</span> fit<span class="sc">$</span>correlation</span>
-<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;set&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
-<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>      set_from, ranked_on, set, <span class="at">n_proteins =</span> NGenes, <span class="at">direction =</span> Direction, <span class="at">p =</span> PValue, <span class="at">fdr =</span> FDR</span>
-<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
-<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(carried, <span class="at">by =</span> <span class="st">&quot;set&quot;</span>)</span>
-<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>fry_concordance</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  sets <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">criterion =</span> <span class="fu">c</span>(<span class="st">&quot;pi&quot;</span>, <span class="st">&quot;nominal&quot;</span>), <span class="at">set_direction =</span> <span class="fu">c</span>(<span class="st">&quot;up&quot;</span>, <span class="st">&quot;down&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">set =</span> <span class="fu">paste</span>(criterion, set_direction, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>),</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">rows =</span> <span class="fu">map2</span>(criterion, set_direction, \(c, d) <span class="fu">which</span>(<span class="fu">signature</span>(set_from, c, d))),</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">set_size =</span> <span class="fu">lengths</span>(rows), <span class="at">tested =</span> set_size <span class="sc">&gt;=</span> <span class="dv">5</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  tested <span class="ot">&lt;-</span> <span class="fu">filter</span>(sets, tested)</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>  own <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> set_from)<span class="sc">$</span>logFC</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>  other <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> ranked_on)<span class="sc">$</span>logFC</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>  carried <span class="ot">&lt;-</span> <span class="fu">transmute</span>(tested, set,</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_logfc_own =</span> <span class="fu">map_dbl</span>(rows, \(i) <span class="fu">mean</span>(own[i])),</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_logfc_other =</span> <span class="fu">map_dbl</span>(rows, \(i) <span class="fu">mean</span>(other[i])),</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">same_sign_share =</span> <span class="fu">map_dbl</span>(rows, \(i) <span class="fu">mean</span>(<span class="fu">sign</span>(own[i]) <span class="sc">==</span> <span class="fu">sign</span>(other[i])))</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>  tests <span class="ot">&lt;-</span> <span class="fu">fry</span>(fit<span class="sc">$</span>EList, <span class="at">index =</span> <span class="fu">set_names</span>(tested<span class="sc">$</span>rows, tested<span class="sc">$</span>set), <span class="at">design =</span> design,</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrast =</span> contrast_matrix[, ranked_on], <span class="at">block =</span> meta<span class="sc">$</span>subject, <span class="at">correlation =</span> fit<span class="sc">$</span>correlation</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;set&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(set, <span class="at">direction =</span> Direction, <span class="at">p =</span> PValue, <span class="at">fdr =</span> FDR)</span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>  sets <span class="sc">|&gt;</span></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(set_from, ranked_on, set, criterion, set_direction, set_size, tested) <span class="sc">|&gt;</span></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(tests, <span class="at">by =</span> <span class="st">&quot;set&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(carried, <span class="at">by =</span> <span class="st">&quot;set&quot;</span>)</span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>fry_concordance</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 15 × 10
-   set_from  ranked_on set   n_proteins direction       p     fdr mean_logfc_own
-   &lt;chr&gt;     &lt;chr&gt;     &lt;chr&gt;      &lt;int&gt; &lt;chr&gt;       &lt;dbl&gt;   &lt;dbl&gt;          &lt;dbl&gt;
- 1 Training… Training… pi_up         24 Up        5.52e-4 0.00154          0.774
- 2 Training… Training… nomi…        122 Up        7.68e-4 0.00154          0.537
- 3 Training… Training… nomi…         34 Down      3.19e-1 0.425           -0.633
- 4 Training… Training… pi_d…         14 Down      5.97e-1 0.597           -1.04 
- 5 Training… Training… pi_up         48 Up        5.32e-3 0.0160           0.850
- 6 Training… Training… nomi…        196 Up        1.51e-2 0.0227           0.575
- 7 Training… Training… nomi…          7 Down      7.39e-1 0.739           -0.711
- 8 Acute_HR  Acute_LR  nomi…         49 Down      2.81e-2 0.112           -0.726
- 9 Acute_HR  Acute_LR  pi_up         54 Up        9.99e-2 0.200            1.28 
-10 Acute_HR  Acute_LR  nomi…        106 Up        3.08e-1 0.411            0.918
-11 Acute_HR  Acute_LR  pi_d…         16 Down      5.17e-1 0.517           -1.27 
-12 Acute_LR  Acute_HR  nomi…         32 Up        2.06e-3 0.00436          1.19 
-13 Acute_LR  Acute_HR  pi_up         19 Up        2.18e-3 0.00436          1.72 
-14 Acute_LR  Acute_HR  nomi…        172 Down      2.06e-1 0.274           -0.696
-15 Acute_LR  Acute_HR  pi_d…         65 Down      3.17e-1 0.317           -0.973
-# ℹ 2 more variables: mean_logfc_other &lt;dbl&gt;, same_sign_share &lt;dbl&gt;</code></pre>
+<pre><code># A tibble: 16 × 13
+   set_from    ranked_on set   criterion set_direction set_size tested direction
+   &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt;     &lt;chr&gt;            &lt;int&gt; &lt;lgl&gt;  &lt;chr&gt;    
+ 1 Training_HR Training… pi_up pi        up                  24 TRUE   Up       
+ 2 Training_HR Training… pi_d… pi        down                14 TRUE   Down     
+ 3 Training_HR Training… nomi… nominal   up                 122 TRUE   Up       
+ 4 Training_HR Training… nomi… nominal   down                34 TRUE   Down     
+ 5 Training_LR Training… pi_up pi        up                  48 TRUE   Up       
+ 6 Training_LR Training… pi_d… pi        down                 3 FALSE  &lt;NA&gt;     
+ 7 Training_LR Training… nomi… nominal   up                 196 TRUE   Up       
+ 8 Training_LR Training… nomi… nominal   down                 7 TRUE   Down     
+ 9 Acute_HR    Acute_LR  pi_up pi        up                  54 TRUE   Up       
+10 Acute_HR    Acute_LR  pi_d… pi        down                16 TRUE   Down     
+11 Acute_HR    Acute_LR  nomi… nominal   up                 106 TRUE   Up       
+12 Acute_HR    Acute_LR  nomi… nominal   down                49 TRUE   Down     
+13 Acute_LR    Acute_HR  pi_up pi        up                  19 TRUE   Up       
+14 Acute_LR    Acute_HR  pi_d… pi        down                65 TRUE   Down     
+15 Acute_LR    Acute_HR  nomi… nominal   up                  32 TRUE   Up       
+16 Acute_LR    Acute_HR  nomi… nominal   down               172 TRUE   Down     
+# ℹ 5 more variables: p &lt;dbl&gt;, fdr &lt;dbl&gt;, mean_logfc_own &lt;dbl&gt;,
+#   mean_logfc_other &lt;dbl&gt;, same_sign_share &lt;dbl&gt;</code></pre>
 </div>
 </div>
 </section>
@@ -2610,8 +2616,10 @@ Figure 2: Biopsies per time point on PC1 and PC2 of the blood-corrected values.
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nrow</span>(results) <span class="sc">==</span> <span class="fu">nrow</span>(proteins) <span class="sc">*</span> <span class="fu">ncol</span>(contrast_matrix), <span class="sc">!</span><span class="fu">anyNA</span>(results<span class="sc">$</span>p),</span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(results<span class="sc">$</span>fdr <span class="sc">&gt;=</span> results<span class="sc">$</span>p),</span>
 <span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(results<span class="sc">$</span>logFC_lower <span class="sc">&lt;=</span> results<span class="sc">$</span>logFC <span class="sc">&amp;</span> results<span class="sc">$</span>logFC <span class="sc">&lt;=</span> results<span class="sc">$</span>logFC_upper),</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nrow</span>(trajectory_tests) <span class="sc">==</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">nrow</span>(proteins)</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nrow</span>(trajectory_tests) <span class="sc">==</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">nrow</span>(proteins),</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">nrow</span>(fry_concordance) <span class="sc">==</span> <span class="dv">4</span> <span class="sc">*</span> <span class="fu">nrow</span>(pairings),</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(fry_concordance<span class="sc">$</span>tested <span class="sc">==</span> <span class="sc">!</span><span class="fu">is.na</span>(fry_concordance<span class="sc">$</span>p))</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="summary" class="level2">

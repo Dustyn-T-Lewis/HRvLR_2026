@@ -1,40 +1,22 @@
+# F1 e: each group's training and acute responders tested with fry in the other group's contrast.
 library(here)
 library(dplyr)
-library(tidyr)
 library(ggplot2)
 source(here("04_Figures", "style", "figure_style.R"))
 
 inputs <- c(contrasts = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx")
-read_sheet <- \(sheet) readxl::read_excel(here(inputs[["contrasts"]]), sheet)
-fry_rows <- read_sheet("fry_concordance")
-summary_rows <- read_sheet("contrast_summary")
-results <- read_sheet("protein_by_contrast")
 holds <- paste(
-  "Panel d: each group's training and acute sets (Π or p < 0.05) tested with fry in the other",
+  "Panel e: each group's training and acute sets (Π or p < 0.05) tested with fry in the other",
   "group's contrast; sets under 5 proteins were not tested."
 )
+fry_rows <- read_sheet(inputs[["contrasts"]], "fry_concordance")
 
-# Every set the step could have formed, so a set too small for fry still gets its row.
-criteria <- c(pi = "Π < 0.05", nominal = "p < 0.05")
-set_sizes <- results |>
-  filter(contrast %in% c("Training_HR", "Training_LR", "Acute_HR", "Acute_LR")) |>
-  mutate(set_direction = if_else(logFC > 0, "Up", "Down")) |>
-  summarise(
-    pi = sum(sig_pi != 0), nominal = sum(p < alpha_nominal),
-    .by = c(contrast, set_direction)
-  ) |>
-  pivot_longer(c(pi, nominal), names_to = "criterion", values_to = "set_size") |>
-  rename(set_from = contrast)
-
-panel_data <- set_sizes |>
+criteria <- c(pi = sprintf("Π < %s", alpha_nominal), nominal = sprintf("p < %s", alpha_nominal))
+panel_data <- fry_rows |>
   mutate(
-    set = paste(criterion, tolower(set_direction), sep = "_"),
     window = sub("_.*", "", set_from), from_group = sub(".*_", "", set_from),
-    in_group = if_else(from_group == "HR", "LR", "HR")
-  ) |>
-  left_join(select(fry_rows, -n_proteins), by = c("set_from", "set")) |>
-  mutate(
-    tested = !is.na(p),
+    in_group = sub(".*_", "", ranked_on),
+    set_direction = if_else(set_direction == "up", "Up", "Down"),
     evidence = evidence_level(p, fdr),
     signed_log_p = if_else(set_direction == "Up", 1, -1) * -log10(p)
   ) |>
@@ -44,14 +26,9 @@ panel_data <- set_sizes |>
     signed_log_p
   ) |>
   arrange(window, from_group, criterion, set_direction)
-
-traced <- inner_join(
-  filter(panel_data, tested), fry_rows,
-  by = c("set_from", "ranked_on", "direction", "p", "fdr")
-)
 stopifnot(
-  nrow(traced) == nrow(fry_rows), all(traced$set_size == traced$n_proteins),
-  all(panel_data$tested == (panel_data$set_size >= 5))
+  nrow(panel_data) == nrow(fry_rows), all(panel_data$from_group != panel_data$in_group),
+  all(panel_data$tested == !is.na(panel_data$p))
 )
 
 windows <- c("Training", "Acute")
@@ -71,8 +48,8 @@ plotted <- panel_data |>
     fry_direction = coalesce(direction, set_direction),
     text = case_when(
       !tested ~ sprintf("%d, too few", set_size),
-      direction != set_direction ~ sprintf("%d, FDR %.2g, opposite", set_size, fdr),
-      .default = sprintf("%d, FDR %.2g", set_size, fdr)
+      direction != set_direction ~ sprintf("%d · %.2g, opposite", set_size, fdr),
+      .default = sprintf("%d · %.2g", set_size, fdr)
     ),
     text_x = if_else(tested, signed_log_p + side * 0.12, side * 0.12),
     hjust = if_else(side > 0, 0, 1)
@@ -83,7 +60,8 @@ row_order <- plotted |>
 plotted <- mutate(plotted, row = factor(row, rev(row_order$row)))
 # Room beyond the longest bar on each side for its label.
 limits <- c(
-  min(plotted$signed_log_p, 0, na.rm = TRUE) - 2.2, max(plotted$signed_log_p, 0, na.rm = TRUE) + 2.8
+  min(plotted$signed_log_p, 0, na.rm = TRUE) - 1.8,
+  max(plotted$signed_log_p, 0, na.rm = TRUE) + 2.4
 )
 
 panel <- ggplot(filter(plotted, tested), aes(signed_log_p, row)) +
@@ -114,11 +92,11 @@ panel <- ggplot(filter(plotted, tested), aes(signed_log_p, row)) +
     strip = contrast_strips(y = windows)
   ) +
   labs(
-    x = "-log10 p in the other group (down sets left, up sets right)", y = NULL,
-    title = "Does one group's response carry over to the other?",
+    x = "-log10 p in the other group (down | up sets)", y = NULL,
+    title = "Does one group's response carry over?",
     subtitle = paste0(
-      "fry: proteins one group changes (Π or p < 0.05) tested in the other group's contrast\n",
-      "label: set size and FDR; dashed: p = 0.05"
+      "fry: proteins one group changes tested in the other group's contrast\n",
+      "label: set size · FDR; dashed: p = 0.05"
     )
   ) +
   figure_theme +
@@ -136,7 +114,4 @@ panel <- ggplot(filter(plotted, tested), aes(signed_log_p, row)) +
     alpha = guide_legend(order = 2, override.aes = list(fill = "grey30", colour = "grey30"))
   )
 
-ggsave(
-  here("04_Figures", "F1", "b_reports", "panels", "d_fry_transfer.pdf"), panel,
-  width = 95, height = 85, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "F1", "e_fry_transfer", 80, 95)

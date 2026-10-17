@@ -105,7 +105,7 @@ evidence_level <- function(p, fdr) {
 
 # Contrast names: a readable label, the family that sets the colour, and the window that groups the
 # rows. A between-group suffix reads "HRvLR"; a within-group suffix is one group's name.
-between <- "[A-Za-z0-9]+v[A-Za-z0-9]+$"
+between_pattern <- "[A-Za-z0-9]+v[A-Za-z0-9]+$"
 contrast_label <- function(contrast) {
   contrast |>
     sub(pattern = "([A-Za-z0-9]+)v([A-Za-z0-9]+)$", replacement = "\\1 - \\2") |>
@@ -114,14 +114,14 @@ contrast_label <- function(contrast) {
 contrast_family <- function(contrast) {
   dplyr::case_when(
     grepl("Interaction", contrast) ~ "Interaction",
-    grepl(between, contrast) ~ "HR - LR",
+    grepl(between_pattern, contrast) ~ "HR - LR",
     startsWith(contrast, "Training") ~ "Training",
     startsWith(contrast, "Acute") ~ "Acute"
   )
 }
 contrast_window <- function(contrast) {
   dplyr::case_when(
-    grepl(between, contrast) ~ "Between groups",
+    grepl(between_pattern, contrast) ~ "Between groups",
     startsWith(contrast, "Training") ~ "Training",
     startsWith(contrast, "Acute") ~ "Acute"
   )
@@ -139,7 +139,7 @@ contrast_short <- function(contrast) {
   prefix <- sub("_.*", "", contrast)
   dplyr::case_when(
     grepl("Interaction", contrast) ~ prefix,
-    grepl(between, contrast) ~ c(Baseline = "T1", Trained = "T2", Acute = "T3")[prefix],
+    grepl(between_pattern, contrast) ~ c(Baseline = "T1", Trained = "T2", Acute = "T3")[prefix],
     .default = sub(".*_", "", contrast)
   )
 }
@@ -199,4 +199,15 @@ pathway_label <- function(pathway, width = 52) {
     label <- gsub(paste0("\\b", word, "\\b"), acronyms[[word]], label, ignore.case = TRUE)
   }
   stringr::str_trunc(label, width)
+}
+
+# One sheet of a saved workbook, the path relative to the project root.
+read_sheet <- \(path, sheet) readxl::read_excel(here::here(path), sheet)
+
+# A panel's own PDF, at 04_Figures/<figure>/b_reports/panels/<name>.pdf, size in mm.
+save_panel <- function(panel, figure, name, width, height) {
+  ggplot2::ggsave(
+    here::here("04_Figures", figure, "b_reports", "panels", paste0(name, ".pdf")), panel,
+    width = width, height = height, units = "mm", device = grDevices::cairo_pdf
+  )
 }

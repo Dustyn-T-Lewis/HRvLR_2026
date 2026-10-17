@@ -1,6 +1,8 @@
 # 07_Group_Trait_Slopes
 
-Does the link between a feature and a muscle trait differ between HR and LR? Per feature type
+How much did each group change in fibre area, muscle area and strength (geometric-mean % with
+95% CI per group, Welch's t-test for HR − LR, on log ratios)? And does the link between a feature
+and a muscle trait differ between HR and LR? Per feature type
 (proteins, set scores, eigengenes), window and trait: Spearman's rho within each group (exact p,
 descriptive), and limma on feature ~ group × trait, whose interaction is HR's slope minus LR's with
 its 95% interval. The pooled, label-free version is `03_Continuous/01_Trait_Associations`.
@@ -26,12 +28,15 @@ quarto render 02_HRvLR/07_Group_Trait_Slopes/a_script/group_trait_slopes.qmd --o
 
 | File | Holds |
 |---|---|
-| `c_data/group_trait_slopes.rds` | `counts`, `within_group`, `group_difference`, for the figures |
+| `c_data/group_trait_slopes.rds` | `trait_effects`, `counts`, `within_group`, `group_difference`, for the figures |
 | `c_data/group_trait_slopes.xlsx` | the same tables |
 | `b_reports/group_trait_slopes.html` | the rendered walkthrough |
 
 ## Read with care
 
+- Trait change: HR grew in fibre area (+16%) while LR's shrank (−15%); muscle area +11% against
+  +3%. Muscle area and mixed fibre area chose the groups, so those gaps are built in. Strength rose
+  alike: leg press +34% against +31% (p 0.85), leg extension +17% against +13% (p 0.43).
 - Slope difference: 4,904 of 136,266 tests at p < 0.05 (3.6%; chance 5%), 50 at FDR < 0.05, 44 of
   them gene sets in the training window against leg-press gain. Proteins: 3,207 of 80,301 (4.0%),
   3 at FDR < 0.05.

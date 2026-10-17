@@ -2357,23 +2357,46 @@ Figure 1: Share of each protein’s variance by source (variancePartition).
 </section>
 <section id="do-the-biopsies-form-natural-clusters" class="level2">
 <h2 class="anchored" data-anchor-id="do-the-biopsies-form-natural-clusters">Do the biopsies form natural clusters?</h2>
-<p>The blood-corrected values, proteins scaled, are reduced to their first 10 principal components. The gap statistic (Tibshirani, Walther and Hastie 2001; <code>cluster::clusGap()</code> with PAM, 100 reference data sets) compares how tight k clusters are against data with no group structure; the one-standard-error rule (<code>Tibs2001SEmax</code>) picks the smallest k whose gap is at least the next k’s gap minus that gap’s standard error. k = 1 means no natural clusters. The biopsy correlation matrix, ordered by hierarchical clustering, shows the same question as a picture.</p>
+<p>The blood-corrected values, proteins scaled, are reduced to their first 10 principal components. The gap statistic (Tibshirani, Walther and Hastie 2001; <code>cluster::clusGap()</code> with PAM, 100 reference data sets) compares how tight k clusters are against data with no group structure; the one-standard-error rule (<code>Tibs2001SEmax</code>) picks the smallest k whose gap is at least the next k’s gap minus that gap’s standard error. k = 1 means no natural clusters. The question is asked of all 48 biopsies and of each time point alone. A second check forces the biopsies into two PAM clusters and asks whether those match HR and LR: the adjusted Rand index (Hubert and Arabie 1985; <code>mclust::adjustedRandIndex()</code>) is 1 for a perfect match and about 0 for chance. The biopsy correlation matrix, ordered by hierarchical clustering, shows the same question as a picture.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>scaled <span class="ot">&lt;-</span> <span class="fu">scale</span>(<span class="fu">t</span>(corrected<span class="sc">$</span>E))</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>pcs <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(scaled)<span class="sc">$</span>x[, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>gap <span class="ot">&lt;-</span> cluster<span class="sc">::</span><span class="fu">clusGap</span>(</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  pcs, <span class="at">FUNcluster =</span> \(x, k) <span class="fu">list</span>(<span class="at">cluster =</span> cluster<span class="sc">::</span><span class="fu">pam</span>(x, k, <span class="at">cluster.only =</span> <span class="cn">TRUE</span>)),</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">K.max =</span> <span class="dv">6</span>, <span class="at">B =</span> <span class="dv">100</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>gap_table <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(gap<span class="sc">$</span>Tab) <span class="sc">|&gt;</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">k =</span> <span class="fu">row_number</span>(), <span class="at">.before =</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(k, gap, <span class="at">se =</span> SE.sim)</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>k_chosen <span class="ot">&lt;-</span> cluster<span class="sc">::</span><span class="fu">maxSE</span>(gap_table<span class="sc">$</span>gap, gap_table<span class="sc">$</span>se, <span class="at">method =</span> <span class="st">&quot;Tibs2001SEmax&quot;</span>)</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">k_chosen =</span> k_chosen)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>gap_of <span class="ot">&lt;-</span> \(x) {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  gap <span class="ot">&lt;-</span> cluster<span class="sc">::</span><span class="fu">clusGap</span>(</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    x, <span class="at">FUNcluster =</span> \(x, k) <span class="fu">list</span>(<span class="at">cluster =</span> cluster<span class="sc">::</span><span class="fu">pam</span>(x, k, <span class="at">cluster.only =</span> <span class="cn">TRUE</span>)),</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">K.max =</span> <span class="dv">6</span>, <span class="at">B =</span> <span class="dv">100</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>(gap<span class="sc">$</span>Tab) <span class="sc">|&gt;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">k =</span> <span class="fu">row_number</span>(), <span class="at">.before =</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(k, gap, <span class="at">se =</span> SE.sim)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>in_window <span class="ot">&lt;-</span> \(w) w <span class="sc">==</span> <span class="st">&quot;all&quot;</span> <span class="sc">|</span> meta<span class="sc">$</span>timepoint <span class="sc">==</span> w</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>pcs <span class="ot">&lt;-</span> <span class="fu">map</span>(</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;all&quot;</span>, <span class="st">&quot;T1&quot;</span>, <span class="st">&quot;T2&quot;</span>, <span class="st">&quot;T3&quot;</span>)),</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  \(w) <span class="fu">prcomp</span>(<span class="fu">scale</span>(<span class="fu">t</span>(corrected<span class="sc">$</span>E[, <span class="fu">in_window</span>(w)])))<span class="sc">$</span>x[, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>gaps <span class="ot">&lt;-</span> <span class="fu">map</span>(pcs, gap_of)</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>separation <span class="ot">&lt;-</span> <span class="fu">imap</span>(pcs, \(x, w) {</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>  split <span class="ot">&lt;-</span> cluster<span class="sc">::</span><span class="fu">pam</span>(x, <span class="dv">2</span>, <span class="at">cluster.only =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_biopsies =</span> <span class="fu">nrow</span>(x),</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">k_gap =</span> cluster<span class="sc">::</span><span class="fu">maxSE</span>(gaps[[w]]<span class="sc">$</span>gap, gaps[[w]]<span class="sc">$</span>se, <span class="at">method =</span> <span class="st">&quot;Tibs2001SEmax&quot;</span>),</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">ari_group =</span> mclust<span class="sc">::</span><span class="fu">adjustedRandIndex</span>(split, meta<span class="sc">$</span>group[<span class="fu">in_window</span>(w)]),</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">smaller_cluster =</span> <span class="fu">min</span>(<span class="fu">table</span>(split))</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;window&quot;</span>)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>gap_table <span class="ot">&lt;-</span> gaps<span class="sc">$</span>all</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>k_chosen <span class="ot">&lt;-</span> separation<span class="sc">$</span>k_gap[separation<span class="sc">$</span>window <span class="sc">==</span> <span class="st">&quot;all&quot;</span>]</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>separation</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>k_chosen 
-       1 </code></pre>
+<pre><code># A tibble: 4 × 5
+  window n_biopsies k_gap ari_group smaller_cluster
+  &lt;chr&gt;       &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;           &lt;int&gt;
+1 all            48     1  -0.00543              21
+2 T1             16     1  -0.0667                6
+3 T2             16     1   0                     1
+4 T3             16     1   0                     1</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>biopsy_correlation <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">t</span>(scaled))</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>order_rows <span class="ot">&lt;-</span> <span class="fu">hclust</span>(<span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> biopsy_correlation), <span class="at">method =</span> <span class="st">&quot;average&quot;</span>)<span class="sc">$</span>order</span>
@@ -2453,7 +2476,7 @@ Figure 2: Biopsy correlation, ordered by average-linkage clustering; axis label
 </section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
-<p>The median protein owes 12.5% of its variance to person, 0% to time point and 0% to group. The gap statistic picks k = 1.</p>
+<p>The median protein owes 12.5% of its variance to person, 0% to time point and 0% to group. The gap statistic picks k = 1 across all biopsies and k = 1, 1, 1 at T1, T2 and T3; a forced two-cluster split matches HR/LR with an adjusted Rand index of -0.01, -0.07, 0.00, 0.00 (all, T1, T2, T3).</p>
 </section>
 <section id="save" class="level2">
 <h2 class="anchored" data-anchor-id="save">Save</h2>
@@ -2462,7 +2485,7 @@ Figure 2: Biopsy correlation, ordered by average-linkage clustering; axis label
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_workbook</span>(</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">variance_shares =</span> variance_shares, <span class="at">diffvar =</span> diffvar, <span class="at">gap =</span> gap_table,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">variance_shares =</span> variance_shares, <span class="at">diffvar =</span> diffvar, <span class="at">gap =</span> gap_table, <span class="at">separation =</span> separation,</span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">biopsy_correlation =</span> correlation_long,</span>
 <span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">biopsy_order =</span> <span class="fu">tibble</span>(</span>
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">sample_id =</span> <span class="fu">rownames</span>(biopsy_correlation)[order_rows], <span class="at">position =</span> <span class="fu">seq_along</span>(order_rows)</span>
@@ -2473,13 +2496,14 @@ Figure 2: Biopsy correlation, ordered by average-linkage clustering; axis label
 <span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Per protein: share of variance from person, time point, group, blood and residual.&quot;</span>,</span>
 <span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Per time point, proteins seen in all 16 biopsies: DiffVar log variance ratio (LR/HR), p, FDR.&quot;</span>,</span>
 <span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Gap statistic per k (PAM on 10 PCs, 100 reference sets) with its standard error.&quot;</span>,</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Pearson correlation between every pair of biopsies, blood-corrected values scaled.&quot;</span>,</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Biopsy order from average-linkage clustering of 1 - correlation.&quot;</span>,</span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;PC1 to PC5 per biopsy with its covariates.&quot;</span>,</span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;R² of each covariate on each of PCs 1 to 5, and each PC&#39;s share of variance.&quot;</span></span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;variance.xlsx&quot;</span>), inputs, paths</span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;All biopsies and each time point: gap k, and how a forced two-cluster split matches HR/LR.&quot;</span>,</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Pearson correlation between every pair of biopsies, blood-corrected values scaled.&quot;</span>,</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Biopsy order from average-linkage clustering of 1 - correlation.&quot;</span>,</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;PC1 to PC5 per biopsy with its covariates.&quot;</span>,</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;R² of each covariate on each of PCs 1 to 5, and each PC&#39;s share of variance.&quot;</span></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;variance.xlsx&quot;</span>), inputs, paths</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 

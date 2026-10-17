@@ -72,6 +72,51 @@ group_of <- set_names(meta$group, meta$subject)
 map(features, dim)
 ```
 
+## Trait change per group
+
+Before any feature enters, how much did each group change? Each person's T1 to T2 change in a trait
+is taken as the log ratio, log(post / pre), so a rise and a fall of the same size count the same.
+Within each group, a one-sample t-test gives the mean log ratio and its 95% interval; between
+groups, Welch's t-test gives HR minus LR. Both are shown as % change (geometric mean). The
+composite hypertrophy score, (2 × %ΔmCSA + %ΔfCSA mixed) / 3, chose the groups, so HR beats LR on
+muscle area and mixed fibre area by construction; those two rows check the selection rather than
+test it.
+
+```{r}
+#| label: trait-effects
+selection_traits <- c("mcsa", "fcsa_mixed")
+log_ratios <- phenotype |>
+  select(subject, group, matches("_(pre|post)_")) |>
+  pivot_longer(
+    matches("_(pre|post)_"),
+    names_to = c("trait", "when"), names_pattern = "(.*)_(pre|post)_.*"
+  ) |>
+  filter(!startsWith(trait, "fibres_")) |>
+  pivot_wider(names_from = when) |>
+  filter(!is.na(pre), !is.na(post)) |>
+  mutate(log_ratio = log(post / pre))
+as_pct <- \(x) 100 * (exp(x) - 1)
+t_row <- \(test) {
+  broom::tidy(test) |>
+    transmute(
+      pct_change = as_pct(unname(estimate)), lower = as_pct(conf.low), upper = as_pct(conf.high),
+      p = p.value
+    )
+}
+within_change <- log_ratios |>
+  reframe(n = n(), t_row(t.test(log_ratio)), .by = c(trait, group))
+between_change <- log_ratios |>
+  reframe(
+    n = n(), t_row(t.test(log_ratio[group == "HR"], log_ratio[group == "LR"])),
+    .by = trait
+  ) |>
+  mutate(group = "HR - LR")
+trait_effects <- bind_rows(within_change, between_change) |>
+  mutate(used_for_groups = trait %in% selection_traits, .after = trait) |>
+  arrange(trait, match(group, c("HR", "LR", "HR - LR")))
+trait_effects
+```
+
 ## Windows and traits
 
 Each feature enters as one value per person in six windows (`window_values()` and
@@ -218,7 +263,13 @@ counts |>
 stopifnot(
   all(within$fdr >= within$p, na.rm = TRUE), all(abs(within$rho) <= 1, na.rm = TRUE),
   all(between$fdr >= between$p), !"comp_hypertrophy" %in% between$trait,
-  all(within$n_people >= 7), all(between$n_people >= 15)
+  all(within$n_people >= 7), all(between$n_people >= 15), all(trait_effects$n >= 7),
+  all(trait_effects$lower <= trait_effects$pct_change),
+  all(trait_effects$pct_change <= trait_effects$upper),
+  isTRUE(all.equal(
+    filter(trait_effects, trait == "mcsa", group == "HR")$pct_change,
+    with(filter(phenotype, group == "HR"), as_pct(mean(log(mcsa_post_cm2 / mcsa_pre_cm2))))
+  ))
 )
 ```
 
@@ -247,16 +298,21 @@ Within each group (Spearman): `r format(within_n$n_tested, big.mark = ",")` test
 out <- here("02_HRvLR", "07_Group_Trait_Slopes", "c_data")
 dir.create(out, showWarnings = FALSE)
 saveRDS(
-  list(counts = counts, within_group = within, group_difference = between),
+  list(
+    trait_effects = trait_effects, counts = counts, within_group = within,
+    group_difference = between
+  ),
   file.path(out, "group_trait_slopes.rds")
 )
 write_workbook(
   list(
+    trait_effects = trait_effects,
     counts = counts,
     within_group = arrange(within, feature_type, window, trait, group, p),
     group_difference = arrange(between, feature_type, window, trait, p)
   ),
   c(
+    "T1 to T2 % change per trait, geometric mean and 95% CI: per group (t-test), HR - LR (Welch).",
     "Tested, p < 0.05 and FDR < 0.05 per test, group, feature type, window and trait.",
     "Spearman rho and exact p within each group, per feature, window and trait.",
     "limma, feature ~ group * trait: HR slope minus LR slope with its 95% CI, t, p and FDR."

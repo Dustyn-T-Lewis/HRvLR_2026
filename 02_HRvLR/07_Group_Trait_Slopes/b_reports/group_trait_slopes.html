@@ -2209,6 +2209,7 @@ vertical-align: -.125em;
   <ul>
   <li><a href="#packages" id="toc-packages" class="nav-link active" data-scroll-target="#packages">Packages</a></li>
   <li><a href="#input" id="toc-input" class="nav-link" data-scroll-target="#input">Input</a></li>
+  <li><a href="#trait-change-per-group" id="toc-trait-change-per-group" class="nav-link" data-scroll-target="#trait-change-per-group">Trait change per group</a></li>
   <li><a href="#windows-and-traits" id="toc-windows-and-traits" class="nav-link" data-scroll-target="#windows-and-traits">Windows and traits</a></li>
   <li><a href="#tests" id="toc-tests" class="nav-link" data-scroll-target="#tests">Tests</a></li>
   <li><a href="#how-many-links-against-chance" id="toc-how-many-links-against-chance" class="nav-link" data-scroll-target="#how-many-links-against-chance">How many links, against chance</a></li>
@@ -2301,6 +2302,66 @@ $modules
 </div>
 </div>
 </section>
+<section id="trait-change-per-group" class="level2">
+<h2 class="anchored" data-anchor-id="trait-change-per-group">Trait change per group</h2>
+<p>Before any feature enters, how much did each group change? Each person’s T1 to T2 change in a trait is taken as the log ratio, log(post / pre), so a rise and a fall of the same size count the same. Within each group, a one-sample t-test gives the mean log ratio and its 95% interval; between groups, Welch’s t-test gives HR minus LR. Both are shown as % change (geometric mean). The composite hypertrophy score, (2 × %ΔmCSA + %ΔfCSA mixed) / 3, chose the groups, so HR beats LR on muscle area and mixed fibre area by construction; those two rows check the selection rather than test it.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>selection_traits <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;mcsa&quot;</span>, <span class="st">&quot;fcsa_mixed&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>log_ratios <span class="ot">&lt;-</span> phenotype <span class="sc">|&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(subject, group, <span class="fu">matches</span>(<span class="st">&quot;_(pre|post)_&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">matches</span>(<span class="st">&quot;_(pre|post)_&quot;</span>),</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_to =</span> <span class="fu">c</span>(<span class="st">&quot;trait&quot;</span>, <span class="st">&quot;when&quot;</span>), <span class="at">names_pattern =</span> <span class="st">&quot;(.*)_(pre|post)_.*&quot;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">startsWith</span>(trait, <span class="st">&quot;fibres_&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> when) <span class="sc">|&gt;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(pre), <span class="sc">!</span><span class="fu">is.na</span>(post)) <span class="sc">|&gt;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">log_ratio =</span> <span class="fu">log</span>(post <span class="sc">/</span> pre))</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>as_pct <span class="ot">&lt;-</span> \(x) <span class="dv">100</span> <span class="sc">*</span> (<span class="fu">exp</span>(x) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>t_row <span class="ot">&lt;-</span> \(test) {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  broom<span class="sc">::</span><span class="fu">tidy</span>(test) <span class="sc">|&gt;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">pct_change =</span> <span class="fu">as_pct</span>(<span class="fu">unname</span>(estimate)), <span class="at">lower =</span> <span class="fu">as_pct</span>(conf.low), <span class="at">upper =</span> <span class="fu">as_pct</span>(conf.high),</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">p =</span> p.value</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>within_change <span class="ot">&lt;-</span> log_ratios <span class="sc">|&gt;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reframe</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="fu">t_row</span>(<span class="fu">t.test</span>(log_ratio)), <span class="at">.by =</span> <span class="fu">c</span>(trait, group))</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>between_change <span class="ot">&lt;-</span> log_ratios <span class="sc">|&gt;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reframe</span>(</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">n =</span> <span class="fu">n</span>(), <span class="fu">t_row</span>(<span class="fu">t.test</span>(log_ratio[group <span class="sc">==</span> <span class="st">&quot;HR&quot;</span>], log_ratio[group <span class="sc">==</span> <span class="st">&quot;LR&quot;</span>])),</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> trait</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">group =</span> <span class="st">&quot;HR - LR&quot;</span>)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>trait_effects <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(within_change, between_change) <span class="sc">|&gt;</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">used_for_groups =</span> trait <span class="sc">%in%</span> selection_traits, <span class="at">.after =</span> trait) <span class="sc">|&gt;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(trait, <span class="fu">match</span>(group, <span class="fu">c</span>(<span class="st">&quot;HR&quot;</span>, <span class="st">&quot;LR&quot;</span>, <span class="st">&quot;HR - LR&quot;</span>)))</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>trait_effects</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 18 × 8
+   trait         used_for_groups group       n pct_change  lower  upper        p
+   &lt;chr&gt;         &lt;lgl&gt;           &lt;chr&gt;   &lt;int&gt;      &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+ 1 fcsa_mixed    TRUE            HR          8      15.6    4.96 27.4    9.36e-3
+ 2 fcsa_mixed    TRUE            LR          8     -15.2  -27.3  -1.12   3.88e-2
+ 3 fcsa_mixed    TRUE            HR - LR    16      36.4   15.3  61.3    1.71e-3
+ 4 fcsa_type1    FALSE           HR          8      15.9    5.79 26.9    6.48e-3
+ 5 fcsa_type1    FALSE           LR          8     -18.9  -33.2  -1.61   3.74e-2
+ 6 fcsa_type1    FALSE           HR - LR    16      42.9   16.8  74.8    2.76e-3
+ 7 fcsa_type2    FALSE           HR          8      17.3    8.53 26.8    1.86e-3
+ 8 fcsa_type2    FALSE           LR          8     -14.0  -25.6  -0.618  4.31e-2
+ 9 fcsa_type2    FALSE           HR - LR    16      36.4   17.0  59.1    1.01e-3
+10 leg_ext_1rm   FALSE           HR          7      17.3    9.02 26.2    1.77e-3
+11 leg_ext_1rm   FALSE           LR          8      13.0    4.20 22.5    9.17e-3
+12 leg_ext_1rm   FALSE           HR - LR    15       3.81  -5.92 14.5    4.26e-1
+13 leg_press_1rm FALSE           HR          8      33.6    8.81 63.9    1.25e-2
+14 leg_press_1rm FALSE           LR          8      30.5    8.86 56.5    1.04e-2
+15 leg_press_1rm FALSE           HR - LR    16       2.31 -20.2  31.2    8.46e-1
+16 mcsa          TRUE            HR          8      11.5    8.43 14.6    3.36e-5
+17 mcsa          TRUE            LR          8       3.40  -1.65  8.72   1.58e-1
+18 mcsa          TRUE            HR - LR    16       7.79   2.19 13.7    1.02e-2</code></pre>
+</div>
+</div>
+</section>
 <section id="windows-and-traits" class="level2">
 <h2 class="anchored" data-anchor-id="windows-and-traits">Windows and traits</h2>
 <p>Each feature enters as one value per person in six windows (<code>window_values()</code> and <code>trait_windows()</code>, from <code>02_HRvLR/helpers.R</code>):</p>
@@ -2351,9 +2412,9 @@ $modules
 </tbody>
 </table>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>windows <span class="ot">&lt;-</span> <span class="fu">trait_windows</span>(phenotype)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>trait_of <span class="ot">&lt;-</span> <span class="fu">map</span>(windows, \(d) <span class="fu">setdiff</span>(<span class="fu">names</span>(d), <span class="st">&quot;subject&quot;</span>))</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">lengths</span>(trait_of)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>windows <span class="ot">&lt;-</span> <span class="fu">trait_windows</span>(phenotype)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>trait_of <span class="ot">&lt;-</span> <span class="fu">map</span>(windows, \(d) <span class="fu">setdiff</span>(<span class="fu">names</span>(d), <span class="st">&quot;subject&quot;</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">lengths</span>(trait_of)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> baseline_level        baseline        training      post_level           acute 
               6               8               8               6               8 
@@ -2366,67 +2427,67 @@ post_bout_level
 <h2 class="anchored" data-anchor-id="tests">Tests</h2>
 <p><code>within_group()</code> takes a feature-by-person matrix and one trait value per person and returns, per group and feature, the people used, rho and its exact p (<code>cor.test()</code>, which drops to a normal approximation where values tie). <code>slope_difference()</code> fits feature ~ group × trait with robust empirical Bayes and returns HR’s slope minus LR’s with its 95% interval, t and p. People without the trait are dropped from both. <code>fdr</code> is Benjamini-Hochberg within feature type, window, trait and test (and group, and collection for sets).</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>within_group <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;HR&quot;</span>, <span class="st">&quot;LR&quot;</span>)), \(g) {</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    kept <span class="ot">&lt;-</span> group_of[<span class="fu">colnames</span>(x)] <span class="sc">==</span> g <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(y)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">feature =</span> <span class="fu">rownames</span>(x), <span class="at">n_people =</span> <span class="fu">sum</span>(kept),</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">rho =</span> <span class="fu">cor</span>(<span class="fu">t</span>(x[, kept]), y[kept], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)[, <span class="dv">1</span>],</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">p =</span> <span class="fu">apply</span>(x[, kept], <span class="dv">1</span>, \(v) {</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">suppressWarnings</span>(<span class="fu">cor.test</span>(v, y[kept], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>))<span class="sc">$</span>p.value</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      })</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;group&quot;</span>)</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>slope_difference <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  kept <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(y)</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">*</span> trait, <span class="fu">data.frame</span>(</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">group =</span> <span class="fu">factor</span>(group_of[<span class="fu">colnames</span>(x)][kept], <span class="fu">c</span>(<span class="st">&quot;LR&quot;</span>, <span class="st">&quot;HR&quot;</span>)), <span class="at">trait =</span> y[kept]</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  ))</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lmFit</span>(x[, kept], design) <span class="sc">|&gt;</span></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">eBayes</span>(<span class="at">robust =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">topTable</span>(<span class="at">coef =</span> <span class="st">&quot;groupHR:trait&quot;</span>, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>, <span class="at">confint =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;feature&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>      feature, <span class="at">n_people =</span> <span class="fu">sum</span>(kept), <span class="at">slope_difference =</span> logFC,</span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">slope_difference_lower =</span> CI.L, <span class="at">slope_difference_upper =</span> CI.R, t, <span class="at">p =</span> P.Value</span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>screens <span class="ot">&lt;-</span> <span class="fu">imap</span>(features, \(x, type) {</span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>  values <span class="ot">&lt;-</span> <span class="fu">window_values</span>(x, meta)</span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="fu">imap</span>(trait_of, \(tr, w) <span class="fu">tibble</span>(<span class="at">window =</span> w, <span class="at">trait =</span> tr))) <span class="sc">|&gt;</span></span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">feature_type =</span> type, <span class="at">x =</span> <span class="fu">map</span>(window, \(w) values[[w]]),</span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="fu">map2</span>(window, trait, \(w, tr) {</span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        <span class="fu">set_names</span>(windows[[w]][[tr]], windows[[w]]<span class="sc">$</span>subject)[<span class="fu">colnames</span>(values[[w]])]</span>
-<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>      })</span>
-<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>tidy <span class="ot">&lt;-</span> \(d) {</span>
-<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>  d <span class="sc">|&gt;</span></span>
-<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">collection =</span> <span class="fu">unname</span>(collection_of[feature]), <span class="at">label =</span> <span class="fu">unname</span>(label_of[feature]),</span>
-<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>      <span class="at">.after =</span> feature</span>
-<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
-<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>),</span>
-<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">.by =</span> <span class="fu">c</span>(feature_type, window, trait, <span class="fu">any_of</span>(<span class="st">&quot;group&quot;</span>), collection)</span>
-<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>within <span class="ot">&lt;-</span> screens <span class="sc">|&gt;</span></span>
-<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">result =</span> <span class="fu">map2</span>(x, y, within_group)) <span class="sc">|&gt;</span></span>
-<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(feature_type, window, trait, result) <span class="sc">|&gt;</span></span>
-<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(result) <span class="sc">|&gt;</span></span>
-<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>()</span>
-<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>between <span class="ot">&lt;-</span> screens <span class="sc">|&gt;</span></span>
-<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trait <span class="sc">!=</span> <span class="st">&quot;comp_hypertrophy&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">result =</span> <span class="fu">map2</span>(x, y, slope_difference)) <span class="sc">|&gt;</span></span>
-<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(feature_type, window, trait, result) <span class="sc">|&gt;</span></span>
-<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(result) <span class="sc">|&gt;</span></span>
-<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>()</span>
-<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">screens =</span> <span class="fu">nrow</span>(<span class="fu">distinct</span>(screens, window, trait)), <span class="at">within =</span> <span class="fu">nrow</span>(within), <span class="at">between =</span> <span class="fu">nrow</span>(between))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>within_group <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;HR&quot;</span>, <span class="st">&quot;LR&quot;</span>)), \(g) {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    kept <span class="ot">&lt;-</span> group_of[<span class="fu">colnames</span>(x)] <span class="sc">==</span> g <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(y)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">feature =</span> <span class="fu">rownames</span>(x), <span class="at">n_people =</span> <span class="fu">sum</span>(kept),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">rho =</span> <span class="fu">cor</span>(<span class="fu">t</span>(x[, kept]), y[kept], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)[, <span class="dv">1</span>],</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">p =</span> <span class="fu">apply</span>(x[, kept], <span class="dv">1</span>, \(v) {</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">suppressWarnings</span>(<span class="fu">cor.test</span>(v, y[kept], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>))<span class="sc">$</span>p.value</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      })</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;group&quot;</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>slope_difference <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  kept <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(y)</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">*</span> trait, <span class="fu">data.frame</span>(</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">group =</span> <span class="fu">factor</span>(group_of[<span class="fu">colnames</span>(x)][kept], <span class="fu">c</span>(<span class="st">&quot;LR&quot;</span>, <span class="st">&quot;HR&quot;</span>)), <span class="at">trait =</span> y[kept]</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  ))</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lmFit</span>(x[, kept], design) <span class="sc">|&gt;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">eBayes</span>(<span class="at">robust =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">topTable</span>(<span class="at">coef =</span> <span class="st">&quot;groupHR:trait&quot;</span>, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>, <span class="at">confint =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;feature&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>      feature, <span class="at">n_people =</span> <span class="fu">sum</span>(kept), <span class="at">slope_difference =</span> logFC,</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">slope_difference_lower =</span> CI.L, <span class="at">slope_difference_upper =</span> CI.R, t, <span class="at">p =</span> P.Value</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>screens <span class="ot">&lt;-</span> <span class="fu">imap</span>(features, \(x, type) {</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>  values <span class="ot">&lt;-</span> <span class="fu">window_values</span>(x, meta)</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="fu">imap</span>(trait_of, \(tr, w) <span class="fu">tibble</span>(<span class="at">window =</span> w, <span class="at">trait =</span> tr))) <span class="sc">|&gt;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">feature_type =</span> type, <span class="at">x =</span> <span class="fu">map</span>(window, \(w) values[[w]]),</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="fu">map2</span>(window, trait, \(w, tr) {</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>        <span class="fu">set_names</span>(windows[[w]][[tr]], windows[[w]]<span class="sc">$</span>subject)[<span class="fu">colnames</span>(values[[w]])]</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>      })</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>tidy <span class="ot">&lt;-</span> \(d) {</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>  d <span class="sc">|&gt;</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">collection =</span> <span class="fu">unname</span>(collection_of[feature]), <span class="at">label =</span> <span class="fu">unname</span>(label_of[feature]),</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>      <span class="at">.after =</span> feature</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>),</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">.by =</span> <span class="fu">c</span>(feature_type, window, trait, <span class="fu">any_of</span>(<span class="st">&quot;group&quot;</span>), collection)</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>within <span class="ot">&lt;-</span> screens <span class="sc">|&gt;</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">result =</span> <span class="fu">map2</span>(x, y, within_group)) <span class="sc">|&gt;</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(feature_type, window, trait, result) <span class="sc">|&gt;</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(result) <span class="sc">|&gt;</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>()</span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>between <span class="ot">&lt;-</span> screens <span class="sc">|&gt;</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(trait <span class="sc">!=</span> <span class="st">&quot;comp_hypertrophy&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">result =</span> <span class="fu">map2</span>(x, y, slope_difference)) <span class="sc">|&gt;</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(feature_type, window, trait, result) <span class="sc">|&gt;</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(result) <span class="sc">|&gt;</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>()</span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">screens =</span> <span class="fu">nrow</span>(<span class="fu">distinct</span>(screens, window, trait)), <span class="at">within =</span> <span class="fu">nrow</span>(within), <span class="at">between =</span> <span class="fu">nrow</span>(between))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>screens  within between 
      42  293496  136266 </code></pre>
@@ -2437,20 +2498,20 @@ post_bout_level
 <h2 class="anchored" data-anchor-id="how-many-links-against-chance">How many links, against chance</h2>
 <p>A protein that limpa never observed at a time point gets one estimate for everyone there; it has no rank correlation in that window, so it is not counted as tested. At p &lt; 0.05 chance alone puts 5% of features below the line in every screen.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">within_group =</span> within, <span class="at">group_difference =</span> <span class="fu">mutate</span>(between, <span class="at">group =</span> <span class="st">&quot;HR - LR&quot;</span>), <span class="at">.id =</span> <span class="st">&quot;test&quot;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_tested =</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(p)), <span class="at">n_nominal =</span> <span class="fu">sum</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_fdr_05 =</span> <span class="fu">sum</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.by =</span> <span class="fu">c</span>(test, group, feature_type, window, trait)</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">share_nominal =</span> n_nominal <span class="sc">/</span> n_tested)</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>counts <span class="sc">|&gt;</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_tested =</span> <span class="fu">sum</span>(n_tested), <span class="at">n_nominal =</span> <span class="fu">sum</span>(n_nominal), <span class="at">n_fdr_05 =</span> <span class="fu">sum</span>(n_fdr_05),</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(test, feature_type)</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">share_nominal =</span> <span class="fu">round</span>(n_nominal <span class="sc">/</span> n_tested, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">within_group =</span> within, <span class="at">group_difference =</span> <span class="fu">mutate</span>(between, <span class="at">group =</span> <span class="st">&quot;HR - LR&quot;</span>), <span class="at">.id =</span> <span class="st">&quot;test&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_tested =</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(p)), <span class="at">n_nominal =</span> <span class="fu">sum</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_fdr_05 =</span> <span class="fu">sum</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.by =</span> <span class="fu">c</span>(test, group, feature_type, window, trait)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">share_nominal =</span> n_nominal <span class="sc">/</span> n_tested)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>counts <span class="sc">|&gt;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_tested =</span> <span class="fu">sum</span>(n_tested), <span class="at">n_nominal =</span> <span class="fu">sum</span>(n_nominal), <span class="at">n_fdr_05 =</span> <span class="fu">sum</span>(n_fdr_05),</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(test, feature_type)</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">share_nominal =</span> <span class="fu">round</span>(n_nominal <span class="sc">/</span> n_tested, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 6
   test             feature_type n_tested n_nominal n_fdr_05 share_nominal
@@ -2464,19 +2525,19 @@ post_bout_level
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>counts <span class="sc">|&gt;</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">test =</span> <span class="fu">if_else</span>(test <span class="sc">==</span> <span class="st">&quot;within_group&quot;</span>, <span class="fu">paste</span>(<span class="st">&quot;Spearman in&quot;</span>, group), <span class="st">&quot;slope HR - LR&quot;</span>),</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">window =</span> <span class="fu">factor</span>(window, <span class="fu">names</span>(windows))</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(share_nominal, trait, <span class="at">fill =</span> test)) <span class="sc">+</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.8</span>), <span class="at">width =</span> <span class="fl">0.75</span>) <span class="sc">+</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.05</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(feature_type <span class="sc">~</span> window, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>, <span class="at">space =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span><span class="fu">label_percent</span>()) <span class="sc">+</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;features at p &lt; 0.05&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>, <span class="at">fill =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">7</span>) <span class="sc">+</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>counts <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">test =</span> <span class="fu">if_else</span>(test <span class="sc">==</span> <span class="st">&quot;within_group&quot;</span>, <span class="fu">paste</span>(<span class="st">&quot;Spearman in&quot;</span>, group), <span class="st">&quot;slope HR - LR&quot;</span>),</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">window =</span> <span class="fu">factor</span>(window, <span class="fu">names</span>(windows))</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(share_nominal, trait, <span class="at">fill =</span> test)) <span class="sc">+</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.8</span>), <span class="at">width =</span> <span class="fl">0.75</span>) <span class="sc">+</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.05</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(feature_type <span class="sc">~</span> window, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>, <span class="at">space =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span><span class="fu">label_percent</span>()) <span class="sc">+</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;features at p &lt; 0.05&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>, <span class="at">fill =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">7</span>) <span class="sc">+</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div id="fig-counts" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
@@ -2494,19 +2555,25 @@ Figure 1: Share of features at p &lt; 0.05 per test, window and trait. Dashed: 
 <section id="validation" class="level2">
 <h2 class="anchored" data-anchor-id="validation">Validation</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(within<span class="sc">$</span>fdr <span class="sc">&gt;=</span> within<span class="sc">$</span>p, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="fu">all</span>(<span class="fu">abs</span>(within<span class="sc">$</span>rho) <span class="sc">&lt;=</span> <span class="dv">1</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(between<span class="sc">$</span>fdr <span class="sc">&gt;=</span> between<span class="sc">$</span>p), <span class="sc">!</span><span class="st">&quot;comp_hypertrophy&quot;</span> <span class="sc">%in%</span> between<span class="sc">$</span>trait,</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(within<span class="sc">$</span>n_people <span class="sc">&gt;=</span> <span class="dv">7</span>), <span class="fu">all</span>(between<span class="sc">$</span>n_people <span class="sc">&gt;=</span> <span class="dv">15</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(within<span class="sc">$</span>fdr <span class="sc">&gt;=</span> within<span class="sc">$</span>p, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="fu">all</span>(<span class="fu">abs</span>(within<span class="sc">$</span>rho) <span class="sc">&lt;=</span> <span class="dv">1</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(between<span class="sc">$</span>fdr <span class="sc">&gt;=</span> between<span class="sc">$</span>p), <span class="sc">!</span><span class="st">&quot;comp_hypertrophy&quot;</span> <span class="sc">%in%</span> between<span class="sc">$</span>trait,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(within<span class="sc">$</span>n_people <span class="sc">&gt;=</span> <span class="dv">7</span>), <span class="fu">all</span>(between<span class="sc">$</span>n_people <span class="sc">&gt;=</span> <span class="dv">15</span>), <span class="fu">all</span>(trait_effects<span class="sc">$</span>n <span class="sc">&gt;=</span> <span class="dv">7</span>),</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(trait_effects<span class="sc">$</span>lower <span class="sc">&lt;=</span> trait_effects<span class="sc">$</span>pct_change),</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(trait_effects<span class="sc">$</span>pct_change <span class="sc">&lt;=</span> trait_effects<span class="sc">$</span>upper),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">isTRUE</span>(<span class="fu">all.equal</span>(</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(trait_effects, trait <span class="sc">==</span> <span class="st">&quot;mcsa&quot;</span>, group <span class="sc">==</span> <span class="st">&quot;HR&quot;</span>)<span class="sc">$</span>pct_change,</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">with</span>(<span class="fu">filter</span>(phenotype, group <span class="sc">==</span> <span class="st">&quot;HR&quot;</span>), <span class="fu">as_pct</span>(<span class="fu">mean</span>(<span class="fu">log</span>(mcsa_post_cm2 <span class="sc">/</span> mcsa_pre_cm2))))</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  ))</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>tally <span class="ot">&lt;-</span> \(name) <span class="fu">summarise</span>(<span class="fu">filter</span>(counts, test <span class="sc">==</span> name), <span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">&quot;n_&quot;</span>), sum))</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>between_n <span class="ot">&lt;-</span> <span class="fu">tally</span>(<span class="st">&quot;group_difference&quot;</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>within_n <span class="ot">&lt;-</span> <span class="fu">tally</span>(<span class="st">&quot;within_group&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>tally <span class="ot">&lt;-</span> \(name) <span class="fu">summarise</span>(<span class="fu">filter</span>(counts, test <span class="sc">==</span> name), <span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">&quot;n_&quot;</span>), sum))</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>between_n <span class="ot">&lt;-</span> <span class="fu">tally</span>(<span class="st">&quot;group_difference&quot;</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>within_n <span class="ot">&lt;-</span> <span class="fu">tally</span>(<span class="st">&quot;within_group&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Slope difference (limma, feature ~ group × trait): 136,266 tests, 4,904 at p &lt; 0.05 (chance: 6,813), 50 at FDR &lt; 0.05. Within each group (Spearman): 292,378 tests, 12,942 at p &lt; 0.05 (chance: 14,619), 14 at FDR &lt; 0.05.</p>
 </section>
@@ -2514,25 +2581,30 @@ Figure 1: Share of features at p &lt; 0.05 per test, window and trait. Dashed: 
 <h2 class="anchored" data-anchor-id="save">Save</h2>
 <p><code>group_trait_slopes.rds</code> holds both tables and the counts for the figures.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;07_Group_Trait_Slopes&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">counts =</span> counts, <span class="at">within_group =</span> within, <span class="at">group_difference =</span> between),</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;group_trait_slopes.rds&quot;</span>)</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write_workbook</span>(</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> counts,</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">within_group =</span> <span class="fu">arrange</span>(within, feature_type, window, trait, group, p),</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">group_difference =</span> <span class="fu">arrange</span>(between, feature_type, window, trait, p)</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(</span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Tested, p &lt; 0.05 and FDR &lt; 0.05 per test, group, feature type, window and trait.&quot;</span>,</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Spearman rho and exact p within each group, per feature, window and trait.&quot;</span>,</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;limma, feature ~ group * trait: HR slope minus LR slope with its 95% CI, t, p and FDR.&quot;</span></span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;group_trait_slopes.xlsx&quot;</span>), inputs, paths</span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;07_Group_Trait_Slopes&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">trait_effects =</span> trait_effects, <span class="at">counts =</span> counts, <span class="at">within_group =</span> within,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">group_difference =</span> between</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;group_trait_slopes.rds&quot;</span>)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">write_workbook</span>(</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">trait_effects =</span> trait_effects,</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> counts,</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">within_group =</span> <span class="fu">arrange</span>(within, feature_type, window, trait, group, p),</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">group_difference =</span> <span class="fu">arrange</span>(between, feature_type, window, trait, p)</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;T1 to T2 % change per trait, geometric mean and 95% CI: per group (t-test), HR - LR (Welch).&quot;</span>,</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Tested, p &lt; 0.05 and FDR &lt; 0.05 per test, group, feature type, window and trait.&quot;</span>,</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Spearman rho and exact p within each group, per feature, window and trait.&quot;</span>,</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;limma, feature ~ group * trait: HR slope minus LR slope with its 95% CI, t, p and FDR.&quot;</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;group_trait_slopes.xlsx&quot;</span>), inputs, paths</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 

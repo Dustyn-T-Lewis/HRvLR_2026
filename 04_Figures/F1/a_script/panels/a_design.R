@@ -1,3 +1,4 @@
+# F1 a: the design schematic, with the people and biopsies it shows counted from the saved data.
 library(here)
 library(dplyr)
 library(ggplot2)
@@ -7,17 +8,16 @@ inputs <- c(
   design = "04_Figures/assets/design.png",
   contrasts = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx"
 )
-design <- png::readPNG(here(inputs[["design"]]))
-biopsies <- readxl::read_excel(here(inputs[["contrasts"]]), "sample_weights")
 holds <- "Panel a: the design schematic (assets/design.png) and the people and biopsies it shows."
+design <- png::readPNG(here(inputs[["design"]]))
+biopsies <- read_sheet(inputs[["contrasts"]], "sample_weights")
 
-panel_data <- tibble(
-  asset = inputs[["design"]], width_px = dim(design)[2], height_px = dim(design)[1],
-  n_people = n_distinct(biopsies$subject),
-  n_hr = n_distinct(biopsies$subject[biopsies$group == "HR"]),
-  n_lr = n_distinct(biopsies$subject[biopsies$group == "LR"]),
-  n_biopsies = nrow(biopsies)
-)
+panel_data <- biopsies |>
+  summarise(
+    n_people = n_distinct(subject), n_hr = n_distinct(subject[group == "HR"]),
+    n_lr = n_distinct(subject[group == "LR"]), n_biopsies = n()
+  ) |>
+  mutate(asset = inputs[["design"]], width_px = ncol(design), height_px = nrow(design))
 stopifnot(
   panel_data$n_hr + panel_data$n_lr == panel_data$n_people,
   setequal(biopsies$timepoint, c("T1", "T2", "T3"))
@@ -27,14 +27,14 @@ stopifnot(
 panel <- ggplot() +
   annotation_custom(grid::rasterGrob(
     design,
-    y = grid::unit(1, "npc"), just = "top", interpolate = TRUE
+    y = unit(1, "npc"), just = "top", interpolate = TRUE
   )) +
   labs(
     title = "Design and contrasts",
-    subtitle = sprintf(
-      "%d adults (%d HR, %d LR), %d biopsies; contrast colours carry through b to d",
-      panel_data$n_people, panel_data$n_hr, panel_data$n_lr, panel_data$n_biopsies
-    )
+    subtitle = with(panel_data, sprintf(
+      "%d adults (%d HR, %d LR), %d biopsies; contrast colours carry through the figure",
+      n_people, n_hr, n_lr, n_biopsies
+    ))
   ) +
   theme_void(base_size = 7) +
   theme(
@@ -42,7 +42,4 @@ panel <- ggplot() +
     plot.title.position = "plot"
   )
 
-ggsave(
-  here("04_Figures", "F1", "b_reports", "panels", "a_design.pdf"), panel,
-  width = 95, height = 62, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "F1", "a_design", 75, 70)

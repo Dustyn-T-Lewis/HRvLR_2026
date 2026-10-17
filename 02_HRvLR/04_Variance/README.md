@@ -22,12 +22,14 @@ quarto render 02_HRvLR/04_Variance/a_script/variance.qmd --output-dir ../b_repor
 
 | File | Holds |
 |---|---|
-| `c_data/variance.xlsx` | variance shares, DiffVar, gap table, biopsy correlation and order, PC scores with covariates, PC-by-covariate R² |
+| `c_data/variance.xlsx` | variance shares, DiffVar, gap table, separation per time point (gap k, forced-split adjusted Rand index against HR/LR), biopsy correlation and order, PC scores with covariates, PC-by-covariate R² |
 | `b_reports/variance.html` | the rendered walkthrough |
 
 ## Read with care
 
-- The gap statistic picks k = 1: the biopsies form no natural clusters.
+- The gap statistic picks k = 1 across all biopsies and at each time point: the biopsies form no
+  natural clusters. Forced into two clusters, they match HR/LR no better than chance (adjusted Rand
+  index −0.07 to 0.00); at T2 and T3 the second cluster is S28's thin biopsy alone.
 - PC1 of the blood-corrected values follows the number of proteins each biopsy detected (R² 0.85):
   the thin S28 biopsies sit at its extreme. PCA, clustering and DiffVar include them unweighted.
 - DiffVar runs only on proteins observed in all 16 biopsies of a time point (1,076 at T1, 870 at

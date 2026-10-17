@@ -121,6 +121,10 @@ soft_threshold,chosen,TRUE for the power used.
 ^trajectory_tests$,f,Moderated F statistic (limma).
 ,direction,Direction of the change: Up or Down.
 ^fry_concordance$,set,"Selection: pi_up, pi_down (Π < 0.05) or nominal_up, nominal_down (p < 0.05) in set_from."
+^fry_concordance$,criterion,"Selection of the set: pi (Π < 0.05) or nominal (p < 0.05)."
+^fry_concordance$,set_direction,Direction of the set's members in set_from: up or down.
+^fry_concordance$,set_size,Proteins in the set.
+^fry_concordance$,tested,"Whether fry tested the set; sets under 5 proteins are not tested and their p, FDR and means stay blank."
 ,set_from,Contrast whose responders form the set.
 ,ranked_on,Contrast the set is tested in.
 ,mean_logfc_own,Mean logFC of the members in the contrast that chose them.
@@ -161,6 +165,11 @@ soft_threshold,chosen,TRUE for the power used.
 ^gap$,k,Number of clusters.
 ^gap$,gap,Gap statistic: log within-cluster dispersion of reference data minus that of the data.
 ^gap$,se,Simulation standard error of the gap.
+^separation$,window,"Biopsies asked: all 48, or one time point (T1, T2, T3)."
+^separation$,n_biopsies,Biopsies in the window.
+^(separation|b_pca)$,k_gap,"Clusters the gap statistic picks (one-standard-error rule, k = 1 to 6); 1 means no natural clusters."
+^(separation|b_pca)$,ari_group,"Adjusted Rand index between a forced two-cluster PAM split and HR/LR: 1 a perfect match, about 0 chance."
+^separation$,smaller_cluster,Biopsies in the smaller of the two forced clusters.
 ^biopsy_correlation$,sample_a,First biopsy of the pair.
 ^biopsy_correlation$,sample_b,Second biopsy of the pair.
 ^biopsy_correlation$,r,"Pearson correlation of the two biopsies' blood-corrected, scaled values."
@@ -280,22 +289,22 @@ soft_threshold,chosen,TRUE for the power used.
 ^b_pca$,permanova_n,Biopsies in that time point's PERMANOVA.
 ^b_pca$,permanova_r2,Share of distance variation HR/LR explains at that time point (PERMANOVA R squared).
 ^b_pca$,permanova_p,PERMANOVA p for HR/LR at that time point.
-^c_counts$,family,"Contrast family the row sits under: Training, Acute, HR - LR or Interaction."
-^c_counts$,label,Row label: the group for a within-group window; the time point for HR - LR; the window for an interaction.
-^c_counts$,n_pi,Proteins at Π < 0.05 in that direction.
-^c_counts$,n_chance,Proteins expected at p < 0.05 in one direction by chance: 2.5% of those tested.
-^c_counts$,n_nominal,Proteins at p < 0.05 in that direction.
-^c_counts$,n_fdr_05,Proteins at FDR < 0.05 in that direction.
-^d_fry_transfer$,window,Window the set comes from: Training (T2 - T1) or Acute (T3 - T2).
-^d_fry_transfer$,from_group,Group whose contrast chose the set.
-^d_fry_transfer$,in_group,Group whose contrast the set is tested in.
-^d_fry_transfer$,criterion,"Selection of the set: pi (Π < 0.05) or nominal (p < 0.05)."
-^d_fry_transfer$,set_direction,Direction of the set's members in the group that chose them.
-^d_fry_transfer$,set_size,Proteins in the set.
-^d_fry_transfer$,tested,"Whether fry tested the set; sets under 5 proteins were not tested."
-^d_fry_transfer$,direction,Direction fry reports for the set in the other group's contrast.
-^d_fry_transfer$,evidence,"Evidence level drawn: FDR < 0.05, p < 0.05 only, or not significant."
-^d_fry_transfer$,signed_log_p,"-log10 fry p, negative for down sets: the bar drawn."
+^d_counts$,family,"Contrast family the row sits under: Training, Acute, HR - LR or Interaction."
+^d_counts$,label,Row label: the group for a within-group window; the time point for HR - LR; the window for an interaction.
+^d_counts$,n_pi,Proteins at Π < 0.05 in that direction.
+^d_counts$,n_chance,Proteins expected at p < 0.05 in one direction by chance: 2.5% of those tested.
+^d_counts$,n_nominal,Proteins at p < 0.05 in that direction.
+^d_counts$,n_fdr_05,Proteins at FDR < 0.05 in that direction.
+^e_fry_transfer$,window,Window the set comes from: Training (T2 - T1) or Acute (T3 - T2).
+^e_fry_transfer$,from_group,Group whose contrast chose the set.
+^e_fry_transfer$,in_group,Group whose contrast the set is tested in.
+^e_fry_transfer$,criterion,"Selection of the set: pi (Π < 0.05) or nominal (p < 0.05)."
+^e_fry_transfer$,set_direction,Direction of the set's members in the group that chose them.
+^e_fry_transfer$,set_size,Proteins in the set.
+^e_fry_transfer$,tested,"Whether fry tested the set; sets under 5 proteins were not tested."
+^e_fry_transfer$,direction,Direction fry reports for the set in the other group's contrast.
+^e_fry_transfer$,evidence,"Evidence level drawn: FDR < 0.05, p < 0.05 only, or not significant."
+^e_fry_transfer$,signed_log_p,"-log10 fry p, negative for down sets: the bar drawn."
 ^a_trait_changes$,block,"Which axis the trait is drawn on: % change, composite score or volume load (kg)."
 ^a_trait_changes$,value,"The person's T1 to T2 value of the trait: % change, composite hypertrophy score, or total volume load in kg."
 ^(b_links_vs_chance|a_slope_counts)$,n_expected,Features expected at p < 0.05 by chance alone: 5% of those tested.
@@ -367,3 +376,15 @@ soft_threshold,chosen,TRUE for the power used.
 ^d_pc_covariates$,pc_share,Share of total variance on the component.
 ^d_pc_covariates$,covariate_label,Row label of the covariate.
 ^d_pc_covariates$,component_label,Column label: the component and its share of variance.
+^trait_effects$,trait,"Trait, as in phenotype.csv: fibre area (mixed, type I, type II), muscle area (mcsa), leg press and leg extension 1RM."
+^(trait_effects|c_trait_effects)$,used_for_groups,Whether the trait enters the composite hypertrophy score that formed the groups (muscle area and mixed fibre area).
+^trait_effects$,group,"HR or LR (that group's change), or HR - LR (the difference)."
+^(trait_effects|c_trait_effects)$,n,People with both T1 and T2 values (both groups for HR - LR).
+^(trait_effects|c_trait_effects)$,pct_change,"T1 to T2 change as a geometric-mean %; for HR - LR, HR's ratio over LR's, as %."
+^(trait_effects|c_trait_effects)$,lower,Lower 95% confidence limit of pct_change.
+^(trait_effects|c_trait_effects)$,upper,Upper 95% confidence limit of pct_change.
+^trait_effects$,p,"One-sample t-test of the log ratio (HR, LR) or Welch's t-test between groups (HR - LR)."
+^c_trait_effects$,hr_lr_pct,"HR's T1 to T2 ratio over LR's, as %."
+^c_trait_effects$,hr_lr_p,Welch's t-test of HR against LR on the log ratios; printed beside traits not used to form the groups.
+^c_trait_effects$,block,"Row block: traits that formed the groups (muscle area, mixed fibre area) or not."
+^c_trait_effects$,called,"Whether the group's change reaches p < 0.05 (filled point)."

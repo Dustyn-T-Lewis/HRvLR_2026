@@ -193,8 +193,8 @@ A spike at zero on a flat background is signal; a flat histogram is chance.
 ## Does one group's response carry over to the other?
 
 The proteins one group changes with training (or the bout) at Π < 0.05 or p < 0.05 form a set; fry
-(limma) tests that set in the other group's contrast. Sets need 5 or
-more proteins. Beside each test: the set's mean logFC in the group that chose it (inflated by the
+(limma) tests that set in the other group's contrast. All four sets per pairing are kept; fry
+tests those with 5 or more proteins. Beside each test: the set's mean logFC in the group that chose it (inflated by the
 selection) and in the other group, and the share of members with the same sign. fry is a rotation
 test across biopsies that keeps the person block and its within-person correlation.
 
@@ -211,24 +211,28 @@ signature <- \(contrast, criterion, direction) {
   hit & if (direction == "up") r$logFC > 0 else r$logFC < 0
 }
 fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
-  sets <- expand_grid(criterion = c("pi", "nominal"), direction = c("up", "down")) |>
-    mutate(set = paste(criterion, direction, sep = "_")) |>
-    mutate(rows = pmap(list(criterion, direction), \(c, d) which(signature(set_from, c, d))))
-  sets <- filter(sets, lengths(rows) >= 5)
+  sets <- expand_grid(criterion = c("pi", "nominal"), set_direction = c("up", "down")) |>
+    mutate(
+      set = paste(criterion, set_direction, sep = "_"),
+      rows = map2(criterion, set_direction, \(c, d) which(signature(set_from, c, d))),
+      set_size = lengths(rows), tested = set_size >= 5
+    )
+  tested <- filter(sets, tested)
   own <- filter(results, contrast == set_from)$logFC
   other <- filter(results, contrast == ranked_on)$logFC
-  carried <- transmute(sets, set,
+  carried <- transmute(tested, set,
     mean_logfc_own = map_dbl(rows, \(i) mean(own[i])),
     mean_logfc_other = map_dbl(rows, \(i) mean(other[i])),
     same_sign_share = map_dbl(rows, \(i) mean(sign(own[i]) == sign(other[i])))
   )
-  fry(fit$EList, index = set_names(sets$rows, sets$set), design = design,
+  tests <- fry(fit$EList, index = set_names(tested$rows, tested$set), design = design,
     contrast = contrast_matrix[, ranked_on], block = meta$subject, correlation = fit$correlation
   ) |>
     as_tibble(rownames = "set") |>
-    transmute(
-      set_from, ranked_on, set, n_proteins = NGenes, direction = Direction, p = PValue, fdr = FDR
-    ) |>
+    transmute(set, direction = Direction, p = PValue, fdr = FDR)
+  sets |>
+    transmute(set_from, ranked_on, set, criterion, set_direction, set_size, tested) |>
+    left_join(tests, by = "set") |>
     left_join(carried, by = "set")
 }) |>
   list_rbind()
@@ -290,7 +294,9 @@ stopifnot(
   nrow(results) == nrow(proteins) * ncol(contrast_matrix), !anyNA(results$p),
   all(results$fdr >= results$p),
   all(results$logFC_lower <= results$logFC & results$logFC <= results$logFC_upper),
-  nrow(trajectory_tests) == 2 * nrow(proteins)
+  nrow(trajectory_tests) == 2 * nrow(proteins),
+  nrow(fry_concordance) == 4 * nrow(pairings),
+  all(fry_concordance$tested == !is.na(fry_concordance$p))
 )
 ```
 

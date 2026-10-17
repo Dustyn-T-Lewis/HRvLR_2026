@@ -133,23 +133,44 @@ The gap statistic (Tibshirani, Walther and Hastie 2001; `cluster::clusGap()` wit
 reference data sets) compares how tight k clusters are against data with no group structure; the
 one-standard-error rule (`Tibs2001SEmax`) picks the smallest k whose gap is at least the next k's
 gap minus that gap's standard error.
-k = 1 means no natural clusters. The biopsy correlation matrix, ordered by hierarchical
+k = 1 means no natural clusters. The question is asked of all 48 biopsies and of each time point
+alone. A second check forces the biopsies into two PAM clusters and asks whether those match HR and
+LR: the adjusted Rand index (Hubert and Arabie 1985; `mclust::adjustedRandIndex()`) is 1 for a
+perfect match and about 0 for chance. The biopsy correlation matrix, ordered by hierarchical
 clustering, shows the same question as a picture.
 
 ```{r}
 #| label: clusters
 scaled <- scale(t(corrected$E))
-pcs <- prcomp(scaled)$x[, 1:10]
-set.seed(1)
-gap <- cluster::clusGap(
-  pcs, FUNcluster = \(x, k) list(cluster = cluster::pam(x, k, cluster.only = TRUE)),
-  K.max = 6, B = 100, verbose = FALSE
+gap_of <- \(x) {
+  set.seed(1)
+  gap <- cluster::clusGap(
+    x, FUNcluster = \(x, k) list(cluster = cluster::pam(x, k, cluster.only = TRUE)),
+    K.max = 6, B = 100, verbose = FALSE
+  )
+  as_tibble(gap$Tab) |>
+    mutate(k = row_number(), .before = 1) |>
+    select(k, gap, se = SE.sim)
+}
+in_window <- \(w) w == "all" | meta$timepoint == w
+pcs <- map(
+  set_names(c("all", "T1", "T2", "T3")),
+  \(w) prcomp(scale(t(corrected$E[, in_window(w)])))$x[, 1:10]
 )
-gap_table <- as_tibble(gap$Tab) |>
-  mutate(k = row_number(), .before = 1) |>
-  select(k, gap, se = SE.sim)
-k_chosen <- cluster::maxSE(gap_table$gap, gap_table$se, method = "Tibs2001SEmax")
-c(k_chosen = k_chosen)
+gaps <- map(pcs, gap_of)
+separation <- imap(pcs, \(x, w) {
+  split <- cluster::pam(x, 2, cluster.only = TRUE)
+  tibble(
+    n_biopsies = nrow(x),
+    k_gap = cluster::maxSE(gaps[[w]]$gap, gaps[[w]]$se, method = "Tibs2001SEmax"),
+    ari_group = mclust::adjustedRandIndex(split, meta$group[in_window(w)]),
+    smaller_cluster = min(table(split))
+  )
+}) |>
+  list_rbind(names_to = "window")
+gap_table <- gaps$all
+k_chosen <- separation$k_gap[separation$window == "all"]
+separation
 biopsy_correlation <- cor(t(scaled))
 order_rows <- hclust(as.dist(1 - biopsy_correlation), method = "average")$order
 correlation_long <- as_tibble(biopsy_correlation, rownames = "sample_a") |>
@@ -224,7 +245,9 @@ stopifnot(
 The median protein owes `r round(100 * median(variance_shares$subject), 1)`% of its variance to
 person, `r round(100 * median(variance_shares$timepoint), 1)`% to time point and
 `r round(100 * median(variance_shares$group), 1)`% to group. The gap statistic picks k =
-`r k_chosen`.
+`r k_chosen` across all biopsies and k = `r paste(separation$k_gap[-1], collapse = ", ")` at T1,
+T2 and T3; a forced two-cluster split matches HR/LR with an adjusted Rand index of
+`r paste(sprintf("%.2f", separation$ari_group), collapse = ", ")` (all, T1, T2, T3).
 
 ## Save
 
@@ -234,7 +257,7 @@ out <- here("02_HRvLR", "04_Variance", "c_data")
 dir.create(out, showWarnings = FALSE)
 write_workbook(
   list(
-    variance_shares = variance_shares, diffvar = diffvar, gap = gap_table,
+    variance_shares = variance_shares, diffvar = diffvar, gap = gap_table, separation = separation,
     biopsy_correlation = correlation_long,
     biopsy_order = tibble(
       sample_id = rownames(biopsy_correlation)[order_rows], position = seq_along(order_rows)
@@ -245,6 +268,7 @@ write_workbook(
     "Per protein: share of variance from person, time point, group, blood and residual.",
     "Per time point, proteins seen in all 16 biopsies: DiffVar log variance ratio (LR/HR), p, FDR.",
     "Gap statistic per k (PAM on 10 PCs, 100 reference sets) with its standard error.",
+    "All biopsies and each time point: gap k, and how a forced two-cluster split matches HR/LR.",
     "Pearson correlation between every pair of biopsies, blood-corrected values scaled.",
     "Biopsy order from average-linkage clustering of 1 - correlation.",
     "PC1 to PC5 per biopsy with its covariates.",
