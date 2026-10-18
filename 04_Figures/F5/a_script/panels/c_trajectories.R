@@ -47,7 +47,7 @@ panel <- ggplot(d, aes(timepoint, eigengene, colour = group)) +
   geom_line(aes(group = group), data = means, linewidth = 1) +
   geom_point(data = means, size = 1.4) +
   facet_wrap(~group, nrow = 1) +
-  scale_colour_manual(values = group_greys, guide = "none") +
+  scale_colour_manual(values = group_colours, guide = "none") +
   scale_x_discrete(expand = expansion(add = 0.2)) +
   labs(
     title = sprintf("%s, person by person", identity[[module]]),

@@ -239,50 +239,77 @@ fry_concordance <- pmap(pairings, \(set_from, ranked_on) {
 fry_concordance
 ```
 
-## Whole-proteome structure per time point
+## Whole-proteome structure: levels and changes
 
-A PCA on the blood-corrected values (proteins scaled) at each time point, and PERMANOVA (vegan's
-`adonis2()`, 9,999 permutations) asking how much of the distance between people group explains
-(R²) at that time point. Time is also tested across all biopsies, with permutations kept inside
-each person; the model has no person term, so this test is conservative.
+A PCA on the blood-corrected values (proteins scaled) at each time point, and on each person's
+change: T2 − T1 (training) and T3 − T2 (acute bout), one point per person. PERMANOVA (vegan's
+`adonis2()`, 9,999 permutations) asks how much of the distance between people group explains (R²)
+in each. On a level it asks whether HR and LR proteomes differ; on a change, whether they
+responded differently across the whole proteome, the multivariate form of the interaction. Time is
+also tested across all biopsies, with permutations kept inside each person; the model has no person
+term, so this test is conservative.
 
 ```{r}
 #| label: pca
 corrected <- readRDS(paths[["corrected"]])
-scaled_at <- \(rows) scale(t(corrected$E[, rows]))
-pca_by_time <- map(set_names(c("T1", "T2", "T3")), \(tp) {
+people <- distinct(meta, subject, group)
+at_time <- \(tp) {
   rows <- meta$timepoint == tp
-  pca <- prcomp(scaled_at(rows))
-  as_tibble(pca$x[, 1:2], rownames = "sample_id") |>
-    mutate(pc1_share = summary(pca)$importance[2, 1], pc2_share = summary(pca)$importance[2, 2])
-}) |>
-  list_rbind(names_to = "timepoint") |>
-  left_join(select(meta, sample_id, subject, group), by = "sample_id")
-permanova <- \(rows, term, blocks = NULL) {
-  set.seed(1)
-  control <- permute::how(nperm = 9999, blocks = blocks)
-  fit <- vegan::adonis2(dist(scaled_at(rows)) ~ ., data = meta[rows, term], permutations = control)
-  tibble(n_samples = sum(rows), r2 = fit$R2[1], f = fit$F[1], p = fit$`Pr(>F)`[1])
+  set_names(as.data.frame(corrected$E[, rows]), meta$subject[rows])[, people$subject]
 }
+# A protein with no spread in a window (one modelled value for everyone) cannot be scaled; it is
+# left out of that window.
+spread_only <- \(x) x[, apply(x, 2, sd) > 0]
+structure_data <- list(
+  T1 = at_time("T1"), T2 = at_time("T2"), T3 = at_time("T3"),
+  Training = at_time("T2") - at_time("T1"), Acute = at_time("T3") - at_time("T2")
+) |>
+  map(\(x) scale(spread_only(t(as.matrix(x)))))
+map_int(structure_data, ncol)
+pca <- imap(structure_data, \(x, window) {
+  fit <- prcomp(x)
+  as_tibble(fit$x[, 1:2], rownames = "subject") |>
+    mutate(
+      pc1_share = summary(fit)$importance[2, 1], pc2_share = summary(fit)$importance[2, 2]
+    )
+}) |>
+  list_rbind(names_to = "window") |>
+  left_join(people, by = "subject")
+permanova_group <- \(x) {
+  set.seed(1)
+  fit <- vegan::adonis2(
+    dist(x) ~ group,
+    data = people[match(rownames(x), people$subject), ],
+    permutations = permute::how(nperm = 9999)
+  )
+  tibble(n_samples = nrow(x), r2 = fit$R2[1], f = fit$F[1], p = fit$`Pr(>F)`[1])
+}
+set.seed(1)
+time_fit <- vegan::adonis2(
+  dist(scale(t(corrected$E))) ~ timepoint,
+  data = meta, permutations = permute::how(nperm = 9999, blocks = factor(meta$subject))
+)
 permanova_tests <- bind_rows(
-  map(set_names(c("T1", "T2", "T3")), \(tp) permanova(meta$timepoint == tp, "group")) |>
+  map(structure_data, permanova_group) |>
     list_rbind(names_to = "window") |>
     mutate(term = "group", .before = 1),
-  permanova(rep(TRUE, nrow(meta)), "timepoint", blocks = factor(meta$subject)) |>
-    mutate(term = "time", window = "all", .before = 1)
+  tibble(
+    term = "time", window = "all", n_samples = nrow(meta), r2 = time_fit$R2[1],
+    f = time_fit$F[1], p = time_fit$`Pr(>F)`[1]
+  )
 )
 permanova_tests
 ```
 
 ```{r}
 #| label: fig-pca
-#| fig-cap: "Biopsies per time point on PC1 and PC2 of the blood-corrected values."
-#| fig-width: 9
-#| fig-height: 3.2
-ggplot(pca_by_time, aes(PC1, PC2, colour = group)) +
+#| fig-cap: "People on PC1 and PC2 of the blood-corrected values: per time point and per change."
+#| fig-width: 12
+#| fig-height: 3
+ggplot(pca, aes(PC1, PC2, colour = group)) +
   geom_point(size = 2) +
-  facet_wrap(~timepoint, scales = "free") +
-  scale_colour_manual(values = c(HR = "#D6404E", LR = "#7F7F7F"), name = NULL) +
+  facet_wrap(~ factor(window, names(structure_data)), scales = "free", nrow = 1) +
+  scale_colour_manual(values = c(HR = "#2E3A6E", LR = "#8E9BD3"), name = NULL) +
   theme_bw(base_size = 9)
 ```
 
@@ -328,7 +355,7 @@ write_workbook(
     trajectory_tests = arrange(trajectory_tests, test, p),
     sample_weights = sample_weights,
     fry_concordance = fry_concordance,
-    pca_by_time = pca_by_time,
+    pca = pca,
     permanova = permanova_tests
   ),
   c(
@@ -337,7 +364,7 @@ write_workbook(
     "Per protein: moderated F for any HR-LR difference and trajectory shape; FDR (BH) within test.",
     "Per biopsy: limpa sample weight; tested HR against LR.",
     "fry: each group's responders tested in the other group's contrast; FDR within each pairing.",
-    "PC1 and PC2 per biopsy within each time point, blood-corrected values, proteins scaled.",
+    "PC1 and PC2 per person at each time point and per change (training, acute), proteins scaled.",
     "PERMANOVA: group at each time point; time across all biopsies within person."
   ),
   file.path(out, "protein_contrasts.xlsx"), inputs, paths

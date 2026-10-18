@@ -35,8 +35,9 @@ time_colours <- c(
   T3 = contrast_palette$line[contrast_palette$family == "Acute"]
 )
 group_shapes <- c(HR = 16, LR = 17)
-# HR dark and LR light grey, as the two figures in the design panel.
-group_greys <- c(HR = "#4D4D4D", LR = "#A6A6A6")
+# HR deep indigo and LR periwinkle: two shades of the between-groups colour, so HR against LR reads
+# as one family in every figure, apart from the window colours and the up/down pair.
+group_colours <- c(HR = "#2E3A6E", LR = "#8E9BD3")
 direction_colours <- c(Up = "#4D9221", Down = "#C51B7D")
 
 figure_theme <- ggplot2::theme_minimal(base_size = 7) +
@@ -48,7 +49,10 @@ figure_theme <- ggplot2::theme_minimal(base_size = 7) +
     plot.title.position = "plot",
     panel.grid.minor = ggplot2::element_blank(),
     panel.grid.major = ggplot2::element_line(linewidth = 0.2),
-    legend.key.size = ggplot2::unit(3, "mm")
+    legend.key.size = ggplot2::unit(3, "mm"),
+    legend.text = ggplot2::element_text(size = 6),
+    legend.title = ggplot2::element_text(size = 6, face = "bold"),
+    legend.box.spacing = ggplot2::unit(1.5, "mm")
   )
 
 # Panel letters sit in a left margin column, level with the title.

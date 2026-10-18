@@ -66,7 +66,7 @@ drawn <- mutate(panel_data, group = factor(group, c("HR", "LR")))
 panel <- ggplot(drawn, aes(feature_value, trait_value, colour = group, shape = group)) +
   geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.6) +
   geom_point(size = 1.4) +
-  scale_colour_manual(values = group_greys, labels = legend_text, name = NULL) +
+  scale_colour_manual(values = group_colours, labels = legend_text, name = NULL) +
   scale_shape_manual(values = group_shapes, labels = legend_text, name = NULL) +
   labs(
     title = sprintf("%s, person by person", feature_name),

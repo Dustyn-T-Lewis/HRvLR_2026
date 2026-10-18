@@ -50,7 +50,7 @@ panel <- panel_data |>
     fill = "white", linewidth = 0, label.padding = unit(0.8, "mm"), inherit.aes = FALSE
   ) +
   scale_fill_manual(
-    values = c(group_greys[["HR"]], group_greys[["LR"]], "grey88") |> rlang::set_names(calls),
+    values = c(group_colours[["HR"]], group_colours[["LR"]], "grey88") |> rlang::set_names(calls),
     name = NULL
   ) +
   scale_x_continuous(limits = c(-axis_limit, axis_limit)) +

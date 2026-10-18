@@ -47,7 +47,7 @@ strip_tiles <- strips |>
   tidyr::pivot_longer(c(group, timepoint, subject), names_to = "strip", values_to = "level") |>
   mutate(
     y = strip_rows[strip],
-    colour = c(group_greys, time_colours, person_colours)[level]
+    colour = c(group_colours, time_colours, person_colours)[level]
   )
 
 heatmap <- ggplot(cells, aes(position_a, n_biopsies + 1 - position_b)) +
@@ -87,8 +87,8 @@ gap_plot <- ggplot(mutate(gap, chosen = k == k_chosen), aes(k, gap)) +
   figure_theme
 
 legend_key <- tibble(
-  label = c(names(group_greys), names(time_colours)),
-  colour = c(group_greys, time_colours),
+  label = c(names(group_colours), names(time_colours)),
+  colour = c(group_colours, time_colours),
   x = c(1, 1, 2, 2, 2), y = c(2, 1, 3, 2, 1)
 )
 key_plot <- ggplot(legend_key, aes(x, y)) +

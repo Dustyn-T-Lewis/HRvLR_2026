@@ -65,7 +65,7 @@ panel <- ggplot(drawn, aes(value, label, colour = group, shape = group)) +
   ) +
   ggh4x::facet_grid2(block ~ ., scales = "free", space = "free_y", independent = "x") +
   scale_x_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
-  scale_colour_manual(values = group_greys, name = NULL) +
+  scale_colour_manual(values = group_colours, name = NULL) +
   scale_shape_manual(values = group_shapes, name = NULL) +
   labs(
     title = "Each person's training response",

@@ -50,8 +50,8 @@ panel <- ggplot(panel_data, aes(ratio(pct_change), trait, colour = group)) +
     transform = "log2", breaks = breaks, labels = \(x) sprintf("%+.0f%%", 100 * (x - 1))
   ) +
   scale_y_discrete(labels = tibble::deframe(distinct(panel_data, trait, label))) +
-  scale_colour_manual(values = group_greys, breaks = c("HR", "LR"), name = NULL) +
-  scale_fill_manual(values = group_greys, na.value = "white", guide = "none") +
+  scale_colour_manual(values = group_colours, breaks = c("HR", "LR"), name = NULL) +
+  scale_fill_manual(values = group_colours, na.value = "white", guide = "none") +
   scale_shape_manual(values = c(HR = 21, LR = 24), breaks = c("HR", "LR"), name = NULL) +
   facet_grid(block ~ ., scales = "free_y", space = "free_y", switch = "y") +
   labs(

@@ -68,7 +68,7 @@ panel <- panel_data |>
   geom_point(aes(fill = value_source), size = 0.7, shape = 21, stroke = 0.25) +
   geom_point(aes(shape = group), means, size = 1.4) +
   facet_wrap(~facet, nrow = 1, scales = "free_y") +
-  scale_colour_manual(values = group_greys, name = NULL) +
+  scale_colour_manual(values = group_colours, name = NULL) +
   scale_shape_manual(values = group_shapes, name = NULL) +
   scale_fill_manual(
     values = c(observed = "grey40", `modelled (no precursor seen)` = "white"), name = NULL

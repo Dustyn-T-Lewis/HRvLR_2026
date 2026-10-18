@@ -102,7 +102,7 @@ panel <- ggplot(d, aes(auc, reorder(row, -rank))) +
     labels = tibble::deframe(distinct(d, row, name)), expand = expansion(add = c(1.1, 0.6))
   ) +
   scale_colour_manual(
-    values = group_greys, labels = c("higher in HR", "higher in LR"),
+    values = group_colours, labels = c("higher in HR", "higher in LR"),
     name = NULL
   ) +
   scale_shape_manual(values = auc_shapes, name = NULL, drop = TRUE) +

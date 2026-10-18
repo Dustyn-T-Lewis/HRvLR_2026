@@ -9,8 +9,9 @@ group varies more, and what drives the main principal components.
 | b_variance_shares | Each protein's variance shares for person, time point, HR/LR, blood index and residual (variancePartition), with medians | `variance_shares` |
 | c_diffvar | DiffVar log variance ratio (LR relative to HR) per time point, shaded where p < 0.05; counts per direction against chance (2.5% of tested each way), FDR count, and ratios beyond ±4, which are counted but not drawn. Exploratory: 8 people per group | `diffvar` |
 | d_pc_covariates | R² of each covariate alone on PCs 1 to 5: time point, HR/LR, person, blood index, proteins detected, sample weight | `pc_covariates` |
+| e_pca_levels | PCA of the T2 and T3 levels, one point per person, drawn as Figure 1b (`style/pca_grid.R`) with each time point's PERMANOVA, gap k and forced-split ARI | `pca`, `permanova` from `01_Protein_Contrasts`; `separation` |
 
-All sheets come from `02_HRvLR/04_Variance/c_data/variance.xlsx`.
+Sheets come from `02_HRvLR/04_Variance/c_data/variance.xlsx` unless named.
 
 `b_reports/S1_pc_scatters.pdf` has every PC-covariate pair behind panel d, one covariate per page;
 it is written by `d_pc_covariates.R` and is not part of the composite.
@@ -27,7 +28,7 @@ Rscript 04_Figures/S1/a_script/panels/c_diffvar.R      # one panel
 | File | Holds |
 |---|---|
 | `b_reports/panels/<panel>.pdf` | each panel on its own |
-| `b_reports/S1_composite.pdf` | the figure, 180 × 167 mm |
+| `b_reports/S1_composite.pdf` | the figure, 180 × 229 mm |
 | `b_reports/S1_pc_scatters.pdf` | every PC against every covariate, six pages |
 | `c_data/S1.xlsx` | one sheet per panel with the numbers drawn, column meanings, inputs with md5 |
 

@@ -22,7 +22,7 @@ quarto render 02_HRvLR/04_Variance/a_script/variance.qmd --output-dir ../b_repor
 
 | File | Holds |
 |---|---|
-| `c_data/variance.xlsx` | variance shares, DiffVar, gap table, separation per time point (gap k, forced-split adjusted Rand index against HR/LR), biopsy correlation and order, PC scores with covariates, PC-by-covariate R² |
+| `c_data/variance.xlsx` | variance shares, DiffVar, gap table, separation per time point and per change (gap k, forced-split adjusted Rand index against HR/LR), biopsy correlation and order, PC scores with covariates, PC-by-covariate R² |
 | `b_reports/variance.html` | the rendered walkthrough |
 
 ## Read with care
