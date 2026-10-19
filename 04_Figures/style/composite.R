@@ -37,3 +37,12 @@ write_figure_workbook <- function(envs, figure) {
     here::here(inputs)
   )
 }
+
+# A figure's composite PDF at 04_Figures/<figure>/b_reports/<figure>_composite.pdf, landscape by
+# default (250 mm wide).
+save_figure <- function(plot, figure, height, width = 250) {
+  ggplot2::ggsave(
+    here::here("04_Figures", figure, "b_reports", paste0(figure, "_composite.pdf")), plot,
+    width = width, height = height, units = "mm", device = grDevices::cairo_pdf
+  )
+}

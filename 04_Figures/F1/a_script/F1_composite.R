@@ -19,9 +19,6 @@ layout <- c(
 figure <- wrap_plots(plots, design = layout, heights = c(66, 95)) +
   plot_annotation(tag_levels = "a") &
   figure_tags
-ggplot2::ggsave(
-  here("04_Figures", "F1", "b_reports", "F1_composite.pdf"), figure,
-  width = 250, height = 165, units = "mm", device = grDevices::cairo_pdf
-)
+save_figure(figure, "F1", 165)
 
 write_figure_workbook(panels, "F1")
