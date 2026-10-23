@@ -37,15 +37,14 @@ set_label <- \(pathway, same_sign, interaction = FALSE) {
 }
 
 # The candidate sets of 02_HRvLR/02_Set_Contrasts, the window as a factor in strip order (the step
-# names the between-group window "HR - LR"), and each block's strip label: the window, then for
-# Training and Acute the pattern and its candidate count.
+# names the between-group window "HR - LR"), and each block's strip label: the step's block name,
+# with the candidate count for Training and Acute patterns.
 set_selection <- function(selection) {
   selection |>
     mutate(
       window = factor(if_else(window == "HR - LR", "Between groups", window), panel_families),
       block = if_else(
-        is.na(pattern), as.character(window),
-        sprintf("%s\n%s (%d)", as.character(window), pattern, n())
+        is.na(pattern), as.character(window), sprintf("%s (%d)", sub(": ", "\n", block), n())
       ),
       .by = c(window, pattern)
     ) |>

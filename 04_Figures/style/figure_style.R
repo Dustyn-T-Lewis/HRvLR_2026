@@ -193,7 +193,7 @@ screen_family <- rlang::set_names(
 )
 
 # MSigDB-style set names as short sentence-case labels with their acronyms restored.
-pathway_label <- function(pathway, width = 52) {
+pathway_label <- function(pathway, width = 64) {
   acronyms <- c(
     tca = "TCA", rrna = "rRNA", mrna = "mRNA", trna = "tRNA", ncrna = "ncRNA", rna = "RNA",
     dna = "DNA", atp = "ATP", coa = "CoA", nmd = "NMD", myc = "MYC", rho = "RHO",

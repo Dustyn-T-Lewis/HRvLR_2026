@@ -232,7 +232,7 @@ stopifnot(
 
 `r length(sets)` sets in `r length(by_db)` databases, tested in nine contrasts by fgsea and fry.
 `r sum(selection$representative_0.85)` sets represent the clusters of the `r n_distinct(selection$block)`
-blocks at cut 0.85; the main pathway figure draws up to eight per block.
+blocks at cut 0.85; Figure 3 draws the first few of each block by rank.
 
 ## Save
 

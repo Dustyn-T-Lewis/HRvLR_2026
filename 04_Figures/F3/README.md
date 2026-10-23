@@ -1,13 +1,23 @@
 # F3: pathways
 
-One panel, drawn with the shared pathway dot-matrix (`style/pathway_grid.R`).
+The pathway dot-matrix (`style/pathway_grid.R`) and the gene-set counts behind it.
 
 | Panel | Shows |
 |---|---|
 | a_pathways | Seven row blocks: Training and Acute each split into shared, HR only and LR only (fgsea FDR < 0.05 in both groups, HR alone or LR alone; candidate count in the strip), then Between groups (two of three time points). Within a block, sets are grouped by a tree of shared proteins cut at Jaccard height 0.85, each cluster shown by its most specific set (`representative_0.85`), up to eight per block by rank. Each set is drawn in all nine contrasts: fill fgsea NES, size -log10 FDR, square the database. `*` marks calls of opposite sign within the window, `†` a set whose interaction also reaches FDR < 0.05. The interaction window is in S3. |
+| b_set_counts | Gene sets at fgsea FDR < 0.05 per contrast, up and down, over Hallmark, Reactome, KEGG and GO BP (1,364 sets, FDR within each database). Read beside F1 d: HR and LR change a similar number of proteins, but HR moves 142 sets with training against LR's 31, and 164 against 28 after the bout. |
 
 Disease sets are removed upstream in `01_Processing/04_Gene_Sets`; GO Slim is left out of the
-selection (see S3d).
+selection and the counts (see S3d).
+
+## Read with care
+
+- "HR only" means fgsea FDR < 0.05 in HR and not in LR; it is not a test of HR against LR. The
+  `†` sets are the ones the interaction also supports (22 training, 53 acute sets in panel b).
+- Sets overlap: one mitochondrial programme reaches many sets, which is why panel a shows one set
+  per tree cluster and panel b's counts are not independent programmes.
+- The T3 HR − LR count (263 sets) is the largest in panel b, while T1 has 65 and T2 none; panel a's
+  between-group block needs two of the three time points.
 
 ## Inputs
 
@@ -19,13 +29,13 @@ selection (see S3d).
 
 ```sh
 Rscript 04_Figures/F3/a_script/F3_composite.R            # figure and workbook
-Rscript 04_Figures/F3/a_script/panels/a_pathways.R       # the panel alone
+Rscript 04_Figures/F3/a_script/panels/a_pathways.R       # one panel
 ```
 
 ## Outputs
 
 | File | Holds |
 |---|---|
-| `b_reports/panels/a_pathways.pdf` | the panel |
-| `b_reports/F3_composite.pdf` | the figure, 180 mm wide |
-| `c_data/F3.xlsx` | sheet `a_pathways`: every drawn cell (window, rank, set, contrast, NES, FDR) |
+| `b_reports/panels/<panel>.pdf` | each panel alone |
+| `b_reports/F3_composite.pdf` | the figure, 250 mm wide landscape |
+| `c_data/F3.xlsx` | sheet `a_pathways`: every drawn cell (window, rank, set, contrast, NES, FDR); sheet `b_set_counts`: sets tested and at FDR < 0.05 per contrast and direction |

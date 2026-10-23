@@ -296,6 +296,10 @@ soft_threshold,chosen,TRUE for the power used.
 ^d_counts$,n_chance,Proteins expected at p < 0.05 in one direction by chance: 2.5% of those tested.
 ^d_counts$,n_nominal,Proteins at p < 0.05 in that direction.
 ^d_counts$,n_fdr_05,Proteins at FDR < 0.05 in that direction.
+^b_set_counts$,family,"Contrast family the row sits under: Training, Acute, Between groups or Interaction."
+^b_set_counts$,label,Row label: the group for a within-group window; the time point for HR - LR; the window for an interaction.
+^b_set_counts$,n_tested,"Gene sets tested in the contrast (Hallmark, Reactome, KEGG legacy, GO BP)."
+^b_set_counts$,n_fdr_05,Gene sets at fgsea FDR < 0.05 (within database) with NES in that direction.
 ^e_fry_transfer$,window,Window the set comes from: Training (T2 - T1) or Acute (T3 - T2).
 ^e_fry_transfer$,from_group,Group whose contrast chose the set.
 ^e_fry_transfer$,in_group,Group whose contrast the set is tested in.
