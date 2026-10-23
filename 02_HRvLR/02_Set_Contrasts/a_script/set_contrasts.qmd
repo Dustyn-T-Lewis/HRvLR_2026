@@ -26,6 +26,7 @@ library(tidyr)
 library(purrr)
 library(tibble)
 library(ggplot2)
+source(here("02_HRvLR", "helpers.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
@@ -181,28 +182,9 @@ and 0.9.
 
 ```{r}
 #| label: tree
-jaccard <- \(ids) {
-  outer(ids, ids, Vectorize(\(a, b) {
-    length(intersect(sets[[a]], sets[[b]])) / length(union(sets[[a]], sets[[b]]))
-  }))
-}
-most_specific <- \(cluster, p, size) {
-  near_best <- p <= 10 * ave(p, cluster, FUN = min)
-  pick <- order(cluster, !near_best, size, p)
-  seq_along(p) %in% pick[!duplicated(cluster[pick])]
-}
 selection <- candidates |>
   group_by(block) |>
-  group_modify(\(d, key) {
-    if (nrow(d) == 1) {
-      return(mutate(d, cut_0.75 = 1L, cut_0.85 = 1L, cut_0.9 = 1L, tree_order = 1L))
-    }
-    tree <- hclust(as.dist(1 - jaccard(d$set_id)), method = "average")
-    mutate(d,
-      cut_0.75 = cutree(tree, h = 0.75), cut_0.85 = cutree(tree, h = 0.85),
-      cut_0.9 = cutree(tree, h = 0.9), tree_order = order(tree$order)
-    )
-  }) |>
+  group_modify(\(d, key) set_tree(d, sets)) |>
   ungroup() |>
   mutate(
     representative_0.75 = most_specific(cut_0.75, best_p, n_proteins),

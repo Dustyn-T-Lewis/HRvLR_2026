@@ -19,21 +19,8 @@ panel_data <- slopes$counts |>
   mutate(n_expected = alpha_nominal * n_tested) |>
   select(feature_type, window, trait, n_tested, n_nominal, n_expected, n_fdr_05, share_nominal)
 
-recount <- slopes$group_difference |>
-  summarise(
-    n_tested = sum(!is.na(p)), n_nominal = sum(p < alpha_nominal, na.rm = TRUE),
-    n_fdr_05 = sum(fdr < alpha_fdr, na.rm = TRUE), .by = c(feature_type, window, trait)
-  )
-stopifnot(
-  identical(
-    arrange(
-      select(panel_data, feature_type, window, trait, n_tested, n_nominal, n_fdr_05),
-      feature_type, window, trait
-    ),
-    arrange(recount, feature_type, window, trait)
-  ),
-  !"comp_hypertrophy" %in% panel_data$trait
-)
+check_counts(panel_data, slopes$group_difference)
+stopifnot(!"comp_hypertrophy" %in% panel_data$trait)
 
 panel <- share_grid(
   panel_data,

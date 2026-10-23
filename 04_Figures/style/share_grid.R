@@ -6,6 +6,21 @@
 # `counts`: one row per feature_type, window and trait, with share_nominal and n_fdr_05.
 feature_types <- c(proteins = "Proteins", sets = "Gene sets", modules = "Modules")
 
+# Check the saved counts against a recount of the per-feature results (p and fdr per feature_type,
+# window and trait), so the tiles cannot drift from the tests behind them.
+check_counts <- function(counts, results) {
+  recount <- results |>
+    summarise(
+      n_tested = sum(!is.na(p)), n_nominal = sum(p < alpha_nominal, na.rm = TRUE),
+      n_fdr_05 = sum(fdr < alpha_fdr, na.rm = TRUE), .by = c(feature_type, window, trait)
+    ) |>
+    arrange(feature_type, window, trait)
+  saved <- counts |>
+    select(feature_type, window, trait, n_tested, n_nominal, n_fdr_05) |>
+    arrange(feature_type, window, trait)
+  stopifnot(identical(saved, recount))
+}
+
 share_grid <- function(counts, title, subtitle) {
   window_text <- rlang::set_names(
     if_else(

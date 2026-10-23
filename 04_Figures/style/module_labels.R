@@ -1,13 +1,20 @@
-# Module names for F5 and S5. WGCNA colours are labels only and change when the network is rebuilt,
-# so a module is named by its leading set (its top over-represented set in
-# 07_Module_Characterisation, when that set's FDR is below alpha_fdr) with the colour after it.
+# Module names for F5 and S5, and the profile-group names of F4 d. WGCNA colours are labels only
+# and change when the network is rebuilt, so a module is named by its leading set (its top
+# over-represented set in 07_Module_Characterisation, when that set's FDR is below alpha_fdr) with
+# the colour after it.
 # Expects figure_style.R sourced.
 
-module_identity <- function(labels, width = 34) {
-  identity <- dplyr::if_else(
-    labels$top_set_fdr < alpha_fdr, pathway_label(labels$top_set, width),
+# A protein group's name: its top over-represented set where that set passes FDR < alpha_fdr.
+# Also names the profile groups of F4 d.
+set_identity <- function(top_set, top_set_fdr, width = 34) {
+  dplyr::if_else(
+    top_set_fdr < alpha_fdr, pathway_label(top_set, width),
     sprintf("no set at FDR < %s", alpha_fdr)
   )
+}
+
+module_identity <- function(labels, width = 34) {
+  identity <- set_identity(labels$top_set, labels$top_set_fdr, width)
   rlang::set_names(paste0(identity, " (", labels$module, ")"), labels$module)
 }
 

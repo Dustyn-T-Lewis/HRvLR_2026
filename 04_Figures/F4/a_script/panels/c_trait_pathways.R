@@ -1,6 +1,7 @@
-# Trait pathways: per window, the representative of each tree cluster at Jaccard height 0.85
-# (03_Continuous/02_Trait_Pathways), up to ten by rank, drawn against every trait of the window with
-# fgsea NES and FDR. Change windows (traits as % change) on the left, level windows on the right.
+# Trait pathways: per window, the most specific set of each tree cluster at Jaccard height 0.85
+# (03_Continuous/02_Trait_Pathways), the first `cap` by rank, drawn against every trait of the
+# window with fgsea NES and FDR. Change windows (traits as % change) on the left, level windows on
+# the right.
 library(here)
 library(dplyr)
 library(ggplot2)
@@ -51,7 +52,8 @@ panel <- half_grid(
   title = "Gene sets that follow the traits",
   subtitle = paste0(
     "fgsea on each window-trait protein ranking, everyone pooled; one set per tree cluster ",
-    "(Jaccard height 0.85), up to ten per window; * calls of opposite sign"
+    sprintf("(Jaccard height 0.85, its most specific), up to %d per window; ", cap),
+    "* calls of opposite sign"
   )
 ) +
   half_grid("level") +
@@ -73,8 +75,4 @@ stopifnot(
   nrow(cells_per_set) == nrow(rows), all(cells_per_set$n == cells_per_set$n_traits)
 )
 
-panel_height <- 100
-ggsave(
-  here("04_Figures", "F4", "b_reports", "panels", "c_trait_pathways.pdf"), panel,
-  width = 180, height = panel_height, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "F4", "c_trait_pathways", 250, 100)

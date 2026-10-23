@@ -27,6 +27,7 @@ library(tidyr)
 library(purrr)
 library(tibble)
 library(ggplot2)
+source(here("02_HRvLR", "helpers.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
   associations = "03_Continuous/01_Trait_Associations/c_data/associations.rds",
@@ -130,7 +131,8 @@ candidates <- pathways |>
   summarise(
     hits = sum(fdr < 0.05, na.rm = TRUE),
     same_sign = n_distinct(sign(nes[which(fdr < 0.05)])) == 1,
-    strength = sum(abs(nes), na.rm = TRUE), .by = c(window, set_id, collection)
+    strength = sum(abs(nes), na.rm = TRUE), best_p = min(p, na.rm = TRUE),
+    n_proteins = first(n_proteins), .by = c(window, set_id, collection)
   ) |>
   filter(hits >= 1) |>
   arrange(window, desc(same_sign), desc(strength)) |>
@@ -140,38 +142,26 @@ count(candidates, window)
 
 Near-duplicate sets are grouped, not dropped. Within each window, sets are clustered by the
 proteins they share (Jaccard similarity: shared ÷ union; average linkage), and the tree is cut at
-three heights. The figure draws one set per cluster at height 0.85, the strongest.
+three heights, as in `02_Set_Contrasts`. Each cluster is shown by its most specific set: the
+smallest whose best p across the window's traits is within 10-fold of the cluster's best. The
+figure draws one set per cluster at height 0.85.
 
 ```{r}
 #| label: tree
-jaccard <- \(ids) {
-  outer(ids, ids, Vectorize(\(a, b) {
-    length(intersect(sets[[a]], sets[[b]])) / length(union(sets[[a]], sets[[b]]))
-  }))
-}
 trait_selection <- candidates |>
   group_by(window) |>
-  group_modify(\(d, key) {
-    if (nrow(d) == 1) {
-      return(mutate(d, cut_0.75 = 1L, cut_0.85 = 1L, cut_0.9 = 1L, tree_order = 1L))
-    }
-    tree <- hclust(as.dist(1 - jaccard(d$set_id)), method = "average")
-    mutate(d,
-      cut_0.75 = cutree(tree, h = 0.75), cut_0.85 = cutree(tree, h = 0.85),
-      cut_0.9 = cutree(tree, h = 0.9), tree_order = order(tree$order)
-    )
-  }) |>
+  group_modify(\(d, key) set_tree(d, sets)) |>
   ungroup() |>
   mutate(
-    representative_0.75 = !duplicated(cut_0.75), representative_0.85 = !duplicated(cut_0.85),
-    representative_0.9 = !duplicated(cut_0.9), .by = window
+    representative_0.75 = most_specific(cut_0.75, best_p, n_proteins),
+    representative_0.85 = most_specific(cut_0.85, best_p, n_proteins),
+    representative_0.9 = most_specific(cut_0.9, best_p, n_proteins), .by = window
   ) |>
   left_join(select(catalog, set_id, pathway), by = "set_id")
 trait_selection |>
   summarise(candidates = n(), across(starts_with("representative"), sum), .by = window)
 ```
 
-Rows are ranked strongest first, so `!duplicated()` keeps each cluster's strongest set.
 
 ```{r}
 #| label: fig-matrix

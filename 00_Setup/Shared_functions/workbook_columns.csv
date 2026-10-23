@@ -148,6 +148,7 @@ soft_threshold,chosen,TRUE for the power used.
 ^selection$,hits,Contrasts in the window where fgsea calls the set at FDR < 0.05.
 ^selection$,same_sign,Whether the set's FDR < 0.05 calls in the window agree in sign.
 ^selection$,best_p,Smallest fgsea p among the window's FDR < 0.05 calls.
+^trait_selection$,best_p,"Smallest fgsea p of the set across the window's traits; picks the most specific set per cluster."
 ^selection$,interaction,"Training and Acute: whether the window's interaction (HR change minus LR change) reaches fgsea FDR < 0.05; blank in the other windows."
 ^selection$,rank,"Rank within the block: agreeing sign first, then interaction, then best_p."
 ^selection$,cut_0.75,Tree cluster within the block at Jaccard-distance height 0.75.
@@ -252,9 +253,9 @@ soft_threshold,chosen,TRUE for the power used.
 ^trait_selection$,cut_0.85,Tree cluster within the window at height 0.85 (drawn in the figure).
 ^trait_selection$,cut_0.9,Tree cluster within the window at height 0.9.
 ^trait_selection$,tree_order,Position of the set in the window's tree (leaf order).
-^trait_selection$,representative_0.75,Whether the set is its cluster's strongest at cut 0.75.
-^trait_selection$,representative_0.85,Whether the set is its cluster's strongest at cut 0.85 (drawn in the figure).
-^trait_selection$,representative_0.9,Whether the set is its cluster's strongest at cut 0.9.
+^trait_selection$,representative_0.75,"Whether the set represents its cluster at cut 0.75: the smallest set with best_p within 10-fold of the cluster's best."
+^trait_selection$,representative_0.85,Whether the set represents its cluster at cut 0.85 (same rule; drawn in the figure).
+^trait_selection$,representative_0.9,Whether the set represents its cluster at cut 0.9 (same rule).
 ^(profile_groups|profile_members|profile_means|trait_groups)$,group,"Cluster number from dynamicTreeCut (a protein group, not HR or LR)."
 ,mean_t,Mean limma t of the group's proteins (profile groups: mean over all screens).
 ,share_positive,Share of the group's proteins with a positive t.
@@ -355,7 +356,7 @@ soft_threshold,chosen,TRUE for the power used.
 ^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09)$,block,"Row block: the window, split for Training and Acute into shared, HR only and LR only with the candidate count."
 ^a_tree_matrix$,tree_order,Position of the set in its block's tree (leaf order); rows run in this order.
 ^a_tree_matrix$,cut_0.85,Tree cluster within the block at Jaccard-distance height 0.85; grey and white bands alternate between clusters.
-^a_tree_matrix$,representative_0.85,Whether the set is its cluster's most specific at height 0.85 (bold; Figure 3 draws the first eight per block).
+^a_tree_matrix$,representative_0.85,Whether the set is its cluster's most specific at height 0.85 (bold; Figure 3 draws the first few per block).
 ^d_go_slim$,order,"Row position, top first, from average-linkage clustering of the theme's NES across the nine contrasts."
 ^(a_pathways|a_tree_matrix|b_cut_075|c_cut_09|d_go_slim)$,nes,fgsea normalised enrichment score in the contrast: positive = the set sits towards the up end of the ranking.
 ^c_trait_pathways$,nes,fgsea normalised enrichment score against the trait: positive = the set sits towards the end of the ranking that rises with the trait.

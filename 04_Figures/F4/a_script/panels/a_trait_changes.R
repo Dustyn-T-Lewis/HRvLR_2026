@@ -8,7 +8,7 @@ library(ggplot2)
 source(here("04_Figures", "style", "figure_style.R"))
 source(here("02_HRvLR", "helpers.R"))
 
-inputs <- c(phenotype = "00_Setup/Input/phenotype.csv", helpers = "02_HRvLR/helpers.R")
+inputs <- c(phenotype = "00_Setup/Input/phenotype.csv")
 phenotype <- readr::read_csv(here(inputs[["phenotype"]]), show_col_types = FALSE)
 changes <- trait_windows(phenotype)$training
 holds <- paste(
@@ -29,8 +29,9 @@ panel_data <- changes |>
 pct_check <- with(
   phenotype, 100 * (leg_press_1rm_post_kg - leg_press_1rm_pre_kg) / leg_press_1rm_pre_kg
 )
+n_people <- n_distinct(phenotype$subject)
 stopifnot(
-  n_distinct(panel_data$subject) == 16,
+  n_distinct(panel_data$subject) == n_people,
   setequal(panel_data$group, c("HR", "LR")),
   all.equal(
     filter(panel_data, trait == "pct_leg_press_1rm")$value,
@@ -69,7 +70,7 @@ panel <- ggplot(drawn, aes(value, label, colour = group, shape = group)) +
   scale_shape_manual(values = group_shapes, name = NULL) +
   labs(
     title = "Each person's training response",
-    subtitle = "16 people, T1 to T2 (% change); bar: group median",
+    subtitle = sprintf("%d people, T1 to T2 (%% change); bar: group median", n_people),
     x = NULL, y = NULL
   ) +
   figure_theme +
@@ -78,7 +79,4 @@ panel <- ggplot(drawn, aes(value, label, colour = group, shape = group)) +
     strip.text = element_blank(), panel.spacing.y = unit(2, "mm")
   )
 
-ggsave(
-  here("04_Figures", "F4", "b_reports", "panels", "a_trait_changes.pdf"), panel,
-  width = 75, height = 70, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "F4", "a_trait_changes", 85, 70)

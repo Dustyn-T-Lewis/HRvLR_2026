@@ -1,5 +1,6 @@
-# Per-person views of a feature-by-biopsy matrix, and the phenotype as the trait steps read it.
-# Sourced by 02_HRvLR steps 06 and 07 and 03_Continuous steps 01 and 03, after dplyr and tidyr load.
+# Per-person views of a feature-by-biopsy matrix, the phenotype as the trait steps read it, and the
+# gene-set tree both pathway steps use. Sourced by 02_HRvLR steps 02, 06 and 07 and 03_Continuous
+# steps 01 to 03, after dplyr and tidyr load.
 
 # One column per person: the value at time point `at`, or with `from`, the change from `from` to
 # `at`. Every person has all three biopsies, so no one drops out.
@@ -51,4 +52,29 @@ window_values <- function(values, meta) {
     acute = person_values(values, meta, "T3", from = "T2"),
     post_bout_level = person_values(values, meta, "T3")
   )
+}
+
+# Candidate sets `d` (one block or window) grouped by the proteins they share: Jaccard similarity
+# (shared / union), average linkage, as EnrichmentMap and DAVID group them, cut at three heights.
+# `sets` maps set_id to its genes. Adds cut_0.75, cut_0.85, cut_0.9 and the tree's row order.
+set_tree <- function(d, sets) {
+  if (nrow(d) == 1) {
+    return(mutate(d, cut_0.75 = 1L, cut_0.85 = 1L, cut_0.9 = 1L, tree_order = 1L))
+  }
+  similarity <- outer(d$set_id, d$set_id, Vectorize(\(a, b) {
+    length(intersect(sets[[a]], sets[[b]])) / length(union(sets[[a]], sets[[b]]))
+  }))
+  tree <- hclust(as.dist(1 - similarity), method = "average")
+  mutate(d,
+    cut_0.75 = cutree(tree, h = 0.75), cut_0.85 = cutree(tree, h = 0.85),
+    cut_0.9 = cutree(tree, h = 0.9), tree_order = order(tree$order)
+  )
+}
+
+# Each cluster's representative: the smallest set whose p is within 10-fold of the cluster's best,
+# so a narrow set nested in a broad one takes its place when the evidence is close.
+most_specific <- function(cluster, p, size) {
+  near_best <- p <= 10 * ave(p, cluster, FUN = min)
+  pick <- order(cluster, !near_best, size, p)
+  seq_along(p) %in% pick[!duplicated(cluster[pick])]
 }

@@ -21,21 +21,7 @@ panel_data <- associations$counts |>
   mutate(n_expected = alpha_nominal * n_tested) |>
   select(feature_type, window, trait, n_tested, n_nominal, n_expected, n_fdr_05, share_nominal)
 
-recount <- associations$change_score |>
-  summarise(
-    n_tested = sum(!is.na(p)), n_nominal = sum(p < alpha_nominal, na.rm = TRUE),
-    n_fdr_05 = sum(fdr < alpha_fdr, na.rm = TRUE), .by = c(feature_type, window, trait)
-  )
-stopifnot(
-  nrow(panel_data) == nrow(recount),
-  identical(
-    arrange(
-      select(panel_data, feature_type, window, trait, n_tested, n_nominal, n_fdr_05),
-      feature_type, window, trait
-    ),
-    arrange(recount, feature_type, window, trait)
-  )
-)
+check_counts(panel_data, associations$change_score)
 
 panel <- share_grid(
   panel_data,
@@ -46,7 +32,4 @@ panel <- share_grid(
   )
 )
 
-ggsave(
-  here("04_Figures", "F4", "b_reports", "panels", "b_links_vs_chance.pdf"), panel,
-  width = 105, height = 70, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "F4", "b_links_vs_chance", 165, 70)

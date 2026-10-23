@@ -6,6 +6,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 source(here("04_Figures", "style", "figure_style.R"))
+source(here("04_Figures", "style", "module_labels.R"))
 
 inputs <- c(profile_clusters = "03_Continuous/03_Profile_Clusters/c_data/profile_clusters.rds")
 profiles <- readRDS(here(inputs[["profile_clusters"]]))
@@ -14,12 +15,7 @@ holds <- "Panel d: mean limma t per window-trait screen of the largest profile g
 
 shown <- profiles$profile_groups |>
   slice_max(n_proteins, n = n_groups, with_ties = FALSE) |>
-  mutate(
-    identity = if_else(
-      top_set_fdr < alpha_fdr, pathway_label(top_set, 40), sprintf("no set at FDR < %s", alpha_fdr)
-    ),
-    row = sprintf("%d (%d) %s", group, n_proteins, identity)
-  )
+  mutate(row = sprintf("%d (%d) %s", group, n_proteins, set_identity(top_set, top_set_fdr, 40)))
 panel_data <- profiles$profile_means |>
   filter(group %in% shown$group) |>
   separate_wider_delim(screen, " ", names = c("window", "trait"), cols_remove = FALSE) |>
@@ -47,6 +43,8 @@ drawn <- panel_data |>
     window = factor(screen_windows[window], screen_windows),
     row = factor(shown$row[match(group, shown$group)], rev(shown$row))
   )
+# Mean t is capped so the many small means stay visible beside a few large ones.
+t_limit <- 1.5
 panel <- ggplot(drawn, aes(column, row, fill = mean_t)) +
   geom_tile(colour = "white", linewidth = 0.3) +
   ggh4x::facet_grid2(
@@ -54,7 +52,7 @@ panel <- ggplot(drawn, aes(column, row, fill = mean_t)) +
     scales = "free_x", space = "free_x", strip = contrast_strips(x = screen_family)
   ) +
   scale_fill_distiller(
-    palette = "RdBu", limits = c(-1.5, 1.5), oob = scales::squish, name = "mean t"
+    palette = "RdBu", limits = c(-t_limit, t_limit), oob = scales::squish, name = "mean t"
   ) +
   scale_x_discrete(expand = c(0, 0)) +
   scale_y_discrete(expand = c(0, 0)) +
@@ -77,7 +75,4 @@ panel <- ggplot(drawn, aes(column, row, fill = mean_t)) +
     legend.key.height = unit(5, "mm"), legend.key.width = unit(2.5, "mm")
   )
 
-ggsave(
-  here("04_Figures", "F4", "b_reports", "panels", "d_profile_clusters.pdf"), panel,
-  width = 180, height = 75, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "F4", "d_profile_clusters", 250, 70)
