@@ -21,9 +21,8 @@ holds <- paste(
 # The module drawn is the one with the smallest eigengene p in a training, acute or HR - LR
 # contrast; the interactions are left out because they test a difference of changes, which the
 # per-person lines show less directly.
-chosen <- tests |>
-  filter(!grepl("Interaction", contrast)) |>
-  slice_min(p, n = 1, with_ties = FALSE)
+eligible <- filter(tests, contrast_panel(contrast) != "Interaction")
+chosen <- slice_min(eligible, p, n = 1, with_ties = FALSE)
 module <- chosen$module
 
 panel_data <- tibble(
@@ -35,8 +34,8 @@ panel_data <- tibble(
 
 stopifnot(
   nrow(panel_data) == ncol(modules$eigengenes), !anyNA(panel_data$eigengene),
-  setequal(panel_data$group, groups), all(table(panel_data$subject) == 3),
-  chosen$p == min(tests$p[!grepl("Interaction", tests$contrast)])
+  setequal(panel_data$group, groups),
+  all(table(panel_data$subject) == n_distinct(panel_data$timepoint)), chosen$p == min(eligible$p)
 )
 
 d <- mutate(panel_data, group = factor(group, groups))
@@ -61,7 +60,4 @@ panel <- ggplot(d, aes(timepoint, eigengene, colour = group)) +
   figure_theme +
   theme(strip.text = element_text(face = "bold", size = 6.5))
 
-ggsave(
-  here("04_Figures", "F5", "b_reports", "panels", "c_trajectories.pdf"), panel,
-  width = 95, height = 65, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "F5", "c_trajectories", 100, 80)

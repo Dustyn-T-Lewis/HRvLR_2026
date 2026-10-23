@@ -12,7 +12,7 @@ inputs <- c(
 labels <- read_module_labels()
 string <- readxl::read_excel(characterisation_file, "string")
 modules <- readRDS(here(inputs[["modules"]]))
-identity <- module_identity(labels)
+identity <- module_identity(labels, width = 48)
 holds <- paste(
   "Panel a: each module's size, top ORA set and STRING enrichment; identity is the label drawn."
 )
@@ -37,12 +37,11 @@ stopifnot(
   all(abs(panel_data$string_ratio - labels$string_ratio) < 1e-9)
 )
 
+string_calls <- sprintf(c("FDR < %s", "FDR ≥ %s"), alpha_fdr)
 d <- mutate(
   panel_data,
   module = factor(module, rev(module)),
-  string_call = if_else(
-    string_fdr < alpha_fdr, sprintf("FDR < %s", alpha_fdr), sprintf("FDR ≥ %s", alpha_fdr)
-  )
+  string_call = if_else(string_fdr < alpha_fdr, string_calls[1], string_calls[2])
 )
 size_plot <- ggplot(d, aes(n_proteins, module)) +
   geom_col(aes(fill = module), width = 0.65, colour = "grey30", linewidth = 0.15, alpha = 0.85) +
@@ -65,7 +64,7 @@ string_plot <- ggplot(d, aes(string_ratio, module)) +
   geom_segment(aes(x = 1, xend = string_ratio), linewidth = 0.3, colour = "grey60") +
   geom_point(aes(shape = string_call), size = 1.4, colour = "grey15", stroke = 0.4) +
   scale_shape_manual(
-    values = rlang::set_names(c(16, 1), sprintf(c("FDR < %s", "FDR ≥ %s"), alpha_fdr)),
+    values = rlang::set_names(c(16, 1), string_calls),
     guide = "none"
   ) +
   scale_x_continuous(
@@ -75,9 +74,8 @@ string_plot <- ggplot(d, aes(string_ratio, module)) +
   figure_theme +
   theme(axis.text.y = element_blank(), panel.grid.major.y = element_blank())
 
+# Alone, size and STRING side by side; the composite lays size_plot, string_plot and panel b on the
+# same rows so each module's name reads across all three.
 panel <- (size_plot | string_plot) + plot_layout(widths = c(3, 1.3))
 
-ggsave(
-  here("04_Figures", "F5", "b_reports", "panels", "a_identity.pdf"), panel,
-  width = 100, height = 75, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "F5", "a_identity", 100, 75)

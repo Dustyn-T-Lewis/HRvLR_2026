@@ -2,7 +2,8 @@
 
 Co-expression modules from `01_Processing/06_Module_Building` (WGCNA, soft power 12). Colours are
 labels only, so every module is named by its top over-represented set (FDR < 0.05) with the colour
-after it (`style/module_labels.R`). Rows run largest module first in a and b.
+after it (`style/module_labels.R`). Rows run largest module first. In the composite, a and b share their rows: each module's name is
+printed once, on the left of a, and reads across to its eigengene tests in b.
 
 | Panel | Shows |
 |---|---|
@@ -32,5 +33,14 @@ Rscript 04_Figures/F5/a_script/panels/b_eigengene_matrix.R    # one panel alone
 | File | Holds |
 |---|---|
 | `b_reports/panels/<panel>.pdf` | each panel |
-| `b_reports/F5_composite.pdf` | the figure, 180 × 165 mm |
+| `b_reports/F5_composite.pdf` | the figure, 250 × 165 mm landscape |
 | `c_data/F5.xlsx` | one sheet per panel with the numbers drawn |
+
+## Read with care
+
+- Module eigengenes change at chance: 4 of 117 tests reach p < 0.05 against 5.9 expected, and
+  none passes FDR < 0.05. Panel c draws the smallest p (tan, Training HR, FDR 0.27) as an example
+  of what a module trajectory looks like, not as a finding.
+- Five of 13 modules have no over-represented set at FDR < 0.05; they are named by colour alone.
+- Panel d shows most modules moderately preserved in the other group (Zsummary 2 to 10): HR and LR
+  share their co-expression structure (26 of 29 group modules; 3 fall below 2, none above 10).

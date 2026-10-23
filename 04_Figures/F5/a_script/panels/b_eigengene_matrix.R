@@ -29,8 +29,8 @@ panel_data <- tests$eigengene_tests |>
 
 check <- inner_join(panel_data, tests$fry_tests, by = c("contrast", "module"))
 stopifnot(
-  length(contrasts) == 9, setequal(panel_data$module, labels$module),
-  nrow(panel_data) == 9 * nrow(labels), nrow(check) == nrow(panel_data),
+  setequal(panel_data$module, labels$module),
+  nrow(panel_data) == length(contrasts) * nrow(labels), nrow(check) == nrow(panel_data),
   all(check$fry_p == check$p.y), !anyNA(panel_data$logFC)
 )
 
@@ -83,7 +83,7 @@ panel <- ggplot(d, aes(column, module)) +
     labeller = labeller(family = label_wrap_gen(10))
   ) +
   labs(
-    x = NULL, y = NULL, title = "Module eigengenes across the nine contrasts",
+    x = NULL, y = NULL, title = "Module eigengenes across the contrasts",
     subtitle = sprintf(
       paste0(
         "limma on each eigengene; square: fry on the module's proteins\n",
@@ -96,7 +96,4 @@ panel <- ggplot(d, aes(column, module)) +
   matrix_theme +
   theme(axis.text.y = element_text(size = 5.5))
 
-ggsave(
-  here("04_Figures", "F5", "b_reports", "panels", "b_eigengene_matrix.pdf"), panel,
-  width = 80, height = 75, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "F5", "b_eigengene_matrix", 100, 75)

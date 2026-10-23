@@ -7,6 +7,8 @@ inputs <- c(preservation = "02_HRvLR/05_Module_Preservation/c_data/preservation.
 preservation <- readRDS(here(inputs[["preservation"]]))
 holds <- "Panel d: Zsummary of each group's modules tested in the other group."
 thresholds <- c(none = 2, strong = 10)
+# The axis reaches at least 12, so the strong line stays in view when no module passes it.
+z_floor <- 12
 
 panel_data <- preservation$preservation |>
   select(reference, test, module, n_proteins, z_summary, median_rank, full_module, full_share) |>
@@ -38,7 +40,8 @@ panel <- ggplot(d, aes(z_summary, row)) +
   scale_size_area(max_size = 3, name = "proteins") +
   scale_y_discrete(labels = tibble::deframe(select(d, row, label))) +
   scale_x_continuous(
-    limits = c(0, max(12, ceiling(max(d$z_summary)))), breaks = c(0, unname(thresholds), 5),
+    limits = c(0, max(z_floor, ceiling(max(d$z_summary)))),
+    breaks = sort(c(0, 5, unname(thresholds))),
     expand = expansion(mult = c(0, 0.03))
   ) +
   facet_grid(facet ~ ., scales = "free_y", space = "free_y") +
@@ -62,7 +65,4 @@ panel <- ggplot(d, aes(z_summary, row)) +
     legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
   )
 
-ggsave(
-  here("04_Figures", "F5", "b_reports", "panels", "d_preservation.pdf"), panel,
-  width = 85, height = 80, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "F5", "d_preservation", 150, 80)
