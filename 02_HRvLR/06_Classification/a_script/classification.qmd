@@ -159,13 +159,16 @@ auc |>
   theme_bw(base_size = 8)
 ```
 
-The strongest features per task, by p:
+The strongest features per task: smallest p, ties broken by the AUC furthest from 0.5.
 
 ```{r}
 #| label: top
 top <- auc |>
-  slice_min(p, n = 3, by = c(feature_type, task), with_ties = FALSE) |>
-  select(feature_type, task, label, auc, auc_lower, auc_upper, p, fdr)
+  arrange(p, desc(abs(auc - 0.5))) |>
+  slice_head(n = 3, by = c(feature_type, task)) |>
+  mutate(rank = row_number(), .by = c(feature_type, task)) |>
+  select(feature_type, task, rank, feature, collection, label, auc, auc_lower, auc_upper, p, fdr) |>
+  arrange(feature_type, task, rank)
 top
 ```
 
@@ -196,15 +199,16 @@ largest distance from 0.5 is an AUC of `r round(auc$auc[which.max(abs(auc$auc - 
 #| label: save
 out <- here("02_HRvLR", "06_Classification", "c_data")
 dir.create(out, showWarnings = FALSE)
-saveRDS(list(auc = auc, counts = counts), file.path(out, "classification.rds"))
+saveRDS(list(auc = auc, counts = counts, top = top), file.path(out, "classification.rds"))
 write_workbook(
-  list(counts = counts, auc = arrange(auc, feature_type, task, collection, p)),
+  list(counts = counts, auc = arrange(auc, feature_type, task, collection, p), top = top),
   c(
     "Per feature type and task: tested, p < 0.05, FDR < 0.05, smallest p, AUC furthest from 0.5.",
     paste(
       "Per feature and task: AUC (HR above LR) with DeLong 95% CI, Wilcoxon p, people per group,",
       "FDR within feature type, task and collection."
-    )
+    ),
+    "Per feature type and task, the three features with the smallest p (Supplementary Figure 2)."
   ),
   file.path(out, "classification.xlsx"), inputs, paths
 )

@@ -13,7 +13,6 @@ holds <- paste(
   "Panel b: Spearman rho within HR and within LR for every feature in the screen holding the",
   "smallest slope-difference p, with that feature's slope difference."
 )
-feature_types <- c(proteins = "proteins", sets = "gene sets", modules = "modules")
 n_label <- 6
 
 top <- slice_min(slopes$group_difference, p, n = 1, with_ties = FALSE)
@@ -78,7 +77,7 @@ panel <- ggplot(panel_data, aes(rho_HR, rho_LR)) +
     subtitle = sprintf(
       "%s, %s, %s %s; %d of %d FDR hits change sign",
       trait_label(top$trait), screen_windows[[top$window]], scales::comma(nrow(panel_data)),
-      feature_types[[top$feature_type]], n_crossed, n_hits
+      tolower(feature_types[[top$feature_type]]), n_crossed, n_hits
     ),
     x = "Spearman rho in HR", y = "Spearman rho in LR"
   ) +

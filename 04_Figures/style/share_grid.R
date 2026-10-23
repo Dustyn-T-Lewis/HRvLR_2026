@@ -4,7 +4,6 @@
 # dplyr and ggplot2 attached and figure_style.R sourced.
 #
 # `counts`: one row per feature_type, window and trait, with share_nominal and n_fdr_05.
-feature_types <- c(proteins = "Proteins", sets = "Gene sets", modules = "Modules")
 
 # Check the saved counts against a recount of the per-feature results (p and fdr per feature_type,
 # window and trait), so the tiles cannot drift from the tests behind them.

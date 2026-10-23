@@ -281,7 +281,7 @@ soft_threshold,chosen,TRUE for the power used.
 ^(a_responders|b_hr_lr_candidates)$,row_order,Position of the protein within its block (1 at the top).
 ^c_trajectories$,log2_abundance,"Blood-corrected log2 protein value in the biopsy (01_Processing/03_Blood_Correction)."
 ^c_trajectories$,observed,TRUE when at least one precursor of the protein was observed in the biopsy; FALSE when limpa modelled the value from the detection curve.
-^a_auc_top$,rank,"Rank within task and feature type: smallest Wilcoxon p, then AUC furthest from 0.5."
+^(top|a_auc_top)$,rank,"Rank within task and feature type: smallest Wilcoxon p, then AUC furthest from 0.5."
 ^a_design$,asset,Image file drawn as the design panel.
 ^a_design$,width_px,Width of the design image in pixels.
 ^a_design$,height_px,Height of the design image in pixels.

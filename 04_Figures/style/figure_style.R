@@ -55,6 +55,9 @@ figure_theme <- ggplot2::theme_minimal(base_size = 7) +
     legend.box.spacing = ggplot2::unit(1.5, "mm")
   )
 
+# Feature types of the trait and classification screens, as facet labels.
+feature_types <- c(proteins = "Proteins", sets = "Set scores", modules = "Modules")
+
 # The dot-matrix panels (proteins, pathways, modules): small rotated markdown column labels, row
 # strips outside on the left, tight facets.
 matrix_theme <- ggplot2::theme(

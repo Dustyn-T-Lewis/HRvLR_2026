@@ -10,7 +10,7 @@ inputs <- c(
   characterisation = characterisation_input
 )
 classification <- readRDS(here(inputs[["classification"]]))
-modules <- module_identity(read_module_labels(), width = 30)
+modules <- module_identity(read_module_labels(), width = 42)
 
 # The five tasks sit under the contrast strips: the levels under Between groups, the changes under
 # their window.
@@ -18,20 +18,21 @@ tasks <- c(
   Baseline_HRvLR = "T1", Trained_HRvLR = "T2", Acute_HRvLR = "T3",
   Training_change_HRvLR = "T2 - T1", Acute_change_HRvLR = "T3 - T2"
 )
-task_family <- c("Between groups", "Between groups", "Between groups", "Training", "Acute")
-feature_types <- c(proteins = "Proteins", sets = "Set scores", modules = "Module eigengenes")
+task_family <- c(
+  Baseline_HRvLR = "Between groups", Trained_HRvLR = "Between groups",
+  Acute_HRvLR = "Between groups", Training_change_HRvLR = "Training",
+  Acute_change_HRvLR = "Acute"
+)
 
-# Top features per task and feature type: smallest Wilcoxon p, then AUC furthest from 0.5.
-n_top <- 3
+# The step's top features per task and feature type (smallest Wilcoxon p, then AUC furthest from
+# 0.5).
+counts <- classification$counts
+n_top <- max(classification$top$rank)
 holds <- paste(
   sprintf("Panel a: per task and feature type, the %d features with the smallest Wilcoxon", n_top),
   "p: AUC with DeLong 95% CI, p, FDR, and the features at p < 0.05 against the number tested."
 )
-counts <- classification$counts
-panel_data <- classification$auc |>
-  arrange(p, desc(abs(auc - 0.5))) |>
-  slice_head(n = n_top, by = c(feature_type, task)) |>
-  mutate(rank = row_number(), .by = c(feature_type, task)) |>
+panel_data <- classification$top |>
   left_join(
     select(counts, feature_type, task, n_tested, n_nominal),
     by = c("feature_type", "task")
@@ -55,7 +56,7 @@ d <- panel_data |>
     type = factor(feature_types[feature_type], feature_types),
     name = case_when(
       feature_type == "sets" ~ sprintf(
-        "%s (%s)", pathway_label(label, 30), collection_names[collection]
+        "%s (%s)", pathway_label(label, 42), collection_names[collection]
       ),
       feature_type == "modules" ~ modules[feature],
       .default = label
@@ -76,7 +77,7 @@ tallies <- distinct(d, task_row, type, n_nominal, n_tested) |>
 # open at p only, a cross otherwise.
 auc_shapes <- rlang::set_names(c(16, 1, 4), evidence_levels)
 
-families <- task_family[match(levels(d$task_row), tasks)]
+families <- unname(task_family[names(tasks)])
 panel <- ggplot(d, aes(auc, reorder(row, -rank))) +
   # The chance line stops above the tally line below the bottom row.
   annotate(
@@ -128,7 +129,4 @@ panel <- ggplot(d, aes(auc, reorder(row, -rank))) +
     panel.spacing.y = unit(1.5, "mm")
   )
 
-ggsave(
-  here("04_Figures", "S2", "b_reports", "panels", "a_auc_top.pdf"), panel,
-  width = 180, height = 140, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "S2", "a_auc_top", 250, 120)
