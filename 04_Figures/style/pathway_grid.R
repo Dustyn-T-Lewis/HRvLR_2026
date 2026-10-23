@@ -180,17 +180,12 @@ pathway_grid <- function(cells, rows, columns, title = NULL, subtitle = NULL, ne
     ) +
     labs(x = NULL, y = NULL, title = title, subtitle = subtitle) +
     figure_theme +
+    matrix_theme +
     theme(
       axis.text.y.left = y_text(size = text_size, hjust = 1),
       axis.text.x.bottom = ggtext::element_markdown(
         size = 5.5, angle = x_angle, hjust = if (x_angle) 1 else 0.5,
         vjust = if (x_angle == 90) 0.5 else 1
-      ),
-      strip.placement = "outside",
-      strip.text.y.left = element_text(angle = 90, size = 5.5),
-      strip.text.x = element_text(size = 5.5),
-      panel.spacing = unit(1, "mm"),
-      legend.spacing.y = unit(1, "mm"),
-      legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
+      )
     )
 }

@@ -272,10 +272,10 @@ soft_threshold,chosen,TRUE for the power used.
 ^module_qc$,n_modules_other,Modules found at the other power.
 ^module_qc$,grey_other,Proteins in no module at the other power.
 ^a_responders$,block,"Row block: Shared (Π < 0.05 in both groups' training or acute contrasts), HR only or LR only."
-^a_responders$,selection_pi,"Π the row was ranked on: the group's smallest Π over its training and acute contrasts; for Shared, the larger of the two groups' values."
+^a_responders$,selection_p,"p the row was ranked on: the group's smallest p over its training and acute contrasts with Π < 0.05; for Shared, the larger of the two groups' values."
 ^b_hr_lr_candidates$,block,"Row block: the panel (Between groups or Interaction) of the contrast where the protein's Π is smallest."
-^(b_hr_lr_candidates|c_trajectories)$,selected_in,Contrast giving the protein's smallest Π among the HR - LR and interaction contrasts.
-^(b_hr_lr_candidates|c_trajectories)$,selection_pi,Smallest Π of the protein among the HR - LR and interaction contrasts (the ranking value).
+^(b_hr_lr_candidates|c_trajectories)$,selected_in,"Contrast giving the protein's smallest p among the HR - LR and interaction contrasts where Π < 0.05."
+^(b_hr_lr_candidates|c_trajectories)$,selection_p,"p in selected_in, the ranking value."
 ^(a_responders|b_hr_lr_candidates)$,row_order,Position of the protein within its block (1 at the top).
 ^c_trajectories$,log2_abundance,"Blood-corrected log2 protein value in the biopsy (01_Processing/03_Blood_Correction)."
 ^c_trajectories$,observed,TRUE when at least one precursor of the protein was observed in the biopsy; FALSE when limpa modelled the value from the detection curve.

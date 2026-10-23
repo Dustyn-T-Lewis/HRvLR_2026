@@ -55,6 +55,17 @@ figure_theme <- ggplot2::theme_minimal(base_size = 7) +
     legend.box.spacing = ggplot2::unit(1.5, "mm")
   )
 
+# The dot-matrix panels (proteins, pathways, modules): small rotated markdown column labels, row
+# strips outside on the left, tight facets.
+matrix_theme <- ggplot2::theme(
+  axis.text.x.bottom = ggtext::element_markdown(size = 5.5, angle = 45, hjust = 1, vjust = 1),
+  strip.placement = "outside",
+  strip.text.y.left = ggplot2::element_text(angle = 90, size = 5.5),
+  strip.text.x = ggplot2::element_text(size = 5.5),
+  panel.spacing = ggplot2::unit(1, "mm"),
+  legend.spacing.y = ggplot2::unit(1, "mm")
+)
+
 # Panel letters sit in a left margin column, level with the title.
 figure_tags <- ggplot2::theme(
   plot.tag = ggplot2::element_text(

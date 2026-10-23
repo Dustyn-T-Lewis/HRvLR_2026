@@ -1,6 +1,6 @@
+# F2: responders and HR - LR candidates as dot-matrices sharing one key, then the candidates with
+# the smallest p person by person.
 library(here)
-library(dplyr)
-library(ggplot2)
 library(patchwork)
 source(here("04_Figures", "style", "figure_style.R"))
 source(here("04_Figures", "style", "composite.R"))
@@ -8,20 +8,16 @@ source(here("04_Figures", "style", "composite.R"))
 panels <- run_panels("F2")
 stopifnot(names(panels) == c("a_responders", "b_hr_lr_candidates", "c_trajectories"))
 
-# a and b share one colour cap, so their legends are identical and drawn once.
-stopifnot(identical(
-  panels$a_responders$panel$scales$get_scales("colour")$limits,
-  panels$b_hr_lr_candidates$panel$scales$get_scales("colour")$limits
-))
-top_row <- (panels$a_responders$panel | panels$b_hr_lr_candidates$panel) +
-  plot_layout(guides = "collect")
-figure <- (top_row / panels$c_trajectories$panel) +
-  plot_layout(heights = c(3.2, 1)) +
+# Widths on a 250 mm page: a and b 80 mm each, their shared key 18 mm, c 72 mm. Both matrices take
+# protein_colour_limit() of the same table, so their keys are identical and collected once.
+# c keeps its own key at its foot.
+figure <- wrap_plots(
+  panels$a_responders$panel, panels$b_hr_lr_candidates$panel, guide_area(),
+  panels$c_trajectories$panel + plot_layout(guides = "keep"),
+  widths = c(80, 80, 18, 72), guides = "collect"
+) +
   plot_annotation(tag_levels = "a") &
   figure_tags
-ggsave(
-  here("04_Figures", "F2", "b_reports", "F2_composite.pdf"), figure,
-  width = 180, height = 215, units = "mm", device = cairo_pdf
-)
+save_figure(figure, "F2", 140)
 
 write_figure_workbook(panels, "F2")

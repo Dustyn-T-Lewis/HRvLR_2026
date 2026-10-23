@@ -93,14 +93,8 @@ panel <- ggplot(d, aes(column, module)) +
     )
   ) +
   figure_theme +
-  theme(
-    axis.text.y = element_text(size = 5.5),
-    axis.text.x.bottom = ggtext::element_markdown(size = 5.5, angle = 45, hjust = 1, vjust = 1),
-    strip.text.x = element_text(size = 5.5),
-    panel.spacing = unit(1, "mm"),
-    legend.spacing.y = unit(1, "mm"),
-    legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
-  )
+  matrix_theme +
+  theme(axis.text.y = element_text(size = 5.5))
 
 ggsave(
   here("04_Figures", "F5", "b_reports", "panels", "b_eigengene_matrix.pdf"), panel,
