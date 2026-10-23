@@ -4,7 +4,7 @@ library(ggplot2)
 source(here("04_Figures", "style", "figure_style.R"))
 
 inputs <- c(variance = "02_HRvLR/04_Variance/c_data/variance.xlsx")
-shares <- readxl::read_excel(here(inputs[["variance"]]), "variance_shares")
+shares <- read_sheet(inputs[["variance"]], "variance_shares")
 holds <- "Panel b: per protein, the share of its variance from each component (variancePartition)."
 
 components <- c(
@@ -49,7 +49,4 @@ panel <- ggplot(panel_data, aes(component, share)) +
   figure_theme +
   theme(panel.grid.major.x = element_blank())
 
-ggsave(
-  here("04_Figures", "S1", "b_reports", "panels", "b_variance_shares.pdf"), panel,
-  width = 70, height = 95, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "S1", "b_variance_shares", 70, 95)

@@ -1,5 +1,6 @@
+# S1: the technical checks behind F1. Row 1: clustering, variance shares, PC drivers. Row 2: DiffVar
+# and the T2 and T3 PCAs.
 library(here)
-library(dplyr)
 library(patchwork)
 source(here("04_Figures", "style", "figure_style.R"))
 source(here("04_Figures", "style", "composite.R"))
@@ -11,17 +12,17 @@ stopifnot(names(panels) == c(
 # Panels are not aligned with each other, so a wrapped panel's title stays beside its tag.
 plots <- lapply(panels, \(env) free(env$panel))
 
-# Widths in 5 mm columns: a, c and e 110 mm, b and d 70 mm.
+# Widths in 5 mm columns of a 250 mm page: a 110, b 70, d 70 mm; then c and e 125 mm each.
 layout <- c(
-  area(1, 1, 1, 22), area(1, 23, 1, 36), area(2, 1, 2, 22), area(2, 23, 2, 36),
-  area(3, 1, 3, 22)
+  area(1, 1, 1, 22), area(1, 23, 1, 36), area(2, 1, 2, 25), area(1, 37, 1, 50),
+  area(2, 26, 2, 50)
 )
-figure <- wrap_plots(plots, design = layout, heights = c(95, 72, 62)) +
+figure <- wrap_plots(plots, design = layout, heights = c(95, 72)) +
   plot_annotation(tag_levels = "a") &
   figure_tags
-ggplot2::ggsave(
-  here("04_Figures", "S1", "b_reports", "S1_composite.pdf"), figure,
-  width = 180, height = 229, units = "mm", device = cairo_pdf
-)
+save_figure(figure, "S1", 167)
 
 write_figure_workbook(panels, "S1")
+
+# The PC-covariate scatter pages behind panel d, a separate PDF.
+sys.source(here("04_Figures", "S1", "a_script", "extra", "pc_scatters.R"), envir = new.env())

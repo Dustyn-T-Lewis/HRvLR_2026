@@ -22,4 +22,4 @@ panel <- pca_row(
   )
 )
 
-save_panel(panel, "S1", "e_pca_levels", 110, 62)
+save_panel(panel, "S1", "e_pca_levels", 125, 72)

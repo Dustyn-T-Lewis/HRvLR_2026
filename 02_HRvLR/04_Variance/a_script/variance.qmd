@@ -162,15 +162,16 @@ windows <- list(
 )
 group_of <- set_names(c(meta$group, meta$group), c(meta$sample_id, meta$subject))
 # Proteins with no spread in a window (one modelled value for everyone) are left out of it.
+n_pcs <- 10
 pcs <- map(windows, \(x) {
   x <- t(as.matrix(x))
-  prcomp(scale(x[, apply(x, 2, sd) > 0]))$x[, 1:10]
+  prcomp(scale(x[, apply(x, 2, sd) > 0]))$x[, seq_len(n_pcs)]
 })
 gaps <- map(pcs, gap_of)
 separation <- imap(pcs, \(x, w) {
   split <- cluster::pam(x, 2, cluster.only = TRUE)
   tibble(
-    n_biopsies = nrow(x),
+    n_biopsies = nrow(x), n_pcs = ncol(x),
     k_gap = cluster::maxSE(gaps[[w]]$gap, gaps[[w]]$se, method = "Tibs2001SEmax"),
     ari_group = mclust::adjustedRandIndex(split, group_of[rownames(x)]),
     smaller_cluster = min(table(split))
