@@ -28,5 +28,5 @@ Rscript 04_Figures/S5/a_script/panels/b_string.R           # one panel alone
 | File | Holds |
 |---|---|
 | `b_reports/panels/<panel>.pdf` | each panel |
-| `b_reports/S5_composite.pdf` | the figure, 180 × 238 mm |
+| `b_reports/S5_composite.pdf` | the figure, 250 × 195 mm: a and c side by side, b below |
 | `c_data/S5.xlsx` | one sheet per panel with the numbers drawn |

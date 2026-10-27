@@ -9,11 +9,16 @@ inputs <- c(
   module_building = "01_Processing/06_Module_Building/c_data/module_building.xlsx"
 )
 modules <- readRDS(here(inputs[["modules"]]))
-module_qc <- readxl::read_excel(here(inputs[["module_building"]]), "module_qc")
-chosen_power <- 12
-holds <- paste(
-  "Panel c: modules and grey proteins per soft power (part network) and each power-12 module's",
-  "kept share at powers 10, 14 and 19 (part kept_share)."
+module_qc <- read_sheet(inputs[["module_building"]], "module_qc")
+soft_threshold <- read_sheet(inputs[["module_building"]], "soft_threshold")
+chosen_power <- soft_threshold$Power[soft_threshold$chosen]
+other_powers <- sort(unique(as.numeric(module_qc$power_other)))
+holds <- sprintf(
+  paste(
+    "Panel c: modules and grey proteins per soft power (part network) and each power-%d module's",
+    "kept share at powers %s (part kept_share)."
+  ),
+  chosen_power, paste(other_powers, collapse = ", ")
 )
 
 networks <- module_qc |>
@@ -31,7 +36,8 @@ panel_data <- bind_rows(
   relocate(part)
 
 stopifnot(
-  setequal(networks$power, c(10, chosen_power, 14, 19)), anyDuplicated(networks$power) == 0,
+  length(chosen_power) == 1, setequal(networks$power, c(other_powers, chosen_power)),
+  anyDuplicated(networks$power) == 0,
   setequal(kept$module, rownames(modules$eigengenes)),
   all(kept$kept_share >= 0 & kept$kept_share <= 1)
 )
@@ -69,9 +75,6 @@ kept_plot <- ggplot(kept, aes(power, kept_share)) +
   ) +
   figure_theme
 
-panel <- modules_plot | grey_plot | kept_plot
+panel <- modules_plot / grey_plot / kept_plot
 
-ggsave(
-  here("04_Figures", "S5", "b_reports", "panels", "c_module_qc.pdf"), panel,
-  width = 180, height = 50, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "S5", "c_module_qc", 95, 115)

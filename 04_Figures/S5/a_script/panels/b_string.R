@@ -1,14 +1,15 @@
 library(here)
 library(dplyr)
 library(ggplot2)
-library(ggraph)
 source(here("04_Figures", "style", "figure_style.R"))
 source(here("04_Figures", "style", "module_labels.R"))
 
 inputs <- c(characterisation = characterisation_input)
 labels <- read_module_labels()
-edges <- readxl::read_excel(characterisation_file, "network_edges")
-string <- readxl::read_excel(characterisation_file, "string")
+edges <- read_sheet(characterisation_input, "network_edges")
+string <- read_sheet(characterisation_input, "string")
+# STRING's high-confidence cut, the one 07_Module_Characterisation applied to the edges.
+string_min_score <- 700
 identity <- module_identity(labels, width = 20)
 n_named <- 5
 holds <- "Panel b: STRING edges drawn, among each module's 25 highest-kME members."
@@ -24,7 +25,7 @@ nodes <- bind_rows(
 
 stopifnot(
   all(panel_data$module %in% labels$module), nrow(panel_data) == nrow(edges),
-  all(panel_data$combined_score >= 700)
+  all(panel_data$combined_score >= string_min_score)
 )
 
 # Each module is laid out on its own, its components packed side by side (igraph
@@ -50,44 +51,42 @@ graph <- tidygraph::tbl_graph(
 strip_text <- string |>
   filter(module %in% nodes$module) |>
   transmute(module, text = sprintf("%s\nobs/exp %.1f, %s", identity[module], ratio, label_fdr(fdr)))
-panel <- ggraph(graph, layout = "manual", x = x, y = y) +
-  geom_edge_link(aes(alpha = combined_score), colour = "grey45", edge_width = 0.2) +
-  geom_node_point(aes(fill = I(as.character(module)), size = degree),
+panel <- ggraph::ggraph(graph, layout = "manual", x = x, y = y) +
+  ggraph::geom_edge_link(aes(alpha = combined_score), colour = "grey45", edge_width = 0.2) +
+  ggraph::geom_node_point(aes(fill = I(as.character(module)), size = degree),
     shape = 21,
     colour = "grey25", stroke = 0.2
   ) +
-  geom_node_text(aes(label = if_else(named, gene, NA_character_)),
+  ggraph::geom_node_text(aes(label = if_else(named, gene, NA_character_)),
     size = 1.8,
     fontface = "italic", repel = TRUE, max.overlaps = Inf, segment.size = 0.1,
     box.padding = 0.25, bg.colour = "white", bg.r = 0.1, na.rm = TRUE
   ) +
-  facet_nodes(
+  ggraph::facet_nodes(
     ~module,
-    scales = "free", ncol = 5,
+    scales = "free", ncol = 7,
     labeller = as_labeller(tibble::deframe(strip_text))
   ) +
-  scale_edge_alpha(range = c(0.25, 0.8), limits = c(700, 1000), name = "STRING score") +
+  ggraph::scale_edge_alpha(range = c(0.25, 0.8), limits = c(string_min_score, 1000),
+    name = "STRING score"
+  ) +
   scale_size_area(max_size = 2.2, name = "edges") +
   labs(
     title = "STRING interactions within modules",
     subtitle = sprintf(
       paste(
-        "Edges (combined score ≥ 700) among each module's 25 highest-kME members;",
+        "Edges (combined score ≥ %d) among each module's 25 highest-kME members;",
         "the %d best-connected named. Strip: module-wide STRING enrichment"
       ),
-      n_named
+      string_min_score, n_named
     )
   ) +
   figure_theme +
   theme(
-    axis.text = element_blank(), axis.title = element_blank(), panel.grid = element_blank(),
-    panel.grid.major = element_blank(),
+    axis.text = element_blank(), axis.title = element_blank(), panel.grid.major = element_blank(),
     panel.border = element_rect(fill = NA, colour = "grey85", linewidth = 0.3),
     strip.text = element_text(size = 5, lineheight = 0.95),
     legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
   )
 
-ggsave(
-  here("04_Figures", "S5", "b_reports", "panels", "b_string.pdf"), panel,
-  width = 180, height = 95, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "S5", "b_string", 250, 80)

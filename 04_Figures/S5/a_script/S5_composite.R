@@ -1,6 +1,6 @@
+# S5: module detail. Row 1: what each module holds, and the soft-power QC beside it. Row 2: STRING
+# edges within each module.
 library(here)
-library(dplyr)
-library(ggplot2)
 library(patchwork)
 source(here("04_Figures", "style", "figure_style.R"))
 source(here("04_Figures", "style", "composite.R"))
@@ -8,13 +8,17 @@ source(here("04_Figures", "style", "composite.R"))
 panels <- run_panels("S5")
 stopifnot(names(panels) == c("a_characterisation", "b_string", "c_module_qc"))
 plots <- purrr::map2(lapply(panels, `[[`, "panel"), letters[seq_along(panels)], tag_panel)
-# Each panel is wrapped so its axes do not line up with the other panels' axes.
-figure <- wrap_plots(lapply(plots, \(p) wrap_elements(full = p)),
-  ncol = 1, heights = c(100, 85, 42)
+
+# Widths on a 250 mm page: a 155 mm beside c 95 mm, then b full width. Each panel is wrapped so
+# its axes do not line up with the others'.
+figure <- wrap_plots(
+  wrap_elements(full = wrap_plots(
+    wrap_elements(full = plots$a_characterisation), wrap_elements(full = plots$c_module_qc),
+    widths = c(155, 95)
+  )),
+  wrap_elements(full = plots$b_string),
+  ncol = 1, heights = c(115, 80)
 )
-ggsave(
-  here("04_Figures", "S5", "b_reports", "S5_composite.pdf"), figure,
-  width = 180, height = 238, units = "mm", device = cairo_pdf
-)
+save_figure(figure, "S5", 195)
 
 write_figure_workbook(panels, "S5")

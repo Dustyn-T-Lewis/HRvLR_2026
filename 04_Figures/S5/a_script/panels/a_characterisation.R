@@ -8,14 +8,18 @@ source(here("04_Figures", "style", "module_labels.R"))
 
 inputs <- c(characterisation = characterisation_input)
 labels <- read_module_labels()
-ora <- readxl::read_excel(characterisation_file, "ora")
-top_members <- readxl::read_excel(characterisation_file, "top_members")
+ora <- read_sheet(characterisation_input, "ora")
+top_members <- read_sheet(characterisation_input, "top_members")
 n_sets <- 3
-holds <- paste(
-  "Panel a: top three ORA sets per module (part ora) and the ten highest-kME members with their",
-  "grid position (part member)."
-)
+n_members <- max(count(top_members, module)$n)
 n_columns <- 4
+holds <- sprintf(
+  paste(
+    "Panel a: top %d ORA sets per module (part ora) and the %d highest-kME members with their",
+    "grid position (part member)."
+  ),
+  n_sets, n_members
+)
 
 # GO Slim themes repeat GO BP names, so sets are counted by their printed label.
 sets <- ora |>
@@ -41,7 +45,8 @@ check <- inner_join(sets, ora, by = c("module", "set_id"))
 stopifnot(
   setequal(sets$module, labels$module), all(count(sets, module)$n == n_sets),
   nrow(check) == nrow(sets), all(check$p.x == check$p.y), all(check$fdr.x == check$fdr.y),
-  setequal(members$module, labels$module), max(members$row) <= n_sets
+  setequal(members$module, labels$module), all(count(members, module)$n == n_members),
+  max(members$row) == ceiling(n_members / n_columns)
 )
 
 module_levels <- labels$module
@@ -109,7 +114,7 @@ member_plot <- members |>
   scale_x_continuous(expand = expansion(add = 0)) +
   facet_grid(module ~ ., scales = "free_y", space = "free_y") +
   guides(fill = guide_colourbar(barheight = unit(12, "mm"), barwidth = unit(2.5, "mm"))) +
-  labs(title = " ", subtitle = "Ten highest-kME members", x = NULL, y = NULL) +
+  labs(title = " ", subtitle = sprintf("%d highest-kME members", n_members), x = NULL, y = NULL) +
   figure_theme +
   theme(
     axis.text = element_blank(), panel.grid.major = element_blank(), strip.text = element_blank(),
@@ -119,7 +124,4 @@ member_plot <- members |>
 
 panel <- (ora_plot | member_plot) + plot_layout(widths = c(1.15, 1))
 
-ggsave(
-  here("04_Figures", "S5", "b_reports", "panels", "a_characterisation.pdf"), panel,
-  width = 180, height = 115, units = "mm", device = grDevices::cairo_pdf
-)
+save_panel(panel, "S5", "a_characterisation", 155, 115)
