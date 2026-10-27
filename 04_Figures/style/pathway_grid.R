@@ -78,7 +78,7 @@ cluster_grid <- function(saved, cut, title, subtitle, cap = Inf, windows = panel
   source_values <- inner_join(panel_data, fgsea, by = c("set_id", "contrast"))
   clusters <- summarise(selection, n = n_distinct(.data[[paste0("cut_", cut)]]), .by = block)
   stopifnot(
-    nrow(columns) == 9, all(count(panel_data, window, set_id)$n == 9),
+    all(count(panel_data, window, set_id)$n == nrow(columns)),
     nrow(source_values) == nrow(panel_data),
     identical(source_values$nes.x, source_values$nes.y),
     identical(source_values$fdr.x, source_values$fdr.y),
@@ -87,6 +87,25 @@ cluster_grid <- function(saved, cut, title, subtitle, cap = Inf, windows = panel
   list(
     panel = pathway_grid(cells, rows, columns, title = title, subtitle = subtitle),
     panel_data = panel_data, height = 3.3 * nrow(rows) + 34
+  )
+}
+
+# S3 b and c: every cluster of every window at one tree cut, the representative of each. Returns
+# what a panel script leaves (panel, panel_data, panel_height, holds).
+cut_panel <- function(saved, cut) {
+  built <- cluster_grid(
+    saved, cut,
+    title = sprintf("One set per cluster at tree height %s", cut),
+    subtitle = paste(
+      sprintf("All four windows, every cluster at height %s (Figure 3: 0.85, first few per", cut),
+      "block); * calls of opposite sign; \u2020 interaction FDR < 0.05"
+    )
+  )
+  list(
+    panel = built$panel, panel_data = built$panel_data, panel_height = built$height,
+    holds = sprintf(
+      "Per window, one set per tree cluster at height %s, every cluster: fgsea NES and FDR.", cut
+    )
   )
 }
 
