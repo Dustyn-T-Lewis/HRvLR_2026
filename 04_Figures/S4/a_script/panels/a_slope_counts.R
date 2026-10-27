@@ -32,7 +32,4 @@ panel <- share_grid(
   )
 )
 
-ggsave(
-  here("04_Figures", "S4", "b_reports", "panels", "a_slope_counts.pdf"), panel,
-  width = 180, height = 65, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "S4", "a_slope_counts", 250, 65)

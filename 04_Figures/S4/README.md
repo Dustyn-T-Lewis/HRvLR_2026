@@ -25,7 +25,7 @@ Rscript 04_Figures/S4/a_script/panels/c_top_slope.R   # one panel
 | File | Holds |
 |---|---|
 | `b_reports/panels/<letter>_<name>.pdf` | each panel alone |
-| `b_reports/S4_composite.pdf` | the figure, 180 x 165 mm |
+| `b_reports/S4_composite.pdf` | the figure, 250 x 160 mm landscape |
 | `c_data/S4.xlsx` | one sheet per panel with the numbers drawn, the files read with md5, packages |
 
 ## Read with care
@@ -33,3 +33,8 @@ Rscript 04_Figures/S4/a_script/panels/c_top_slope.R   # one panel
 HR and LR were split on growth, so the range of growth inside each group is narrow, and each
 within-group rho rests on 8 people. Panel a is the check on panels b and c: a screen whose share
 sits near 5% has no more slope differences than chance gives.
+
+Panel c's feature (cardiac muscle tissue morphogenesis, training change against leg press gain)
+does not rest on one person: dropping any one of the 8 HR people leaves HR's rho between -0.93 and
+-0.96. HR_S03, whose leg press rose 108%, moves the HR slope most (-384 to -281) without reversing
+it.

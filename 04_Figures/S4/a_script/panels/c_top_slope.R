@@ -11,7 +11,7 @@ source(here("02_HRvLR", "helpers.R"))
 inputs <- c(
   group_trait_slopes = "02_HRvLR/07_Group_Trait_Slopes/c_data/group_trait_slopes.rds",
   corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  phenotype = "00_Setup/Input/phenotype.csv", helpers = "02_HRvLR/helpers.R"
+  phenotype = "00_Setup/Input/phenotype.csv"
 )
 slopes <- readRDS(here(inputs[["group_trait_slopes"]]))
 top <- slice_min(slopes$group_difference, p, n = 1, with_ties = FALSE)
@@ -22,7 +22,7 @@ feature_files <- c(
   modules = "01_Processing/06_Module_Building/c_data/modules.rds"
 )
 if (top$feature_type != "proteins") {
-  inputs <- c(inputs, setNames(feature_files[[top$feature_type]], top$feature_type))
+  inputs <- c(inputs, rlang::set_names(feature_files[[top$feature_type]], top$feature_type))
 }
 corrected <- readRDS(here(inputs[["corrected"]]))
 meta <- as_tibble(corrected$targets)
@@ -60,7 +60,9 @@ stopifnot(
 
 value_name <- c(proteins = "log2 abundance", sets = "set score", modules = "eigengene")
 feature_name <- if (top$feature_type == "sets") pathway_label(top$label, 45) else top$label
-legend_text <- with(rho, setNames(sprintf("%s: rho %.2f (n = %d)", group, rho, n_people), group))
+legend_text <- with(
+  rho, rlang::set_names(sprintf("%s: rho %.2f (n = %d)", group, rho, n_people), group)
+)
 drawn <- mutate(panel_data, group = factor(group, c("HR", "LR")))
 
 panel <- ggplot(drawn, aes(feature_value, trait_value, colour = group, shape = group)) +
@@ -79,7 +81,4 @@ panel <- ggplot(drawn, aes(feature_value, trait_value, colour = group, shape = g
   figure_theme +
   theme(legend.position = "bottom", legend.direction = "vertical", legend.margin = margin(t = -4))
 
-ggsave(
-  here("04_Figures", "S4", "b_reports", "panels", "c_top_slope.pdf"), panel,
-  width = 85, height = 90, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "S4", "c_top_slope", 125, 95)

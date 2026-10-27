@@ -39,16 +39,12 @@ stopifnot(
 labelled <- panel_data |>
   filter(evidence == evidence_levels[1]) |>
   slice_min(p, n = n_label) |>
-  arrange(desc(rho_LR), rho_HR) |>
-  mutate(
-    short = if (top$feature_type == "sets") pathway_label(label, 30) else label,
-    label_x = 0.05, label_y = seq(0.95, by = -0.09, length.out = n())
-  )
+  mutate(short = if (top$feature_type == "sets") pathway_label(label, 30) else label)
 n_hits <- sum(panel_data$evidence == evidence_levels[1])
 n_crossed <- sum(
   panel_data$evidence == evidence_levels[1] & sign(panel_data$rho_HR) != sign(panel_data$rho_LR)
 )
-hit_colours <- setNames(
+hit_colours <- rlang::set_names(
   c(contrast_tone("ink")[["Interaction"]], contrast_tone("ink")[["HR - LR"]], "grey80"),
   evidence_levels
 )
@@ -61,17 +57,15 @@ panel <- ggplot(panel_data, aes(rho_HR, rho_LR)) +
     aes(colour = evidence),
     data = arrange(panel_data, desc(evidence)), size = 0.6
   ) +
-  geom_segment(
-    aes(xend = label_x, yend = label_y),
-    labelled,
-    linewidth = 0.2, colour = "grey40"
-  ) +
-  geom_label(
-    aes(label_x, label_y, label = short), labelled,
-    size = 1.8, hjust = 0, linewidth = 0, label.padding = unit(0.3, "mm"), fill = "white"
+  ggrepel::geom_label_repel(
+    aes(label = short), labelled,
+    size = 1.8, linewidth = 0, label.padding = unit(0.3, "mm"), fill = "white",
+    segment.size = 0.2, segment.colour = "grey40", min.segment.length = 0, seed = 1,
+    direction = "y", nudge_x = 1.2, xlim = c(0.05, 1), ylim = c(0, 1),
+    force = 10, box.padding = 0.35, max.overlaps = Inf, max.iter = 1e5, max.time = 3
   ) +
   scale_colour_manual(values = hit_colours, name = "HR - LR slope", drop = FALSE) +
-  coord_equal(xlim = c(-1, 1), ylim = c(-1, 1)) +
+  coord_cartesian(xlim = c(-1, 1), ylim = c(-1, 1)) +
   labs(
     title = "The strongest screen, within each group",
     subtitle = sprintf(
@@ -85,7 +79,4 @@ panel <- ggplot(panel_data, aes(rho_HR, rho_LR)) +
   theme(legend.position = "bottom", legend.margin = margin(t = -4)) +
   guides(colour = guide_legend(override.aes = list(size = 1.5)))
 
-ggsave(
-  here("04_Figures", "S4", "b_reports", "panels", "b_within_rho.pdf"), panel,
-  width = 85, height = 90, units = "mm", device = cairo_pdf
-)
+save_panel(panel, "S4", "b_within_rho", 125, 95)
