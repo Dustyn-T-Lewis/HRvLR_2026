@@ -29,7 +29,11 @@ against 28 after the bout (fgsea FDR < 0.05; Figure 1e). 116 training and 148 ac
 HR alone, against 5 and 12 in LR alone. The interaction, the direct test of a different response,
 supports 22 training and 53 acute sets. After the bout these include mitochondrial respiration,
 oxidative phosphorylation and mitochondrial biogenesis, which move down in HR relative to LR, and
-translation, ribosome quality control and mitotic sets, which move up (Figure 3a).
+translation, ribosome quality control and mitotic sets, which move up (Figure 3a). The modules
+point the same way: after the bout, HR's respiration, cristae, mRNA-processing and cytoskeleton
+modules change together across people and opposite to glycolysis, while LR's do not (respiration
+with cristae: rho 0.90 in HR, 0.17 in LR; 6 of 45 module pairs differ at Fisher p < 0.05;
+Figure 5b).
 
 ## Tree
 
