@@ -33,10 +33,10 @@ quarto render 03_Continuous/01_Trait_Associations/a_script/trait_associations.qm
 
 ## Read with care
 
-- Six windows × 42 window-trait screens. Change score, proteins: 3,682 of 86,478 tests at
+- Six windows, 42 window-trait screens. Change score, proteins: 3,682 of 86,478 tests at
   p < 0.05 (4.3%; chance 5%), 3 at FDR < 0.05 (EHD1 with T1 fibre area, SEC31A and APOBEC2 with
   T2 muscle area). Sets: 2,930 of 59,724 (4.9%), 144 at FDR < 0.05, 118 of them T1 sets against
-  T1 leg press. Modules: 18 of 546, none.
+  T1 leg press. Modules: 18 of 420, none.
 - Sample model: 1,225 of 24,708 protein tests at p < 0.05 (5.0%), 4 at FDR < 0.05.
 - HR and LR are the top and bottom 8 of 25 by growth, so correlations across these 16 run stronger
   than they would across all 25. Pooling avoids a split, not confounding.

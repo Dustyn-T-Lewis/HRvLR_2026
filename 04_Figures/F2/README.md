@@ -9,7 +9,8 @@ in S2 (b, c). The nominal call is Π = p^|logFC|
 | a `a_responders` | Protein dot-matrix over the nine contrasts. Rows: proteins at Π < 0.05 in a group's training or acute contrast, in three blocks (shared by HR and LR, HR only, LR only), the top 10 per block by p (shared proteins rank on the weaker group's p). |
 
 Dot-matrix code: colour is logFC (PiYG, capped at the median |logFC| of all Π hits so most dots
-stay readable; a and b share the cap and one key; the workbook holds the uncapped values), size is
+stay readable; the HR − LR candidates in S2 b use the same cap; the workbook holds the uncapped
+values), size is
 −log10 p (capped at 4), a filled dot is a Π hit and an open one is not, a black outline marks
 FDR < 0.05. Column labels are the group (training, acute), the time point (HR − LR) or the window
 (interaction). Each row reads "gene (n/48)", the biopsies where the protein was observed. The grid

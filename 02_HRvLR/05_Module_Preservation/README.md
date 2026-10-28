@@ -2,8 +2,9 @@
 
 Builds WGCNA modules inside HR and inside LR with the network settings of `06_Module_Building`,
 then tests each group's modules in the other group's data with `modulePreservation()` (Zsummary and
-median rank, 200 permutations). The soft power follows the same WGCNA FAQ rule as
-`06_Module_Building`: 16 for a signed network of 24 biopsies.
+median rank, 200 permutations). The soft power is the WGCNA FAQ value for a signed
+network of 24 biopsies, 16; the full network in `06_Module_Building` uses 10, chosen by
+leave-one-person-out stability.
 
 ## Inputs
 
@@ -34,5 +35,5 @@ quarto render 02_HRvLR/05_Module_Preservation/a_script/module_preservation.qmd -
 - Zsummary runs from 1.3 to 9.8. Three of 29 group modules fall below 2 (one HR, two LR); none
   passes 10.
 - Every group module maps best to a full-cohort module, not to the unassigned `grey` proteins,
-  holding 20% to 75% of its proteins in that module (`full_share`).
+  holding 22% to 77% of its proteins in that module (`full_share`).
 - With 8 people per group the test has little power to show a module is missing.

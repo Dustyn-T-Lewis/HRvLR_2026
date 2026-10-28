@@ -31,7 +31,7 @@ quarto render 02_HRvLR/06_Classification/a_script/classification.qmd --output-di
 
 ## Read with care
 
-- One test of 17,470 passes FDR < 0.05: the GO Slim set "transmembrane transport" in the training
+- One test of 17,455 passes FDR < 0.05: the GO Slim set "transmembrane transport" in the training
   change (AUC 0.97). No protein or module does.
 - The most extreme protein AUC is 0 (ACSL1 at T3: every LR person above every HR person), p =
   0.00016, the smallest p 8 against 8 can give.

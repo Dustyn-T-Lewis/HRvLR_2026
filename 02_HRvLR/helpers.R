@@ -1,5 +1,5 @@
 # Per-person views of a feature-by-biopsy matrix, the phenotype as the trait steps read it, and the
-# gene-set tree both pathway steps use. Sourced by 02_HRvLR steps 02, 06 and 07 and 03_Continuous
+# gene-set tree both pathway steps use. Sourced by 02_HRvLR steps 02 and 06 to 08 and 03_Continuous
 # steps 01 to 03, after dplyr and tidyr load.
 
 # One column per person: the value at time point `at`, or with `from`, the change from `from` to
@@ -51,6 +51,24 @@ window_values <- function(values, meta) {
     post_level = person_values(values, meta, "T2"),
     acute = person_values(values, meta, "T3", from = "T2"),
     post_bout_level = person_values(values, meta, "T3")
+  )
+}
+
+# The three feature types the trait and classification steps test, as feature-by-biopsy matrices
+# in biopsy order, with each feature's readable label (gene, set name, module colour) and each set's
+# collection.
+load_features <- function(corrected, scores, catalog, modules, meta) {
+  features <- list(
+    proteins = corrected$E, sets = scores[catalog$set_id, ], modules = modules$eigengenes
+  )
+  walk(features, \(x) stopifnot(identical(colnames(x), meta$sample_id)))
+  list(
+    features = features,
+    label_of = c(
+      set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected)),
+      set_names(catalog$pathway, catalog$set_id), set_names(rownames(modules$eigengenes))
+    ),
+    collection_of = set_names(catalog$collection, catalog$set_id)
   )
 }
 

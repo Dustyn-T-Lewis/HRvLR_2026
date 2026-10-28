@@ -38,5 +38,5 @@ Rscript 04_Figures/F1/a_script/panels/b_pca.R          # one panel
   selection. Strength gains do not differ (leg press p 0.85, leg extension p 0.43).
 - Panel b: the whole-proteome response does not differ between groups (training R² 0.06, p 0.61;
   acute R² 0.08, p 0.17), though LR's responses sit in a tighter ellipse than HR's.
-- Panel d against F3: LR changes as many single proteins as HR (203 against 156 with training),
-  while HR changes far more gene sets.
+- Panels d and e: LR changes as many single proteins as HR (203 against 156 with training),
+  while HR changes more gene sets (142 against 31).

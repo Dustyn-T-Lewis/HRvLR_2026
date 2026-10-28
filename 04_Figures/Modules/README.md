@@ -32,7 +32,7 @@ Rscript run_all.R 04_Figures/Modules
   glycolysis (pink, -0.93 to -0.95), with no such pattern in LR. 7 of 90 pair-windows differ at
   Fisher p < 0.05, 6 of them after the bout. Each rho rests on 8 people.
 - Rewiring: in the respiration module, NDUFA11 and the mitochondrially encoded MT-ND2 move with
-  the module in HR (kME 0.73 and 0.82) and not in LR (about 0); talin-2 (TLN2) does the same in
+  the module in HR (kME 0.73 and 0.82) and not in LR (-0.16 and 0.01); talin-2 (TLN2) does the same in
   the cristae module (0.78 against -0.21).
 - PLS: no model beats its permutation null at p < 0.05. The closest is the training changes
   predicting the muscle-area gain (Q² 0.13, p 0.09); HR against LR is at chance from every window.

@@ -25,7 +25,6 @@ library(limpa)
 library(dplyr)
 library(tidyr)
 library(purrr)
-library(tibble)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
@@ -111,7 +110,7 @@ roles <- tibble(
     contrast == "Training_Interaction" ~ "primary",
     contrast == "Acute_Interaction" ~ "secondary",
     contrast == "Baseline_HRvLR" ~ "baseline_reference",
-    TRUE ~ "descriptive"
+    .default = "descriptive"
   )
 )
 eb <- eBayes(contrasts.fit(fit, contrast_matrix), robust = TRUE)
@@ -345,7 +344,7 @@ it.
 out <- here("02_HRvLR", "01_Protein_Contrasts", "c_data")
 dir.create(out, showWarnings = FALSE)
 saveRDS(
-  list(fit = fit, eb = eb, design = design, contrast_matrix = contrast_matrix, roles = roles),
+  list(fit = fit, eb = eb, design = design, contrast_matrix = contrast_matrix),
   file.path(out, "fit.rds")
 )
 write_workbook(

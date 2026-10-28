@@ -22,7 +22,6 @@ slope removed. This step builds that copy, after testing three ways to remove th
 library(here)
 library(limma)
 library(dplyr)
-library(tibble)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(proteins = "01_Processing/02_Quantification/c_data/proteins.rds")

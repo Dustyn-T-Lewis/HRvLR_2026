@@ -35,8 +35,9 @@ Steps 02 and 03 read `01_Protein_Contrasts/c_data/fit.rds`, so 01 runs first; th
 
 ## Read with care
 
-No protein, module or fry set test separates HR from LR at FDR < 0.05 in an HR − LR contrast or
-an interaction, and one single-feature AUC of 17,470 does (a GO Slim set). fgsea, which treats
-proteins as independent, calls hundreds of sets in the same contrasts. Nominal protein counts in
-the HR − LR contrasts run from 0.8 to 1.4 times chance. HR and LR are the top and bottom 8 of 25 by
-the composite hypertrophy score, so differences in growth between them are built in.
+No protein, module or fry set test separates HR from LR at FDR < 0.05 in an HR − LR contrast or an
+interaction, and one single-feature AUC of 17,455 does (a GO Slim set). fgsea, which treats proteins
+as independent, calls 403 sets in the same five contrasts (four databases, GO Slim aside), 263 of
+them at T3. Nominal protein counts in the HR − LR contrasts run from 0.8 to 1.4 times chance. HR and
+LR are the top and bottom 8 of 25 by the composite hypertrophy score, so differences in growth
+between them are built in.

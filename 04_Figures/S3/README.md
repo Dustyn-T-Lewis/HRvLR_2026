@@ -1,7 +1,7 @@
 # S3: pathways, full selection
 
-Four panels, drawn with the shared pathway dot-matrix (`style/pathway_grid.R`). Together they run
-well past one page, so `S3_composite.pdf` has a page per panel and panel a a page per window (seven
+Five panels, drawn with the shared pathway dot-matrix (`style/pathway_grid.R`). Together they run
+well past one page, so `S3_composite.pdf` has a page per panel and panel a a page per window (four
 pages), each 250 mm wide and as tall as its content.
 
 | Panel | Shows |

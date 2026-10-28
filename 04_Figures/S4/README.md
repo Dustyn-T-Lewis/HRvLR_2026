@@ -38,8 +38,8 @@ sits near 5% has no more slope differences than chance gives.
 
 Panel c's feature (cardiac muscle tissue morphogenesis, training change against leg press gain)
 does not rest on one person: dropping any one of the 8 HR people leaves HR's rho between -0.93 and
--0.96. HR_S03, whose leg press rose 108%, moves the HR slope most (-384 to -281) without reversing
-it.
+-0.96, and the HR slope (-384) stays between -281 (without HR_S03, whose leg press rose 108%) and
+-515 (without HR_S27).
 
 - Profile groups have a mean silhouette near zero (see `03_Profile_Clusters`); panel d is a way to
   read the protein profiles, not evidence of structure.

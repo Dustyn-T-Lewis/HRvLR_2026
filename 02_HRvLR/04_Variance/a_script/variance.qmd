@@ -24,11 +24,9 @@ the gap statistic and PAM.
 #| label: packages
 #| message: false
 library(here)
-library(limma)
 library(dplyr)
 library(tidyr)
 library(purrr)
-library(tibble)
 library(ggplot2)
 library(variancePartition)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))

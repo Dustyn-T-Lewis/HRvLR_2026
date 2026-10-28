@@ -37,10 +37,10 @@ quarto render 02_HRvLR/07_Group_Trait_Slopes/a_script/group_trait_slopes.qmd --o
 - Trait change: HR grew in fibre area (+16%) while LR's shrank (−15%); muscle area +11% against
   +3%. Muscle area and mixed fibre area chose the groups, so those gaps are built in. Strength rose
   alike: leg press +34% against +31% (p 0.85), leg extension +17% against +13% (p 0.43).
-- Slope difference: 4,904 of 136,266 tests at p < 0.05 (3.6%; chance 5%), 50 at FDR < 0.05, 44 of
+- Slope difference: 4,900 of 136,149 tests at p < 0.05 (3.6%; chance 5%), 50 at FDR < 0.05, 44 of
   them gene sets in the training window against leg-press gain. Proteins: 3,207 of 80,301 (4.0%),
   3 at FDR < 0.05.
-- Within groups: 12,942 of 292,378 Spearman tests at p < 0.05 (4.4%), 14 at FDR < 0.05. Each rests
+- Within groups: 12,927 of 292,126 Spearman tests at p < 0.05 (4.4%), 15 at FDR < 0.05. Each rests
   on 8 people, and a group split on growth has a narrowed range of growth inside it.
 - The composite hypertrophy score defined the groups, so it is left out of the slope difference.
 - Proteins limpa never observed at a time point carry one estimate for everyone there; they have no

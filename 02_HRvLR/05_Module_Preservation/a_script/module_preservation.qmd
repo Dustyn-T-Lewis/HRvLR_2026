@@ -27,7 +27,6 @@ module is found again, not that the two networks are the same.
 #| message: false
 library(here)
 library(dplyr)
-library(tibble)
 library(tidyr)
 library(purrr)
 library(ggplot2)

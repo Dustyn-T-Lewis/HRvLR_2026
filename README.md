@@ -19,7 +19,7 @@ story the figures tell.
 
 That story is the same scale, different programmes. The two groups change a similar number of
 single proteins: at p < 0.05, HR 156 and LR 203 with training, 155 and 204 after the extra bout,
-against 103 expected by chance, with one to five at FDR < 0.05 (Figure 1d). The whole proteome does
+against 103 expected by chance, with zero to five at FDR < 0.05 (Figure 1d). The whole proteome does
 not separate them: PERMANOVA for group gives p 0.85 at T1, 0.61 for the training change and 0.17
 for the acute change, and the gap statistic finds no natural clusters (Figure 1b, S1). Strength
 rose alike (leg press +34% in HR and +31% in LR, p 0.85 for the difference); the fibre and muscle

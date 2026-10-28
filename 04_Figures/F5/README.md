@@ -43,12 +43,12 @@ Rscript 04_Figures/F5/a_script/panels/a_heatmap.R             # one panel alone
   aerobic respiration (red) and cristae formation (magenta) rise with training in HR and sit lower
   in HR than LR after the bout. S5 d draws the smallest p (magenta, HR − LR at T3, p 0.031) person by person.
 - Three of 10 modules have no over-represented set at FDR < 0.05; they are named by colour alone.
-- 7 of 10 modules re-form when any one person is left out (S5); yellow and magenta do not.
+- 7 of 10 modules re-form when any one person is left out (S5); green, yellow and magenta do not.
 - Panel c shows most modules moderately preserved in the other group (Zsummary 2 to 10): HR and LR
   share their co-expression structure (26 of 29 group modules; 3 fall below 2, none above 10).
 - In panel a, each within-group rho rests on 8 people: |rho| must reach about 0.71 for p < 0.05.
-  The r-equivalent of a limma t uses its total df (about 46 for contrasts), so a contrast at
-  p < 0.05 shows near 0.3, and the HR − LR slope uses df 12.
+  The r-equivalent of a limma t uses its total df (410 for the eigengene contrasts), so a contrast at
+  p < 0.05 shows near 0.1, and the HR − LR slope uses df 12.
 - Panel b: after the bout, HR's modules change as one block and LR's do not. Respiration and
   cristae move together in HR (rho 0.90) and not in LR (0.17); mRNA processing, brown and
   cytoskeleton move together in HR and opposite to glycolysis. 6 of 45 pairs differ at Fisher

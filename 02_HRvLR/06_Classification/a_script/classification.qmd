@@ -31,7 +31,6 @@ library(here)
 library(dplyr)
 library(tidyr)
 library(purrr)
-library(tibble)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 source(here("02_HRvLR", "helpers.R"))
@@ -56,17 +55,10 @@ corrected <- readRDS(paths[["corrected"]])
 catalog <- filter(readRDS(paths[["gene_sets"]])$set_catalog, qualifies)
 modules <- readRDS(paths[["modules"]])
 meta <- as_tibble(corrected$targets)
-features <- list(
-  proteins = corrected$E,
-  sets = readRDS(paths[["singscore"]])$scores[catalog$set_id, ],
-  modules = modules$eigengenes
-)
-walk(features, \(x) stopifnot(identical(colnames(x), meta$sample_id)))
-label_of <- c(
-  set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected)),
-  set_names(catalog$pathway, catalog$set_id), set_names(rownames(modules$eigengenes))
-)
-collection_of <- set_names(catalog$collection, catalog$set_id)
+loaded <- load_features(corrected, readRDS(paths[["singscore"]])$scores, catalog, modules, meta)
+features <- loaded$features
+label_of <- loaded$label_of
+collection_of <- loaded$collection_of
 map(features, dim)
 ```
 

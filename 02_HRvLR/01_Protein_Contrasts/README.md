@@ -20,7 +20,7 @@ quarto render 02_HRvLR/01_Protein_Contrasts/a_script/protein_contrasts.qmd --out
 
 | File | Holds |
 |---|---|
-| `c_data/fit.rds` | the `dpcDE()` fit, the moderated contrasts (`eb`), design, contrast matrix and roles |
+| `c_data/fit.rds` | the `dpcDE()` fit, the moderated contrasts (`eb`), design and contrast matrix |
 | `c_data/protein_contrasts.xlsx` | per protein and contrast results, contrast counts, trajectory F-tests, sample weights, fry carry-over (all four sets per pairing, untested ones blank), PCA per time point and per change (training, acute), PERMANOVA for each |
 | `b_reports/protein_contrasts.html` | the rendered walkthrough |
 

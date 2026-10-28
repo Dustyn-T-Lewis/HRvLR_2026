@@ -7,7 +7,7 @@ the F2 dot-matrix (`style/protein_grid.R`).
 
 | Panel | Shows |
 |---|---|
-| a `a_auc_top` | Per task (T1, T2, T3 levels; T2 − T1 and T3 − T2 changes) and feature type, the three features with the smallest Wilcoxon p (ties broken by AUC furthest from 0.5; the step's `top` table): AUC with DeLong's 95% interval, none at AUC 0 or 1. Dashed line: 0.5, chance. Shade: which group is higher. Shape: filled at FDR < 0.05, open at p < 0.05 only, a cross otherwise. Under each cell: features at p < 0.05 against the number chance gives. |
+| a `a_auc_top` | Per task (T1, T2, T3 levels; T2 − T1 and T3 − T2 changes) and feature type, the three features with the smallest Wilcoxon p (ties broken by AUC furthest from 0.5; the step's `top` table): AUC with DeLong's 95% interval, no interval at AUC 0 or 1. Dashed line: 0.5, chance. Shade: which group is higher. Shape: filled at FDR < 0.05, open at p < 0.05 only, a cross otherwise. Under each cell: features at p < 0.05 against the number chance gives. |
 | b `b_hr_lr_candidates` | The F2 dot-matrix. Rows: proteins at Π < 0.05 in an HR − LR contrast (T1, T2, T3) or an interaction, in the block of the hit with the smallest p, the top 12 per block. Exploratory: the subtitle gives the range of p < 0.05 counts over these five contrasts against the number chance gives, and the count at FDR < 0.05 (none). |
 | c `c_trajectories` | Blood-corrected values per person at T1, T2 and T3 for the four candidates with the smallest p, HR and LR shaded, with group means. Each header gives logFC, Π, p and FDR. Open points are biopsies where no precursor was seen and limpa modelled the value. |
 

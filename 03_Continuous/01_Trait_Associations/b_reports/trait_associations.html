@@ -2256,19 +2256,18 @@ vertical-align: -.125em;
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tibble)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;helpers.R&quot;</span>))</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds&quot;</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">singscore =</span> <span class="st">&quot;01_Processing/05_Set_Scores/c_data/singscore.rds&quot;</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene_sets =</span> <span class="st">&quot;01_Processing/04_Gene_Sets/c_data/gene_sets.rds&quot;</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/modules.rds&quot;</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">phenotype =</span> <span class="st">&quot;00_Setup/Input/phenotype.csv&quot;</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">vapply</span>(inputs, here, <span class="fu">character</span>(<span class="dv">1</span>))</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(paths))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;helpers.R&quot;</span>))</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds&quot;</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">singscore =</span> <span class="st">&quot;01_Processing/05_Set_Scores/c_data/singscore.rds&quot;</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene_sets =</span> <span class="st">&quot;01_Processing/04_Gene_Sets/c_data/gene_sets.rds&quot;</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/modules.rds&quot;</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">phenotype =</span> <span class="st">&quot;00_Setup/Input/phenotype.csv&quot;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">vapply</span>(inputs, here, <span class="fu">character</span>(<span class="dv">1</span>))</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(paths))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="input" class="level2">
@@ -2280,18 +2279,11 @@ vertical-align: -.125em;
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>modules <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;modules&quot;</span>]])</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(paths[[<span class="st">&quot;phenotype&quot;</span>]], <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>meta <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(corrected<span class="sc">$</span>targets)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>features <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">proteins =</span> corrected<span class="sc">$</span>E,</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">sets =</span> <span class="fu">readRDS</span>(paths[[<span class="st">&quot;singscore&quot;</span>]])<span class="sc">$</span>scores[catalog<span class="sc">$</span>set_id, ],</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> modules<span class="sc">$</span>eigengenes</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(features, \(x) <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">colnames</span>(x), meta<span class="sc">$</span>sample_id)))</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>label_of <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_names</span>(<span class="fu">sub</span>(<span class="st">&quot;;.*&quot;</span>, <span class="st">&quot;&quot;</span>, corrected<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="fu">rownames</span>(corrected)),</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_names</span>(catalog<span class="sc">$</span>pathway, catalog<span class="sc">$</span>set_id), <span class="fu">set_names</span>(<span class="fu">rownames</span>(modules<span class="sc">$</span>eigengenes))</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>collection_of <span class="ot">&lt;-</span> <span class="fu">set_names</span>(catalog<span class="sc">$</span>collection, catalog<span class="sc">$</span>set_id)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(features, dim)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>loaded <span class="ot">&lt;-</span> <span class="fu">load_features</span>(corrected, <span class="fu">readRDS</span>(paths[[<span class="st">&quot;singscore&quot;</span>]])<span class="sc">$</span>scores, catalog, modules, meta)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>features <span class="ot">&lt;-</span> loaded<span class="sc">$</span>features</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>label_of <span class="ot">&lt;-</span> loaded<span class="sc">$</span>label_of</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>collection_of <span class="ot">&lt;-</span> loaded<span class="sc">$</span>collection_of</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(features, dim)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$proteins
 [1] 2059   48
@@ -2506,7 +2498,7 @@ $modules
 <h2 class="anchored" data-anchor-id="fdr-and-counts">FDR and counts</h2>
 <p><code>fdr</code> is Benjamini-Hochberg within one screen: feature type, trait or window and trait (with term, strength test or coefficient where the analysis has them), and collection for sets. At p &lt; 0.05 chance alone puts 5% of features below the line in every screen.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>annotate <span class="ot">&lt;-</span> \(d, ...) {</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>add_fdr <span class="ot">&lt;-</span> \(d, ...) {</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  d <span class="sc">|&gt;</span></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">collection =</span> <span class="fu">unname</span>(collection_of[feature]), <span class="at">label =</span> <span class="fu">unname</span>(label_of[feature]),</span>
@@ -2514,10 +2506,10 @@ $modules
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>), <span class="at">.by =</span> <span class="fu">c</span>(feature_type, ..., collection))</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">annotate</span>(model, trait, term)</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>change_score <span class="ot">&lt;-</span> <span class="fu">annotate</span>(change_score, window, trait)</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>two_predictor <span class="ot">&lt;-</span> <span class="fu">annotate</span>(two_predictor, window, strength_test, coefficient)</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>interaction <span class="ot">&lt;-</span> <span class="fu">annotate</span>(interaction, window, strength_test)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(model, trait, term)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>change_score <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(change_score, window, trait)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>two_predictor <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(two_predictor, window, strength_test, coefficient)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>interaction <span class="ot">&lt;-</span> <span class="fu">add_fdr</span>(interaction, window, strength_test)</span>
 <span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>tally <span class="ot">&lt;-</span> \(d, analysis, ...) {</span>
 <span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  d <span class="sc">|&gt;</span></span>
 <span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(</span>
