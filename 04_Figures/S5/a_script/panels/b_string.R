@@ -64,7 +64,7 @@ panel <- ggraph::ggraph(graph, layout = "manual", x = x, y = y) +
   ) +
   ggraph::facet_nodes(
     ~module,
-    scales = "free", ncol = 7,
+    scales = "free", ncol = 5,
     labeller = as_labeller(tibble::deframe(strip_text))
   ) +
   ggraph::scale_edge_alpha(range = c(0.25, 0.8), limits = c(string_min_score, 1000),
@@ -89,4 +89,4 @@ panel <- ggraph::ggraph(graph, layout = "manual", x = x, y = y) +
     legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
   )
 
-save_panel(panel, "S5", "b_string", 250, 80)
+save_panel(panel, "S5", "b_string", 140, 95)

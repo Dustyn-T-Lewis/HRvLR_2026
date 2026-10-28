@@ -12,7 +12,7 @@ and which went to supplements (see the root README).
 | F2 | proteins each group changes with training or the bout | S2: single-feature AUC; exploratory HR − LR protein candidates |
 | F3 | pathways: shared, HR-only and LR-only blocks for training and the bout, then between groups; one set per tree cluster | S3: every candidate set grouped by tree, cuts 0.75 and 0.9, GO Slim overview |
 | F4 | traits: people's changes; links against chance; trait pathways | S4: HR slope minus LR slope; protein profile groups |
-| F5 | modules: score heatmap (contrasts and trait links), trajectories, preservation | S5: module characterisation with STRING; WGCNA module QC. Modules/: per-module hubs and rewiring; coupling, per-person responses, PLS |
+| F5 | modules: score heatmap (contrasts and trait links), coupling after the bout within each group, preservation | S5: module characterisation with STRING; WGCNA module QC; the smallest-p module person by person. Modules/: per-module hubs and rewiring; coupling, per-person responses, PLS |
 
 ## Layout
 

@@ -327,9 +327,9 @@ soft_threshold,chosen,TRUE for the power used.
 ^b_within_rho$,evidence,"Slope-difference call: FDR < 0.05, p < 0.05 only, or not significant."
 ^c_top_slope$,feature_value,"The feature's value for the person in the window: log2 abundance, set score or eigengene, as a level or a change."
 ^c_top_slope$,trait_value,The person's value of the trait in the window.
-^b_trajectories$,eigengene,Eigengene of the drawn module in the biopsy.
-^b_trajectories$,chosen_contrast,Contrast whose eigengene p chose the module: the smallest p outside the two interactions.
-^b_trajectories$,chosen_p,Eigengene p of the module in chosen_contrast.
+^d_trajectories$,eigengene,Eigengene of the drawn module in the biopsy.
+^d_trajectories$,chosen_contrast,Contrast whose eigengene p chose the module: the smallest p outside the two interactions.
+^d_trajectories$,chosen_p,Eigengene p of the module in chosen_contrast.
 ^c_preservation$,reference,Group whose network defined the module.
 ^c_preservation$,test,Group whose data the module is tested in.
 ^c_preservation$,module,Module colour in the reference group's network (not the full-cohort colour).
@@ -426,3 +426,9 @@ soft_threshold,chosen,TRUE for the power used.
 ^pls$,p_perm,(1 + shuffled scores >= observed) / 1001.
 ^pls_loadings$,loading,Component-1 loading of the module in the model fitted on all 16 people.
 ^per_person$,comp_hypertrophy,"Composite growth score, (2 x % change in muscle area + % change in fibre area) / 3; it ranked people into HR and LR."
+^b_coupling$,module_a,First module of the pair.
+^b_coupling$,module_b,Second module of the pair.
+^b_coupling$,rho_HR,Spearman rho between the two modules' acute eigengene changes across the 8 HR people.
+^b_coupling$,rho_LR,Spearman rho between the two modules' acute eigengene changes across the 8 LR people.
+^b_coupling$,difference,rho_HR minus rho_LR.
+^b_coupling$,p_difference,"Fisher z test of rho_HR against rho_LR (n = 8 each; Spearman treated as Pearson)."

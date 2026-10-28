@@ -65,4 +65,4 @@ panel <- ggplot(d, aes(z_summary, row)) +
     legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
   )
 
-save_panel(panel, "F5", "c_preservation", 150, 80)
+save_panel(panel, "F5", "c_preservation", 110, 90)
