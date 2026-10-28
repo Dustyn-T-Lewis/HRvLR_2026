@@ -129,4 +129,4 @@ panel <- ggplot(d, aes(auc, reorder(row, -rank))) +
     panel.spacing.y = unit(1.5, "mm")
   )
 
-save_panel(panel, "S2", "a_auc_top", 250, 120)
+save_panel(panel, "S2", "a_auc_top", 250, 105)

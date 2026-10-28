@@ -122,4 +122,4 @@ panel <- ggplot(bars, aes(signed, contrast)) +
   ) +
   guides(fill = guide_legend(nrow = 2))
 
-save_panel(panel, "F1", "d_counts", 75, 95)
+save_panel(panel, "F1", "d_counts", 90, 95)

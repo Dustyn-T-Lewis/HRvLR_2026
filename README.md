@@ -17,10 +17,19 @@ sets, modules, variance, traits), each set against what chance gives. Those resu
 figure plan in `04_Figures`: which panels became main figures, which went to supplements, and the
 story the figures tell.
 
-That story: both groups respond to training and to the extra bout, and HR's response reaches
-significance in more gene sets than LR's (158 against 36 with training, 189 against 32 after the
-bout, FDR < 0.05). The direct test of a larger HR response, the interaction, is weaker: 23 sets
-for training and 58 for the bout at FDR < 0.05, and no single protein at that threshold.
+That story is the same scale, different programmes. The two groups change a similar number of
+single proteins: at p < 0.05, HR 156 and LR 203 with training, 155 and 204 after the extra bout,
+against 103 expected by chance, with one to five at FDR < 0.05 (Figure 1d). The whole proteome does
+not separate them: PERMANOVA for group gives p 0.85 at T1, 0.61 for the training change and 0.17
+for the acute change, and the gap statistic finds no natural clusters (Figure 1b, S1). Strength
+rose alike (leg press +34% in HR and +31% in LR, p 0.85 for the difference); the fibre and muscle
+area that defined the groups did not (Figure 1c). The groups differ in which pathways move. Across
+Hallmark, Reactome, KEGG and GO BP, HR moves 142 gene sets with training against LR's 31, and 164
+against 28 after the bout (fgsea FDR < 0.05; Figure 1e). 116 training and 148 acute sets pass in
+HR alone, against 5 and 12 in LR alone. The interaction, the direct test of a different response,
+supports 22 training and 53 acute sets. After the bout these include mitochondrial respiration,
+oxidative phosphorylation and mitochondrial biogenesis, which move down in HR relative to LR, and
+translation, ribosome quality control and mitotic sets, which move up (Figure 3a).
 
 ## Tree
 

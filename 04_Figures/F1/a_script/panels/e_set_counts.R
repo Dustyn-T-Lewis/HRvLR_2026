@@ -1,6 +1,6 @@
-# F3 b: gene sets per contrast at fgsea FDR < 0.05, up and down, over the four MSigDB databases
-# (FDR within each). Read beside F1 d: the groups change a similar number of proteins, but HR moves
-# many more sets.
+# F1 e: gene sets per contrast at fgsea FDR < 0.05, up and down, over the four MSigDB databases
+# (FDR within each). Read beside panel d: the groups change a similar number of proteins, but HR
+# moves many more sets.
 library(here)
 library(dplyr)
 library(tidyr)
@@ -9,7 +9,7 @@ source(here("04_Figures", "style", "figure_style.R"))
 source(here("04_Figures", "style", "pathway_grid.R"))
 
 inputs <- c(set_tests = "02_HRvLR/02_Set_Contrasts/c_data/set_tests.rds")
-holds <- "Panel b: per contrast and direction, gene sets at fgsea FDR < 0.05 and sets tested."
+holds <- "Panel e: per contrast and direction, gene sets at fgsea FDR < 0.05 and sets tested."
 fgsea <- readRDS(here(inputs[["set_tests"]]))$set_tests |>
   filter(method == "fgsea", collection != "GO_Slim")
 contrasts <- unique(fgsea$contrast)
@@ -70,4 +70,4 @@ panel <- ggplot(bars, aes(signed, contrast)) +
     panel.spacing.y = unit(1, "mm"), legend.position = "bottom"
   )
 
-save_panel(panel, "F3", "b_set_counts", 80, 110)
+save_panel(panel, "F1", "e_set_counts", 80, 95)

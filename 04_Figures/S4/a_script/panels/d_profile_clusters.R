@@ -75,4 +75,4 @@ panel <- ggplot(drawn, aes(column, row, fill = mean_t)) +
     legend.key.height = unit(5, "mm"), legend.key.width = unit(2.5, "mm")
   )
 
-save_panel(panel, "F4", "d_profile_clusters", 250, 70)
+save_panel(panel, "S4", "d_profile_clusters", 250, 70)

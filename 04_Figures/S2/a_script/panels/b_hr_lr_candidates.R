@@ -41,4 +41,4 @@ panel <- panel_data |>
     n_samples = n_samples, limit = protein_colour_limit(results)
   )
 
-save_panel(panel, "F2", "b_hr_lr_candidates", 95, 110)
+save_panel(panel, "S2", "b_hr_lr_candidates", 160, 135)

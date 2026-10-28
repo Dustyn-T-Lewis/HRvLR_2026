@@ -89,4 +89,4 @@ panel <- panel_data |>
   )
 panel_data <- select(panel_data, -facet, -value_source)
 
-save_panel(panel, "F2", "c_trajectories", 75, 135)
+save_panel(panel, "S2", "c_trajectories", 90, 135)

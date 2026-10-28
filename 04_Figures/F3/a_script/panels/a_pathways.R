@@ -32,4 +32,4 @@ panel <- built$panel
 panel_data <- built$panel_data
 panel_height <- built$height
 
-save_panel(panel, "F3", "a_pathways", 170, panel_height)
+save_panel(panel, "F3", "a_pathways", 250, panel_height)

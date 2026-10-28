@@ -1,8 +1,8 @@
 # F1
 
 The global view of HR against LR. Row 1: the design and the proteome at each time point. Row 2: how
-much each group grew and got stronger, how many proteins each contrast moves, and whether one
-group's response shows up in the other.
+much each group grew and got stronger, and how many proteins (d) and gene sets (e) each contrast
+moves. Row 3: whether one group's response shows up in the other.
 
 | Panel | Shows | Reads |
 |---|---|---|
@@ -10,7 +10,8 @@ group's response shows up in the other.
 | b_pca | Three PCAs in a row, one point per person (blood-corrected values, proteins scaled): T1 levels, the training change (T2 − T1) and the acute change (T3 − T2). HR deep indigo circles, LR periwinkle triangles, each group in its 95% normal ellipse with its centre marked and labelled. Each carries the PERMANOVA for HR/LR (on a change: did the groups respond differently?), the gap statistic's k (1 = no natural clusters) and the adjusted Rand index of a forced two-cluster split against HR/LR (0 = chance); the subtitle gives the PERMANOVA for time across all biopsies | `pca`, `permanova`; `separation` from `04_Variance`; drawn by `style/pca_grid.R` |
 | c_trait_effects | Each group's T1 to T2 change in fibre area, muscle area and strength: geometric-mean % with 95% CI on a log-ratio axis, filled at p < 0.05. Muscle area and mixed fibre area formed the groups and sit in their own block without an HR − LR p; the other traits carry Welch's HR − LR p | `trait_effects` from `07_Group_Trait_Slopes` |
 | d_counts | Proteins per contrast at p < 0.05 (light bar), Π < 0.05 (dark bar) and FDR < 0.05 (number), up and down; dashed lines mark 2.5% of tested per direction, the 5% expected at p < 0.05 | `protein_by_contrast`, checked against `contrast_summary` |
-| e_fry_transfer | Each group's training and acute responders (Π or p < 0.05, up and down) tested with fry in the other group's contrast: bar length −log10 p, colour the direction fry reports, shade the evidence, label set size · FDR. Sets under 5 proteins were not tested and are labelled "too few" | `fry_concordance` |
+| e_set_counts | Gene sets at fgsea FDR < 0.05 per contrast, up and down, over Hallmark, Reactome, KEGG and GO BP (1,364 sets, FDR within each database). Beside d: HR and LR change a similar number of proteins, but HR moves 142 sets with training against LR's 31, and 164 against 28 after the bout | `set_tests` from `02_Set_Contrasts` |
+| f_fry_transfer | Each group's training and acute responders (Π or p < 0.05, up and down) tested with fry in the other group's contrast: bar length −log10 p, colour the direction fry reports, shade the evidence, label set size · FDR. Sets under 5 proteins were not tested and are labelled "too few" | `fry_concordance` |
 
 Sheets come from `02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx` unless named.
 
@@ -26,7 +27,7 @@ Rscript 04_Figures/F1/a_script/panels/b_pca.R          # one panel
 | File | Holds |
 |---|---|
 | `b_reports/panels/<panel>.pdf` | each panel on its own |
-| `b_reports/F1_composite.pdf` | the figure, 250 × 165 mm (landscape) |
+| `b_reports/F1_composite.pdf` | the figure, 250 × 235 mm (landscape) |
 | `c_data/F1.xlsx` | one sheet per panel with the numbers drawn, column meanings, inputs with md5 |
 
 ## Read with care

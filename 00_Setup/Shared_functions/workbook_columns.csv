@@ -298,20 +298,20 @@ soft_threshold,chosen,TRUE for the power used.
 ^d_counts$,n_chance,Proteins expected at p < 0.05 in one direction by chance: 2.5% of those tested.
 ^d_counts$,n_nominal,Proteins at p < 0.05 in that direction.
 ^d_counts$,n_fdr_05,Proteins at FDR < 0.05 in that direction.
-^b_set_counts$,family,"Contrast family the row sits under: Training, Acute, Between groups or Interaction."
-^b_set_counts$,label,Row label: the group for a within-group window; the time point for HR - LR; the window for an interaction.
-^b_set_counts$,n_tested,"Gene sets tested in the contrast (Hallmark, Reactome, KEGG legacy, GO BP)."
-^b_set_counts$,n_fdr_05,Gene sets at fgsea FDR < 0.05 (within database) with NES in that direction.
-^e_fry_transfer$,window,Window the set comes from: Training (T2 - T1) or Acute (T3 - T2).
-^e_fry_transfer$,from_group,Group whose contrast chose the set.
-^e_fry_transfer$,in_group,Group whose contrast the set is tested in.
-^e_fry_transfer$,criterion,"Selection of the set: pi (Π < 0.05) or nominal (p < 0.05)."
-^e_fry_transfer$,set_direction,Direction of the set's members in the group that chose them.
-^e_fry_transfer$,set_size,Proteins in the set.
-^e_fry_transfer$,tested,"Whether fry tested the set; sets under 5 proteins were not tested."
-^e_fry_transfer$,direction,Direction fry reports for the set in the other group's contrast.
-^e_fry_transfer$,evidence,"Evidence level drawn: FDR < 0.05, p < 0.05 only, or not significant."
-^e_fry_transfer$,signed_log_p,"-log10 fry p, negative for down sets: the bar drawn."
+^e_set_counts$,family,"Contrast family the row sits under: Training, Acute, Between groups or Interaction."
+^e_set_counts$,label,Row label: the group for a within-group window; the time point for HR - LR; the window for an interaction.
+^e_set_counts$,n_tested,"Gene sets tested in the contrast (Hallmark, Reactome, KEGG legacy, GO BP)."
+^e_set_counts$,n_fdr_05,Gene sets at fgsea FDR < 0.05 (within database) with NES in that direction.
+^f_fry_transfer$,window,Window the set comes from: Training (T2 - T1) or Acute (T3 - T2).
+^f_fry_transfer$,from_group,Group whose contrast chose the set.
+^f_fry_transfer$,in_group,Group whose contrast the set is tested in.
+^f_fry_transfer$,criterion,"Selection of the set: pi (Π < 0.05) or nominal (p < 0.05)."
+^f_fry_transfer$,set_direction,Direction of the set's members in the group that chose them.
+^f_fry_transfer$,set_size,Proteins in the set.
+^f_fry_transfer$,tested,"Whether fry tested the set; sets under 5 proteins were not tested."
+^f_fry_transfer$,direction,Direction fry reports for the set in the other group's contrast.
+^f_fry_transfer$,evidence,"Evidence level drawn: FDR < 0.05, p < 0.05 only, or not significant."
+^f_fry_transfer$,signed_log_p,"-log10 fry p, negative for down sets: the bar drawn."
 ^a_trait_changes$,block,"Which axis the trait is drawn on: % change, composite score or volume load (kg)."
 ^a_trait_changes$,value,"The person's T1 to T2 value of the trait: % change, composite hypertrophy score, or total volume load in kg."
 ^(b_links_vs_chance|a_slope_counts)$,n_expected,Features expected at p < 0.05 by chance alone: 5% of those tested.

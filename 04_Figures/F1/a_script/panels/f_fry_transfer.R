@@ -1,4 +1,4 @@
-# F1 e: each group's training and acute responders tested with fry in the other group's contrast.
+# F1 f: each group's training and acute responders tested with fry in the other group's contrast.
 library(here)
 library(dplyr)
 library(ggplot2)
@@ -6,7 +6,7 @@ source(here("04_Figures", "style", "figure_style.R"))
 
 inputs <- c(contrasts = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx")
 holds <- paste(
-  "Panel e: each group's training and acute sets (Π or p < 0.05) tested with fry in the other",
+  "Panel f: each group's training and acute sets (Π or p < 0.05) tested with fry in the other",
   "group's contrast; sets under 5 proteins were not tested."
 )
 fry_rows <- read_sheet(inputs[["contrasts"]], "fry_concordance")
@@ -114,4 +114,4 @@ panel <- ggplot(filter(plotted, tested), aes(signed_log_p, row)) +
     alpha = guide_legend(order = 2, override.aes = list(fill = "grey30", colour = "grey30"))
   )
 
-save_panel(panel, "F1", "e_fry_transfer", 105, 95)
+save_panel(panel, "F1", "f_fry_transfer", 250, 70)

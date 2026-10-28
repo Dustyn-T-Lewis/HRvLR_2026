@@ -70,4 +70,4 @@ panel <- ggplot(panel_data, aes(ratio(pct_change), trait, colour = group)) +
     legend.position = "bottom"
   )
 
-save_panel(panel, "F1", "c_trait_effects", 70, 95)
+save_panel(panel, "F1", "c_trait_effects", 80, 95)
