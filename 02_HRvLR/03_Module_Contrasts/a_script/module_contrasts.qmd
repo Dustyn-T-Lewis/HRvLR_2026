@@ -59,7 +59,8 @@ modules$module_summary
 Each eigengene goes through the protein design: one mean per group and time point plus the blood
 index, person as a block. The within-person correlation is estimated on the eigengenes themselves
 (`duplicateCorrelation()`), since they are the values fitted. limpa's sample weights belong to the
-protein values and are not used here. `fdr` is Benjamini-Hochberg across modules within a contrast.
+protein values and are not used here. `df` is limma's total degrees of freedom (the heatmap turns t
+into an r-equivalent with it). `fdr` is Benjamini-Hochberg across modules within a contrast.
 
 ```{r}
 #| label: eigengene-tests
@@ -71,7 +72,8 @@ eigengene_tests <- map(set_names(contrasts), \(cn) {
   topTable(me_fit, coef = cn, number = Inf, sort.by = "none", confint = TRUE) |>
     as_tibble(rownames = "module") |>
     transmute(
-      module, logFC, logFC_lower = CI.L, logFC_upper = CI.R, t, p = P.Value, fdr = adj.P.Val
+      module, logFC, logFC_lower = CI.L, logFC_upper = CI.R, t,
+      df = me_fit$df.total[match(module, rownames(me_fit))], p = P.Value, fdr = adj.P.Val
     )
 }) |>
   list_rbind(names_to = "contrast")

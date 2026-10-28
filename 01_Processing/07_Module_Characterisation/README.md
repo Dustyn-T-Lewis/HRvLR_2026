@@ -31,8 +31,8 @@ quarto render 01_Processing/07_Module_Characterisation/a_script/module_character
 
 - The ORA universe is the measured genes, so a set is enriched relative to muscle, not the genome.
 - The top set is the smallest p in the module across all collections; overlapping sets often
-  share the top ranks. In five of the 13 modules (blue, brown, green, magenta, salmon) the top set
-  does not reach BH < 0.05.
+  share the top ranks. In three of the 10 modules (turquoise, brown, yellow) the top set does not
+  reach BH < 0.05.
 - STRING edges include text-mining and co-expression evidence; a high ratio says the members are
   known to be related, not that they bind.
 - The STRING enrichment test calls the STRING web API; the step needs network access.

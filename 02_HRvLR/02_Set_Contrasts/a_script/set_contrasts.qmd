@@ -30,7 +30,8 @@ source(here("02_HRvLR", "helpers.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds"
+  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds",
+  set_scores = "01_Processing/05_Set_Scores/c_data/singscore.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -210,6 +211,42 @@ stopifnot(
 )
 ```
 
+## Hallmark set scores
+
+The supplementary score heatmap (S3 e) tests the Hallmark sets with 15 to 500 measured genes (35 of
+the 50) as per-biopsy singscore scores, chosen in advance rather than by the tests above. Each score goes through the eigengene fit of
+`03_Module_Contrasts`: the protein design, person as a block with the within-person correlation
+estimated on the scores, robust eBayes. `df` is limma's total degrees of freedom, which the heatmap
+needs to turn t into an r-equivalent. `fdr` is Benjamini-Hochberg across these sets within a
+contrast.
+
+```{r}
+#| label: score-tests
+scores <- readRDS(paths[["set_scores"]])$scores
+hallmark <- catalog$set_id[catalog$collection == "Hallmark"]
+hallmark_scores <- scores[hallmark, saved$fit$EList$targets$sample_id]
+score_block <- saved$fit$EList$targets$subject
+score_correlation <- duplicateCorrelation(hallmark_scores, saved$design, block = score_block)
+score_fit <- lmFit(hallmark_scores, saved$design,
+  block = score_block, correlation = score_correlation$consensus.correlation
+) |>
+  contrasts.fit(saved$contrast_matrix) |>
+  eBayes(robust = TRUE)
+score_tests <- map(set_names(contrasts), \(cn) {
+  topTable(score_fit, coef = cn, number = Inf, sort.by = "none", confint = TRUE) |>
+    as_tibble(rownames = "set_id") |>
+    transmute(
+      set_id, logFC, logFC_lower = CI.L, logFC_upper = CI.R, t,
+      df = score_fit$df.total[match(set_id, rownames(score_fit))], p = P.Value, fdr = adj.P.Val
+    )
+}) |>
+  list_rbind(names_to = "contrast")
+stopifnot(nrow(score_tests) == length(hallmark) * length(contrasts), !anyNA(score_tests$p))
+length(hallmark)
+c(within_person_correlation = round(score_correlation$consensus.correlation, 3))
+count(filter(score_tests, fdr < 0.05), contrast)
+```
+
 ## Summary
 
 `r length(sets)` sets in `r length(by_db)` databases, tested in nine contrasts by fgsea and fry.
@@ -222,17 +259,21 @@ blocks at cut 0.85; Figure 3 draws the first few of each block by rank.
 #| label: save
 out <- here("02_HRvLR", "02_Set_Contrasts", "c_data")
 dir.create(out, showWarnings = FALSE)
-saveRDS(list(set_tests = set_tests, selection = selection), file.path(out, "set_tests.rds"))
+saveRDS(
+  list(set_tests = set_tests, selection = selection, score_tests = score_tests),
+  file.path(out, "set_tests.rds")
+)
 write_workbook(
   list(
     set_tests = mutate(set_tests,
       leading_edge = map_chr(leading_edge, \(x) paste(x, collapse = ";"))
     ),
-    selection = selection
+    selection = selection, score_tests = score_tests
   ),
   c(
     "Per contrast, database and set: fgsea NES or fry direction, p and FDR within the database.",
-    "Candidate sets per block: rank, tree clusters at three cuts, most specific set per cluster."
+    "Candidate sets per block: rank, tree clusters at three cuts, most specific set per cluster.",
+    "Per contrast and qualifying Hallmark set: limma on the singscore set score, with df and FDR."
   ),
   file.path(out, "set_contrasts.xlsx"), inputs, paths
 )

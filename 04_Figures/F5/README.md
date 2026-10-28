@@ -1,6 +1,6 @@
 # F5: modules
 
-Co-expression modules from `01_Processing/06_Module_Building` (WGCNA, soft power 12). Colours are
+Co-expression modules from `01_Processing/06_Module_Building` (WGCNA, soft power 10, merge 0.25). Colours are
 labels only, so every module is named by its top over-represented set (FDR < 0.05) with the colour
 after it (`style/module_labels.R`). Rows run largest module first. In the composite, a and b share their rows: each module's name is
 printed once, on the left of a, and reads across to its eigengene tests in b.
@@ -38,9 +38,10 @@ Rscript 04_Figures/F5/a_script/panels/b_eigengene_matrix.R    # one panel alone
 
 ## Read with care
 
-- Module eigengenes change at chance: 4 of 117 tests reach p < 0.05 against 5.9 expected, and
-  none passes FDR < 0.05. Panel c draws the smallest p (tan, Training HR, FDR 0.27) as an example
-  of what a module trajectory looks like, not as a finding.
-- Five of 13 modules have no over-represented set at FDR < 0.05; they are named by colour alone.
+- 6 of 90 eigengene tests reach p < 0.05 (4.5 expected) and none passes FDR < 0.05. The leads:
+  aerobic respiration (red) and cristae formation (magenta) rise with training in HR and sit lower
+  in HR than LR after the bout. Panel c draws the smallest p (magenta, HR − LR at T3, p 0.031).
+- Three of 10 modules have no over-represented set at FDR < 0.05; they are named by colour alone.
+- 7 of 10 modules re-form when any one person is left out (S5); yellow and magenta do not.
 - Panel d shows most modules moderately preserved in the other group (Zsummary 2 to 10): HR and LR
   share their co-expression structure (26 of 29 group modules; 3 fall below 2, none above 10).

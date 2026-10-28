@@ -27,10 +27,11 @@ quarto render 02_HRvLR/03_Module_Contrasts/a_script/module_contrasts.qmd --outpu
 
 ## Read with care
 
-- 13 modules × 9 contrasts, about 5.9 tests per method at p < 0.05 by chance. Eigengene tests: 4
-  at p < 0.05, none at FDR < 0.05. fry: 12 at p < 0.05 and 4 at FDR < 0.05, all within-group
-  changes (tan up with training in LR; blue, green and pink down after the bout in LR). No HR − LR
-  or interaction test reaches FDR < 0.05 by either method.
+- 10 modules × 9 contrasts, about 4.5 tests per method at p < 0.05 by chance. Eigengene tests: 6
+  at p < 0.05, none at FDR < 0.05; the respiration (red) and cristae (magenta) modules rise with
+  training in HR and are lower in HR than LR after the bout. fry: 9 at p < 0.05 and 3 at
+  FDR < 0.05, all down after the bout in LR (brown, pink, yellow). No HR − LR or interaction test
+  reaches FDR < 0.05 by either method.
 - The eigengene fit uses the protein design and person block, with the within-person correlation
   estimated on the eigengenes; limpa's sample weights are not applied to eigengenes.
 - The kME-against-t correlations and their p are descriptions: members were chosen for moving
