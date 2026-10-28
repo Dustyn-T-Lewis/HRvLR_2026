@@ -55,14 +55,16 @@ HRvLR_V2/
 │   ├── 04_Variance/               variance shares, DiffVar, gap statistic, PCs against covariates
 │   ├── 05_Module_Preservation/    modules built in each group, preserved in the other
 │   ├── 06_Classification/         single-feature AUC
-│   └── 07_Group_Trait_Slopes/     trait slopes within each group, HR slope minus LR slope
+│   ├── 07_Group_Trait_Slopes/     trait slopes within each group, HR slope minus LR slope
+│   └── 08_Module_Detail/          module hubs, coupling, rewiring, per-person changes, PLS
 ├── 03_Continuous/                 traits as numbers, all 16 people pooled
 │   ├── 01_Trait_Associations/     sample model, change score, two-predictor, interaction
 │   ├── 02_Trait_Pathways/         fgsea on each trait ranking
 │   └── 03_Profile_Clusters/       proteins grouped by their trait links
 └── 04_Figures/                    main figures F1 to F5, supplements S1 to S5
     ├── style/, assets/            shared theme, palette, grids; the design schematic
-    └── F1/ … F5/, S1/ … S5/       panel scripts, panel PDFs, composite PDF, one workbook
+    ├── F1/ … F5/, S1/ … S5/       panel scripts, panel PDFs, composite PDF, one workbook
+    └── Modules/                   per-module pages (hubs, rewiring) and cross-module pages
 ```
 
 ## Every step

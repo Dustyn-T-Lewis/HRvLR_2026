@@ -14,6 +14,7 @@ fit.
 | [`05_Module_Preservation`](05_Module_Preservation/README.md) | WGCNA modules built inside each group, preservation of each in the other | `preservation.rds`, `module_preservation.xlsx` |
 | [`06_Classification`](06_Classification/README.md) | single-feature AUC (Wilcoxon, DeLong interval) for proteins, set scores and modules in five tasks | `classification.rds`, `classification.xlsx` |
 | [`07_Group_Trait_Slopes`](07_Group_Trait_Slopes/README.md) | Spearman within each group; limma HR slope minus LR slope per feature, window and trait | `group_trait_slopes.rds`, `group_trait_slopes.xlsx` |
+| [`08_Module_Detail`](08_Module_Detail/README.md) | module hubs, coupling within each group, kME rewiring between groups, per-person changes, sPLS-DA and sPLS-R | `module_detail.rds`, `module_detail.xlsx` |
 
 `helpers.R` holds `person_values()` (one column per person: a level or a change) and the trait
 windows. Steps 06 and 07 source it, as do `03_Continuous` steps 01 and 03.

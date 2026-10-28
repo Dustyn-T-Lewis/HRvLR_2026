@@ -1,0 +1,304 @@
+---
+title: "Module detail"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+The module tests (`03_Module_Contrasts`) say whether a module's summary moves. This step asks what
+sits underneath and around it, five ways:
+
+- hubs: each module's most central proteins and how each changed;
+- coupling: whether two modules change together across people, within HR and within LR;
+- rewiring: whether a protein belongs to its module in one group and not the other;
+- per person: each person's module changes, ordered by how much they grew;
+- PLS: whether the modules together separate HR from LR or predict growth.
+
+Every result here is exploratory: 8 people per group, and nothing below is corrected across the
+whole step. The figures are in `04_Figures/Modules`.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(WGCNA)
+source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+disableWGCNAThreads()
+inputs <- c(
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  contrasts = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+```{r}
+#| label: input
+modules <- readRDS(paths[["modules"]])
+corrected <- readRDS(paths[["corrected"]])
+results <- readxl::read_excel(paths[["contrasts"]], "protein_by_contrast")
+phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
+meta <- modules$meta
+me <- modules$eigengenes
+members <- filter(modules$membership, module != "grey")
+group_of <- with(phenotype, set_names(group, subject))
+stopifnot(
+  identical(colnames(me), meta$sample_id), identical(colnames(corrected$E), meta$sample_id),
+  setequal(names(group_of), meta$subject)
+)
+dim(me)
+```
+
+## Hubs
+
+A protein's kME is its correlation with its module's eigengene; the highest are the module's hubs.
+Each module's 15 hubs are joined to their logFC, p and FDR in the six training and acute contrasts
+(each group and the interaction).
+
+```{r}
+#| label: hubs
+hub_contrasts <- c(
+  "Training_HR", "Training_LR", "Training_Interaction", "Acute_HR", "Acute_LR", "Acute_Interaction"
+)
+hubs <- members |>
+  slice_max(kme, n = 15, by = module, with_ties = FALSE) |>
+  mutate(hub_rank = row_number(), .by = module) |>
+  inner_join(
+    filter(results, contrast %in% hub_contrasts) |> select(uniprot_id, contrast, logFC, p, fdr),
+    by = "uniprot_id"
+  ) |>
+  arrange(module, hub_rank, match(contrast, hub_contrasts))
+count(filter(hubs, p < 0.05), contrast)
+```
+
+## Coupling
+
+For each window (training: T2 − T1; acute: T3 − T2) and group, the Spearman correlation between
+two modules' eigengene changes across the 8 people. The HR − LR difference per pair is tested with
+Fisher's z on the two correlations (each from 8 people), which treats Spearman's rho as Pearson's;
+with 8 people this is a rough guide.
+
+```{r}
+#| label: coupling
+changes <- list(
+  training = person_values(me, meta, "T2", from = "T1"),
+  acute = person_values(me, meta, "T3", from = "T2")
+)
+fisher_p <- \(r1, r2, n) 2 * pnorm(-abs((atanh(r1) - atanh(r2)) / sqrt(2 / (n - 3))))
+pairs <- combn(rownames(me), 2) |>
+  t() |>
+  as_tibble(.name_repair = ~ c("module_a", "module_b"))
+coupling <- imap(changes, \(x, window) {
+  rho <- map(c(HR = "HR", LR = "LR"), \(g) {
+    cor(t(x[, names(group_of)[group_of == g]]), method = "spearman")
+  })
+  mutate(pairs,
+    window,
+    rho_HR = rho$HR[cbind(module_a, module_b)], rho_LR = rho$LR[cbind(module_a, module_b)],
+    difference = rho_HR - rho_LR,
+    p_difference = fisher_p(pmin(rho_HR, 0.999), pmin(rho_LR, 0.999), 8)
+  )
+}) |>
+  list_rbind() |>
+  relocate(window)
+filter(coupling, p_difference < 0.05)
+```
+
+## Rewiring
+
+Each member's kME is recomputed within HR's 24 biopsies and within LR's 24, on the person-centred
+values that built the modules (`06_Module_Building`). A protein with a high kME in one group and a
+low one in the other moves with its module in one group only.
+
+```{r}
+#| label: rewiring
+centred <- apply(corrected$E, 1, \(v) v - ave(v, meta$subject))
+colours <- with(modules$membership, set_names(module, uniprot_id))[colnames(centred)]
+group_kme <- map(c(HR = "HR", LR = "LR"), \(g) {
+  rows <- meta$group == g
+  eigen <- moduleEigengenes(centred[rows, ], colors = colours, excludeGrey = TRUE)$eigengenes
+  k <- signedKME(centred[rows, ], eigen,
+    corFnc = "bicor", corOptions = "maxPOutliers = 0.05, pearsonFallback = 'individual'"
+  )
+  colnames(k) <- sub("^kME", "", colnames(k))
+  k
+})
+rewiring <- members |>
+  transmute(
+    module, uniprot_id, gene, kme,
+    kme_HR = group_kme$HR[cbind(uniprot_id, module)],
+    kme_LR = group_kme$LR[cbind(uniprot_id, module)], shift = kme_HR - kme_LR
+  ) |>
+  arrange(module, desc(abs(shift)))
+slice_max(rewiring, abs(shift), n = 2, by = module)
+```
+
+## Per person
+
+Each person's eigengene change per module and window, with their group and growth score (the
+composite that ranked them into HR and LR).
+
+```{r}
+#| label: per-person
+per_person <- imap(changes, \(x, window) {
+  as_tibble(t(x), rownames = "subject") |> mutate(window = window)
+}) |>
+  list_rbind() |>
+  pivot_longer(-c(subject, window), names_to = "module", values_to = "change") |>
+  left_join(select(phenotype, subject, group, comp_hypertrophy), by = "subject") |>
+  relocate(window, subject, group, comp_hypertrophy)
+summarise(per_person, spread = round(sd(change), 3), .by = c(window, module)) |> head()
+```
+
+## PLS
+
+Sparse PLS (mixOmics) on the eigengenes: sPLS-DA for HR against LR from the T1 levels, the
+training change and the acute change; sPLS regression for the % gains in fibre area, muscle area
+and leg press, and the growth score, from the T1 levels and the training change. One component;
+the number of modules kept (2, 4, 6 or all) is tuned by leave-one-out inside each training fold,
+and each person is predicted once, held out (nested leave-one-out). The score is the AUC (sPLS-DA)
+or Q² = 1 − held-out error / error of the held-out person's mean of the others (sPLS-R). The null
+reruns the whole procedure on 1,000 shuffles of the outcome; p = (1 + null ≥ observed) / 1,001.
+The loadings come from one model on all 16 people.
+
+```{r}
+#| label: pls
+people <- colnames(changes$training)
+windows <- list(
+  T1 = t(person_values(me, meta, "T1"))[people, ], training = t(changes$training),
+  acute = t(changes$acute)
+)
+gains <- trait_windows(phenotype)$training
+keep_grid <- c(2, 4, 6, nrow(me))
+auc <- \(score, y) {
+  r <- rank(score)
+  hr <- y == "HR"
+  (sum(r[hr]) - sum(hr) * (sum(hr) + 1) / 2) / (sum(hr) * sum(!hr))
+}
+fit_da <- \(x, y, k) mixOmics::splsda(x, y, ncomp = 1, keepX = k)
+fit_reg <- \(x, y, k) mixOmics::spls(x, y, ncomp = 1, keepX = k, mode = "regression")
+predict_da <- \(fit, x) predict(fit, x)$predict[, "HR", 1]
+predict_reg <- \(fit, x) predict(fit, x)$predict[, 1, 1]
+nested <- function(x, y, fit, predict_one, loss) {
+  map_dbl(seq_len(nrow(x)), \(i) {
+    xt <- x[-i, , drop = FALSE]
+    yt <- y[-i]
+    inner <- map_dbl(keep_grid, \(k) {
+      loss(map_dbl(seq_len(nrow(xt)), \(j) {
+        predict_one(fit(xt[-j, , drop = FALSE], yt[-j], k), xt[j, , drop = FALSE])
+      }), yt)
+    })
+    predict_one(fit(xt, yt, keep_grid[which.min(inner)]), x[i, , drop = FALSE])
+  })
+}
+q2 <- \(pred, y) 1 - sum((y - pred)^2) / sum((y - map_dbl(seq_along(y), \(i) mean(y[-i])))^2)
+score <- function(model, x, y) {
+  if (model == "sPLS-DA") {
+    auc(nested(x, y, fit_da, predict_da, \(s, yt) 1 - auc(s, yt)), y)
+  } else {
+    q2(nested(x, y, fit_reg, predict_reg, \(p, yt) sum((yt - p)^2)), y)
+  }
+}
+outcome_of <- \(outcome) {
+  if (outcome == "HR vs LR") factor(group_of[people], c("LR", "HR"))
+  else gains[[outcome]][match(people, gains$subject)]
+}
+tasks <- bind_rows(
+  tibble(model = "sPLS-DA", window = names(windows), outcome = "HR vs LR"),
+  expand_grid(
+    model = "sPLS-R", window = c("T1", "training"),
+    outcome = c("pct_fcsa_mixed", "pct_mcsa", "pct_leg_press_1rm", "comp_hypertrophy")
+  )
+)
+RNGkind("L'Ecuyer-CMRG")
+set.seed(20261028)
+n_perm <- 1000
+pls_fits <- pmap(tasks, \(model, window, outcome) {
+  x <- windows[[window]]
+  y <- outcome_of(outcome)
+  observed <- score(model, x, y)
+  null <- unlist(parallel::mclapply(seq_len(n_perm), \(b) score(model, x, sample(y)),
+    mc.cores = max(1, parallel::detectCores() - 1), mc.set.seed = TRUE
+  ))
+  full <- if (model == "sPLS-DA") {
+    mixOmics::splsda(x, y, ncomp = 1)
+  } else {
+    mixOmics::spls(x, y, ncomp = 1, mode = "regression")
+  }
+  list(
+    summary = tibble(
+      model, window, outcome, statistic = if (model == "sPLS-DA") "AUC" else "Q2", observed,
+      null_median = median(null), null_95 = unname(quantile(null, 0.95)),
+      p_perm = (1 + sum(null >= observed)) / (1 + n_perm)
+    ),
+    loadings = tibble(model, window, outcome,
+      module = rownames(full$loadings$X), loading = full$loadings$X[, 1]
+    )
+  )
+})
+pls <- list_rbind(map(pls_fits, "summary"))
+pls_loadings <- list_rbind(map(pls_fits, "loadings"))
+pls
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  all(count(hubs, module)$n == 15 * length(hub_contrasts)),
+  nrow(coupling) == 2 * nrow(pairs), all(abs(c(coupling$rho_HR, coupling$rho_LR)) <= 1),
+  nrow(rewiring) == nrow(members), !anyNA(rewiring$kme_HR), !anyNA(rewiring$kme_LR),
+  nrow(per_person) == 2 * length(people) * nrow(me),
+  nrow(pls) == nrow(tasks), all(pls$p_perm > 0 & pls$p_perm <= 1)
+)
+```
+
+## Summary
+
+`r sum(coupling$p_difference < 0.05)` of `r nrow(coupling)` module pairs couple differently in
+HR and LR at Fisher p < 0.05. The largest kME shift is `r rewiring$gene[which.max(abs(rewiring$shift))]`
+in `r rewiring$module[which.max(abs(rewiring$shift))]` (HR
+`r round(rewiring$kme_HR[which.max(abs(rewiring$shift))], 2)`, LR
+`r round(rewiring$kme_LR[which.max(abs(rewiring$shift))], 2)`). The best PLS model is
+`r with(slice_min(pls, p_perm, n = 1, with_ties = FALSE), sprintf("%s, %s, %s: %s %.2f, permutation p %.3f", model, window, outcome, statistic, observed, p_perm))`.
+
+## Save
+
+```{r}
+#| label: save
+out <- here("02_HRvLR", "08_Module_Detail", "c_data")
+dir.create(out, showWarnings = FALSE)
+detail <- list(
+  hubs = hubs, coupling = coupling, rewiring = rewiring, per_person = per_person, pls = pls,
+  pls_loadings = pls_loadings
+)
+saveRDS(detail, file.path(out, "module_detail.rds"))
+write_workbook(
+  detail,
+  c(
+    "Per module, its 15 highest-kME proteins with logFC, p and FDR in six contrasts.",
+    "Per window and module pair: Spearman rho of eigengene changes in HR and in LR, Fisher p.",
+    "Per member: kME overall, within HR and within LR biopsies, and HR minus LR.",
+    "Per window, person and module: eigengene change, group and growth score.",
+    "Per PLS task: held-out AUC or Q2, its permutation null and p.",
+    "Per PLS task and module: component-1 loading on all 16 people."
+  ),
+  file.path(out, "module_detail.xlsx"), inputs, paths
+)
+```

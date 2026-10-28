@@ -226,6 +226,6 @@ read_sheet <- \(path, sheet) readxl::read_excel(here::here(path), sheet)
 save_panel <- function(panel, figure, name, width, height) {
   ggplot2::ggsave(
     here::here("04_Figures", figure, "b_reports", "panels", paste0(name, ".pdf")), panel,
-    width = width, height = height, units = "mm", device = grDevices::cairo_pdf
+    width = width, height = height, units = "mm", device = grDevices::cairo_pdf, create.dir = TRUE
   )
 }

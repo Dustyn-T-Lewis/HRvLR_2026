@@ -14,7 +14,7 @@ tests <- readRDS(here(inputs[["module_tests"]]))$eigengene_tests
 identity <- module_identity(read_module_labels())
 groups <- c("HR", "LR")
 holds <- paste(
-  "Panel c: per-biopsy eigengene of the module with the smallest eigengene p outside the",
+  "Panel b: per-biopsy eigengene of the module with the smallest eigengene p outside the",
   "interaction contrasts, with the contrast and p that chose it."
 )
 
@@ -60,4 +60,4 @@ panel <- ggplot(d, aes(timepoint, eigengene, colour = group)) +
   figure_theme +
   theme(strip.text = element_text(face = "bold", size = 6.5))
 
-save_panel(panel, "F5", "c_trajectories", 100, 80)
+save_panel(panel, "F5", "b_trajectories", 100, 80)

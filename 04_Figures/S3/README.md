@@ -10,6 +10,7 @@ pages), each 250 mm wide and as tall as its content.
 | b_cut_075 | One set per cluster with the tree cut at 0.75 (tighter clusters, more rows), every cluster of every block in all four windows. |
 | c_cut_09 | The same at 0.9 (looser clusters, fewer rows). |
 | d_go_slim | Every GO Slim theme in every contrast, rows ordered by average-linkage clustering of their NES. GO Slim is tested upstream but kept out of the F3 selection. |
+| e_hallmark_heatmap | The F5 a heatmap for the 35 Hallmark sets with 15 to 500 measured genes, as singscore set scores: limma contrasts on the scores (`score_tests` in `02_Set_Contrasts`) and the trait links of `07_Group_Trait_Slopes`. Hallmark is chosen in advance, so the rows are not selected by the tests drawn; rows are clustered by their 36 values. |
 
 Fill is fgsea NES, size -log10 FDR, the square the database; `*` marks a set whose FDR < 0.05 calls
 in its window disagree in sign, `†` a training or acute set whose interaction also reaches
@@ -33,5 +34,5 @@ Rscript 04_Figures/S3/a_script/panels/a_tree_matrix.R      # one panel
 | File | Holds |
 |---|---|
 | `b_reports/panels/{a_tree_matrix,b_cut_075,c_cut_09,d_go_slim}.pdf` | one PDF per panel |
-| `b_reports/S3_composite.pdf` | seven pages, 250 mm wide: panel a by window, then b, c and d |
+| `b_reports/S3_composite.pdf` | eight pages, 250 mm wide: panel a by window, then b, c, d and e |
 | `c_data/S3.xlsx` | one sheet per panel with every drawn cell |

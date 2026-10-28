@@ -12,7 +12,7 @@ and which went to supplements (see the root README).
 | F2 | proteins each group changes with training or the bout | S2: single-feature AUC; exploratory HR − LR protein candidates |
 | F3 | pathways: shared, HR-only and LR-only blocks for training and the bout, then between groups; one set per tree cluster | S3: every candidate set grouped by tree, cuts 0.75 and 0.9, GO Slim overview |
 | F4 | traits: people's changes; links against chance; trait pathways | S4: HR slope minus LR slope; protein profile groups |
-| F5 | modules: identity, eigengene contrasts, trajectories, preservation | S5: module characterisation with STRING; WGCNA module QC |
+| F5 | modules: score heatmap (contrasts and trait links), trajectories, preservation | S5: module characterisation with STRING; WGCNA module QC. Modules/: per-module hubs and rewiring; coupling, per-person responses, PLS |
 
 ## Layout
 
@@ -21,7 +21,8 @@ style/figure_style.R            palette, theme, contrast and trait labels, strip
 style/pathway_grid.R            the pathway dot-matrix (F3, S3, F4) and its one-set-per-cluster rows
 style/protein_grid.R            the protein dot-matrix (F2)
 style/share_grid.R              the share-against-chance tiles of the trait screens (F4b, S4a)
-style/module_labels.R           module names from their leading set (F5, S2, S5)
+style/module_labels.R           module names from their leading set (F5, S2, S5, Modules)
+style/score_heatmap.R           the YvO-style score heatmap (F5a, S3e)
 style/composite.R               run a figure's panels, tag them, write its workbook
 assets/design.png               study design schematic (F1a)
 F1/a_script/panels/a_*.R        one script per panel
@@ -29,6 +30,9 @@ F1/a_script/F1_composite.R      sources the panels and stitches them
 F1/b_reports/panels/a_*.pdf     one PDF per panel
 F1/b_reports/F1_composite.pdf   the figure
 F1/c_data/F1.xlsx               one sheet per panel, the numbers drawn
+Modules/a_script/modules_pages.R  every module page, from 02_HRvLR/08_Module_Detail
+Modules/b_reports/<module>/     hubs.pdf and rewiring.pdf per module
+Modules/b_reports/overview/     coupling.pdf, per_person.pdf, pls.pdf
 ```
 
 Each panel script runs on its own from the project root and leaves four objects: `panel` (the

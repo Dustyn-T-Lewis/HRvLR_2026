@@ -327,21 +327,12 @@ soft_threshold,chosen,TRUE for the power used.
 ^b_within_rho$,evidence,"Slope-difference call: FDR < 0.05, p < 0.05 only, or not significant."
 ^c_top_slope$,feature_value,"The feature's value for the person in the window: log2 abundance, set score or eigengene, as a level or a change."
 ^c_top_slope$,trait_value,The person's value of the trait in the window.
-^a_identity$,identity,"Label drawn for the module: its top ORA set when FDR < 0.05 (else no set at FDR < 0.05), with the colour in brackets."
-^a_identity$,string_p,Nominal p of the STRING interaction enrichment among the module's members.
-^b_eigengene_matrix$,logFC,Difference in the module eigengene for the contrast; positive = higher at the later time point or in HR.
-^b_eigengene_matrix$,logFC_lower,Lower bound of the 95% confidence interval of the eigengene difference (limma topTable).
-^b_eigengene_matrix$,logFC_upper,Upper bound of the 95% confidence interval of the eigengene difference (limma topTable).
-^b_eigengene_matrix$,t,Moderated t statistic of the eigengene difference (limma).
-^b_eigengene_matrix$,fry_direction,Direction fry gives for the module's proteins in the contrast: Up or Down.
-^b_eigengene_matrix$,fry_p,fry p for the module's proteins as a set in the contrast.
-^b_eigengene_matrix$,fry_fdr,Benjamini-Hochberg adjusted fry p across modules within the contrast.
-^c_trajectories$,eigengene,Eigengene of the drawn module in the biopsy.
-^c_trajectories$,chosen_contrast,Contrast whose eigengene p chose the module: the smallest p outside the two interactions.
-^c_trajectories$,chosen_p,Eigengene p of the module in chosen_contrast.
-^d_preservation$,reference,Group whose network defined the module.
-^d_preservation$,test,Group whose data the module is tested in.
-^d_preservation$,module,Module colour in the reference group's network (not the full-cohort colour).
+^b_trajectories$,eigengene,Eigengene of the drawn module in the biopsy.
+^b_trajectories$,chosen_contrast,Contrast whose eigengene p chose the module: the smallest p outside the two interactions.
+^b_trajectories$,chosen_p,Eigengene p of the module in chosen_contrast.
+^c_preservation$,reference,Group whose network defined the module.
+^c_preservation$,test,Group whose data the module is tested in.
+^c_preservation$,module,Module colour in the reference group's network (not the full-cohort colour).
 ^(a_characterisation|c_module_qc)$,part,Which of the panel's plots the row belongs to; the sheet's read_me names them.
 ^a_characterisation$,row,"Row within the module's block: set rank for ora, line of the member grid for member."
 ^a_characterisation$,column,Column of the member grid (member rows only).
@@ -410,3 +401,28 @@ soft_threshold,chosen,TRUE for the power used.
 ^settings_screen$,chosen,Whether this is the setting the step uses.
 ^module_stability$,stability,Median over 16 leave-one-person-out refits of the module's best Jaccard match.
 ^module_stability$,reform_share,Share of the 16 refits in which the module's best match has Jaccard >= 0.5.
+^(a_heatmap|e_hallmark_heatmap)$,section,"Column block: Training, Acute or HR - LR contrasts, or a trait relation (Baseline: T1 level vs T1 trait; Predicts gain: T1 level vs % gain; Tracks gain: T2 - T1 change vs % gain)."
+^(a_heatmap|e_hallmark_heatmap)$,column,Column label as drawn: group or time point for a contrast; trait and HR / LR / HR - LR for a relation.
+^(a_heatmap|e_hallmark_heatmap)$,key,Unique column identifier: the contrast name or relation-trait-group.
+^(a_heatmap|e_hallmark_heatmap)$,scale,"What value holds: r-equivalent (limma contrast or HR - LR slope, sign(t) * sqrt(t^2 / (t^2 + df))) or Spearman rho (within one group)."
+^(a_heatmap|e_hallmark_heatmap)$,value,The number drawn in the cell.
+^hubs$,hub_rank,"Rank of the protein within its module by kME (1 = most central)."
+^coupling$,module_a,First module of the pair.
+^coupling$,module_b,Second module of the pair.
+^coupling$,rho_HR,Spearman rho between the two modules' eigengene changes across the 8 HR people.
+^coupling$,rho_LR,Spearman rho between the two modules' eigengene changes across the 8 LR people.
+^coupling$,difference,rho_HR minus rho_LR.
+^coupling$,p_difference,"Fisher z test of rho_HR against rho_LR (n = 8 each; Spearman treated as Pearson, rho capped at 0.999)."
+^rewiring$,kme_HR,kME of the protein in its module within HR's 24 biopsies (person-centred values).
+^rewiring$,kme_LR,kME of the protein in its module within LR's 24 biopsies (person-centred values).
+^rewiring$,shift,kme_HR minus kme_LR.
+^per_person$,change,Eigengene change of the person in the window.
+^(pls|pls_loadings)$,model,"sPLS-DA (HR against LR) or sPLS-R (regression on a trait gain), one component."
+^(pls|pls_loadings)$,outcome,"What the model predicts: HR vs LR, a trait % gain, or the growth score."
+^pls$,statistic,"AUC (sPLS-DA) or Q2 (sPLS-R) of the held-out predictions."
+^pls$,observed,Nested leave-one-out score on the real outcome.
+^pls$,null_median,Median score over 1000 shuffled outcomes.
+^pls$,null_95,95th percentile of the shuffled scores.
+^pls$,p_perm,(1 + shuffled scores >= observed) / 1001.
+^pls_loadings$,loading,Component-1 loading of the module in the model fitted on all 16 people.
+^per_person$,comp_hypertrophy,"Composite growth score, (2 x % change in muscle area + % change in fibre area) / 3; it ranked people into HR and LR."

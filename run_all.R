@@ -19,10 +19,11 @@ stages <- c(
   "02_HRvLR/05_Module_Preservation",
   "02_HRvLR/06_Classification",
   "02_HRvLR/07_Group_Trait_Slopes",
+  "02_HRvLR/08_Module_Detail",
   "03_Continuous/01_Trait_Associations",
   "03_Continuous/02_Trait_Pathways",
   "03_Continuous/03_Profile_Clusters",
-  paste0("04_Figures/", c("F1", "S1", "F2", "S2", "F3", "S3", "F4", "S4", "F5", "S5"))
+  paste0("04_Figures/", c("F1", "S1", "F2", "S2", "F3", "S3", "F4", "S4", "F5", "S5", "Modules"))
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[rowSums(outer(stages, only, startsWith)) > 0]

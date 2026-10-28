@@ -5,7 +5,7 @@ source(here("04_Figures", "style", "figure_style.R"))
 
 inputs <- c(preservation = "02_HRvLR/05_Module_Preservation/c_data/preservation.rds")
 preservation <- readRDS(here(inputs[["preservation"]]))
-holds <- "Panel d: Zsummary of each group's modules tested in the other group."
+holds <- "Panel c: Zsummary of each group's modules tested in the other group."
 thresholds <- c(none = 2, strong = 10)
 # The axis reaches at least 12, so the strong line stays in view when no module passes it.
 z_floor <- 12
@@ -65,4 +65,4 @@ panel <- ggplot(d, aes(z_summary, row)) +
     legend.text = element_text(size = 5.5), legend.title = element_text(size = 6)
   )
 
-save_panel(panel, "F5", "d_preservation", 150, 80)
+save_panel(panel, "F5", "c_preservation", 150, 80)
