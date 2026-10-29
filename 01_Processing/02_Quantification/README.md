@@ -21,7 +21,7 @@ quarto render 01_Processing/02_Quantification/a_script/quantification.qmd --outp
 
 | File | Holds |
 |---|---|
-| `c_data/proteins.rds` | limma `EList` from `dpcQuant()`: `E` (complete log2 values), `other$standard.error`, `genes` (precursor count, share observed), `targets` (with the blood index) |
+| `c_data/quantification.rds` | limma `EList` from `dpcQuant()`: `E` (complete log2 values), `other$standard.error`, `genes` (precursor count, share observed), `targets` (with the blood index) |
 | `c_data/quantification.xlsx` | curve coefficients, every protein kept, blood index, contaminants removed, genes kept for review, proteins dropped for detection |
 | `b_reports/quantification.html` | the rendered walkthrough |
 

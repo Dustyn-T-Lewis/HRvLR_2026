@@ -9,11 +9,11 @@ and no AUC is measured on held-out people.
 
 | File | Holds |
 |---|---|
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | blood-corrected protein values |
-| `01_Processing/05_Set_Scores/c_data/singscore.rds` | singscore per set and biopsy |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | blood-corrected protein values |
+| `01_Processing/05_Set_Scores/c_data/set_scores.rds` | singscore per set and biopsy |
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | the tested sets and their databases |
-| `01_Processing/06_Module_Building/c_data/modules.rds` | eigengenes |
-| `02_HRvLR/helpers.R` | `person_values()` |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | eigengenes |
+| `00_Setup/Shared_functions/person_traits.R` | `person_values()` |
 
 ## Run
 

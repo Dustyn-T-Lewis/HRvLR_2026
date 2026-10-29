@@ -27,7 +27,7 @@ library(dplyr)
 library(purrr)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
-  proteins = "01_Processing/02_Quantification/c_data/proteins.rds",
+  proteins = "01_Processing/02_Quantification/c_data/quantification.rds",
   msigdb = "01_Processing/04_Gene_Sets/references/msigdb_2026.1.Hs.rds",
   goslim = "01_Processing/04_Gene_Sets/references/goslim_generic.obo"
 )

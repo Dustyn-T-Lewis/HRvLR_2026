@@ -40,12 +40,12 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 library(tibble)
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "person_traits.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
-  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/set_scores.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   phenotype = "00_Setup/Input/phenotype.csv"
 )

@@ -2249,7 +2249,7 @@ vertical-align: -.125em;
 <li>per person: each person’s module changes, ordered by how much they grew;</li>
 <li>PLS: whether the modules together separate HR from LR or predict growth.</li>
 </ul>
-<p>Every result here is exploratory: 8 people per group, and nothing below is corrected across the whole step. The figures are in <code>04_Figures/Modules</code>.</p>
+<p>Every result here is exploratory: 8 people per group, and nothing below is corrected across the whole step. The figures are in <code>04_Figures/S7</code>.</p>
 <section id="packages" class="level2">
 <h2 class="anchored" data-anchor-id="packages">Packages</h2>
 <div class="cell">
@@ -2258,12 +2258,12 @@ vertical-align: -.125em;
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(WGCNA)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;helpers.R&quot;</span>))</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;person_traits.R&quot;</span>))</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">disableWGCNAThreads</span>()</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/modules.rds&quot;</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds&quot;</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/module_building.rds&quot;</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/blood_correction.rds&quot;</span>,</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">contrasts =</span> <span class="st">&quot;02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx&quot;</span>,</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">phenotype =</span> <span class="st">&quot;00_Setup/Input/phenotype.csv&quot;</span></span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>)</span>

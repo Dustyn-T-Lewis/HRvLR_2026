@@ -7,22 +7,22 @@ fit.
 
 | Step | Does | Writes for later steps |
 |---|---|---|
-| [`01_Protein_Contrasts`](01_Protein_Contrasts/README.md) | limpa `dpcDE()` with sample weights; nine contrasts with logFC, 95% CI, p, FDR and Π; trajectory F-tests; fry concordance between groups; PCA and PERMANOVA per time point | `fit.rds`, `protein_contrasts.xlsx` |
-| [`02_Set_Contrasts`](02_Set_Contrasts/README.md) | fgsea and fry on every gene set in the nine contrasts, FDR within database; Jaccard tree selection for the pathway figure | `set_tests.rds`, `set_contrasts.xlsx` |
-| [`03_Module_Contrasts`](03_Module_Contrasts/README.md) | limma on module eigengenes and fry on modules as protein sets, same design; kME against protein t | `module_tests.rds`, `module_contrasts.xlsx` |
+| [`01_Protein_Contrasts`](01_Protein_Contrasts/README.md) | limpa `dpcDE()` with sample weights; nine contrasts with logFC, 95% CI, p, FDR and Π; trajectory F-tests; fry concordance between groups; PCA and PERMANOVA per time point | `protein_contrasts.rds`, `protein_contrasts.xlsx` |
+| [`02_Set_Contrasts`](02_Set_Contrasts/README.md) | fgsea and fry on every gene set in the nine contrasts, FDR within database; Jaccard tree selection for the pathway figure | `set_contrasts.rds`, `set_contrasts.xlsx` |
+| [`03_Module_Contrasts`](03_Module_Contrasts/README.md) | limma on module eigengenes and fry on modules as protein sets, same design; kME against protein t | `module_contrasts.rds`, `module_contrasts.xlsx` |
 | [`04_Variance`](04_Variance/README.md) | variance shares (person, time, group, blood), DiffVar between groups, gap statistic, PCs against covariates | `variance.xlsx` |
-| [`05_Module_Preservation`](05_Module_Preservation/README.md) | WGCNA modules built inside each group, preservation of each in the other | `preservation.rds`, `module_preservation.xlsx` |
+| [`05_Module_Preservation`](05_Module_Preservation/README.md) | WGCNA modules built inside each group, preservation of each in the other | `module_preservation.rds`, `module_preservation.xlsx` |
 | [`06_Classification`](06_Classification/README.md) | single-feature AUC (Wilcoxon, DeLong interval) for proteins, set scores and modules in five tasks | `classification.rds`, `classification.xlsx` |
 | [`07_Group_Trait_Slopes`](07_Group_Trait_Slopes/README.md) | Spearman within each group; limma HR slope minus LR slope per feature, window and trait | `group_trait_slopes.rds`, `group_trait_slopes.xlsx` |
 | [`08_Module_Detail`](08_Module_Detail/README.md) | module hubs, coupling within each group, kME rewiring between groups, per-person changes, sPLS-DA and sPLS-R | `module_detail.rds`, `module_detail.xlsx` |
 
-`helpers.R` holds `person_values()` (one column per person: a level or a change) and the trait
-windows. Steps 06 and 07 source it, as do `03_Continuous` steps 01 and 03.
+Shared functions live in `00_Setup/Shared_functions/`: `person_traits.R` (per-person values and
+trait windows) and `set_tree.R` (the gene-set tree of step 02).
 
 ## Inputs
 
-`01_Processing` outputs (`proteins.rds`, `proteins_corrected.rds`, `gene_sets.rds`,
-`singscore.rds`, `modules.rds`) and `00_Setup/Input/phenotype.csv`.
+`01_Processing` outputs (`quantification.rds`, `blood_correction.rds`, `gene_sets.rds`,
+`set_scores.rds`, `module_building.rds`) and `00_Setup/Input/phenotype.csv`.
 
 ## Run
 
@@ -30,7 +30,7 @@ windows. Steps 06 and 07 source it, as do `03_Continuous` steps 01 and 03.
 Rscript run_all.R 02_HRvLR
 ```
 
-Steps 02 and 03 read `01_Protein_Contrasts/c_data/fit.rds`, so 01 runs first; the others read only
+Steps 02 and 03 read `01_Protein_Contrasts/c_data/protein_contrasts.rds`, so 01 runs first; the others read only
 `01_Processing`.
 
 ## Read with care

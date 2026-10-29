@@ -10,8 +10,8 @@ leave-one-person-out stability.
 
 | File | Holds |
 |---|---|
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | limpa's complete matrix with blood slopes removed |
-| `01_Processing/06_Module_Building/c_data/modules.rds` | full-cohort modules, used to label each group module |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | limpa's complete matrix with blood slopes removed |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | full-cohort modules, used to label each group module |
 
 ## Run
 
@@ -23,7 +23,7 @@ quarto render 02_HRvLR/05_Module_Preservation/a_script/module_preservation.qmd -
 
 | File | Holds |
 |---|---|
-| `c_data/preservation.rds` | `preservation` (Zsummary, median rank, best full-cohort match), `group_networks`, `group_membership` |
+| `c_data/module_preservation.rds` | `preservation` (Zsummary, median rank, best full-cohort match), `group_networks`, `group_membership` |
 | `c_data/module_preservation.xlsx` | the same tables |
 | `b_reports/module_preservation.html` | the rendered walkthrough |
 

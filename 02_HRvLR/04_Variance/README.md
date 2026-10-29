@@ -8,9 +8,9 @@ whether HR or LR people spread more (DiffVar, exploratory), whether biopsies for
 
 | File | Holds |
 |---|---|
-| `01_Processing/02_Quantification/c_data/proteins.rds` | limpa protein values and standard errors |
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | blood-corrected values, for clustering and PCA |
-| `02_HRvLR/01_Protein_Contrasts/c_data/fit.rds` | sample weights |
+| `01_Processing/02_Quantification/c_data/quantification.rds` | limpa protein values and standard errors |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | blood-corrected values, for clustering and PCA |
+| `02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.rds` | sample weights |
 
 ## Run
 

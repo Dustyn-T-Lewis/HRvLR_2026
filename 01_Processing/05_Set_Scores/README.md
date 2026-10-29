@@ -8,7 +8,7 @@ set's members. Descriptive only; no test.
 | File | Holds |
 |---|---|
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | the 1,422 tested sets and the protein-to-gene map |
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | limpa's complete matrix with blood slopes removed from observed values |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | limpa's complete matrix with blood slopes removed from observed values |
 
 ## Run
 
@@ -20,7 +20,7 @@ quarto render 01_Processing/05_Set_Scores/a_script/set_scores.qmd --output-dir .
 
 | File | Holds |
 |---|---|
-| `c_data/singscore.rds` | `scores`: the set-by-biopsy score matrix (1,422 × 48) |
+| `c_data/set_scores.rds` | `scores`: the set-by-biopsy score matrix (1,422 × 48) |
 | `c_data/set_scores.xlsx` | score summaries, per-set spread, PCA check, the full matrix |
 | `b_reports/set_scores.html` | the rendered walkthrough |
 

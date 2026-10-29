@@ -2258,12 +2258,12 @@ vertical-align: -.125em;
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;helpers.R&quot;</span>))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;person_traits.R&quot;</span>))</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds&quot;</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">singscore =</span> <span class="st">&quot;01_Processing/05_Set_Scores/c_data/singscore.rds&quot;</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/blood_correction.rds&quot;</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">singscore =</span> <span class="st">&quot;01_Processing/05_Set_Scores/c_data/set_scores.rds&quot;</span>,</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene_sets =</span> <span class="st">&quot;01_Processing/04_Gene_Sets/c_data/gene_sets.rds&quot;</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/modules.rds&quot;</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/module_building.rds&quot;</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">phenotype =</span> <span class="st">&quot;00_Setup/Input/phenotype.csv&quot;</span></span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">vapply</span>(inputs, here, <span class="fu">character</span>(<span class="dv">1</span>))</span>
@@ -2298,7 +2298,7 @@ $modules
 </section>
 <section id="windows-and-traits" class="level2">
 <h2 class="anchored" data-anchor-id="windows-and-traits">Windows and traits</h2>
-<p><code>trait_windows()</code> and <code>window_values()</code> (from <code>02_HRvLR/helpers.R</code>) pair each feature value with its traits. The baseline window asks whether the T1 level predicts the response.</p>
+<p><code>trait_windows()</code> and <code>window_values()</code> (from <code>00_Setup/Shared_functions/person_traits.R</code>) pair each feature value with its traits. The baseline window asks whether the T1 level predicts the response.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -2626,7 +2626,7 @@ Figure 1: Change score: share of features at limma p &lt; 0.05 per window and t
 </section>
 <section id="save" class="level2">
 <h2 class="anchored" data-anchor-id="save">Save</h2>
-<p><code>associations.rds</code> holds the four tables; <code>02_Trait_Pathways</code> and <code>03_Profile_Clusters</code> read the protein change scores from it.</p>
+<p><code>trait_associations.rds</code> holds the four tables; <code>02_Trait_Pathways</code> and <code>03_Profile_Clusters</code> read the protein change scores from it.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Continuous&quot;</span>, <span class="st">&quot;01_Trait_Associations&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
@@ -2635,7 +2635,7 @@ Figure 1: Change score: share of features at limma p &lt; 0.05 per window and t
 <span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> counts, <span class="at">model =</span> model, <span class="at">change_score =</span> change_score,</span>
 <span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">two_predictor =</span> two_predictor, <span class="at">interaction =</span> interaction</span>
 <span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;associations.rds&quot;</span>)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;trait_associations.rds&quot;</span>)</span>
 <span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="fu">write_workbook</span>(</span>
 <span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>

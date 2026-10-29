@@ -2255,7 +2255,7 @@ vertical-align: -.125em;
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(WGCNA)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">disableWGCNAThreads</span>()</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/blood_correction.rds&quot;</span>)</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">vapply</span>(inputs, here, <span class="fu">character</span>(<span class="dv">1</span>))</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(paths))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -2695,7 +2695,7 @@ Figure 3: Eigengene per biopsy. Thin lines: one person. Thick line and range: g
 </section>
 <section id="save" class="level2">
 <h2 class="anchored" data-anchor-id="save">Save</h2>
-<p><code>modules.rds</code> holds the eigengenes (module by biopsy), the membership with kME, the biopsy table (<code>meta</code>) and the module summary; every module-level step reads it.</p>
+<p><code>module_building.rds</code> holds the eigengenes (module by biopsy), the membership with kME, the biopsy table (<code>meta</code>) and the module summary; every module-level step reads it.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Processing&quot;</span>, <span class="st">&quot;06_Module_Building&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
@@ -2703,7 +2703,7 @@ Figure 3: Eigengene per biopsy. Thin lines: one person. Thick line and range: g
 <span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">eigengenes =</span> eigengenes, <span class="at">membership =</span> membership, <span class="at">meta =</span> meta, <span class="at">module_summary =</span> module_summary</span>
 <span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;modules.rds&quot;</span>),</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;module_building.rds&quot;</span>),</span>
 <span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span></span>
 <span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>

@@ -35,12 +35,12 @@ library(purrr)
 library(tibble)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "person_traits.R"))
 inputs <- c(
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  associations = "03_Continuous/01_Trait_Associations/c_data/associations.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
+  associations = "03_Continuous/01_Trait_Associations/c_data/trait_associations.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))

@@ -26,10 +26,10 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 library(ggplot2)
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "set_tree.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
-  associations = "03_Continuous/01_Trait_Associations/c_data/associations.rds",
+  associations = "03_Continuous/01_Trait_Associations/c_data/trait_associations.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds"
 )
 paths <- vapply(inputs, here, character(1))

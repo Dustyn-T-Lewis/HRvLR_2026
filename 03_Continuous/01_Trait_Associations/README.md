@@ -10,12 +10,12 @@ interaction.
 
 | File | Holds |
 |---|---|
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | blood-corrected protein values and the biopsy table |
-| `01_Processing/05_Set_Scores/c_data/singscore.rds` | singscore per set and biopsy |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | blood-corrected protein values and the biopsy table |
+| `01_Processing/05_Set_Scores/c_data/set_scores.rds` | singscore per set and biopsy |
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | the tested sets and their databases |
-| `01_Processing/06_Module_Building/c_data/modules.rds` | eigengenes |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | eigengenes |
 | `00_Setup/Input/phenotype.csv` | per-person size and strength traits at T1 and T2, composite score, volume load |
-| `02_HRvLR/helpers.R` | `trait_windows()`, `window_values()` |
+| `00_Setup/Shared_functions/person_traits.R` | `trait_windows()`, `window_values()` |
 
 ## Run
 
@@ -27,7 +27,7 @@ quarto render 03_Continuous/01_Trait_Associations/a_script/trait_associations.qm
 
 | File | Holds |
 |---|---|
-| `c_data/associations.rds` | `counts`, `model`, `change_score`, `two_predictor`, `interaction`; steps 02 and 03 read the protein change scores |
+| `c_data/trait_associations.rds` | `counts`, `model`, `change_score`, `two_predictor`, `interaction`; steps 02 and 03 read the protein change scores |
 | `c_data/trait_associations.xlsx` | the same five tables |
 | `b_reports/trait_associations.html` | the rendered walkthrough |
 

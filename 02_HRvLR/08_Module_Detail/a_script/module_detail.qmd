@@ -19,7 +19,7 @@ sits underneath and around it, five ways:
 - PLS: whether the modules together separate HR from LR or predict growth.
 
 Every result here is exploratory: 8 people per group, and nothing below is corrected across the
-whole step. The figures are in `04_Figures/Modules`.
+whole step. The figures are in `04_Figures/S7`.
 
 ## Packages
 
@@ -31,12 +31,12 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 library(WGCNA)
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "person_traits.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 disableWGCNAThreads()
 inputs <- c(
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
   contrasts = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx",
   phenotype = "00_Setup/Input/phenotype.csv"
 )

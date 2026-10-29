@@ -34,7 +34,7 @@ library(patchwork)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 string_dir <- "01_Processing/07_Module_Characterisation/references/STRING"
 inputs <- c(
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
   string_links = file.path(string_dir, "9606.protein.links.v12.0.min700.txt.gz"),
   string_aliases = file.path(string_dir, "9606.protein.aliases.v12.0.txt.gz"),

@@ -31,9 +31,9 @@ library(ggplot2)
 library(variancePartition)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
-  proteins = "01_Processing/02_Quantification/c_data/proteins.rds",
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds"
+  proteins = "01_Processing/02_Quantification/c_data/quantification.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
+  fit = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))

@@ -223,9 +223,22 @@ pathway_label <- function(pathway, width = 64) {
 read_sheet <- \(path, sheet) readxl::read_excel(here::here(path), sheet)
 
 # A panel's own PDF, at 04_Figures/<figure>/b_reports/panels/<name>.pdf, size in mm.
+# Where a figure's files live: a main figure in 04_Figures/<F>/, its supplement in the supp/ folder
+# of the main figure it supports (c_data holds both workbooks side by side).
+figure_home <- c(
+  F1 = "F1", F2 = "F2", F3 = "F3", F4 = "F4", F5 = "F5",
+  S1 = "F1", S2 = "F2", S3 = "F3", S4 = "F4", S5 = "F5", S6 = "F4", S7 = "F5"
+)
+figure_dir <- function(figure, part) {
+  path <- here::here("04_Figures", figure_home[[figure]], part)
+  if (startsWith(figure, "S") && part != "c_data") path <- file.path(path, "supp")
+  path
+}
+# A supplement's files share supp/ with another supplement's, so they carry its code (S4_a_*.pdf).
+panel_prefix <- \(figure) if (startsWith(figure, "S")) paste0(figure, "_") else ""
 save_panel <- function(panel, figure, name, width, height) {
   ggplot2::ggsave(
-    here::here("04_Figures", figure, "b_reports", "panels", paste0(name, ".pdf")), panel,
+    file.path(figure_dir(figure, "b_reports"), paste0(panel_prefix(figure), name, ".pdf")), panel,
     width = width, height = height, units = "mm", device = grDevices::cairo_pdf, create.dir = TRUE
   )
 }

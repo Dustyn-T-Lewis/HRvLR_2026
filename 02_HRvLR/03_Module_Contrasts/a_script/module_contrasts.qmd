@@ -28,8 +28,8 @@ library(purrr)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
-  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds"
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds",
+  fit = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -173,7 +173,7 @@ p < 0.05. Within-person correlation `r round(me_correlation, 3)` on the eigengen
 
 ## Save
 
-`module_tests.rds` holds the three tables for the figures.
+`module_contrasts.rds` holds the three tables for the figures.
 
 ```{r}
 #| label: save
@@ -184,7 +184,7 @@ saveRDS(
     eigengene_tests = eigengene_tests, fry_tests = fry_tests,
     membership_contrast = membership_contrast
   ),
-  file.path(out, "module_tests.rds")
+  file.path(out, "module_contrasts.rds")
 )
 write_workbook(
   list(

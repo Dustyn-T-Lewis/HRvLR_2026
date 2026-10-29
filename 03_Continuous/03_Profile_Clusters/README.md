@@ -9,11 +9,11 @@ is described by size, mean t, main module and its most over-represented gene set
 
 | File | Holds |
 |---|---|
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | blood-corrected protein values |
-| `03_Continuous/01_Trait_Associations/c_data/associations.rds` | protein change scores |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | blood-corrected protein values |
+| `03_Continuous/01_Trait_Associations/c_data/trait_associations.rds` | protein change scores |
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | sets for the over-representation test |
-| `01_Processing/06_Module_Building/c_data/modules.rds` | each protein's module |
-| `02_HRvLR/helpers.R` | `person_values()` |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | each protein's module |
+| `00_Setup/Shared_functions/person_traits.R` | `person_values()` |
 
 ## Run
 

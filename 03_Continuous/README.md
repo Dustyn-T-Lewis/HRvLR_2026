@@ -2,13 +2,13 @@
 
 Which proteins, gene sets and modules follow muscle size and strength when all 16 people are
 pooled and each trait stays a number? No group label enters any model. Traits come from
-`00_Setup/Input/phenotype.csv` through `trait_windows()` in `02_HRvLR/helpers.R`: fibre area
+`00_Setup/Input/phenotype.csv` through `trait_windows()` in `00_Setup/Shared_functions/person_traits.R`: fibre area
 (mixed, type I, type II), muscle area and two 1RMs as levels at T1 and T2 and as % change, plus the
 composite hypertrophy score and total volume load. T3 has no phenotype.
 
 | Step | Does | Writes |
 |---|---|---|
-| [`01_Trait_Associations`](01_Trait_Associations/README.md) | sample model, change score, two-predictor and interaction fits for three feature types | `associations.rds`, `trait_associations.xlsx` |
+| [`01_Trait_Associations`](01_Trait_Associations/README.md) | sample model, change score, two-predictor and interaction fits for three feature types | `trait_associations.rds`, `trait_associations.xlsx` |
 | [`02_Trait_Pathways`](02_Trait_Pathways/README.md) | fgsea on each window-and-trait protein ranking, FDR within database; Jaccard tree selection for the figure | `trait_pathways.rds`, `trait_pathways.xlsx` |
 | [`03_Profile_Clusters`](03_Profile_Clusters/README.md) | proteins grouped by their pattern of trait links, and per trait by co-variation | `profile_clusters.rds`, `profile_clusters.xlsx` |
 | [`04_Elastic_Net`](04_Elastic_Net/README.md) | elastic net of traits on proteins, modules and Hallmark scores in six pairings: stability selection and held-out Q² | `elastic_net.rds`, `elastic_net.xlsx` |
@@ -26,8 +26,8 @@ Six windows pair a feature value with its traits, 42 window-trait screens in all
 
 ## Inputs
 
-`01_Processing` outputs (`proteins_corrected.rds`, `singscore.rds`, `gene_sets.rds`,
-`modules.rds`), `00_Setup/Input/phenotype.csv` and `02_HRvLR/helpers.R`.
+`01_Processing` outputs (`blood_correction.rds`, `set_scores.rds`, `gene_sets.rds`,
+`module_building.rds`), `00_Setup/Input/phenotype.csv` and `00_Setup/Shared_functions/person_traits.R`.
 
 ## Run
 

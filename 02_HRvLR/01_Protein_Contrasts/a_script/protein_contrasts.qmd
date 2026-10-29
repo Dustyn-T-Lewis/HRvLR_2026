@@ -28,8 +28,8 @@ library(purrr)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
-  proteins = "01_Processing/02_Quantification/c_data/proteins.rds",
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds"
+  proteins = "01_Processing/02_Quantification/c_data/quantification.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -336,7 +336,7 @@ p < 0.05 per contrast against about `r round(nrow(proteins) / 20)` by chance. Gr
 
 ## Save
 
-`fit.rds` holds the fit, the moderated contrasts, the design and contrast matrix; later steps read
+`protein_contrasts.rds` holds the fit, the moderated contrasts, the design and contrast matrix; later steps read
 it.
 
 ```{r}
@@ -345,7 +345,7 @@ out <- here("02_HRvLR", "01_Protein_Contrasts", "c_data")
 dir.create(out, showWarnings = FALSE)
 saveRDS(
   list(fit = fit, eb = eb, design = design, contrast_matrix = contrast_matrix),
-  file.path(out, "fit.rds")
+  file.path(out, "protein_contrasts.rds")
 )
 write_workbook(
   list(

@@ -8,8 +8,8 @@ module, whether members that follow the module closely (high kME) are the ones t
 
 | File | Holds |
 |---|---|
-| `01_Processing/06_Module_Building/c_data/modules.rds` | eigengenes (module × biopsy), membership with kME |
-| `02_HRvLR/01_Protein_Contrasts/c_data/fit.rds` | the protein fit (`fit$EList`, correlation), moderated contrasts, design, contrast matrix |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | eigengenes (module × biopsy), membership with kME |
+| `02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.rds` | the protein fit (`fit$EList`, correlation), moderated contrasts, design, contrast matrix |
 
 ## Run
 
@@ -21,7 +21,7 @@ quarto render 02_HRvLR/03_Module_Contrasts/a_script/module_contrasts.qmd --outpu
 
 | File | Holds |
 |---|---|
-| `c_data/module_tests.rds` | `eigengene_tests`, `fry_tests`, `membership_contrast`, for the figures |
+| `c_data/module_contrasts.rds` | `eigengene_tests`, `fry_tests`, `membership_contrast`, for the figures |
 | `c_data/module_contrasts.xlsx` | the same three tables |
 | `b_reports/module_contrasts.html` | the rendered walkthrough |
 

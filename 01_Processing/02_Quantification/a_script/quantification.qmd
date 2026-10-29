@@ -248,14 +248,14 @@ on a single precursor.
 
 ## Save
 
-`proteins.rds` is limpa's `EList`: `E`, `other$standard.error`, `genes` and `targets` with the
+`quantification.rds` is limpa's `EList`: `E`, `other$standard.error`, `genes` and `targets` with the
 blood index. `dpcDE()` in the comparisons reads it directly.
 
 ```{r}
 #| label: save
 out <- file.path(step, "c_data")
 dir.create(out, showWarnings = FALSE)
-saveRDS(proteins, file.path(out, "proteins.rds"))
+saveRDS(proteins, file.path(out, "quantification.rds"))
 write_workbook(
   list(
     dpc = tibble(term = names(dpcest$dpc), estimate = unname(dpcest$dpc)),

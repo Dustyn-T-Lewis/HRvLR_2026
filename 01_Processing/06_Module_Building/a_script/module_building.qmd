@@ -28,7 +28,7 @@ library(ggplot2)
 library(WGCNA)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 disableWGCNAThreads()
-inputs <- c(corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds")
+inputs <- c(corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds")
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
 ```
@@ -385,7 +385,7 @@ proteins fit no module. Module colours are labels only and change if `01_Process
 
 ## Save
 
-`modules.rds` holds the eigengenes (module by biopsy), the membership with kME, the biopsy table
+`module_building.rds` holds the eigengenes (module by biopsy), the membership with kME, the biopsy table
 (`meta`) and the module summary; every module-level step reads it.
 
 ```{r}
@@ -396,7 +396,7 @@ saveRDS(
   list(
     eigengenes = eigengenes, membership = membership, meta = meta, module_summary = module_summary
   ),
-  file.path(out, "modules.rds"),
+  file.path(out, "module_building.rds"),
   compress = "xz"
 )
 sheets <- list(

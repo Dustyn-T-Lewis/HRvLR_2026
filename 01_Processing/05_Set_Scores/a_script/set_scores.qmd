@@ -28,7 +28,7 @@ library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  proteins = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds"
+  proteins = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -38,7 +38,7 @@ stopifnot(file.exists(paths))
 
 Ranking needs every protein in every biopsy and cannot carry a covariate, so the input is limpa's
 complete matrix with each protein's blood slope removed from its observed values
-(`proteins_corrected.rds`, from `03_Blood_Correction`). Values limpa estimated from the detection
+(`blood_correction.rds`, from `03_Blood_Correction`). Values limpa estimated from the detection
 curve are unchanged there.
 
 ```{r}
@@ -183,14 +183,14 @@ stopifnot(
 
 ## Save
 
-`singscore.rds` holds the set-by-biopsy score matrix (`scores`); later set-level comparisons read
+`set_scores.rds` holds the set-by-biopsy score matrix (`scores`); later set-level comparisons read
 it.
 
 ```{r}
 #| label: save
 out <- here("01_Processing", "05_Set_Scores", "c_data")
 dir.create(out, showWarnings = FALSE)
-saveRDS(list(scores = scores), file.path(out, "singscore.rds"), compress = "xz")
+saveRDS(list(scores = scores), file.path(out, "set_scores.rds"), compress = "xz")
 sheets <- list(
   score_summary = score_summary,
   collection_spread = collection_spread,

@@ -2255,12 +2255,12 @@ vertical-align: -.125em;
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;02_HRvLR&quot;</span>, <span class="st">&quot;helpers.R&quot;</span>))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;person_traits.R&quot;</span>))</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds&quot;</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">singscore =</span> <span class="st">&quot;01_Processing/05_Set_Scores/c_data/singscore.rds&quot;</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">corrected =</span> <span class="st">&quot;01_Processing/03_Blood_Correction/c_data/blood_correction.rds&quot;</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">singscore =</span> <span class="st">&quot;01_Processing/05_Set_Scores/c_data/set_scores.rds&quot;</span>,</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene_sets =</span> <span class="st">&quot;01_Processing/04_Gene_Sets/c_data/gene_sets.rds&quot;</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/modules.rds&quot;</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/module_building.rds&quot;</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">phenotype =</span> <span class="st">&quot;00_Setup/Input/phenotype.csv&quot;</span></span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>paths <span class="ot">&lt;-</span> <span class="fu">vapply</span>(inputs, here, <span class="fu">character</span>(<span class="dv">1</span>))</span>
@@ -2356,7 +2356,7 @@ $modules
 </section>
 <section id="windows-and-traits" class="level2">
 <h2 class="anchored" data-anchor-id="windows-and-traits">Windows and traits</h2>
-<p>Each feature enters as one value per person in six windows (<code>window_values()</code> and <code>trait_windows()</code>, from <code>02_HRvLR/helpers.R</code>):</p>
+<p>Each feature enters as one value per person in six windows (<code>window_values()</code> and <code>trait_windows()</code>, from <code>00_Setup/Shared_functions/person_traits.R</code>):</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">

@@ -2258,7 +2258,7 @@ vertical-align: -.125em;
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;00_Setup&quot;</span>, <span class="st">&quot;Shared_functions&quot;</span>, <span class="st">&quot;workbooks.R&quot;</span>))</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>string_dir <span class="ot">&lt;-</span> <span class="st">&quot;01_Processing/07_Module_Characterisation/references/STRING&quot;</span></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/modules.rds&quot;</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">modules =</span> <span class="st">&quot;01_Processing/06_Module_Building/c_data/module_building.rds&quot;</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">gene_sets =</span> <span class="st">&quot;01_Processing/04_Gene_Sets/c_data/gene_sets.rds&quot;</span>,</span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">string_links =</span> <span class="fu">file.path</span>(string_dir, <span class="st">&quot;9606.protein.links.v12.0.min700.txt.gz&quot;</span>),</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">string_aliases =</span> <span class="fu">file.path</span>(string_dir, <span class="st">&quot;9606.protein.aliases.v12.0.txt.gz&quot;</span>),</span>
@@ -2385,9 +2385,9 @@ Figure 1: Leading sets per module at BH &lt; 0.05. Size: gene ratio. Colour: BH
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>string_db<span class="sc">$</span><span class="fu">set_background</span>(mapped<span class="sc">$</span>STRING_id)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>IGRAPH f0a261b UN-- 1864 47002 -- 
+<pre><code>IGRAPH 74ba6ed UN-- 1864 47002 -- 
 + attr: name (v/c), combined_score (e/n)
-+ edges from f0a261b (vertex names):
++ edges from 74ba6ed (vertex names):
  [1] 9606.ENSP00000000233--9606.ENSP00000357048
  [2] 9606.ENSP00000000233--9606.ENSP00000329419
  [3] 9606.ENSP00000000233--9606.ENSP00000469035

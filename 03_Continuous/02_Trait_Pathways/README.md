@@ -8,7 +8,7 @@ trait of a window, grouped by a Jaccard tree as in `02_HRvLR/02_Set_Contrasts`.
 
 | File | Holds |
 |---|---|
-| `03_Continuous/01_Trait_Associations/c_data/associations.rds` | protein change scores per window and trait |
+| `03_Continuous/01_Trait_Associations/c_data/trait_associations.rds` | protein change scores per window and trait |
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | the tested sets and the protein-to-gene map |
 
 ## Run

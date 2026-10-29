@@ -8,7 +8,7 @@ disease sets removed by name.
 
 | File | Holds |
 |---|---|
-| `01_Processing/02_Quantification/c_data/proteins.rds` | the measured proteins with gene symbol, precursor count (`NPrec`) and observed share (`PropObs`) |
+| `01_Processing/02_Quantification/c_data/quantification.rds` | the measured proteins with gene symbol, precursor count (`NPrec`) and observed share (`PropObs`) |
 | `references/msigdb_2026.1.Hs.rds` | MSigDB 2026.1.Hs: Hallmark, Reactome, KEGG Legacy, GO:BP |
 | `references/goslim_generic.obo` | the GO Consortium's generic GO Slim |
 

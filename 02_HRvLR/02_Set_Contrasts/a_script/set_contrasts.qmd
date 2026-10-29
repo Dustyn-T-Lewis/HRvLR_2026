@@ -25,12 +25,12 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 library(ggplot2)
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "set_tree.R"))
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 inputs <- c(
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  fit = "02_HRvLR/01_Protein_Contrasts/c_data/fit.rds",
-  set_scores = "01_Processing/05_Set_Scores/c_data/singscore.rds"
+  fit = "02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.rds",
+  set_scores = "01_Processing/05_Set_Scores/c_data/set_scores.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -260,7 +260,7 @@ out <- here("02_HRvLR", "02_Set_Contrasts", "c_data")
 dir.create(out, showWarnings = FALSE)
 saveRDS(
   list(set_tests = set_tests, selection = selection, score_tests = score_tests),
-  file.path(out, "set_tests.rds")
+  file.path(out, "set_contrasts.rds")
 )
 write_workbook(
   list(

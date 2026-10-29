@@ -24,28 +24,41 @@ stages <- c(
   "03_Continuous/02_Trait_Pathways",
   "03_Continuous/03_Profile_Clusters",
   "03_Continuous/04_Elastic_Net",
-  paste0(
-    "04_Figures/",
-    c("F1", "S1", "F2", "S2", "F3", "S3", "F4", "S4", "F5", "S5", "S6", "Modules")
-  )
+  paste0("04_Figures/", c("F1", "F2", "F3", "F4", "F5"))
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[rowSums(outer(stages, only, startsWith)) > 0]
 dir.create("Scratch/runlogs", recursive = TRUE, showWarnings = FALSE)
-# A stage is a folder whose a_script/ holds one script: a .qmd is rendered into the folder's
-# b_reports/, a .R is run with Rscript. A figure's panel scripts sit one level down.
-render_args <- function(stage) {
-  script <- list.files(file.path(stage, "a_script"), pattern = "\\.(R|qmd)$", full.names = TRUE)
-  stopifnot(length(script) == 1)
-  if (endsWith(script, ".qmd")) c("render", script, "--output-dir", "../b_reports") else script
+# A step's a_script/ holds one .qmd, rendered into its b_reports/. A figure's a_script/ holds its
+# panel scripts and <F>_composite.R, then supp/ with each supplement's composite; every composite
+# runs with Rscript, the figure's first.
+scripts_of <- function(stage) {
+  qmd <- list.files(file.path(stage, "a_script"), "\\.qmd$", full.names = TRUE)
+  if (length(qmd)) {
+    return(qmd)
+  }
+  c(
+    list.files(file.path(stage, "a_script"), "_composite\\.R$", full.names = TRUE),
+    list.files(file.path(stage, "a_script", "supp"), "_composite\\.R$", full.names = TRUE)
+  )
 }
 for (stage in stages) {
-  args <- render_args(stage)
-  log <- file.path("Scratch/runlogs", paste0(gsub("/", "_", stage, fixed = TRUE), ".log"))
-  started <- Sys.time()
-  # Called from the project root, quarto's R session loads the renv library before any package.
-  program <- if (args[1] == "render") "quarto" else "Rscript"
-  status <- system2(program, args, stdout = log, stderr = log)
-  message(sprintf("%-32s %6.1f min", stage, as.numeric(Sys.time() - started, units = "mins")))
-  if (status != 0) stop(stage, " failed; see ", log)
+  for (script in scripts_of(stage)) {
+    name <- sub("\\.(R|qmd)$", "", basename(script))
+    log <- file.path(
+      "Scratch/runlogs", paste0(gsub("/", "_", stage, fixed = TRUE), "_", name, ".log")
+    )
+    started <- Sys.time()
+    # Called from the project root, quarto's R session loads the renv library before any package.
+    status <- if (endsWith(script, ".qmd")) {
+      system2("quarto", c("render", script, "--output-dir", "../b_reports"),
+        stdout = log, stderr = log
+      )
+    } else {
+      system2("Rscript", script, stdout = log, stderr = log)
+    }
+    minutes <- as.numeric(Sys.time() - started, units = "mins")
+    message(sprintf("%-44s %6.1f min", paste(stage, name), minutes))
+    if (status != 0) stop(stage, " failed; see ", log)
+  }
 }

@@ -33,12 +33,12 @@ library(tidyr)
 library(purrr)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "person_traits.R"))
 inputs <- c(
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/set_scores.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -64,7 +64,7 @@ map(features, dim)
 
 ## Tasks
 
-`person_values()` (from `02_HRvLR/helpers.R`) returns one column per person: the value at a time
+`person_values()` (from `00_Setup/Shared_functions/person_traits.R`) returns one column per person: the value at a time
 point, or the change between two.
 
 ```{r}

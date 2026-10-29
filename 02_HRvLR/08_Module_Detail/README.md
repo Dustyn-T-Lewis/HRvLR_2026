@@ -15,11 +15,11 @@ What sits underneath and around each module (`01_Processing/06_Module_Building`)
 
 | File | Holds |
 |---|---|
-| `01_Processing/06_Module_Building/c_data/modules.rds` | eigengenes, membership with kME, biopsy table |
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | values for the within-group kME |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | eigengenes, membership with kME, biopsy table |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | values for the within-group kME |
 | `02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.xlsx` | `protein_by_contrast` for the hubs |
 | `00_Setup/Input/phenotype.csv` | group, growth score and trait gains |
-| `02_HRvLR/helpers.R` | `person_values()`, `trait_windows()` |
+| `00_Setup/Shared_functions/person_traits.R` | `person_values()`, `trait_windows()` |
 
 ## Run
 
@@ -31,7 +31,7 @@ quarto render 02_HRvLR/08_Module_Detail/a_script/module_detail.qmd --output-dir 
 
 | File | Holds |
 |---|---|
-| `c_data/module_detail.rds` | `hubs`, `coupling`, `rewiring`, `per_person`, `pls`, `pls_loadings`, for `04_Figures/Modules` |
+| `c_data/module_detail.rds` | `hubs`, `coupling`, `rewiring`, `per_person`, `pls`, `pls_loadings`, for S7 (`04_Figures/F5/a_script/supp/S7_composite.R`) |
 | `c_data/module_detail.xlsx` | the same tables |
 | `b_reports/module_detail.html` | the rendered walkthrough |
 

@@ -8,7 +8,7 @@ STRING v12 (combined score at least 700).
 
 | File | Holds |
 |---|---|
-| `01_Processing/06_Module_Building/c_data/modules.rds` | modules, membership and kME |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | modules, membership and kME |
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | the tested sets (disease sets removed) and the gene universe |
 | `references/STRING/` | STRING v12.0 links (score ≥ 700), aliases and protein info |
 

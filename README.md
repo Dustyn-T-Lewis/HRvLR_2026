@@ -50,7 +50,7 @@ HRvLR_V2/
 ├── README.md, run_all.R, renv.lock
 ├── 00_Setup/
 │   ├── Input/                     report.parquet, metadata.csv, phenotype.csv
-│   └── Shared_functions/          workbooks.R, workbook_columns.csv
+│   └── Shared_functions/          workbooks, column dictionary, person and trait helpers, set tree
 ├── 01_Processing/                 from precursors to protein values, gene sets and modules
 │   ├── 01_Precursors/             read the report, one injection per biopsy, identity filters
 │   ├── 02_Quantification/         detection curve, protein values with standard errors, blood
@@ -60,7 +60,7 @@ HRvLR_V2/
 │   ├── 05_Set_Scores/             singscore per set and biopsy
 │   ├── 06_Module_Building/        WGCNA modules, eigengenes, kME
 │   └── 07_Module_Characterisation/  gene-set ORA, top members, STRING test per module
-├── 02_HRvLR/                      HR against LR; helpers.R holds the per-person and trait helpers
+├── 02_HRvLR/                      HR against LR
 │   ├── 01_Protein_Contrasts/      limpa dpcDE, nine contrasts, F-tests, PCA, PERMANOVA
 │   ├── 02_Set_Contrasts/          fgsea and fry per gene set
 │   ├── 03_Module_Contrasts/       limma on eigengenes, fry on modules
@@ -74,10 +74,10 @@ HRvLR_V2/
 │   ├── 02_Trait_Pathways/         fgsea on each trait ranking
 │   ├── 03_Profile_Clusters/       proteins grouped by their trait links
 │   └── 04_Elastic_Net/            elastic net of traits: stability selection, held-out Q²
-└── 04_Figures/                    main figures F1 to F5, supplements S1 to S6
+└── 04_Figures/                    main figures F1 to F5 with supplements S1 to S7
     ├── style/, assets/            shared theme, palette, grids; the design schematic
-    ├── F1/ … F5/, S1/ … S6/       panel scripts, panel PDFs, composite PDF, one workbook
-    └── Modules/                   per-module pages (hubs, rewiring) and cross-module pages
+    └── F1/ … F5/                  each figure's panels and composite, its supplements in supp/,
+                                   and one workbook per figure in c_data/
 ```
 
 ## Every step

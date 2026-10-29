@@ -19,11 +19,11 @@ Two readings per fit:
 
 | File | Holds |
 |---|---|
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | protein values |
-| `01_Processing/06_Module_Building/c_data/modules.rds` | eigengenes |
-| `01_Processing/05_Set_Scores/c_data/singscore.rds` | Hallmark set scores |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | protein values |
+| `01_Processing/06_Module_Building/c_data/module_building.rds` | eigengenes |
+| `01_Processing/05_Set_Scores/c_data/set_scores.rds` | Hallmark set scores |
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | sets for the ORA and the Hallmark list |
-| `00_Setup/Input/phenotype.csv` | traits, through `trait_windows()` in `02_HRvLR/helpers.R` |
+| `00_Setup/Input/phenotype.csv` | traits, through `trait_windows()` in `00_Setup/Shared_functions/person_traits.R` |
 
 ## Run
 

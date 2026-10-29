@@ -24,7 +24,7 @@ library(limma)
 library(dplyr)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
-inputs <- c(proteins = "01_Processing/02_Quantification/c_data/proteins.rds")
+inputs <- c(proteins = "01_Processing/02_Quantification/c_data/quantification.rds")
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
 ```
@@ -125,7 +125,7 @@ stopifnot(
 
 ## Save
 
-`proteins_corrected.rds` is the protein `EList` with `E` replaced by variant b; standard errors,
+`blood_correction.rds` is the protein `EList` with `E` replaced by variant b; standard errors,
 annotation and biopsy table are unchanged.
 
 ```{r}
@@ -134,7 +134,7 @@ corrected <- proteins
 corrected$E <- variant_b
 out <- here("01_Processing", "03_Blood_Correction", "c_data")
 dir.create(out, showWarnings = FALSE)
-saveRDS(corrected, file.path(out, "proteins_corrected.rds"))
+saveRDS(corrected, file.path(out, "blood_correction.rds"))
 write_workbook(
   list(blood_check = check),
   "Median |Spearman rho| with the blood index by detection band, uncorrected and three variants.",

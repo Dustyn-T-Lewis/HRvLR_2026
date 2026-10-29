@@ -34,8 +34,8 @@ library(WGCNA)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
 disableWGCNAThreads()
 inputs <- c(
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds"
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds"
 )
 paths <- vapply(inputs, here, character(1))
 stopifnot(file.exists(paths))
@@ -203,7 +203,7 @@ below 2.
 
 ## Save
 
-`preservation.rds` holds the table and each group's module colours for the figures.
+`module_preservation.rds` holds the table and each group's module colours for the figures.
 
 ```{r}
 #| label: save
@@ -218,7 +218,7 @@ saveRDS(
     preservation = preservation_table, group_networks = group_networks,
     group_membership = group_membership
   ),
-  file.path(out, "preservation.rds")
+  file.path(out, "module_preservation.rds")
 )
 write_workbook(
   list(

@@ -42,12 +42,12 @@ library(tidyr)
 library(purrr)
 library(ggplot2)
 source(here("00_Setup", "Shared_functions", "workbooks.R"))
-source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "person_traits.R"))
 inputs <- c(
-  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
-  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  corrected = "01_Processing/03_Blood_Correction/c_data/blood_correction.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/set_scores.rds",
   gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
-  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  modules = "01_Processing/06_Module_Building/c_data/module_building.rds",
   phenotype = "00_Setup/Input/phenotype.csv"
 )
 paths <- vapply(inputs, here, character(1))
@@ -75,7 +75,7 @@ map(features, dim)
 
 ## Windows and traits
 
-`trait_windows()` and `window_values()` (from `02_HRvLR/helpers.R`) pair each feature value with
+`trait_windows()` and `window_values()` (from `00_Setup/Shared_functions/person_traits.R`) pair each feature value with
 its traits. The baseline window asks whether the T1 level predicts the response.
 
 | window | feature value | traits |
@@ -314,7 +314,7 @@ The change score runs `r format(cs$n_tested, big.mark = ",")` tests:
 
 ## Save
 
-`associations.rds` holds the four tables; `02_Trait_Pathways` and `03_Profile_Clusters` read the
+`trait_associations.rds` holds the four tables; `02_Trait_Pathways` and `03_Profile_Clusters` read the
 protein change scores from it.
 
 ```{r}
@@ -326,7 +326,7 @@ saveRDS(
     counts = counts, model = model, change_score = change_score,
     two_predictor = two_predictor, interaction = interaction
   ),
-  file.path(out, "associations.rds")
+  file.path(out, "trait_associations.rds")
 )
 write_workbook(
   list(

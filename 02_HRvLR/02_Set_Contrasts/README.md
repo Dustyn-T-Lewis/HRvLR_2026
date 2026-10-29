@@ -11,7 +11,7 @@ specific set.
 | File | Holds |
 |---|---|
 | `01_Processing/04_Gene_Sets/c_data/gene_sets.rds` | sets (disease sets excluded), catalogue, one protein per gene |
-| `02_HRvLR/01_Protein_Contrasts/c_data/fit.rds` | the protein fit and contrasts |
+| `02_HRvLR/01_Protein_Contrasts/c_data/protein_contrasts.rds` | the protein fit and contrasts |
 
 ## Run
 
@@ -23,7 +23,7 @@ quarto render 02_HRvLR/02_Set_Contrasts/a_script/set_contrasts.qmd --output-dir 
 
 | File | Holds |
 |---|---|
-| `c_data/set_tests.rds` | `set_tests` (every test, with leading edges) and `selection` (candidates, tree clusters, representatives) |
+| `c_data/set_contrasts.rds` | `set_tests` (every test, with leading edges) and `selection` (candidates, tree clusters, representatives) |
 | `c_data/set_contrasts.xlsx` | the same two tables |
 | `b_reports/set_contrasts.html` | the rendered walkthrough |
 

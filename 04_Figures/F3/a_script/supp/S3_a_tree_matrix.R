@@ -1,0 +1,68 @@
+# Every candidate set per block (02_HRvLR/02_Set_Contrasts) in its tree's leaf order, in every
+# contrast, one page per window. Grey and white bands alternate between tree clusters at Jaccard
+# height 0.85; each cluster's representative (the set F3 draws when it ranks high enough) is bold.
+library(here)
+library(dplyr)
+library(ggplot2)
+source(here("04_Figures", "style", "figure_style.R"))
+source(here("04_Figures", "style", "pathway_grid.R"))
+
+inputs <- c(set_tests = "02_HRvLR/02_Set_Contrasts/c_data/set_contrasts.rds")
+saved <- readRDS(here(inputs[["set_tests"]]))
+
+fgsea <- filter(saved$set_tests, method == "fgsea")
+columns <- contrast_columns(unique(fgsea$contrast))
+rows <- set_selection(saved$selection) |>
+  left_join(distinct(fgsea, set_id, pathway), by = "set_id") |>
+  arrange(tree_order) |>
+  mutate(
+    order = tree_order, shade = consecutive_id(cut_0.85) %% 2 == 0, bold = representative_0.85,
+    label = set_label(pathway, same_sign, interaction), .by = block
+  )
+cells <- fgsea |>
+  inner_join(
+    select(rows, window, block, set_id, tree_order, cut_0.85, representative_0.85),
+    by = "set_id", relationship = "many-to-many"
+  ) |>
+  transmute(window, block, set_id, pathway, collection,
+    column = contrast, nes, fdr, tree_order,
+    cut_0.85, representative_0.85
+  )
+
+# One page per window: `panel` is a list of plots and `panel_height` their heights in mm.
+windows <- levels(droplevels(rows$window))
+panel <- lapply(rlang::set_names(windows), \(w) {
+  pathway_grid(
+    filter(cells, window == w), filter(rows, window == w), columns,
+    title = sprintf("Every candidate set, grouped by tree: %s", w),
+    subtitle = paste0(
+      "Sets in leaf order of each block's tree (shared proteins, Jaccard, average linkage); ",
+      "bands alternate between clusters at height 0.85\nbold: the cluster's most specific set; ",
+      "* calls of opposite sign; \u2020 interaction FDR < 0.05"
+    ),
+    text_size = 5
+  )
+})
+panel_height <- vapply(windows, \(w) 2.7 * sum(rows$window == w) + 34, numeric(1))
+panel_data <- cells |>
+  left_join(select(rows, window, set_id, label), by = c("window", "set_id")) |>
+  transmute(
+    window = as.character(window), block = sub("\n", ": ", block), tree_order, cut_0.85,
+    representative_0.85, set_id, collection, label, contrast = column, nes, fdr
+  ) |>
+  arrange(match(window, panel_families), block, tree_order, match(contrast, columns$column))
+
+source_values <- inner_join(panel_data, fgsea, by = c("set_id", "contrast"))
+stopifnot(
+  nrow(rows) == nrow(saved$selection),
+  all(count(panel_data, window, set_id)$n == nrow(columns)),
+  nrow(source_values) == nrow(panel_data),
+  identical(source_values$nes.x, source_values$nes.y),
+  identical(source_values$fdr.x, source_values$fdr.y),
+  all(count(distinct(rows, block, cut_0.85, shade), block, cut_0.85)$n == 1)
+)
+
+for (w in windows) {
+  name <- paste0("a_tree_matrix_", gsub(" ", "_", tolower(w)))
+  save_panel(panel[[w]], "S3", name, 250, panel_height[[w]])
+}

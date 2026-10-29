@@ -8,7 +8,7 @@ phenotype enters construction.
 
 | File | Holds |
 |---|---|
-| `01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds` | limpa's complete matrix with blood slopes removed from observed values |
+| `01_Processing/03_Blood_Correction/c_data/blood_correction.rds` | limpa's complete matrix with blood slopes removed from observed values |
 
 ## Run
 
@@ -20,7 +20,7 @@ quarto render 01_Processing/06_Module_Building/a_script/module_building.qmd --ou
 
 | File | Holds |
 |---|---|
-| `c_data/modules.rds` | `eigengenes` (module × biopsy), `membership` (module and kME per protein), `meta` (biopsy table), `module_summary`; read by every module-level step |
+| `c_data/module_building.rds` | `eigengenes` (module × biopsy), `membership` (module and kME per protein), `meta` (biopsy table), `module_summary`; read by every module-level step |
 | `c_data/module_building.xlsx` | the same tables, the soft-power fit indices, the power QC, the settings screen and each module's leave-one-person-out stability |
 | `b_reports/module_building.html` | the rendered walkthrough |
 
