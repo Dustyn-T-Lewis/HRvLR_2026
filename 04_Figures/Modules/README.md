@@ -9,7 +9,7 @@ Per-module and cross-module pages from `02_HRvLR/08_Module_Detail`, drawn by
 | `b_reports/<module>/rewiring.pdf` | each member's kME within LR's 24 biopsies against within HR's; off the diagonal, a protein moves with the module in one group more than the other; the 8 largest shifts named |
 | `b_reports/overview/coupling.pdf` | Spearman rho between every pair of modules' eigengene changes (training, acute) within HR and within LR, and HR − LR boxed at Fisher p < 0.05 |
 | `b_reports/overview/per_person.pdf` | each person's eigengene change per module and window, people ordered by the growth score |
-| `b_reports/overview/pls.pdf` | sPLS-DA (HR against LR) and sPLS-R (trait gains) on the eigengenes: nested leave-one-out score against its permutation null, and the component-1 loadings |
+| `b_reports/overview/pls.pdf` | sPLS-DA (HR against LR) and sPLS-R (trait gains) on the eigengenes: held-out score (balanced, repeated 4-fold CV) against its permutation null, and the component-1 loadings |
 
 ## Run
 
@@ -35,5 +35,5 @@ Rscript run_all.R 04_Figures/Modules
   the module in HR (kME 0.73 and 0.82) and not in LR (-0.16 and 0.01); talin-2 (TLN2) does the same in
   the cristae module (0.78 against -0.21).
 - PLS: no model beats its permutation null at p < 0.05. The closest is the training changes
-  predicting the muscle-area gain (Q² 0.13, p 0.09); HR against LR is at chance from every window.
+  predicting the muscle-area gain (Q² 0.06, p 0.10); HR against LR is at chance from every window.
 - No hub protein passes FDR < 0.05 in any contrast shown.

@@ -35,6 +35,14 @@ modules change together across people and opposite to glycolysis, while LR's do 
 with cristae: rho 0.90 in HR, 0.17 in LR; 6 of 45 module pairs differ at Fisher p < 0.05;
 Figure 5b).
 
+Apart from the groups, one link with growth holds across all 16 people. How trained muscle
+responds to one bout tracks how much it grew: an elastic net on the acute change predicts the
+held-out muscle-area gain better than its permutation null (modules Q² 0.24, p 0.008; proteins
+Q² 0.14, p 0.019). It keeps proteins of translation (EIF4E, RPL37A), the proteasome (PSMA3) and
+protein handling (OLA1, CSNK2B), which rise more after the bout in people who grew more, within
+HR and within LR alike (Supplementary Figure 6). It is the strongest of 81 exploratory fits, of
+which about as many reach p < 0.10 as chance gives.
+
 ## Tree
 
 ```

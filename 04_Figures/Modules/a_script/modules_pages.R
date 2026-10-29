@@ -175,7 +175,7 @@ score_plot <- ggplot(pls, aes(observed, task)) +
   labs(
     title = "Do the modules together separate the groups or predict growth?",
     subtitle = paste(
-      "Point: nested leave-one-out score;",
+      "Point: held-out score (4-fold CV repeated 5 times, balanced folds);",
       "grey bar: permutation null, median to 95th percentile"
     ),
     x = "score", y = NULL

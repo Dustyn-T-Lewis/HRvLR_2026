@@ -169,11 +169,14 @@ summarise(per_person, spread = round(sd(change), 3), .by = c(window, module)) |>
 Sparse PLS (mixOmics) on the eigengenes: sPLS-DA for HR against LR from the T1 levels, the
 training change and the acute change; sPLS regression for the % gains in fibre area, muscle area
 and leg press, and the growth score, from the T1 levels and the training change. One component;
-the number of modules kept (2, 4, 6 or all) is tuned by leave-one-out inside each training fold,
-and each person is predicted once, held out (nested leave-one-out). The score is the AUC (sPLS-DA)
-or Q² = 1 − held-out error / error of the held-out person's mean of the others (sPLS-R). The null
-reruns the whole procedure on 1,000 shuffles of the outcome; p = (1 + null ≥ observed) / 1,001.
-The loadings come from one model on all 16 people.
+the number of modules kept (2, 4, 6 or all) is tuned by 3-fold cross-validation inside each
+training set, and the outer loop is 4-fold cross-validation repeated 5 times. Folds for sPLS-DA hold
+out HR and LR people in equal numbers: with leave-one-out, a model with no signal predicts against
+the held-out person's group (removing one person tilts the training set to the other), which pushes
+AUCs below 0.5. The score is the AUC (sPLS-DA) or Q² = 1 − held-out error / error of the training
+mean (sPLS-R), averaged over repeats. The null reruns the whole procedure (2 repeats) on 1,000
+shuffles of the outcome; p = (1 + null ≥ observed) / 1,001. The loadings come from one model on all
+16 people.
 
 ```{r}
 #| label: pls
@@ -193,25 +196,48 @@ fit_da <- \(x, y, k) mixOmics::splsda(x, y, ncomp = 1, keepX = k)
 fit_reg <- \(x, y, k) mixOmics::spls(x, y, ncomp = 1, keepX = k, mode = "regression")
 predict_da <- \(fit, x) predict(fit, x)$predict[, "HR", 1]
 predict_reg <- \(fit, x) predict(fit, x)$predict[, 1, 1]
-nested <- function(x, y, fit, predict_one, loss) {
-  map_dbl(seq_len(nrow(x)), \(i) {
-    xt <- x[-i, , drop = FALSE]
-    yt <- y[-i]
-    inner <- map_dbl(keep_grid, \(k) {
-      loss(map_dbl(seq_len(nrow(xt)), \(j) {
-        predict_one(fit(xt[-j, , drop = FALSE], yt[-j], k), xt[j, , drop = FALSE])
-      }), yt)
-    })
-    predict_one(fit(xt, yt, keep_grid[which.min(inner)]), x[i, , drop = FALSE])
-  })
-}
-q2 <- \(pred, y) 1 - sum((y - pred)^2) / sum((y - map_dbl(seq_along(y), \(i) mean(y[-i])))^2)
-score <- function(model, x, y) {
-  if (model == "sPLS-DA") {
-    auc(nested(x, y, fit_da, predict_da, \(s, yt) 1 - auc(s, yt)), y)
-  } else {
-    q2(nested(x, y, fit_reg, predict_reg, \(p, yt) sum((yt - p)^2)), y)
+# Fold labels: balanced across HR and LR for a factor, random for a number.
+folds_of <- function(y, k) {
+  if (!is.factor(y)) {
+    return(sample(rep_len(seq_len(k), length(y))))
   }
+  folds <- integer(length(y))
+  for (g in levels(y)) folds[y == g] <- sample(rep_len(seq_len(k), sum(y == g)))
+  folds
+}
+# Held-out predictions from one pass of 4-fold CV, the panel size tuned by 3-fold CV inside each
+# training set; `base` is each held-out person's training mean, for Q2.
+cv_pass <- function(x, y, fit, predict_one, loss) {
+  outer <- folds_of(y, 4)
+  pred <- base <- numeric(length(y))
+  for (f in 1:4) {
+    train <- outer != f
+    xt <- x[train, , drop = FALSE]
+    yt <- y[train]
+    inner <- folds_of(yt, 3)
+    tuned <- map_dbl(keep_grid, \(k) {
+      held <- numeric(length(yt))
+      for (g in 1:3) {
+        held[inner == g] <- predict_one(
+          fit(xt[inner != g, , drop = FALSE], yt[inner != g], k), xt[inner == g, , drop = FALSE]
+        )
+      }
+      loss(held, yt)
+    })
+    pred[!train] <- predict_one(fit(xt, yt, keep_grid[which.min(tuned)]), x[!train, , drop = FALSE])
+    if (!is.factor(y)) base[!train] <- mean(yt)
+  }
+  list(pred = pred, base = base)
+}
+score <- function(model, x, y, repeats) {
+  mean(map_dbl(seq_len(repeats), \(r) {
+    if (model == "sPLS-DA") {
+      auc(cv_pass(x, y, fit_da, predict_da, \(s, yt) 1 - auc(s, yt))$pred, y)
+    } else {
+      cv <- cv_pass(x, y, fit_reg, predict_reg, \(p, yt) sum((yt - p)^2))
+      1 - sum((y - cv$pred)^2) / sum((y - cv$base)^2)
+    }
+  }))
 }
 outcome_of <- \(outcome) {
   if (outcome == "HR vs LR") factor(group_of[people], c("LR", "HR"))
@@ -230,8 +256,8 @@ n_perm <- 1000
 pls_fits <- pmap(tasks, \(model, window, outcome) {
   x <- windows[[window]]
   y <- outcome_of(outcome)
-  observed <- score(model, x, y)
-  null <- unlist(parallel::mclapply(seq_len(n_perm), \(b) score(model, x, sample(y)),
+  observed <- score(model, x, y, 5)
+  null <- unlist(parallel::mclapply(seq_len(n_perm), \(b) score(model, x, sample(y), 2),
     mc.cores = max(1, parallel::detectCores() - 1), mc.set.seed = TRUE
   ))
   full <- if (model == "sPLS-DA") {

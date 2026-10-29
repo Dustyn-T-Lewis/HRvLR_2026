@@ -7,8 +7,9 @@ What sits underneath and around each module (`01_Processing/06_Module_Building`)
   and within LR, and the HR − LR difference (Fisher z);
 - rewiring: each member's kME within HR biopsies and within LR biopsies;
 - per person: each person's eigengene change per module, with their growth score;
-- PLS: sPLS-DA (HR against LR) and sPLS regression (trait gains) on the eigengenes, nested
-  leave-one-out with 1,000 permutations, and the loadings of a model on all 16 people.
+- PLS: sPLS-DA (HR against LR) and sPLS regression (trait gains) on the eigengenes, 4-fold
+  cross-validation repeated 5 times (folds balanced for HR and LR) with the panel size tuned inside
+  each training set, 1,000 permutations, and the loadings of a model on all 16 people.
 
 ## Inputs
 
@@ -39,5 +40,6 @@ quarto render 02_HRvLR/08_Module_Detail/a_script/module_detail.qmd --output-dir 
 - Everything here is exploratory: 8 people per group, nothing corrected across the step.
 - Coupling uses Fisher's z on Spearman correlations from 8 people each; treat its p as a guide.
 - Within-group kME rests on 24 biopsies from 8 people; a shift needs to be large to mean much.
-- The permutation null reruns the whole nested procedure on shuffled outcomes, so tuning cannot
-  inflate the scores.
+- The permutation null reruns the whole procedure on shuffled outcomes, so tuning cannot inflate
+  the scores. Balanced folds avoid the leave-one-out bias, where a model with no signal predicts
+  against the held-out person's group and the AUC falls below 0.5.
