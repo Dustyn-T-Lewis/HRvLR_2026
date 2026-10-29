@@ -1,0 +1,274 @@
+---
+title: "Elastic net on traits, everyone pooled"
+format:
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+---
+
+Which proteins, modules or Hallmark sets, taken together, carry information about muscle size and
+strength? An elastic net is a regression with a penalty on the size of its weights: the lasso part
+sets most weights to zero, so the model keeps a short list of features, and the ridge part shares
+weight among correlated features instead of picking one at random (Zou and Hastie 2005). With 16
+people and up to 2,059 proteins the fit cannot be a predictor for new people; it is used here to
+find features that carry a trait jointly, read with care. No group label enters any model.
+
+Six pairings of a feature value with a trait, per person:
+
+| Pairing | Features | Trait |
+|---|---|---|
+| T1 level vs T1 trait | T1 level | T1 level |
+| T1 level predicts gain | T1 level | % gain, growth score |
+| training change tracks gain | T2 − T1 | % gain, growth score |
+| T2 level vs T2 trait | T2 level | T2 level |
+| acute change vs T2 trait | T3 − T2 | T2 level |
+| acute change vs gain | T3 − T2 | % gain, growth score |
+
+There is no phenotype at T3. The bout falls in trained muscle, so its response is set against the
+trained trait levels and the gain already made.
+
+## Packages
+
+```{r}
+#| label: packages
+#| message: false
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+source(here("02_HRvLR", "helpers.R"))
+source(here("00_Setup", "Shared_functions", "workbooks.R"))
+inputs <- c(
+  corrected = "01_Processing/03_Blood_Correction/c_data/proteins_corrected.rds",
+  modules = "01_Processing/06_Module_Building/c_data/modules.rds",
+  singscore = "01_Processing/05_Set_Scores/c_data/singscore.rds",
+  gene_sets = "01_Processing/04_Gene_Sets/c_data/gene_sets.rds",
+  phenotype = "00_Setup/Input/phenotype.csv"
+)
+paths <- vapply(inputs, here, character(1))
+stopifnot(file.exists(paths))
+```
+
+## Input
+
+Three feature sets per person: blood-corrected proteins, module eigengenes and the qualifying
+Hallmark set scores. A feature with no spread across the 16 people in a window (one modelled value
+for everyone) is left out of that window.
+
+```{r}
+#| label: input
+corrected <- readRDS(paths[["corrected"]])
+modules <- readRDS(paths[["modules"]])
+scores <- readRDS(paths[["singscore"]])$scores
+gs <- readRDS(paths[["gene_sets"]])
+phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
+meta <- as_tibble(corrected$targets)
+hallmark <- filter(gs$set_catalog, collection == "Hallmark", qualifies)$set_id
+label_of <- c(
+  set_names(sub(";.*", "", corrected$genes$Genes), rownames(corrected)),
+  set_names(sub("^Hallmark\\|HALLMARK_", "", hallmark), hallmark),
+  set_names(rownames(modules$eigengenes))
+)
+feature_sets <- list(
+  proteins = corrected$E, modules = modules$eigengenes, hallmark = scores[hallmark, meta$sample_id]
+)
+x_of <- function(values, window) {
+  m <- switch(window,
+    T1 = person_values(values, meta, "T1"), T2 = person_values(values, meta, "T2"),
+    training = person_values(values, meta, "T2", from = "T1"),
+    acute = person_values(values, meta, "T3", from = "T2")
+  )
+  x <- t(m)
+  x[, apply(x, 2, sd) > 0, drop = FALSE]
+}
+traits <- trait_windows(phenotype)
+levels_at <- c("fcsa_mixed", "mcsa", "leg_press_1rm", "leg_ext_1rm")
+gains <- c(paste0("pct_", levels_at), "comp_hypertrophy")
+fits <- bind_rows(
+  tibble(
+    pairing = "T1 level vs T1 trait", window = "T1", table = "baseline_level", trait = levels_at
+  ),
+  tibble(pairing = "T1 level predicts gain", window = "T1", table = "training", trait = gains),
+  tibble(
+    pairing = "training change tracks gain", window = "training", table = "training",
+    trait = gains
+  ),
+  tibble(pairing = "T2 level vs T2 trait", window = "T2", table = "post_level", trait = levels_at),
+  tibble(
+    pairing = "acute change vs T2 trait", window = "acute", table = "post_level",
+    trait = levels_at
+  ),
+  tibble(pairing = "acute change vs gain", window = "acute", table = "training", trait = gains)
+) |>
+  expand_grid(features = names(feature_sets))
+nrow(fits)
+```
+
+## Two readings per fit
+
+**Which features carry the trait (stability selection; Meinshausen and Bühlmann 2010).** On each
+of 200 random subsamples of 12 people, the elastic net (α = 0.5) keeps the first q features to
+enter its path. A feature's selection frequency is the share of subsamples that keep it. With
+q = min(20, max(1, ⌊√(0.2 p)⌋)) for p features (20 for proteins, 1 for the 10 modules, 2 for the
+35 Hallmark sets), the expected number of features kept in at least 60% of subsamples by chance
+alone is at most q² / ((2 × 0.6 − 1) p), below 1 in every fit. Two exploratory tiers:
+stable (≥ 0.6, the bound applies) and recurring (0.4 to 0.6, a lead without a bound).
+
+**How well the features predict held-out people (Q²).** Four-fold cross-validation repeated 5
+times, λ chosen by 3-fold cross-validation inside each training set; Q² = 1 − held-out error /
+error of predicting each held-out person by the training mean, so Q² ≤ 0 means no better than the
+mean. The null reruns it on 1,000 shuffles of the trait (2 repeats each); p = (1 + null ≥ observed)
+/ 1,001. A fit at p < 0.10 is a lead; with 81 fits, about 8 leads are expected from chance alone.
+Each person's held-out prediction, averaged over the 5 repeats, is kept for the figure.
+
+```{r}
+#| label: fits
+stability <- function(x, y, q, subsamples = 200, size = 12) {
+  kept <- replicate(subsamples, {
+    rows <- sample(nrow(x), size)
+    path <- glmnet::glmnet(x[rows, ], y[rows], alpha = 0.5)
+    first <- which(path$df >= q)[1]
+    if (is.na(first)) first <- length(path$lambda)
+    rownames(path$beta)[path$beta[, first] != 0]
+  }, simplify = FALSE)
+  map_dbl(colnames(x), \(f) mean(map_lgl(kept, \(k) f %in% k)))
+}
+held_out <- function(x, y, repeats) {
+  preds <- map(seq_len(repeats), \(r) {
+    folds <- sample(rep_len(1:4, length(y)))
+    pred <- base <- numeric(length(y))
+    for (f in 1:4) {
+      train <- folds != f
+      fit <- glmnet::cv.glmnet(x[train, ], y[train], alpha = 0.5, nfolds = 3)
+      pred[!train] <- predict(fit, x[!train, , drop = FALSE], s = "lambda.min")
+      base[!train] <- mean(y[train])
+    }
+    list(q2 = 1 - sum((y - pred)^2) / sum((y - base)^2), pred = pred)
+  })
+  list(q2 = mean(map_dbl(preds, "q2")), pred = rowMeans(sapply(preds, `[[`, "pred")))
+}
+
+RNGkind("L'Ecuyer-CMRG")
+set.seed(20261030)
+n_perm <- 1000
+results <- parallel::mclapply(seq_len(nrow(fits)), \(i) {
+  s <- fits[i, ]
+  x_all <- x_of(feature_sets[[s$features]], s$window)
+  table <- traits[[s$table]]
+  y_all <- table[[s$trait]][match(rownames(x_all), table$subject)]
+  x <- x_all[!is.na(y_all), ]
+  y <- y_all[!is.na(y_all)]
+  q <- min(20, max(1, floor(sqrt(0.2 * ncol(x)))))
+  frequency <- stability(x, y, q)
+  held <- held_out(x, y, 5)
+  null <- replicate(n_perm, held_out(x, sample(y), 2)$q2)
+  list(
+    summary = bind_cols(s, tibble(
+      n_people = length(y), n_features = ncol(x), q,
+      false_bound = q^2 / ((2 * 0.6 - 1) * ncol(x)), q2 = held$q2,
+      null_median = median(null), null_95 = unname(quantile(null, 0.95)),
+      p_perm = (1 + sum(null >= held$q2)) / (1 + n_perm)
+    )),
+    selection = bind_cols(s[rep(1, ncol(x)), ], tibble(
+      feature = colnames(x), frequency,
+      rho = apply(x, 2, \(v) cor(v, y, method = "spearman"))
+    )),
+    predictions = bind_cols(s[rep(1, length(y)), ], tibble(
+      subject = rownames(x), observed = y, predicted = held$pred
+    ))
+  )
+}, mc.cores = max(1, parallel::detectCores() - 1), mc.set.seed = TRUE)
+
+selection <- list_rbind(map(results, "selection")) |>
+  mutate(
+    label = unname(label_of[feature]),
+    tier = case_when(frequency >= 0.6 ~ "stable", frequency >= 0.4 ~ "recurring", .default = "rare")
+  )
+summary <- list_rbind(map(results, "summary")) |>
+  left_join(
+    summarise(selection,
+      n_stable = sum(tier == "stable"), n_recurring = sum(tier == "recurring"),
+      .by = c(pairing, trait, features)
+    ),
+    by = c("pairing", "trait", "features")
+  )
+predictions <- list_rbind(map(results, "predictions")) |>
+  left_join(distinct(meta, subject, group), by = "subject")
+selection <- filter(selection, tier != "rare")
+summary |>
+  arrange(p_perm) |>
+  select(pairing, trait, features, q2, p_perm, n_stable, n_recurring) |>
+  head(10)
+```
+
+## What the selected proteins are
+
+Over-representation (clusterProfiler, the `07_Module_Characterisation` settings) of each fit's
+stable and recurring proteins against the measured genes; an exploratory lead at FDR < 0.10.
+
+```{r}
+#| label: ora
+term2gene <- enframe(gs$sets, "set_id", "gene") |> unnest(gene)
+selection_ora <- selection |>
+  filter(features == "proteins") |>
+  summarise(genes = list(unique(na.omit(label))), .by = c(pairing, trait)) |>
+  filter(lengths(genes) >= 4) |>
+  pmap(\(pairing, trait, genes) {
+    e <- clusterProfiler::enricher(genes,
+      TERM2GENE = term2gene, universe = gs$gene_universe,
+      minGSSize = 15, maxGSSize = 500, pvalueCutoff = 1, qvalueCutoff = 1
+    )
+    if (is.null(e)) {
+      return(NULL)
+    }
+    as_tibble(as.data.frame(e)) |>
+      slice_min(p.adjust, n = 3, with_ties = FALSE) |>
+      transmute(pairing, trait, set_id = ID, overlap = GeneRatio, p = pvalue, fdr = p.adjust)
+  }) |>
+  list_rbind()
+filter(selection_ora, fdr < 0.10)
+```
+
+## Validation
+
+```{r}
+#| label: validate
+stopifnot(
+  nrow(summary) == nrow(fits), all(summary$p_perm > 0 & summary$p_perm <= 1),
+  all(summary$false_bound <= 1), !anyNA(predictions$predicted),
+  all(between(selection$frequency, 0.4, 1))
+)
+```
+
+## Summary
+
+`r sum(summary$p_perm < 0.10)` of `r nrow(summary)` fits are leads at permutation p < 0.10
+(about `r round(0.10 * nrow(summary))` expected by chance). The strongest is
+`r with(slice_min(summary, p_perm, n = 1, with_ties = FALSE), sprintf("%s, %s, %s: Q2 %.2f, p %.3f", pairing, trait, features, q2, p_perm))`.
+
+## Save
+
+```{r}
+#| label: save
+out <- here("03_Continuous", "04_Elastic_Net", "c_data")
+dir.create(out, showWarnings = FALSE)
+saved <- list(
+  summary = summary, selection = selection, selection_ora = selection_ora,
+  predictions = predictions
+)
+saveRDS(saved, file.path(out, "elastic_net.rds"))
+write_workbook(
+  saved,
+  c(
+    "Per fit (pairing, trait, feature set): held-out Q2, its permutation null, stable counts.",
+    "Per fit and feature selected in >= 40% of subsamples: frequency, tier, Spearman rho.",
+    "Per fit: top over-represented sets among its selected proteins.",
+    "Per fit and person: observed trait and held-out prediction (mean over 5 repeats)."
+  ),
+  file.path(out, "elastic_net.xlsx"), inputs, paths
+)
+```

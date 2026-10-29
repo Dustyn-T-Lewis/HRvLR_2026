@@ -64,10 +64,11 @@ HRvLR_V2/
 ├── 03_Continuous/                 traits as numbers, all 16 people pooled
 │   ├── 01_Trait_Associations/     sample model, change score, two-predictor, interaction
 │   ├── 02_Trait_Pathways/         fgsea on each trait ranking
-│   └── 03_Profile_Clusters/       proteins grouped by their trait links
-└── 04_Figures/                    main figures F1 to F5, supplements S1 to S5
+│   ├── 03_Profile_Clusters/       proteins grouped by their trait links
+│   └── 04_Elastic_Net/            elastic net of traits: stability selection, held-out Q²
+└── 04_Figures/                    main figures F1 to F5, supplements S1 to S6
     ├── style/, assets/            shared theme, palette, grids; the design schematic
-    ├── F1/ … F5/, S1/ … S5/       panel scripts, panel PDFs, composite PDF, one workbook
+    ├── F1/ … F5/, S1/ … S6/       panel scripts, panel PDFs, composite PDF, one workbook
     └── Modules/                   per-module pages (hubs, rewiring) and cross-module pages
 ```
 

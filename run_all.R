@@ -23,7 +23,11 @@ stages <- c(
   "03_Continuous/01_Trait_Associations",
   "03_Continuous/02_Trait_Pathways",
   "03_Continuous/03_Profile_Clusters",
-  paste0("04_Figures/", c("F1", "S1", "F2", "S2", "F3", "S3", "F4", "S4", "F5", "S5", "Modules"))
+  "03_Continuous/04_Elastic_Net",
+  paste0(
+    "04_Figures/",
+    c("F1", "S1", "F2", "S2", "F3", "S3", "F4", "S4", "F5", "S5", "S6", "Modules")
+  )
 )
 only <- commandArgs(trailingOnly = TRUE)
 if (length(only)) stages <- stages[rowSums(outer(stages, only, startsWith)) > 0]

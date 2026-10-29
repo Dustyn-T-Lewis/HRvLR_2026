@@ -11,6 +11,7 @@ composite hypertrophy score and total volume load. T3 has no phenotype.
 | [`01_Trait_Associations`](01_Trait_Associations/README.md) | sample model, change score, two-predictor and interaction fits for three feature types | `associations.rds`, `trait_associations.xlsx` |
 | [`02_Trait_Pathways`](02_Trait_Pathways/README.md) | fgsea on each window-and-trait protein ranking, FDR within database; Jaccard tree selection for the figure | `trait_pathways.rds`, `trait_pathways.xlsx` |
 | [`03_Profile_Clusters`](03_Profile_Clusters/README.md) | proteins grouped by their pattern of trait links, and per trait by co-variation | `profile_clusters.rds`, `profile_clusters.xlsx` |
+| [`04_Elastic_Net`](04_Elastic_Net/README.md) | elastic net of traits on proteins, modules and Hallmark scores in six pairings: stability selection and held-out Q² | `elastic_net.rds`, `elastic_net.xlsx` |
 
 Six windows pair a feature value with its traits, 42 window-trait screens in all:
 

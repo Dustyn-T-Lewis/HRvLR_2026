@@ -432,3 +432,24 @@ soft_threshold,chosen,TRUE for the power used.
 ^b_coupling$,rho_LR,Spearman rho between the two modules' acute eigengene changes across the 8 LR people.
 ^b_coupling$,difference,rho_HR minus rho_LR.
 ^b_coupling$,p_difference,"Fisher z test of rho_HR against rho_LR (n = 8 each; Spearman treated as Pearson)."
+^(summary|selection|selection_ora|predictions|a_fit_overview|b_selected|c_predictions)$,pairing,"Which feature value is set against which trait: T1 level vs T1 trait, T1 level predicts gain, training change tracks gain, T2 level vs T2 trait, acute change vs T2 trait, acute change vs gain."
+^(summary|selection|predictions|a_fit_overview|b_selected|c_predictions|d_hr_lr)$,features,"Feature set: proteins, modules (eigengenes) or hallmark (singscore set scores)."
+^(summary|selection|predictions)$,table,Which trait table of trait_windows() the trait comes from.
+^(summary|a_fit_overview)$,n_features,Features with spread across the people in the window.
+^summary$,q,"Features kept per subsample in stability selection: min(20, max(1, floor(sqrt(0.2 * n_features))))."
+^summary$,false_bound,"Meinshausen-Buhlmann bound on the expected number of features kept in >= 60% of subsamples by chance: q^2 / (0.2 * n_features)."
+^(summary|a_fit_overview)$,q2,"Held-out Q2, mean over 5 repeats of 4-fold CV: 1 - held-out error / error of the training-set mean."
+^summary$,null_median,Median Q2 over 1000 shuffles of the trait.
+^(summary|a_fit_overview)$,null_95,95th percentile of the shuffled Q2.
+^(summary|a_fit_overview)$,p_perm,(1 + shuffled Q2 >= observed) / 1001.
+^(summary|a_fit_overview)$,n_stable,Features kept in >= 60% of 200 subsamples.
+^(summary|a_fit_overview)$,n_recurring,Features kept in 40% to 60% of subsamples.
+^(selection|b_selected|d_hr_lr)$,frequency,Share of 200 subsamples of 12 people whose elastic net kept the feature.
+^(selection|b_selected)$,tier,"stable (>= 0.6, the error bound applies) or recurring (0.4 to 0.6, an exploratory lead)."
+^(selection|b_selected)$,rho,Spearman rho of the feature with the trait across the people of the fit (direction).
+^selection_ora$,overlap,Selected genes in the set over selected genes tested (GeneRatio).
+^(predictions|c_predictions)$,observed,The person's trait value.
+^(predictions|c_predictions)$,predicted,"The person's held-out prediction, mean over the 5 CV repeats."
+^d_hr_lr$,rho_HR,Spearman rho of the feature with the trait within the 8 HR people (02_HRvLR/07_Group_Trait_Slopes).
+^d_hr_lr$,rho_LR,Spearman rho of the feature with the trait within the 8 LR people.
+^d_hr_lr$,slope_p,p of the limma HR - LR slope difference for the feature and trait (02_HRvLR/07_Group_Trait_Slopes).

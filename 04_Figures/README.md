@@ -13,6 +13,7 @@ and which went to supplements (see the root README).
 | F3 | pathways: shared, HR-only and LR-only blocks for training and the bout, then between groups; one set per tree cluster | S3: every candidate set grouped by tree, cuts 0.75 and 0.9, GO Slim overview |
 | F4 | traits: people's changes; links against chance; trait pathways | S4: HR slope minus LR slope; protein profile groups |
 | F5 | modules: score heatmap (contrasts and trait links), coupling after the bout within each group, preservation | S5: module characterisation with STRING; WGCNA module QC; the smallest-p module person by person. Modules/: per-module hubs and rewiring; coupling, per-person responses, PLS |
+| | | S6: elastic net of traits, everyone pooled: every fit, what carries the lead, held-out predictions, HR against LR |
 
 ## Layout
 
@@ -23,6 +24,7 @@ style/protein_grid.R            the protein dot-matrix (F2)
 style/share_grid.R              the share-against-chance tiles of the trait screens (F4b, S4a)
 style/module_labels.R           module names from their leading set (F5, S2, S5, Modules)
 style/score_heatmap.R           the YvO-style score heatmap (F5a, S3e)
+style/elastic_net.R             the elastic-net results and the lead S6 draws
 style/composite.R               run a figure's panels, tag them, write its workbook
 assets/design.png               study design schematic (F1a)
 F1/a_script/panels/a_*.R        one script per panel
